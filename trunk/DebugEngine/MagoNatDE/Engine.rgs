@@ -1,0 +1,13 @@
+HKCR
+{
+	NoRemove CLSID
+	{
+		ForceRemove {97348AC0-2B6B-4B99-A245-4C7E2C09D403} = s 'MagoNativeEngine Class'
+		{
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Free'
+			}
+		}
+	}
+}
