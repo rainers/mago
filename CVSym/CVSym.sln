@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CVSym", "CVSym\CVSym.vcproj", "{D4DE19AE-33EF-4B61-BFFE-784582BC68C1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BinImage", "BinImage\BinImage.vcproj", "{50220F87-0F20-49B1-B111-A25E1A6C98D9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CVSTI", "CVSTI\CVSTI.vcproj", "{18E6FA8B-62C6-42D7-964B-4C34C797075B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{50220F87-0F20-49B1-B111-A25E1A6C98D9} = {50220F87-0F20-49B1-B111-A25E1A6C98D9}
+		{D4DE19AE-33EF-4B61-BFFE-784582BC68C1} = {D4DE19AE-33EF-4B61-BFFE-784582BC68C1}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D4DE19AE-33EF-4B61-BFFE-784582BC68C1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D4DE19AE-33EF-4B61-BFFE-784582BC68C1}.Debug|Win32.Build.0 = Debug|Win32
+		{D4DE19AE-33EF-4B61-BFFE-784582BC68C1}.Release|Win32.ActiveCfg = Release|Win32
+		{D4DE19AE-33EF-4B61-BFFE-784582BC68C1}.Release|Win32.Build.0 = Release|Win32
+		{50220F87-0F20-49B1-B111-A25E1A6C98D9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{50220F87-0F20-49B1-B111-A25E1A6C98D9}.Debug|Win32.Build.0 = Debug|Win32
+		{50220F87-0F20-49B1-B111-A25E1A6C98D9}.Release|Win32.ActiveCfg = Release|Win32
+		{50220F87-0F20-49B1-B111-A25E1A6C98D9}.Release|Win32.Build.0 = Release|Win32
+		{18E6FA8B-62C6-42D7-964B-4C34C797075B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{18E6FA8B-62C6-42D7-964B-4C34C797075B}.Debug|Win32.Build.0 = Debug|Win32
+		{18E6FA8B-62C6-42D7-964B-4C34C797075B}.Release|Win32.ActiveCfg = Release|Win32
+		{18E6FA8B-62C6-42D7-964B-4C34C797075B}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
