@@ -1,3 +1,4 @@
+<?xml version="1.0" standalone="no"?>
 <!--
    Copyright (c) 2010 Aldo J. Nunez
 
@@ -5,7 +6,6 @@
    See the LICENSE text file for details.
 -->
 
-<?xml version="1.0" standalone="no"?>
 <namespace name="Top">
 	<struct name="T">
 		<field name="f" type="short"/>
