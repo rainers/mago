@@ -103,8 +103,13 @@ HRESULT Utf16To8( const wchar_t* u16Str, size_t u16StrLen, char*& u8Str, size_t&
 {
     int     nChars = 0;
     CAutoVectorPtr<char>    chars;
+    DWORD   flags = 0;
 
-    nChars = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, u16Str, u16StrLen, NULL, 0, NULL, NULL );
+#if _WIN32_WINNT >= _WIN32_WINNT_LONGHORN
+    flags = WC_ERR_INVALID_CHARS;
+#endif
+
+    nChars = WideCharToMultiByte( CP_UTF8, flags, u16Str, u16StrLen, NULL, 0, NULL, NULL );
     if ( nChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
 
@@ -112,7 +117,7 @@ HRESULT Utf16To8( const wchar_t* u16Str, size_t u16StrLen, char*& u8Str, size_t&
     if ( chars == NULL )
         return E_OUTOFMEMORY;
 
-    nChars = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, u16Str, u16StrLen, chars, nChars + 1, NULL, NULL );
+    nChars = WideCharToMultiByte( CP_UTF8, flags, u16Str, u16StrLen, chars, nChars + 1, NULL, NULL );
     if ( nChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
     chars[nChars] = '\0';

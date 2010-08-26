@@ -188,10 +188,15 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
     int     nzChars = 0;
     scoped_array<char>  nameChars;
     SymHandle   childSH;
+    DWORD   flags = 0;
+
+#if _WIN32_WINNT >= _WIN32_WINNT_LONGHORN
+    flags = WC_ERR_INVALID_CHARS;
+#endif
 
     // TODO: who should do the full search?
 
-    nzChars = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, name, -1, NULL, 0, NULL, NULL );
+    nzChars = WideCharToMultiByte( CP_UTF8, flags, name, -1, NULL, 0, NULL, NULL );
     if ( nzChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
 
@@ -199,7 +204,7 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
     if ( nameChars.get() == NULL )
         return E_OUTOFMEMORY;
 
-    nzChars = WideCharToMultiByte( CP_UTF8, WC_ERR_INVALID_CHARS, name, -1, nameChars.get(), nzChars, NULL, NULL );
+    nzChars = WideCharToMultiByte( CP_UTF8, flags, name, -1, nameChars.get(), nzChars, NULL, NULL );
     if ( nzChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
 
