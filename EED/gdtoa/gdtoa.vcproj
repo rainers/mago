@@ -41,6 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="$(ProjectDir)..\..\Include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;NO_FENV_H"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -104,6 +105,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="1"
 				FavorSizeOrSpeed="1"
+				AdditionalIncludeDirectories="$(ProjectDir)..\..\Include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;NO_FENV_H"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
