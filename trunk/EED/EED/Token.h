@@ -48,7 +48,7 @@ enum TOK
     TOKarraylength, TOKversion,
     TOKmodule,  TOKdollar,
     TOKtemplate,    TOKdottd,
-    TOKdeclaration, TOKtypeof,
+    TOKdeclaration, TOKtypeof, TOKtypeof2,
     TOKpragma,  TOKdsymbol,
     TOKtypeid,  TOKuadd,
     TOKremove,

@@ -168,9 +168,19 @@ namespace Mago
         return false;
     }
 
+    bool CVDecl::IsBaseClass()
+    {
+        return mSymInfo->GetSymTag() == MagoST::SymTagBaseClass;
+    }
+
     HRESULT CVDecl::FindObject( const wchar_t* name, Declaration*& decl )
     {
         return E_NOT_FOUND;
+    }
+
+    bool CVDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
+    {
+        return false;
     }
 
 
@@ -394,5 +404,129 @@ namespace Mago
         }
 
         return S_OK;
+    }
+
+    bool TypeCVDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
+    {
+        RefPtr<TypeCVDeclMembers>   cvMembers;
+
+        if ( mSymInfo->GetSymTag() != MagoST::SymTagUDT )
+            return false;
+
+        cvMembers = new TypeCVDeclMembers(
+            mSymStore,
+            mSymInfoData,
+            mSymInfo );
+        if ( cvMembers == NULL )
+            return false;
+
+        members = cvMembers.Detach();
+
+        return true;
+    }
+
+    TypeCVDeclMembers::TypeCVDeclMembers( 
+        ExprContext* symStore,
+        const MagoST::SymInfoData& infoData, 
+        MagoST::ISymbolInfo* symInfo )
+        :   mRefCount( 0 ),
+            mSymStore( symStore ),
+            mCount( 0 ),
+            mIndex( 0 )
+    {
+        _ASSERT( symStore != NULL );
+        _ASSERT( symInfo != NULL );
+
+        HRESULT hr = S_OK;
+
+        hr = symStore->GetSession( mSession.Ref() );
+        _ASSERT( hr == S_OK );
+
+        mSession->CopySymbolInfo( infoData, mSymInfoData, mSymInfo );
+
+        Reset();
+    }
+
+    void TypeCVDeclMembers::AddRef()
+    {
+        InterlockedIncrement( &mRefCount );
+    }
+
+    void TypeCVDeclMembers::Release()
+    {
+        long    newRef = InterlockedDecrement( &mRefCount );
+        _ASSERT( newRef >= 0 );
+        if ( newRef == 0 )
+        {
+            delete this;
+        }
+    }
+
+    uint32_t TypeCVDeclMembers::GetCount()
+    {
+        return mCount;
+    }
+
+    bool TypeCVDeclMembers::Next( MagoEE::Declaration*& decl )
+    {
+        HRESULT             hr = S_OK;
+        MagoST::TypeHandle  childTH = { 0 };
+
+        if ( mIndex >= GetCount() )
+            return false;
+
+        if ( !mSession->NextType( mListScope, childTH ) )
+            return false;
+
+        mIndex++;
+
+        hr = mSymStore->MakeDeclarationFromSymbol( childTH, decl );
+        if ( FAILED( hr ) )
+            return false;
+
+        return true;
+    }
+
+    bool TypeCVDeclMembers::Reset()
+    {
+        MagoST::TypeIndex   flistIndex = 0;
+        MagoST::TypeHandle  flistHandle = { 0 };
+        uint16_t            count = 0;
+
+        mIndex = 0;
+        mCount = 0;
+        memset( &mListScope, 0, sizeof mListScope );
+
+        if ( mSymInfo->GetSymTag() != MagoST::SymTagUDT )
+            return false;
+
+        if ( !mSymInfo->GetFieldCount( count ) )
+            return false;
+
+        if ( !mSymInfo->GetFieldList( flistIndex ) )
+            return false;
+
+        if ( !mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
+            return false;
+
+        if ( mSession->SetChildTypeScope( flistHandle, mListScope ) != S_OK )
+            return false;
+
+        mCount = count;
+
+        return true;
+    }
+
+    bool TypeCVDeclMembers::Skip( uint32_t count )
+    {
+        if ( count > (GetCount() - mIndex) )
+        {
+            mIndex = GetCount();
+            return false;
+        }
+
+        mIndex += count;
+
+        return true;
     }
 }

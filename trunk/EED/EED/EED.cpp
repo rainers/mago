@@ -222,6 +222,10 @@ namespace MagoEE
         {
             en = new EEDEnumDArray();
         }
+        else if ( parentVal._Type->AsTypeStruct() != NULL )
+        {
+            en = new EEDEnumStruct();
+        }
         else
             return E_FAIL;
 

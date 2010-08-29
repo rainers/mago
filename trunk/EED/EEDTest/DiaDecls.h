@@ -46,8 +46,10 @@ public:
     virtual bool IsVar();
     virtual bool IsConstant();
     virtual bool IsType();
+    virtual bool IsBaseClass();
 
     virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
+    virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
 };
 
 
@@ -81,8 +83,6 @@ public:
     virtual bool IsVar();
     virtual bool IsConstant();
     virtual bool IsType();
-
-    virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
 #endif
 };
 
@@ -124,6 +124,7 @@ public:
 #endif
 
     virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
+    virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
 
 private:
     MagoST::SymTag GetTag();

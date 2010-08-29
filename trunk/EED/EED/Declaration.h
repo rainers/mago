@@ -12,6 +12,7 @@ namespace MagoEE
 {
     class Type;
     enum ENUMTY;
+    class IEnumDeclarationMembers;
 
 
     class Declaration
@@ -36,7 +37,22 @@ namespace MagoEE
         virtual bool IsVar() = 0;
         virtual bool IsConstant() = 0;
         virtual bool IsType() = 0;
+        virtual bool IsBaseClass() = 0;
 
         virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl ) = 0;
+        virtual bool EnumMembers( IEnumDeclarationMembers*& members ) = 0;
+    };
+
+
+    class IEnumDeclarationMembers
+    {
+    public:
+        virtual void AddRef() = 0;
+        virtual void Release() = 0;
+
+        virtual uint32_t GetCount() = 0;
+        virtual bool Next( MagoEE::Declaration*& decl ) = 0;
+        virtual bool Skip( uint32_t count ) = 0;
+        virtual bool Reset() = 0;
     };
 }

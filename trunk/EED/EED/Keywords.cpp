@@ -124,6 +124,7 @@ static Keyword gKeywords[] =
     { L"typedef", TOKtypedef },
     { L"typeid", TOKtypeid },
     { L"typeof", TOKtypeof },
+    { L"typeof2", TOKtypeof2 },
 
     { L"ubyte", TOKuns8 },
     { L"ucent", TOKucent },

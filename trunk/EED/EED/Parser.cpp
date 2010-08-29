@@ -608,39 +608,6 @@ Done:
                 break;
             }
 
-        // (type).propertyID
-        case TOKlparen:
-            {
-                const Token*    peekToken = PeekToken( &GetToken() );
-
-                if ( IsDeclaration( peekToken, DeclId_None, TOKrparen, &peekToken ) )
-                {
-                    peekToken = PeekToken( peekToken );
-                    if ( peekToken->Code == TOKdot )
-                    {
-                        RefPtr<Type>    type;
-
-                        NextToken();        // read '('
-                        type = ParseType();
-                        Match( TOKrparen );
-                        NextToken();        // read '.'
-
-                        if ( GetTokenCode() != TOKidentifier )
-                            throw 30;
-
-                        RefPtr<Expression>  typeExpr = new TypeExpr( type );
-                        e = new DotExpr( typeExpr, GetToken().Utf16Str );
-                        NextToken();        // read ID
-                        e = ParsePostfixExpr( e );
-                        return e;
-                    }
-                }
-
-                e = ParsePrimaryExpr();
-                e = ParsePostfixExpr( e.Get() );
-            }
-            break;
-
         // don't worry about C-style casts
         default:
             e = ParsePrimaryExpr();
@@ -947,6 +914,16 @@ Lidentifier:
             {
                 RefPtr<TypeQualified>   t = ParseTypeof();
                 e = new TypeExpr( t.Get() );
+            }
+            break;
+
+        case TOKtypeof2:
+            {
+                NextToken();
+                ReadToken( TOKlparen );
+                RefPtr<Type>    t = ParseType();
+                ReadToken( TOKrparen );
+                e = new TypeExpr( t );
             }
             break;
 
