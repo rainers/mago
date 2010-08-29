@@ -154,6 +154,11 @@ namespace Mago
             MagoST::ISymbolInfo* symInfo, 
             MagoEE::Declaration*& decl );
 
+        HRESULT MakeDeclarationFromBaseClassSymbol( 
+            const MagoST::SymInfoData& infoData,
+            MagoST::ISymbolInfo* symInfo, 
+            MagoEE::Declaration*& decl );
+
         HRESULT GetTypeFromTypeSymbol( 
             MagoST::TypeIndex typeIndex,
             MagoEE::Type*& type );

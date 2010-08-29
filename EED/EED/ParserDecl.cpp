@@ -765,6 +765,7 @@ Done:
 
     RefPtr<TypeQualified>        Parser::ParseTypeName( TypeQualified* typeName )
     {
+        TOK                     curTokCode = TOKreserved;
         Utf16String*            id = NULL;
         RefPtr<TypeQualified>   qualified = typeName;
 
@@ -798,7 +799,12 @@ Done:
                 else
                     qualified->Parts.push_back( instance.Get() );
             }
-        } while ( GetTokenCode() == TOKdot );
+
+            curTokCode = GetTokenCode();
+            if ( curTokCode == TOKdot )
+                // get it ready for looping around again, which expects an ID
+                NextToken();
+        } while ( curTokCode == TOKdot );
 
         return qualified;
     }

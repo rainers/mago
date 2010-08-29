@@ -52,8 +52,10 @@ namespace Mago
         virtual bool IsVar();
         virtual bool IsConstant();
         virtual bool IsType();
+        virtual bool IsBaseClass();
 
         virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
+        virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
     };
 
 
@@ -91,5 +93,35 @@ namespace Mago
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
 
         virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
+        virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
+    };
+
+
+    class TypeCVDeclMembers : public MagoEE::IEnumDeclarationMembers
+    {
+        long                        mRefCount;
+
+        RefPtr<ExprContext>         mSymStore;
+        RefPtr<MagoST::ISession>    mSession;
+        MagoST::SymInfoData         mSymInfoData;
+        MagoST::ISymbolInfo*        mSymInfo;
+
+        MagoST::TypeScope           mListScope;
+        uint32_t                    mCount;
+        uint32_t                    mIndex;
+
+    public:
+        TypeCVDeclMembers( 
+            ExprContext* symStore,
+            const MagoST::SymInfoData& infoData, 
+            MagoST::ISymbolInfo* symInfo );
+
+        virtual void AddRef();
+        virtual void Release();
+
+        virtual uint32_t GetCount();
+        virtual bool Next( MagoEE::Declaration*& decl );
+        virtual bool Skip( uint32_t count );
+        virtual bool Reset();
     };
 }

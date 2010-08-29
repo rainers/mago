@@ -80,9 +80,19 @@ bool DeclDataElement::IsType()
     return false;
 }
 
+bool DeclDataElement::IsBaseClass()
+{
+    return false;
+}
+
 HRESULT DeclDataElement::FindObject( const wchar_t* name, Declaration*& decl )
 {
     return E_FAIL;
+}
+
+bool DeclDataElement::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
+{
+    return false;
 }
 
 

@@ -187,9 +187,19 @@ bool DiaDecl::IsType()
     return false;
 }
 
+bool DiaDecl::IsBaseClass()
+{
+    return mSymInfo->GetSymTag() == MagoST::SymTagBaseClass;
+}
+
 HRESULT DiaDecl::FindObject( const wchar_t* name, Declaration*& decl )
 {
     return HRESULT_FROM_WIN32( ERROR_NOT_FOUND );
+}
+
+bool DiaDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
+{
+    return false;
 }
 
 
@@ -447,6 +457,11 @@ HRESULT TypeDiaDecl::FindObject( const wchar_t* name, Declaration*& decl )
     }
 
     return S_OK;
+}
+
+bool TypeDiaDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
+{
+    return false;
 }
 
 SymTag TypeDiaDecl::GetTag()

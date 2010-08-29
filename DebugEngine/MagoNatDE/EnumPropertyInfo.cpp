@@ -79,6 +79,7 @@ namespace Mago
         HRESULT     hr = S_OK;
         uint32_t    countLeft = mEEEnum->GetCount() - mEEEnum->GetIndex();
         uint32_t    i = 0;
+        uint32_t    countStored = 0;
         MagoEE::EvalOptions options = { 0 };
         wstring     name;
         wstring     fullName;
@@ -91,16 +92,19 @@ namespace Mago
             // make sure this is in the loop so it gets cleaned up every time
             MagoEE::EvalResult  result = { 0 };
 
+            // keep enumerating even if we fail to get an item
             hr = mEEEnum->EvaluateNext( options, result, name, fullName );
             if ( FAILED( hr ) )
-                return hr;
+                continue;
 
-            hr = GetPropertyInfo( result, name.c_str(), fullName.c_str(), rgelt[i] );
+            hr = GetPropertyInfo( result, name.c_str(), fullName.c_str(), rgelt[countStored] );
             if ( FAILED( hr ) )
-                return hr;
+                continue;
+
+            countStored++;
         }
 
-        *pceltFetched = i;
+        *pceltFetched = countStored;
 
         return S_OK;
     }

@@ -806,6 +806,10 @@ namespace Mago
             hr = MakeDeclarationFromDataSymbol( infoData, symInfo, decl );
             break;
 
+        case SymTagBaseClass:
+            hr = MakeDeclarationFromBaseClassSymbol( infoData, symInfo, decl );
+            break;
+
         default:
             return E_FAIL;
         }
@@ -933,6 +937,34 @@ namespace Mago
 
             decl = cvDecl.Detach();
         }
+
+        return S_OK;
+    }
+
+    HRESULT ExprContext::MakeDeclarationFromBaseClassSymbol( 
+        const MagoST::SymInfoData& infoData,
+        MagoST::ISymbolInfo* symInfo, 
+        MagoEE::Declaration*& decl )
+    {
+        HRESULT                 hr = S_OK;
+        MagoST::TypeIndex       typeIndex = 0;
+        RefPtr<MagoEE::Type>    type;
+        RefPtr<GeneralCVDecl>   cvDecl;
+
+        if ( !symInfo->GetType( typeIndex ) )
+            return E_FAIL;
+
+        hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        cvDecl = new GeneralCVDecl( this, infoData, symInfo );
+        if ( cvDecl == NULL )
+            return E_OUTOFMEMORY;
+
+        cvDecl->SetType( type );
+
+        decl = cvDecl.Detach();
 
         return S_OK;
     }

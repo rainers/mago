@@ -256,4 +256,188 @@ namespace MagoEE
 
         return S_OK;
     }
+
+
+    //------------------------------------------------------------------------
+    //  EEDEnumStruct
+    //------------------------------------------------------------------------
+
+    EEDEnumStruct::EEDEnumStruct()
+        :   mCountDone( 0 )
+    {
+    }
+
+    HRESULT EEDEnumStruct::Init( 
+        IValueBinder* binder, 
+        const wchar_t* parentExprText, 
+        const DataObject& parentVal,
+        ITypeEnv* typeEnv,
+        NameTable* strTable )
+    {
+        HRESULT             hr = S_OK;
+        RefPtr<Declaration> decl;
+        RefPtr<IEnumDeclarationMembers> members;
+
+        if ( parentVal._Type == NULL )
+            return E_INVALIDARG;
+
+        if ( parentVal._Type->AsTypeStruct() == NULL )
+            return E_INVALIDARG;
+
+        decl = parentVal._Type->GetDeclaration();
+        if ( decl == NULL )
+            return E_INVALIDARG;
+
+        if ( !decl->EnumMembers( members.Ref() ) )
+            return E_INVALIDARG;
+
+        hr = EEDEnumValues::Init(
+            binder,
+            parentExprText,
+            parentVal,
+            typeEnv,
+            strTable );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mMembers = members;
+
+        return S_OK;
+    }
+
+    uint32_t EEDEnumStruct::GetCount()
+    {
+        return mMembers->GetCount();
+    }
+
+    uint32_t EEDEnumStruct::GetIndex()
+    {
+        return mCountDone;
+    }
+
+    void EEDEnumStruct::Reset()
+    {
+        mCountDone = 0;
+        mMembers->Reset();
+    }
+
+    HRESULT EEDEnumStruct::Skip( uint32_t count )
+    {
+        if ( count > (GetCount() - mCountDone) )
+        {
+            mCountDone = GetCount();
+            return S_FALSE;
+        }
+
+        mCountDone += count;
+        mMembers->Skip( count );
+
+        return S_OK;
+    }
+
+    HRESULT EEDEnumStruct::Clone( IEEDEnumValues*& copiedEnum )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<EEDEnumStruct>  en = new EEDEnumStruct();
+
+        if ( en == NULL )
+            return E_OUTOFMEMORY;
+
+        hr = en->Init( mBinder, mParentExprText.c_str(), mParentVal, mTypeEnv, mStrTable );
+        if ( FAILED( hr ) )
+            return hr;
+
+        en->Skip( mCountDone );
+
+        copiedEnum = en.Detach();
+        return S_OK;
+    }
+
+    HRESULT EEDEnumStruct::EvaluateNext( 
+        const EvalOptions& options, 
+        EvalResult& result,
+        std::wstring& name,
+        std::wstring& fullName )
+    {
+        if ( mCountDone >= GetCount() )
+            return E_FAIL;
+
+        HRESULT hr = S_OK;
+        RefPtr<Declaration>     decl;
+        RefPtr<IEEDParsedExpr>  parsedExpr;
+
+        if ( !mMembers->Next( decl.Ref() ) )
+            return E_FAIL;
+
+        mCountDone++;
+
+        name.clear();
+        fullName.clear();
+
+        if ( decl->IsBaseClass() )
+        {
+            if ( !NameBaseClass( decl, name, fullName ) )
+                return E_FAIL;
+        }
+        else
+        {
+            if ( !NameRegularMember( decl, name, fullName ) )
+                return E_FAIL;
+        }
+
+        hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = parsedExpr->Bind( options, mBinder );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = parsedExpr->Evaluate( options, mBinder, result );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
+    bool EEDEnumStruct::NameBaseClass( 
+            Declaration* decl, 
+            std::wstring& name,
+            std::wstring& fullName )
+    {
+        RefPtr<Type>        baseType;
+        RefPtr<Declaration> baseDecl;
+
+        if ( !decl->GetType( baseType.Ref() ) )
+            return false;
+
+        baseDecl = baseType->GetDeclaration();
+        if ( baseDecl == NULL )
+            return false;
+
+        name.append( baseDecl->GetName() );
+
+        fullName.append( L"cast(" );
+        fullName.append( name );
+        fullName.append( L"*)&(" );
+        fullName.append( mParentExprText );
+        fullName.append( L")" );
+
+        return true;
+    }
+
+    bool EEDEnumStruct::NameRegularMember( 
+            Declaration* decl, 
+            std::wstring& name,
+            std::wstring& fullName )
+    {
+        name.append( decl->GetName() );
+
+        fullName.append( L"(" );
+        fullName.append( mParentExprText );
+        fullName.append( L")." );
+        fullName.append( name );
+
+        return true;
+    }
 }

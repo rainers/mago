@@ -81,4 +81,45 @@ namespace MagoEE
 
 
     typedef EEDEnumSArray EEDEnumDArray;
+
+
+    class EEDEnumStruct : public EEDEnumValues
+    {
+        uint32_t        mCountDone;
+
+        RefPtr<IEnumDeclarationMembers> mMembers;
+
+    public:
+        EEDEnumStruct();
+
+        virtual HRESULT Init( 
+            IValueBinder* binder, 
+            const wchar_t* parentExprText, 
+            const DataObject& parentVal,
+            ITypeEnv* typeEnv,
+            NameTable* strTable );
+
+        virtual uint32_t GetCount();
+        virtual uint32_t GetIndex();
+        virtual void Reset();
+        virtual HRESULT Skip( uint32_t count );
+        virtual HRESULT Clone( IEEDEnumValues*& copiedEnum );
+
+        virtual HRESULT EvaluateNext( 
+            const EvalOptions& options, 
+            EvalResult& result, 
+            std::wstring& name, 
+            std::wstring& fullName );
+
+    private:
+        bool NameBaseClass( 
+            Declaration* decl, 
+            std::wstring& name,
+            std::wstring& fullName );
+
+        bool NameRegularMember( 
+            Declaration* decl, 
+            std::wstring& name,
+            std::wstring& fullName );
+    };
 }
