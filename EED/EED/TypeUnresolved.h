@@ -69,6 +69,7 @@ namespace MagoEE
 
     protected:
         RefPtr<Type> ResolveTypeChain( Declaration* head );
+        RefPtr<Type> ResolveNamePath( const wchar_t* headName, IValueBinder* binder );
     };
 
 

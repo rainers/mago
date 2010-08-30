@@ -20,6 +20,7 @@ namespace MagoEE
     class Declaration;
     class NamingExpression;
     class StdProperty;
+    class SharedString;
 
 
     enum EvalMode
@@ -67,6 +68,10 @@ namespace MagoEE
         virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
         virtual bool TrySetType( Type* type );
         virtual NamingExpression* AsNamingExpression();
+
+        // returns E_MAGOEE_SYMBOL_NOT_FOUND 
+        //          if this node does not support making up a dotted name
+        virtual HRESULT MakeName( uint32_t capacity, RefPtr<SharedString>& namePath );
 
         static bool ConvertToBool( DataObject& obj );
         static Complex10 ConvertToComplex( DataObject& x );
@@ -611,6 +616,12 @@ namespace MagoEE
 
     class DotExpr : public NamingExpression
     {
+        RefPtr<SharedString>    mNamePath;
+        // the length of the name path from the root to this node
+        // we need to assign this value right after we append to the name path
+        // because our parent might append its own name and change the length
+        uint32_t                mNamePathLen;
+
     public:
         RefPtr<Expression>  Child;
         Utf16String*        Id;
@@ -619,6 +630,9 @@ namespace MagoEE
         DotExpr( Expression* child, Utf16String* id );
         virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
+
+    protected:
+        virtual HRESULT MakeName( uint32_t capacity, RefPtr<SharedString>& namePath );
 
     private:
         HRESULT SemanticStdProperty( ITypeEnv* typeEnv );
@@ -684,12 +698,17 @@ namespace MagoEE
 
     class IdExpr : public NamingExpression
     {
+        RefPtr<SharedString>    mNamePath;
+
     public:
         Utf16String*    Id;
 
         IdExpr( Utf16String* id );
         virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
+
+    protected:
+        virtual HRESULT MakeName( uint32_t capacity, RefPtr<SharedString>& namePath );
 
     private:
         HRESULT FindObject( const wchar_t* name, IValueBinder* binder, Declaration*& decl );
