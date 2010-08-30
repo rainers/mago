@@ -417,7 +417,7 @@ namespace MagoEE
 
         name.append( baseDecl->GetName() );
 
-        fullName.append( L"cast(" );
+        fullName.append( L"*cast(" );
         fullName.append( name );
         fullName.append( L"*)&(" );
         fullName.append( mParentExprText );

@@ -16,6 +16,7 @@
 #include "ITypeEnv.h"
 #include "Property.h"
 #include "PropTables.h"
+#include "SharedString.h"
 
 
 namespace MagoEE
@@ -644,36 +645,53 @@ namespace MagoEE
         ClearEvalData();
         Property = NULL;
 
-        hr = Child->Semantic( evalData, typeEnv, binder );
-        if ( FAILED( hr ) )
+        RefPtr<SharedString>    namePath;
+        hr = MakeName( 0, namePath );
+        if ( FAILED( hr ) && (hr != E_MAGOEE_SYMBOL_NOT_FOUND) )
             return hr;
 
-        // if child is value or type
-        if ( Child->Kind != DataKind_Declaration )
+        if ( SUCCEEDED( hr ) )
         {
-            ITypeStruct* t = NULL;
+            const wchar_t*  name = mNamePath->GetCut( mNamePathLen );
 
-            if ( Child->_Type == NULL )
-                return E_MAGOEE_NO_TYPE;
+            binder->FindObject( name, Decl.Ref() );
 
-            if ( Child->_Type->AsTypeStruct() != NULL )
-                t = Child->_Type->AsTypeStruct();
-            else if ( Child->_Type->IsPointer() 
-                && (Child->_Type->AsTypeNext()->GetNext()->AsTypeStruct() != NULL) )
-                t = Child->_Type->AsTypeNext()->GetNext()->AsTypeStruct();
-
-            if ( t != NULL )
-            {
-                Decl = t->FindObject( Id->Str );
-            }
+            mNamePath->ReleaseCut();
         }
-        else
+
+        if ( Decl == NULL )
         {
-            NamingExpression*   namer = Child->AsNamingExpression();
-            if ( namer != NULL )
+            hr = Child->Semantic( evalData, typeEnv, binder );
+            if ( FAILED( hr ) )
+                return hr;
+
+            // if child is value or type
+            if ( Child->Kind != DataKind_Declaration )
             {
-                _ASSERT( namer->Decl != NULL );
-                namer->Decl->FindObject( Id->Str, Decl.Ref() );
+                ITypeStruct* t = NULL;
+
+                if ( Child->_Type == NULL )
+                    return E_MAGOEE_NO_TYPE;
+
+                if ( Child->_Type->AsTypeStruct() != NULL )
+                    t = Child->_Type->AsTypeStruct();
+                else if ( Child->_Type->IsPointer() 
+                    && (Child->_Type->AsTypeNext()->GetNext()->AsTypeStruct() != NULL) )
+                    t = Child->_Type->AsTypeNext()->GetNext()->AsTypeStruct();
+
+                if ( t != NULL )
+                {
+                    Decl = t->FindObject( Id->Str );
+                }
+            }
+            else
+            {
+                NamingExpression*   namer = Child->AsNamingExpression();
+                if ( namer != NULL )
+                {
+                    _ASSERT( namer->Decl != NULL );
+                    namer->Decl->FindObject( Id->Str, Decl.Ref() );
+                }
             }
         }
 

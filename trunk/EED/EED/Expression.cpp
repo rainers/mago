@@ -11,6 +11,8 @@
 #include "TypeUnresolved.h"
 #include "Declaration.h"
 #include "Property.h"
+#include "SharedString.h"
+#include "NameTable.h"
 
 
 namespace MagoEE
@@ -47,6 +49,14 @@ namespace MagoEE
         _Type = NULL;
         Kind = DataKind_None;
     }
+
+    HRESULT Expression::MakeName( uint32_t capacity, RefPtr<SharedString>& namePath )
+    {
+        UNREFERENCED_PARAMETER( capacity );
+        UNREFERENCED_PARAMETER( namePath );
+        return E_MAGOEE_SYMBOL_NOT_FOUND;
+    }
+
 
     //----------------------------------------------------------------------------
     //  BinExpr
@@ -427,8 +437,30 @@ namespace MagoEE
     DotExpr::DotExpr( Expression* child, Utf16String* id )
         :   Child( child ),
             Id( id ),
-            Property( NULL )
+            Property( NULL ),
+            mNamePathLen( 0 )
     {
+    }
+
+    HRESULT DotExpr::MakeName( uint32_t capacity, RefPtr<SharedString>& namePath )
+    {
+        HRESULT hr = S_OK;
+
+        if ( mNamePath == NULL )
+        {
+            hr = Child->MakeName( capacity + Id->Length + 1, mNamePath );
+            if ( FAILED( hr ) )
+                return hr;
+
+            mNamePath->Append( L"." );
+            mNamePath->Append( Id->Str );
+
+            mNamePathLen = mNamePath->GetLength();
+        }
+
+        namePath = mNamePath;
+
+        return S_OK;
     }
 
 
@@ -495,6 +527,21 @@ namespace MagoEE
     IdExpr::IdExpr( Utf16String* id )
         :   Id( id )
     {
+    }
+
+    HRESULT IdExpr::MakeName( uint32_t capacity, RefPtr<SharedString>& namePath )
+    {
+        if ( mNamePath == NULL )
+        {
+            if ( !SharedString::Make( capacity + Id->Length, mNamePath ) )
+                return E_OUTOFMEMORY;
+
+            mNamePath->Append( Id->Str );
+        }
+
+        namePath = mNamePath;
+
+        return S_OK;
     }
 
 

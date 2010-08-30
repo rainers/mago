@@ -111,6 +111,47 @@ namespace MagoEE
         return type;
     }
 
+    RefPtr<Type> TypeQualified::ResolveNamePath( const wchar_t* headName, IValueBinder* binder )
+    {
+        HRESULT             hr = S_OK;
+        std::wstring        fullName;
+        RefPtr<Declaration> decl;
+        RefPtr<Type>        type;
+
+        fullName.append( headName );
+
+        for ( std::vector< RefPtr<NamePart> >::iterator it = Parts.begin();
+            it != Parts.end();
+            it++ )
+        {
+            if ( (*it)->AsId() != NULL )
+            {
+                IdPart* idPart = (*it)->AsId();
+
+                fullName.append( 1, L'.' );
+                fullName.append( idPart->Id->Str );
+            }
+            else
+            {
+                // TODO: TemplateInstancePart
+                _ASSERT( false );
+            }
+        }
+
+        hr = binder->FindObject( fullName.c_str(), decl.Ref() );
+        if ( FAILED( hr ) )
+            return NULL;
+
+        if ( !decl->IsType() )
+            return NULL;
+
+        hr = decl->GetType( type.Ref() );
+        if ( FAILED( hr ) )
+            return NULL;
+
+        return type;
+    }
+
 
     //----------------------------------------------------------------------------
     //  TypeReturn
@@ -257,6 +298,11 @@ namespace MagoEE
 
         HRESULT hr = S_OK;
         RefPtr<Declaration> decl;
+        RefPtr<Type>        resolvedType;
+
+        resolvedType = ResolveNamePath( Id->Str, binder );
+        if ( resolvedType != NULL )
+            return resolvedType;
 
         hr = binder->FindObject( Id->Str, decl.Ref() );
         if ( FAILED( hr ) )
