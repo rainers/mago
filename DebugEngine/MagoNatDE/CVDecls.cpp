@@ -475,7 +475,7 @@ namespace Mago
         if ( mIndex >= GetCount() )
             return false;
 
-        if ( !mSession->NextType( mListScope, childTH ) )
+        if ( !NextMember( mListScope, childTH ) )
             return false;
 
         mIndex++;
@@ -500,8 +500,7 @@ namespace Mago
         if ( mSymInfo->GetSymTag() != MagoST::SymTagUDT )
             return false;
 
-        if ( !mSymInfo->GetFieldCount( count ) )
-            return false;
+        count = CountMembers();
 
         if ( !mSymInfo->GetFieldList( flistIndex ) )
             return false;
@@ -526,6 +525,66 @@ namespace Mago
         }
 
         mIndex += count;
+
+        for ( uint32_t i = 0; i < count; i++ )
+        {
+            MagoST::TypeHandle  memberTH;
+
+            NextMember( mListScope, memberTH );
+        }
+
+        return true;
+    }
+
+    uint16_t TypeCVDeclMembers::CountMembers()
+    {
+        MagoST::TypeIndex   flistIndex = 0;
+        MagoST::TypeHandle  flistHandle = { 0 };
+        MagoST::TypeScope   flistScope = { 0 };
+        uint16_t            maxCount = 0;
+        uint16_t            count = 0;
+
+        if ( !mSymInfo->GetFieldCount( maxCount ) )
+            return 0;
+
+        if ( !mSymInfo->GetFieldList( flistIndex ) )
+            return 0;
+
+        if ( !mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
+            return 0;
+
+        if ( mSession->SetChildTypeScope( flistHandle, flistScope ) != S_OK )
+            return 0;
+
+        for ( uint16_t i = 0; i < maxCount; i++ )
+        {
+            MagoST::TypeHandle      memberTH = { 0 };
+
+            if ( !NextMember( flistScope, memberTH ) )
+                continue;
+
+            count++;
+        }
+
+        return count;
+    }
+
+    bool TypeCVDeclMembers::NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH )
+    {
+        MagoST::SymInfoData     infoData;
+        MagoST::ISymbolInfo*    symInfo = NULL;
+        MagoST::SymTag          tag = MagoST::SymTagNull;
+
+        if ( !mSession->NextType( scope, memberTH ) )
+            return false;
+
+        if ( mSession->GetTypeInfo( memberTH, infoData, symInfo ) != S_OK )
+            return false;
+
+        tag = symInfo->GetSymTag();
+
+        if ( (tag != MagoST::SymTagData) && (tag != MagoST::SymTagBaseClass) )
+            return false;
 
         return true;
     }
