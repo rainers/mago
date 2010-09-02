@@ -240,6 +240,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\SharedString.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\SimpleNameTable.cpp"
 				>
 			</File>
@@ -339,6 +343,10 @@
 			</File>
 			<File
 				RelativePath=".\Scanner.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SharedString.h"
 				>
 			</File>
 			<File
