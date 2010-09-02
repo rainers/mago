@@ -123,5 +123,9 @@ namespace Mago
         virtual bool Next( MagoEE::Declaration*& decl );
         virtual bool Skip( uint32_t count );
         virtual bool Reset();
+
+    private:
+        uint16_t CountMembers();
+        bool NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH );
     };
 }
