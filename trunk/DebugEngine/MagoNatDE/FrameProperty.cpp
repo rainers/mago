@@ -133,9 +133,12 @@ namespace Mago
 
         HRESULT hr = S_OK;
         RefPtr<MagoEE::IEEDParsedExpr>  parsedExpr;
+        uint32_t    curIndex = mIndex;
+
+        mIndex++;
 
         name.clear();
-        name.append( mNames[mIndex] );
+        name.append( mNames[curIndex] );
 
         fullName.clear();
         fullName.append( name );
@@ -155,8 +158,6 @@ namespace Mago
         hr = parsedExpr->Evaluate( options, mExprContext, result );
         if ( FAILED( hr ) )
             return hr;
-
-        mIndex++;
 
         return S_OK;
     }
