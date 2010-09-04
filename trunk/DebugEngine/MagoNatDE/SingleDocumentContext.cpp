@@ -29,4 +29,21 @@ namespace Mago
     {
         return DocumentContext::Init( filename, statementBegin, statementEnd, langName, langGuid );
     }
+
+    HRESULT SingleDocumentContext::Clone( DocumentContext** ppDocContext )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<SingleDocumentContext>   docContext;
+
+        hr = MakeCComObject( docContext );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = docContext->Init( mFilename, mStatementBegin, mStatementEnd, mLangName, mLangGuid );
+        if ( FAILED( hr ) )
+            return hr;
+
+        *ppDocContext = docContext.Detach();
+        return S_OK;
+    }
 }

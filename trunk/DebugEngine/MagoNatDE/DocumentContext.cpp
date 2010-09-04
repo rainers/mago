@@ -113,7 +113,17 @@ namespace Mago
        IDebugDocumentContext2** ppDocContext
     )
     {
-        return E_NOTIMPL;
+        HRESULT hr = S_OK;
+        RefPtr<DocumentContext> docContext;
+
+        hr = Clone( &docContext.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        docContext->mStatementBegin.dwLine += nCount;
+        docContext->mStatementEnd.dwLine += nCount;
+
+        return docContext->QueryInterface( __uuidof( IDebugDocumentContext2 ), (void**) ppDocContext );
     }
 
 
