@@ -38,6 +38,23 @@ namespace Mago
         return DocumentContext::Init( filename, statementBegin, statementEnd, langName, langGuid );
     }
 
+    HRESULT BPDocumentContext::Clone( DocumentContext** ppDocContext )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<BPDocumentContext>   docContext;
+
+        hr = MakeCComObject( docContext );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = docContext->Init( mBPParent, mFilename, mStatementBegin, mStatementEnd, mLangName, mLangGuid );
+        if ( FAILED( hr ) )
+            return hr;
+
+        *ppDocContext = docContext.Detach();
+        return S_OK;
+    }
+
     void BPDocumentContext::Dispose()
     {
         mBPParent.Release();

@@ -42,7 +42,12 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = codeContext->Init( mPC, mModule, NULL );
+        CComPtr<IDebugDocumentContext2> docContext;
+        hr = GetDocumentContext( &docContext );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = codeContext->Init( mPC, mModule, docContext );
         if ( FAILED( hr ) )
             return hr;
 

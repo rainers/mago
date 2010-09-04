@@ -13,6 +13,7 @@ namespace Mago
     class ATL_NO_VTABLE DocumentContext : 
         public IDebugDocumentContext2
     {
+    protected:
         TEXT_POSITION               mStatementBegin;
         TEXT_POSITION               mStatementEnd;
         CComBSTR                    mFilename;
@@ -57,5 +58,7 @@ namespace Mago
             TEXT_POSITION& statementEnd,
             const wchar_t* langName,
             const GUID& langGuid );
+
+        virtual HRESULT Clone( DocumentContext** ppDocContext ) = 0;
     };
 }

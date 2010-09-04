@@ -45,6 +45,8 @@ namespace Mago
             const wchar_t* langName,
             const GUID& langGuid );
 
+        virtual HRESULT Clone( DocumentContext** ppDocContext );
+
         void Dispose();
     };
 }
