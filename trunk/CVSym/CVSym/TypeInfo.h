@@ -69,8 +69,8 @@ namespace MagoST
         virtual bool GetType( TypeIndex& index );
         virtual bool GetName( PasString*& name );
 
+        virtual bool GetLength( uint32_t& length );
         virtual bool GetIndexType( TypeIndex& index );
-        virtual bool GetCount( uint32_t& count );
     };
 
 
