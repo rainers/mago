@@ -259,17 +259,17 @@ namespace MagoST
         return true;
     }
 
+    bool ArrayTypeSymbol::GetLength( uint32_t& length )
+    {
+        CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
+        length = GetUIntValue( &type->array.arraylen );
+        return true;
+    }
+
     bool ArrayTypeSymbol::GetIndexType( TypeIndex& index )
     {
         CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
         index = type->array.idxtype;
-        return true;
-    }
-
-    bool ArrayTypeSymbol::GetCount( uint32_t& count )
-    {
-        CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
-        count = GetUIntValue( &type->array.arraylen );
         return true;
     }
 

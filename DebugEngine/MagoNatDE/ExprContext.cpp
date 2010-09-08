@@ -1101,18 +1101,24 @@ namespace Mago
             {
                 RefPtr<MagoEE::Type>    elemType;
                 RefPtr<MagoEE::Type>    arrayType;
+                uint32_t                len = 0;
+                uint32_t                elemSize = 0;
                 uint32_t                count = 0;
                 MagoST::TypeIndex       elemTypeIndex = 0;
 
                 if ( !symInfo->GetType( elemTypeIndex ) )
                     return E_NOT_FOUND;
 
-                if ( !symInfo->GetCount( count ) )
+                if ( !symInfo->GetLength( len ) )
                     return E_NOT_FOUND;
 
                 hr = GetTypeFromTypeSymbol( elemTypeIndex, elemType.Ref() );
                 if ( FAILED( hr ) )
                     return hr;
+
+                elemSize = elemType->GetSize();
+                if ( elemSize != 0 )
+                    count = len / elemSize;
 
                 hr = mTypeEnv->NewSArray( elemType, count, arrayType.Ref() );
                 if ( FAILED( hr ) )
