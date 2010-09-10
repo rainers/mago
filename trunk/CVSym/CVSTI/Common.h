@@ -39,3 +39,7 @@
 
 // BinImage project
 #include "..\BinImage\BinImage.h"
+
+// Windows declarations that I don't want
+#undef max
+#undef min
