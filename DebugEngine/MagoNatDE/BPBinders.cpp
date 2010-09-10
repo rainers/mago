@@ -103,7 +103,7 @@ namespace Mago
                     continue;
 
                 // do the line ranges overlap?
-                if ( ((line.Number <= mReqLineEnd) && (line.NumberEnd >= mReqLineStart)) )
+                if ( ((line.Number <= mReqLineEnd) && (line.Number >= mReqLineStart)) )
                 {
                     line.NumberEnd = line.Number;
 

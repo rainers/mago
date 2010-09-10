@@ -394,29 +394,44 @@ namespace MagoST
         if ( !mStore->FindCompilandFileSegment( line, compIndex, fileIndex, fileSegInfo ) )
             return false;
 
-        uint16_t    lineStart = fileSegInfo.LineNumbers[0];
-        uint16_t    lineEnd = fileSegInfo.LineNumbers[ fileSegInfo.LineCount - 1 ];
+        if ( fileSegInfo.LineCount == 0 )
+            return false;
 
-        if ( line < lineStart )
+        int     lastLine = 0;
+        int     closestDist = std::numeric_limits<int>::max();
+        int     lastLineIndex = -1;
+        int     closestLineIndex = -1;
+
+        for ( int i = 0; i < fileSegInfo.LineCount; i++ )
         {
-            SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, 0, lineNumber );
+            int curLine = fileSegInfo.LineNumbers[i];
+
+            if ( curLine > lastLine )
+            {
+                lastLine = curLine;
+                lastLineIndex = i;
+            }
+
+            if ( (curLine >= line) && ((curLine - line) < closestDist) )
+            {
+                closestDist = curLine - line;
+                closestLineIndex = i;
+            }
         }
-        else if ( line > lineEnd )
+
+        // a line was found after or at the target line
+        // it's the closest one, so use it
+
+        if ( closestLineIndex >= 0 )
         {
-            SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, fileSegInfo.LineCount - 1, lineNumber );
+            SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, (uint16_t) closestLineIndex, lineNumber );
         }
         else
         {
-            int     i = 0;
-            bool    found = false;
+            // there are lines, so one of them has to be the last one
+            _ASSERT( lastLineIndex >= 0 );
 
-            found = BinarySearch<WORD>( line, fileSegInfo.LineNumbers, fileSegInfo.LineCount, i );
-            UNREFERENCED_PARAMETER( found );
-
-            // since we already made sure that the line is inside the range we're looking thru
-            _ASSERT( found );
-
-            SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, (uint16_t) i, lineNumber );
+            SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, (uint16_t) lastLineIndex, lineNumber );
         }
 
         return true;
