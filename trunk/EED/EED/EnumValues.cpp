@@ -19,6 +19,10 @@ namespace MagoEE
     {
     }
 
+    EEDEnumValues::~EEDEnumValues()
+    {
+    }
+
     void EEDEnumValues::AddRef()
     {
         InterlockedIncrement( &mRefCount );
