@@ -25,6 +25,7 @@ namespace MagoEE
 
     public:
         EEDEnumValues();
+        virtual ~EEDEnumValues();
 
         virtual void AddRef();
         virtual void Release();

@@ -38,6 +38,10 @@ namespace Mago
         mTypeEnv = symStore->GetTypeEnv();
     }
 
+    CVDecl::~CVDecl()
+    {
+    }
+
     MagoST::ISymbolInfo* CVDecl::GetSymbol()
     {
         return mSymInfo;

@@ -34,6 +34,7 @@ namespace Mago
             ExprContext* symStore,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo );
+        virtual ~CVDecl();
 
         MagoST::ISymbolInfo* GetSymbol();
 
