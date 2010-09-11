@@ -41,6 +41,7 @@ public:
     virtual bool GetOffset( int& offset );
     virtual bool GetSize( uint32_t& size );
     virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
+    virtual bool GetUdtKind( MagoEE::UdtKind& kind );
 
     virtual bool IsField();
     virtual bool IsVar();

@@ -18,6 +18,9 @@
 
 using namespace MagoST;
 
+// use references instead of pointers to classes
+#define USE_REFERENCE_TYPE  1
+
 
 // from DMD source
 #define DMD_OEM 0x42    // Digital Mars OEM number (picked at random)
@@ -105,6 +108,8 @@ namespace Mago
         size_t                      u8NameLen = 0;
         MagoST::SymHandle           symHandle = { 0 };
         RefPtr<MagoST::ISession>    session;
+        RefPtr<MagoEE::Declaration> origDecl;
+        MagoEE::UdtKind             udtKind = MagoEE::Udt_Struct;
 
         if ( !mModule->GetSymbolSession( session ) )
             return E_NOT_FOUND;
@@ -121,9 +126,29 @@ namespace Mago
                 return E_NOT_FOUND;
         }
 
-        hr = MakeDeclarationFromSymbol( symHandle, decl );
+        hr = MakeDeclarationFromSymbol( symHandle, origDecl.Ref() );
         if ( FAILED( hr ) )
             return hr;
+
+#if USE_REFERENCE_TYPE
+        if ( origDecl->IsType() && origDecl->GetUdtKind( udtKind ) 
+            && (udtKind == MagoEE::Udt_Class) )
+        {
+            decl = new ClassRefDecl( origDecl, mTypeEnv );
+            if ( decl == NULL )
+                return E_OUTOFMEMORY;
+
+            decl->AddRef();
+        }
+        else
+        {
+            decl = origDecl.Detach();
+        }
+#else
+        UNREFERENCED_PARAMETER( udtKind );
+
+        decl = origDecl.Detach();
+#endif
 
         return S_OK;
     }
@@ -1088,7 +1113,19 @@ namespace Mago
                 if ( FAILED( hr ) )
                     return E_NOT_FOUND;
 
+#if USE_REFERENCE_TYPE
+                if ( (pointed->AsTypeStruct() != NULL) 
+                    && (pointed->AsTypeStruct()->GetUdtKind() == MagoEE::Udt_Class) )
+                {
+                    hr = mTypeEnv->NewReference( pointed, pointer.Ref() );
+                }
+                else
+                {
+                    hr = mTypeEnv->NewPointer( pointed, pointer.Ref() );
+                }
+#else
                 hr = mTypeEnv->NewPointer( pointed, pointer.Ref() );
+#endif
                 if ( hr != S_OK )
                     return E_NOT_FOUND;
 

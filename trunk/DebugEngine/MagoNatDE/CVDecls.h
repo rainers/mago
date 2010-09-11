@@ -48,6 +48,7 @@ namespace Mago
         virtual bool GetOffset( int& offset );
         virtual bool GetSize( uint32_t& size );
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
+        virtual bool GetUdtKind( MagoEE::UdtKind& kind );
 
         virtual bool IsField();
         virtual bool IsVar();
@@ -128,5 +129,37 @@ namespace Mago
     private:
         uint16_t CountMembers();
         bool NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH );
+    };
+
+
+    class ClassRefDecl : public MagoEE::Declaration
+    {
+        long                        mRefCount;
+        RefPtr<MagoEE::Declaration> mOrigDecl;
+        RefPtr<MagoEE::ITypeEnv>    mTypeEnv;
+
+    public:
+        ClassRefDecl( Declaration* decl, MagoEE::ITypeEnv* typeEnv );
+
+        virtual void AddRef();
+        virtual void Release();
+
+        virtual const wchar_t* GetName();
+
+        virtual bool GetType( MagoEE::Type*& type );
+        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool GetOffset( int& offset );
+        virtual bool GetSize( uint32_t& size );
+        virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
+        virtual bool GetUdtKind( MagoEE::UdtKind& kind );
+
+        virtual bool IsField();
+        virtual bool IsVar();
+        virtual bool IsConstant();
+        virtual bool IsType();
+        virtual bool IsBaseClass();
+
+        virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl );
+        virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
     };
 }

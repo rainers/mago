@@ -104,6 +104,27 @@ namespace Mago
         return false;
     }
 
+    bool CVDecl::GetUdtKind( MagoEE::UdtKind& kind )
+    {
+        MagoST::UdtKind cvUdtKind;
+
+        if ( !mSymInfo->GetUdtKind( cvUdtKind ) )
+            return false;
+
+        switch ( cvUdtKind )
+        {
+        case MagoST::UdtStruct: kind = MagoEE::Udt_Struct;  break;
+        case MagoST::UdtClass:  kind = MagoEE::Udt_Class;   break;
+        case MagoST::UdtUnion:  kind = MagoEE::Udt_Union;   break;
+        default:
+            _ASSERT( false );
+            kind = MagoEE::Udt_Struct;
+            break;
+        }
+
+        return true;
+    }
+
     bool CVDecl::IsField()
     {
         MagoST::DataKind   kind = MagoST::DataIsUnknown;
@@ -591,5 +612,110 @@ namespace Mago
             return false;
 
         return true;
+    }
+
+
+//----------------------------------------------------------------------------
+//  ClassRefDecl
+//----------------------------------------------------------------------------
+
+    ClassRefDecl::ClassRefDecl( Declaration* decl, MagoEE::ITypeEnv* typeEnv )
+        :   mRefCount( 0 ),
+            mOrigDecl( decl ),
+            mTypeEnv( typeEnv )
+    {
+    }
+
+    void ClassRefDecl::AddRef()
+    {
+        InterlockedIncrement( &mRefCount );
+    }
+
+    void ClassRefDecl::Release()
+    {
+        long    newRef = InterlockedDecrement( &mRefCount );
+        _ASSERT( newRef >= 0 );
+        if ( newRef == 0 )
+        {
+            delete this;
+        }
+    }
+
+    const wchar_t* ClassRefDecl::GetName()
+    {
+        return NULL;
+    }
+
+    bool ClassRefDecl::GetType( MagoEE::Type*& type )
+    {
+        RefPtr<MagoEE::Type>    classType;
+
+        if ( !mOrigDecl->GetType( classType.Ref() ) )
+            return false;
+
+        if ( FAILED( mTypeEnv->NewReference( classType, type ) ) )
+            return false;
+
+        return true;
+    }
+
+    bool ClassRefDecl::GetAddress( MagoEE::Address& addr )
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::GetOffset( int& offset )
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::GetSize( uint32_t& size )
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::GetBackingTy( MagoEE::ENUMTY& ty )
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::GetUdtKind( MagoEE::UdtKind& kind )
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::IsField()
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::IsVar()
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::IsConstant()
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::IsType()
+    {
+        return true;
+    }
+
+    bool ClassRefDecl::IsBaseClass()
+    {
+        return false;
+    }
+
+    HRESULT ClassRefDecl::FindObject( const wchar_t* name, Declaration*& decl )
+    {
+        return E_NOT_FOUND;
+    }
+
+    bool ClassRefDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
+    {
+        return false;
     }
 }

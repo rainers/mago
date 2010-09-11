@@ -266,8 +266,9 @@ namespace MagoEE
     //  EEDEnumStruct
     //------------------------------------------------------------------------
 
-    EEDEnumStruct::EEDEnumStruct()
-        :   mCountDone( 0 )
+    EEDEnumStruct::EEDEnumStruct( bool skipHeadRef )
+        :   mCountDone( 0 ),
+            mSkipHeadRef( skipHeadRef )
     {
     }
 
@@ -281,14 +282,20 @@ namespace MagoEE
         HRESULT             hr = S_OK;
         RefPtr<Declaration> decl;
         RefPtr<IEnumDeclarationMembers> members;
+        DataObject          parentValCopy = parentVal;
 
-        if ( parentVal._Type == NULL )
+        if ( parentValCopy._Type == NULL )
             return E_INVALIDARG;
 
-        if ( parentVal._Type->AsTypeStruct() == NULL )
+        if ( mSkipHeadRef && parentValCopy._Type->IsReference() )
+        {
+            parentValCopy._Type = parentValCopy._Type->AsTypeNext()->GetNext();
+        }
+
+        if ( parentValCopy._Type->AsTypeStruct() == NULL )
             return E_INVALIDARG;
 
-        decl = parentVal._Type->GetDeclaration();
+        decl = parentValCopy._Type->GetDeclaration();
         if ( decl == NULL )
             return E_INVALIDARG;
 
@@ -298,7 +305,7 @@ namespace MagoEE
         hr = EEDEnumValues::Init(
             binder,
             parentExprText,
-            parentVal,
+            parentValCopy,
             typeEnv,
             strTable );
         if ( FAILED( hr ) )
@@ -421,9 +428,17 @@ namespace MagoEE
 
         name.append( baseDecl->GetName() );
 
-        fullName.append( L"*cast(" );
+        if ( !mSkipHeadRef )
+            fullName.append( L"*" );
+
+        fullName.append( L"cast(" );
         fullName.append( name );
-        fullName.append( L"*)&(" );
+
+        if ( mSkipHeadRef )
+            fullName.append( L")(" );
+        else
+            fullName.append( L"*)&(" );
+
         fullName.append( mParentExprText );
         fullName.append( L")" );
 

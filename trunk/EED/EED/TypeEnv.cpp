@@ -93,6 +93,13 @@ namespace MagoEE
         return S_OK;
     }
 
+    HRESULT TypeEnv::NewReference( Type* pointed, Type*& pointer )
+    {
+        pointer = new TypeReference( pointed );
+        pointer->AddRef();
+        return S_OK;
+    }
+
     HRESULT TypeEnv::NewDArray( Type* elem, Type*& type )
     {
         // TODO: don't allocate these every time

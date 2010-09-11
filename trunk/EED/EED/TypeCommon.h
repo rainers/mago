@@ -70,4 +70,11 @@ namespace MagoEE
 
         ALIASTMAX
     };
+
+    enum UdtKind
+    {
+        Udt_Struct,
+        Udt_Class,
+        Udt_Union
+    };
 }

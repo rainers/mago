@@ -81,6 +81,7 @@ namespace MagoEE
 
         virtual bool IsBasic();
         virtual bool IsPointer();
+        virtual bool IsReference();
         virtual bool IsSArray();
         virtual bool IsDArray();
         virtual bool IsAArray();
@@ -182,6 +183,22 @@ namespace MagoEE
         TypePointer( Type* child );
         virtual RefPtr<Type>    Copy();
         virtual bool IsPointer();
+        virtual bool IsScalar();
+        virtual bool CanRefMember();
+        virtual uint32_t GetSize();
+        virtual bool Equals( Type* other );
+        virtual void ToString( std::wstring& str );
+        virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
+    };
+
+
+    class TypeReference : public TypeNext
+    {
+    public:
+        TypeReference( Type* child );
+        virtual RefPtr<Type>    Copy();
+        virtual bool IsPointer();
+        virtual bool IsReference();
         virtual bool IsScalar();
         virtual bool CanRefMember();
         virtual uint32_t GetSize();
@@ -356,6 +373,8 @@ namespace MagoEE
         virtual RefPtr<Declaration> FindObject( const wchar_t* name ) = 0;
 
         // TODO: where do we put the method that returns all the members?
+
+        virtual UdtKind GetUdtKind() = 0;
     };
 
 
@@ -375,6 +394,7 @@ namespace MagoEE
 
         // ITypeStruct
         virtual RefPtr<Declaration> FindObject( const wchar_t* name );
+        virtual UdtKind GetUdtKind();
     };
 
 
@@ -424,6 +444,7 @@ namespace MagoEE
 
         virtual bool IsBasic();
         virtual bool IsPointer();
+        virtual bool IsReference();
         virtual bool IsSArray();
         virtual bool IsDArray();
 

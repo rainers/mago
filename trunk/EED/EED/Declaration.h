@@ -13,6 +13,7 @@ namespace MagoEE
     class Type;
     enum ENUMTY;
     class IEnumDeclarationMembers;
+    enum UdtKind;
 
 
     class Declaration
@@ -32,6 +33,7 @@ namespace MagoEE
         virtual bool GetOffset( int& offset ) = 0;
         virtual bool GetSize( uint32_t& size ) = 0;
         virtual bool GetBackingTy( ENUMTY& ty ) = 0;
+        virtual bool GetUdtKind( UdtKind& kind ) = 0;
 
         virtual bool IsField() = 0;
         virtual bool IsVar() = 0;

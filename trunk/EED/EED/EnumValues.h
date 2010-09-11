@@ -87,11 +87,12 @@ namespace MagoEE
     class EEDEnumStruct : public EEDEnumValues
     {
         uint32_t        mCountDone;
+        bool            mSkipHeadRef;
 
         RefPtr<IEnumDeclarationMembers> mMembers;
 
     public:
-        EEDEnumStruct();
+        EEDEnumStruct( bool skipHeadRef = false );
 
         virtual HRESULT Init( 
             IValueBinder* binder, 

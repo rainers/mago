@@ -60,6 +60,11 @@ bool DeclDataElement::GetBackingTy( MagoEE::ENUMTY& ty )
     return false;
 }
 
+bool DeclDataElement::GetUdtKind( MagoEE::UdtKind& kind )
+{
+    return false;
+}
+
 bool DeclDataElement::IsField()
 {
     return false;
