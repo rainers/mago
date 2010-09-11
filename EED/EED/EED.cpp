@@ -210,7 +210,11 @@ namespace MagoEE
         HRESULT hr = S_OK;
         RefPtr<EEDEnumValues>   en;
 
-        if ( parentVal._Type->IsPointer() )
+        if ( parentVal._Type->IsReference() )
+        {
+            en = new EEDEnumStruct( true );
+        }
+        else if ( parentVal._Type->IsPointer() )
         {
             en = new EEDEnumPointer();
         }

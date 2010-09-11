@@ -114,6 +114,11 @@ namespace MagoEE
         return false;
     }
 
+    bool Type::IsReference()
+    {
+        return false;
+    }
+
     bool Type::IsSArray()
     {
         return false;
@@ -613,6 +618,72 @@ namespace MagoEE
             return NULL;
 
         RefPtr<Type>    type = new TypePointer( resolvedNext );
+        type->Mod = Mod;
+        return type;
+    }
+
+
+    //----------------------------------------------------------------------------
+    //  TypeReference
+    //----------------------------------------------------------------------------
+
+    TypeReference::TypeReference( Type* child )
+        :   TypeNext( Treference, child )
+    {
+    }
+
+    uint32_t TypeReference::GetSize()
+    {
+        return sizeof( void* );
+    }
+
+    RefPtr<Type> TypeReference::Copy()
+    {
+        RefPtr<Type>    type = new TypeReference( Next.Get() );
+        return type;
+    }
+
+    bool TypeReference::IsPointer()
+    {
+        return true;
+    }
+
+    bool TypeReference::IsReference()
+    {
+        return true;
+    }
+
+    bool TypeReference::IsScalar()
+    {
+        return true;
+    }
+
+    bool TypeReference::CanRefMember()
+    {
+        _ASSERT( Next.Get() != NULL );
+        return Next->AsTypeStruct() != NULL;
+    }
+
+    bool TypeReference::Equals( Type* other )
+    {
+        if ( other->Ty != Treference )
+            return false;
+
+        return Next->Equals( other->AsTypeNext()->GetNext() );
+    }
+
+    void TypeReference::ToString( std::wstring& str )
+    {
+        Next->ToString( str );
+    }
+
+    RefPtr<Type> TypeReference::Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
+    {
+        RefPtr<Type>    resolvedNext = Next->Resolve( evalData, typeEnv, binder );
+        if ( resolvedNext == NULL )
+            return NULL;
+
+        RefPtr<Type>    type = new TypeReference( resolvedNext );
         type->Mod = Mod;
         return type;
     }
@@ -1154,6 +1225,15 @@ namespace MagoEE
         return childDecl;
     }
 
+    UdtKind TypeStruct::GetUdtKind()
+    {
+        UdtKind kind = Udt_Struct;
+
+        mDecl->GetUdtKind( kind );
+
+        return kind;
+    }
+
     bool TypeStruct::Equals( Type* other )
     {
         if ( Ty != other->Ty )
@@ -1342,6 +1422,11 @@ namespace MagoEE
     bool TypeTypedef::IsPointer()
     {
         return mAliased->IsPointer();
+    }
+
+    bool TypeTypedef::IsReference()
+    {
+        return mAliased->IsReference();
     }
 
     bool TypeTypedef::IsSArray()

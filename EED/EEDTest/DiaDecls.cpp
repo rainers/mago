@@ -117,6 +117,27 @@ bool DiaDecl::GetBackingTy( MagoEE::ENUMTY& ty )
     return false;
 }
 
+bool DiaDecl::GetUdtKind( MagoEE::UdtKind& kind )
+{
+    MagoST::UdtKind cvUdtKind;
+
+    if ( !mSymInfo->GetUdtKind( cvUdtKind ) )
+        return false;
+
+    switch ( cvUdtKind )
+    {
+    case MagoST::UdtStruct: kind = MagoEE::Udt_Struct;  break;
+    case MagoST::UdtClass:  kind = MagoEE::Udt_Class;   break;
+    case MagoST::UdtUnion:  kind = MagoEE::Udt_Union;   break;
+    default:
+        _ASSERT( false );
+        kind = MagoEE::Udt_Struct;
+        break;
+    }
+
+    return true;
+}
+
 bool DiaDecl::IsField()
 {
     MagoST::DataKind   kind = MagoST::DataIsUnknown;

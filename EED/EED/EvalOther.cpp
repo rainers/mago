@@ -174,6 +174,9 @@ namespace MagoEE
         if ( !Child->_Type->IsPointer() && !Child->_Type->IsSArray() && !Child->_Type->IsDArray() )
             return E_MAGOEE_BAD_TYPES_FOR_OP;
 
+        if ( Child->_Type->IsReference() )
+            return E_MAGOEE_BAD_TYPES_FOR_OP;
+
         _ASSERT( Child->_Type->AsTypeNext() != NULL );
         RefPtr<Type>    voidType = typeEnv->GetType( Tvoid );
         if ( Child->_Type->AsTypeNext()->GetNext()->Equals( voidType ) )
@@ -236,6 +239,9 @@ namespace MagoEE
 
         Type*   childType = Child->_Type;
         if ( !childType->IsPointer() && !childType->IsSArray() && !childType->IsDArray() )
+            return E_MAGOEE_BAD_INDEX;
+
+        if ( childType->IsReference() )
             return E_MAGOEE_BAD_INDEX;
 
         ITypeNext*  typeNext = Child->_Type->AsTypeNext();

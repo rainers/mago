@@ -38,6 +38,7 @@ namespace MagoEE
         virtual Type* GetAliasType( ALIASTY ty );
 
         virtual HRESULT NewPointer( Type* pointed, Type*& pointer );
+        virtual HRESULT NewReference( Type* pointed, Type*& pointer );
         virtual HRESULT NewDArray( Type* elem, Type*& type );
         virtual HRESULT NewAArray( Type* elem, Type* key, Type*& type );
         virtual HRESULT NewSArray( Type* elem, uint32_t length, Type*& type );
