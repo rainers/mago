@@ -23,6 +23,7 @@
 // STL
 #include <list>
 #include <vector>
+#include <limits>
 
 // Boost
 #include <boost/scoped_array.hpp>
