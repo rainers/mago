@@ -198,7 +198,7 @@ namespace Mago
             if ( !symInfo->GetName( pstrName ) )
                 continue;
 
-            hr = Utf8To16( pstrName->name, pstrName->len, bstrName.m_str );
+            hr = Utf8To16( pstrName->GetName(), pstrName->GetLength(), bstrName.m_str );
             if ( FAILED( hr ) )
                 continue;
 

@@ -703,7 +703,7 @@ namespace Mago
         HRESULT hr = S_OK;
 
         // TODO: go down the lexical hierarchy
-        hr = session->FindChildSymbol( blockSH, name, (BYTE) nameLen, localSH );
+        hr = session->FindChildSymbol( blockSH, name, nameLen, localSH );
         if ( hr != S_OK )
             return E_NOT_FOUND;
 
@@ -721,7 +721,7 @@ namespace Mago
 
         for ( int i = 0; i < MagoST::SymHeap_Count; i++ )
         {
-            hr = session->FindFirstSymbol( (MagoST::SymbolHeapId) i, name, (BYTE) nameLen, enumData );
+            hr = session->FindFirstSymbol( (MagoST::SymbolHeapId) i, name, nameLen, enumData );
             if ( hr == S_OK )
                 break;
         }
@@ -937,8 +937,8 @@ namespace Mago
             return hr;
 
         if ( (pstrName2 != NULL)
-            && (pstrName1->len == pstrName2->len) 
-            && (strncmp( pstrName1->name, pstrName2->name, pstrName1->len ) == 0) )
+            && (pstrName1->GetLength() == pstrName2->GetLength()) 
+            && (strncmp( pstrName1->GetName(), pstrName2->GetName(), pstrName1->GetLength() ) == 0) )
         {
             // the typedef has the same name as the type, 
             // so let's use the referenced type directly, as if there's no typedef

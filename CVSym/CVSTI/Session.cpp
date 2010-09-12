@@ -93,7 +93,7 @@ namespace MagoST
     HRESULT Session::FindFirstSymbol( 
         SymbolHeapId heapId, 
         const char* nameChars, 
-        BYTE nameLen, 
+        size_t nameLen, 
         EnumNamedSymbolsData& data )
     {
         return mStore->FindFirstSymbol( heapId, nameChars, nameLen, data );
@@ -109,7 +109,7 @@ namespace MagoST
         return mStore->GetCurrentSymbol( searchHandle, handle );
     }
 
-    HRESULT Session::FindChildSymbol( SymHandle parentHandle, const char* nameChars, BYTE nameLen, SymHandle& handle )
+    HRESULT Session::FindChildSymbol( SymHandle parentHandle, const char* nameChars, size_t nameLen, SymHandle& handle )
     {
         HRESULT     hr = S_OK;
         SymbolScope scope = { 0 };
@@ -132,7 +132,7 @@ namespace MagoST
             if ( !symInfo->GetName( pstrName ) )
                 continue;
 
-            if ( (nameLen == pstrName->len) && (memcmp( nameChars, pstrName->name, nameLen ) == 0) )
+            if ( (nameLen == pstrName->GetLength()) && (memcmp( nameChars, pstrName->GetName(), nameLen ) == 0) )
             {
                 handle = childHandle;
                 return S_OK;
@@ -272,7 +272,7 @@ namespace MagoST
     HRESULT Session::FindChildType( 
         TypeHandle parentHandle, 
         const char* nameChars, 
-        BYTE nameLen, 
+        size_t nameLen, 
         TypeHandle& handle )
     {
         HRESULT     hr = S_OK;
@@ -296,7 +296,7 @@ namespace MagoST
             if ( !symInfo->GetName( pstrName ) )
                 continue;
 
-            if ( (nameLen == pstrName->len) && (memcmp( nameChars, pstrName->name, nameLen ) == 0) )
+            if ( (nameLen == pstrName->GetLength()) && (memcmp( nameChars, pstrName->GetName(), nameLen ) == 0) )
             {
                 handle = childHandle;
                 return S_OK;

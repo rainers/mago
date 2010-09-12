@@ -710,8 +710,8 @@ HRESULT ProgramValueEnv::MakeDeclarationFromTypedefSymbol(
     refType = GetTypeFromTypeSymbol( session, typeIndex, typeEnv );
 
     if ( (pstrName2 != NULL)
-        && (pstrName1->len == pstrName2->len) 
-        && (strncmp( pstrName1->name, pstrName2->name, pstrName1->len ) == 0) )
+        && (pstrName1->GetLength() == pstrName2->GetLength()) 
+        && (strncmp( pstrName1->GetName(), pstrName2->GetName(), pstrName1->GetLength() ) == 0) )
     {
         // the typedef has the same name as the type, 
         // so let's use the referenced type directly, as if there's no typedef

@@ -386,7 +386,7 @@ namespace MagoST
         return false;
     }
 
-    HRESULT DebugStore::FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, BYTE nameLen, EnumNamedSymbolsData& data )
+    HRESULT DebugStore::FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data )
     {
         if ( heapId >= SymHeap_Max )
             return E_INVALIDARG;
@@ -400,7 +400,7 @@ namespace MagoST
         OMFDirEntry* heapDir,
         uint32_t hash, 
         const char* nameChars, 
-        BYTE nameLen, 
+        size_t nameLen, 
         CodeViewSymbol*& newSymbol, 
         OMFDirEntry*& newHeapDir )
     {
@@ -428,9 +428,9 @@ namespace MagoST
 
         if ( !QuickGetName( sym, pstrName ) )
             return false;
-        if ( nameLen != pstrName->len )
+        if ( nameLen != pstrName->GetLength() )
             return false;
-        if ( memcmp( nameChars, pstrName->name, nameLen ) != 0 )
+        if ( memcmp( nameChars, pstrName->GetName(), nameLen ) != 0 )
             return false;
 
         newSymbol = sym;
@@ -438,7 +438,7 @@ namespace MagoST
         return true;
     }
 
-    HRESULT DebugStore::FindFirstSymHashSymbol( const char* nameChars, BYTE nameLen, OMFDirEntry* entry, EnumNamedSymbolsData& data )
+    HRESULT DebugStore::FindFirstSymHashSymbol( const char* nameChars, size_t nameLen, OMFDirEntry* entry, EnumNamedSymbolsData& data )
     {
         EnumNamedSymbolsDataIn* internalData = (EnumNamedSymbolsDataIn*) &data;
         OMFSymHash*             symHash = GetCVPtr<OMFSymHash>( entry->lfo );
@@ -514,7 +514,7 @@ namespace MagoST
                     internalData->HeapDir,
                     internalData->Hash, 
                     internalData->NameChars, 
-                    (BYTE) internalData->NameLen, 
+                    internalData->NameLen, 
                     sym,
                     newDir ) )
                     continue;
