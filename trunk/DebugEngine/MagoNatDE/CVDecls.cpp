@@ -70,7 +70,7 @@ namespace Mago
             if ( !mSymInfo->GetName( pstrName ) )
                 return NULL;
 
-            hr = Utf8To16( pstrName->name, pstrName->len, mName.m_str );
+            hr = Utf8To16( pstrName->GetName(), pstrName->GetLength(), mName.m_str );
             if ( FAILED( hr ) )
                 return NULL;
         }
@@ -362,7 +362,7 @@ namespace Mago
             if ( !mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
                 return E_NOT_FOUND;
 
-            hr = mSession->FindChildType( flistHandle, u8Name, (BYTE) u8NameLen, childTH );
+            hr = mSession->FindChildType( flistHandle, u8Name, u8NameLen, childTH );
             if ( hr == S_OK )
                 break;
 

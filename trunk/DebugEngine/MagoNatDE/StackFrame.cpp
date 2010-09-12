@@ -447,7 +447,7 @@ namespace Mago
         if ( !symInfo->GetName( pstrName ) )
             return E_NOT_FOUND;
 
-        hr = Utf8To16( pstrName->name, pstrName->len, *funcName );
+        hr = Utf8To16( pstrName->GetName(), pstrName->GetLength(), *funcName );
         if ( FAILED( hr ) )
             return hr;
 

@@ -82,7 +82,7 @@ namespace MagoST
 
         bool NextSymbol( SymbolScope& scope, SymHandle& handle );
 
-        HRESULT FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, BYTE nameLen, EnumNamedSymbolsData& data );
+        HRESULT FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data );
         HRESULT FindNextSymbol( EnumNamedSymbolsData& handle );
         HRESULT GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle );
 
@@ -135,7 +135,7 @@ namespace MagoST
         HRESULT SetSymHashScope( OMFDirEntry* entry, SymbolScope& scope );
         HRESULT SetSymbolScopeForDirEntry( OMFDirEntry* entry, SymbolScope& scope );
 
-        HRESULT FindFirstSymHashSymbol( const char* nameChars, BYTE nameLen, OMFDirEntry* entry, EnumNamedSymbolsData& data );
+        HRESULT FindFirstSymHashSymbol( const char* nameChars, size_t nameLen, OMFDirEntry* entry, EnumNamedSymbolsData& data );
         HRESULT FindSymHashSymbol( WORD segment, DWORD offset, OMFDirEntry* entry, SymHandle& handle );
 
         HRESULT GetSymbolHeapBaseForDirEntry( OMFDirEntry* entry, BYTE*& heapBase );
@@ -160,7 +160,7 @@ namespace MagoST
             OMFDirEntry* heapDir, 
             uint32_t hash, 
             const char* nameChars, 
-            BYTE nameLen, 
+            size_t nameLen, 
             CodeViewSymbol*& newSymbol, 
             OMFDirEntry*& newHeapDir );
 

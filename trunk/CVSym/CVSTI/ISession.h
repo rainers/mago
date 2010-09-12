@@ -61,7 +61,7 @@ namespace MagoST
         virtual HRESULT FindFirstSymbol( 
             SymbolHeapId heapId, 
             const char* nameChars, 
-            BYTE nameLen, 
+            size_t nameLen, 
             EnumNamedSymbolsData& data ) = 0;
         virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle ) = 0;
         virtual HRESULT GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle ) = 0;
@@ -69,7 +69,7 @@ namespace MagoST
         virtual HRESULT FindChildSymbol( 
             SymHandle parentHandle, 
             const char* nameChars, 
-            BYTE nameLen, 
+            size_t nameLen, 
             SymHandle& handle ) = 0;
 
         virtual HRESULT FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle ) = 0;
@@ -94,7 +94,7 @@ namespace MagoST
         virtual HRESULT FindChildType( 
             TypeHandle parentHandle, 
             const char* nameChars, 
-            BYTE nameLen, 
+            size_t nameLen, 
             TypeHandle& handle ) = 0;
 
         // source files

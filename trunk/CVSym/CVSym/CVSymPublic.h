@@ -13,8 +13,34 @@
 
 struct PasString
 {
-    unsigned char   len;
-    char            name[1];
+    size_t GetLength() const 
+    { 
+        const unsigned char* p = data;
+        return ReadLength( p );
+    }
+
+    const char* GetName() const 
+    { 
+        const unsigned char* p = data;
+        ReadLength( p );
+        return (const char*) p;
+    }
+
+    static size_t ReadLength( const unsigned char*& p )
+    {
+        // this uses a non-standard extension to CodeView that allows for long names
+        // normally names are at most 255 chars, and length prefix is 1 byte
+
+        size_t len = *p++;
+        if ( len == 0xff && *p == 0 )
+        {
+            len = p[1] | (p[2] << 8);
+            p += 3;
+        }
+        return len;
+    }
+
+    unsigned char data[1];
 };
 
 
