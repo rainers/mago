@@ -171,6 +171,9 @@ namespace MagoEE
 
     RefPtr<Type> TypeReturn::Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
     {
+        UNREFERENCED_PARAMETER( evalData );
+        UNREFERENCED_PARAMETER( typeEnv );
+
         HRESULT hr = S_OK;
         RefPtr<Type>    retType;
 
@@ -346,7 +349,6 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return NULL;
 
-        // TODO: allow floating-point?
         if ( !Expr->_Type->IsIntegral() )
             return NULL;
 
@@ -357,7 +359,11 @@ namespace MagoEE
             return NULL;
 
         RefPtr<Type>    resolvedThis;
-        hr = typeEnv->NewSArray( resolvedNext, exprVal.Value.UInt64Value, resolvedThis.Ref() );
+        hr = typeEnv->NewSArray( 
+            resolvedNext, 
+            // for now chopping it to 32 bits is OK
+            (uint32_t) exprVal.Value.UInt64Value,
+            resolvedThis.Ref() );
         if ( FAILED( hr ) )
             return NULL;
 

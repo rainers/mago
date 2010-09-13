@@ -192,9 +192,7 @@ namespace MagoEE
     {
     public:
         virtual bool GetType( ITypeEnv* typeEnv, Type* parentType, Declaration* parentDecl, Type*& type );
-        virtual bool UsesParentValue();
         virtual bool GetValue( Type* parentType, Declaration* parentDecl, DataValue& result );
-        virtual bool GetValue( Type* parentType, Declaration* parentDecl, const DataValue& parentVal , DataValue& result );
     };
 
 

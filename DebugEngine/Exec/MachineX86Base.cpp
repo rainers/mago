@@ -783,6 +783,10 @@ HRESULT MachineX86Base::SetupRestoreBPEnvironment( Breakpoint* bp )
 
 bool    MachineX86Base::ShouldIsolateBPRestoringThread( uint32_t threadId, Breakpoint* bp )
 {
+    // we don't use these params now, but what about in the future?
+    UNREFERENCED_PARAMETER( threadId );
+    UNREFERENCED_PARAMETER( bp );
+
     _ASSERT( threadId != 0 );
     _ASSERT( bp != NULL );
 
