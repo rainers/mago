@@ -251,6 +251,7 @@ namespace MagoEE
 
             errno_t err = wmemcpy_s( destBuf, srcCharLen, srcBuf, srcCharLen );
             _ASSERT( err == 0 );
+            UNREFERENCED_PARAMETER( err );
         }
         return srcCharLen;
     }

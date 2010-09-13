@@ -737,23 +737,12 @@ namespace MagoEE
         return SUCCEEDED( hr );
     }
 
-    bool PropertySArrayPtr::UsesParentValue()
-    {
-        return false;
-    }
-
     bool PropertySArrayPtr::GetValue( Type* parentType, Declaration* parentDecl, DataValue& result )
     {
         if ( (parentType == NULL) || !parentType->IsSArray() )
             return false;
 
         return parentDecl->GetAddress( result.Addr );
-    }
-
-    bool PropertySArrayPtr::GetValue( Type* parentType, Declaration* parentDecl, const DataValue& parentVal , DataValue& result )
-    {
-        // TODO: get the address from an address passed in (maybe we don't need Decl param at all)
-        return false;
     }
 
 
