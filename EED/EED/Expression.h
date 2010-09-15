@@ -642,12 +642,22 @@ namespace MagoEE
 
     class DotTemplateInstanceExpr : public NamingExpression
     {
+        RefPtr<SharedString>    mNamePath;
+        // the length of the name path from the root to this node
+        // we need to assign this value right after we append to the name path
+        // because our parent might append its own name and change the length
+        uint32_t                mNamePathLen;
+
     public:
         RefPtr<Expression>  Child;
         RefPtr<TemplateInstancePart>    Instance;
 
         DotTemplateInstanceExpr( Expression* child, TemplateInstancePart* instance );
+        virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
+
+    protected:
+        virtual HRESULT MakeName( uint32_t capacity, RefPtr<SharedString>& namePath );
     };
 
 
@@ -718,11 +728,17 @@ namespace MagoEE
 
     class ScopeExpr : public NamingExpression
     {
+        RefPtr<SharedString>    mNamePath;
+
     public:
         RefPtr<TemplateInstancePart>    Instance;
 
         ScopeExpr( TemplateInstancePart* instance );
+        virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
+
+    protected:
+        virtual HRESULT MakeName( uint32_t capacity, RefPtr<SharedString>& namePath );
     };
 
 

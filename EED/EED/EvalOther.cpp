@@ -17,6 +17,7 @@
 #include "Property.h"
 #include "PropTables.h"
 #include "SharedString.h"
+#include "TypeUnresolved.h"
 
 
 namespace MagoEE
@@ -1011,19 +1012,139 @@ namespace MagoEE
         return S_OK;
     }
 
-#if 1
-    // for assoc. arrays (tables)
-    HRESULT InExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
+
+    //----------------------------------------------------------------------------
+    //  DotTemplateInstanceExpr
+    //----------------------------------------------------------------------------
+
+    HRESULT DotTemplateInstanceExpr::Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
     {
-        return E_NOTIMPL;
+        HRESULT hr = S_OK;
+        std::wstring    fullId;
+        ClearEvalData();
+
+        RefPtr<SharedString>    namePath;
+        hr = MakeName( 0, namePath );
+        if ( FAILED( hr ) && (hr != E_MAGOEE_SYMBOL_NOT_FOUND) )
+            return hr;
+
+        if ( SUCCEEDED( hr ) )
+        {
+            const wchar_t*  name = mNamePath->GetCut( mNamePathLen );
+
+            binder->FindObject( name, Decl.Ref() );
+
+            mNamePath->ReleaseCut();
+        }
+
+        if ( Decl == NULL )
+        {
+            hr = Child->Semantic( evalData, typeEnv, binder );
+            if ( FAILED( hr ) )
+                return hr;
+
+            fullId.append( Instance->Id->Str );
+            fullId.append( Instance->ArgumentString->Str );
+
+            // if child is value or type
+            if ( Child->Kind != DataKind_Declaration )
+            {
+                ITypeStruct* t = NULL;
+
+                if ( Child->_Type == NULL )
+                    return E_MAGOEE_NO_TYPE;
+
+                if ( Child->_Type->AsTypeStruct() != NULL )
+                    t = Child->_Type->AsTypeStruct();
+                else if ( Child->_Type->IsPointer() 
+                    && (Child->_Type->AsTypeNext()->GetNext()->AsTypeStruct() != NULL) )
+                    t = Child->_Type->AsTypeNext()->GetNext()->AsTypeStruct();
+
+                if ( t != NULL )
+                {
+                    Decl = t->FindObject( fullId.c_str() );
+                }
+            }
+            else
+            {
+                NamingExpression*   namer = Child->AsNamingExpression();
+                if ( namer != NULL )
+                {
+                    _ASSERT( namer->Decl != NULL );
+                    namer->Decl->FindObject( fullId.c_str(), Decl.Ref() );
+                }
+            }
+        }
+
+        if ( (Decl == NULL) || !Decl->IsType() )
+            return E_MAGOEE_SYMBOL_NOT_FOUND;
+
+        Decl->GetType( _Type.Ref() );
+
+        Kind = DataKind_Declaration;
+
+        if ( _Type == NULL )
+            return E_MAGOEE_NO_TYPE;
+
+        return S_OK;
     }
 
     HRESULT DotTemplateInstanceExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
     {
-        return E_NOTIMPL;
+        UNREFERENCED_PARAMETER( evalData );
+        UNREFERENCED_PARAMETER( mode );
+        UNREFERENCED_PARAMETER( binder );
+        UNREFERENCED_PARAMETER( obj );
+
+        // can't evaluate a type
+        return E_MAGOEE_VALUE_EXPECTED;
+    }
+
+
+    //----------------------------------------------------------------------------
+    //  ScopeExpr
+    //----------------------------------------------------------------------------
+
+    HRESULT ScopeExpr::Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
+    {
+        UNREFERENCED_PARAMETER( evalData );
+        UNREFERENCED_PARAMETER( typeEnv );
+
+        HRESULT hr = S_OK;
+        std::wstring    fullId;
+        ClearEvalData();
+
+        fullId.append( Instance->Id->Str );
+        fullId.append( Instance->ArgumentString->Str );
+
+        hr = binder->FindObject( fullId.c_str(), Decl.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        Decl->GetType( _Type.Ref() );
+
+        Kind = DataKind_Declaration;
+
+        if ( !Decl->IsType() || (_Type == NULL) )
+            return E_MAGOEE_NO_TYPE;
+
+        return S_OK;
     }
 
     HRESULT ScopeExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
+    {
+        UNREFERENCED_PARAMETER( evalData );
+        UNREFERENCED_PARAMETER( mode );
+        UNREFERENCED_PARAMETER( binder );
+        UNREFERENCED_PARAMETER( obj );
+
+        // can't evaluate a type
+        return E_MAGOEE_VALUE_EXPECTED;
+    }
+
+#if 1
+    // for assoc. arrays (tables)
+    HRESULT InExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
     {
         return E_NOTIMPL;
     }

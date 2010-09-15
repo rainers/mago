@@ -34,3 +34,32 @@ The following were the overall changes that were needed.
    - This is shared with struct and union types.
    - This is already implemented.
 5. Disallow pointer and index expressions on references.
+
+
+Looking up templates
+--------------------
+
+Templates are written to CodeView debug info with a fully qualified name with 
+template arguments. For example, you might find a class like:
+
+  mod.TClass!(int).TClass
+
+When parsing template names, we take a pointer to the '!' and the character 
+after the template arguments. Then, we make a single string out of that range
+and store it in the scanner's name table. So, you'll end up with a node that 
+has a TemplateInstancePart which has an ID and an argument string. In the 
+example above, you would have:
+
+  Id = "TClass"
+  Arguments = "!(int)"
+
+When doing name lookups, the two parts are combined to make a single search 
+term.
+
+It's important to note that this makes template lookup only work with debug 
+info formats like CodeView where template names are stored as a single string.
+Template lookup with formats like DWARF won't work unless specific support is 
+added. The reason is that such formats store a template entry with a simple 
+name and separate attributes for each template argument. We already store the 
+individual template arguments in addition to the whole name string, so that 
+much is already done.

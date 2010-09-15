@@ -638,12 +638,17 @@ Done:
                     if ( (GetTokenCode() == TOKnot) && (PeekTokenCode( 1 ) != TOKis) )
                     {
                         RefPtr<TemplateInstancePart>    instance = new TemplateInstancePart( id );
+                        const wchar_t*  startPtr = mScanner->GetToken().TextStartPtr;
                         NextToken();
 
                         if ( GetTokenCode() == TOKlparen )
                             instance->Params = ParseTemplateArgList();
                         else
                             instance->Params = ParseTemplateArg();
+
+                        // get the template args as a string starting from '!'
+                        const wchar_t*  endPtr = mScanner->GetToken().TextStartPtr;
+                        instance->ArgumentString = mScanner->GetNameTable()->AddString( startPtr, (endPtr - startPtr) );
 
                         e = new DotTemplateInstanceExpr( e.Get(), instance.Get() );
                     }
@@ -887,12 +892,17 @@ Lidentifier:
                 if ( (GetTokenCode() == TOKnot) && (PeekTokenCode( 1 ) != TOKis) )
                 {
                     RefPtr<TemplateInstancePart>    instance = new TemplateInstancePart( id );
+                    const wchar_t*  startPtr = mScanner->GetToken().TextStartPtr;
                     NextToken();
 
                     if ( GetTokenCode() == TOKlparen )
                         instance->Params = ParseTemplateArgList();
                     else
                         instance->Params = ParseTemplateArg();
+
+                    // get the template args as a string starting from '!'
+                    const wchar_t*  endPtr = mScanner->GetToken().TextStartPtr;
+                    instance->ArgumentString = mScanner->GetNameTable()->AddString( startPtr, (endPtr - startPtr) );
 
                     e = new ScopeExpr( instance.Get() );
                 }
