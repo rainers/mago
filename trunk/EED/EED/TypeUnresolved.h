@@ -52,6 +52,7 @@ namespace MagoEE
     {
     public:
         Utf16String*                    Id;
+        Utf16String*                    ArgumentString;
         RefPtr<ObjectList>              Params;
 
         TemplateInstancePart( Utf16String* str );

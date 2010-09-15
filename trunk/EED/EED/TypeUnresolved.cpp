@@ -86,19 +86,30 @@ namespace MagoEE
             it != Parts.end();
             it++ )
         {
+            RefPtr<Declaration> newDecl;
+
             if ( (*it)->AsId() != NULL )
             {
                 IdPart* idPart = (*it)->AsId();
 
-                hr = curDecl->FindObject( idPart->Id->Str, curDecl.Ref() );
+                hr = curDecl->FindObject( idPart->Id->Str, newDecl.Ref() );
                 if ( FAILED( hr ) )
                     return NULL;
             }
             else
             {
-                // TODO: TemplateInstancePart
-                _ASSERT( false );
+                TemplateInstancePart*   templatePart = (*it)->AsTemplateInstance();
+                std::wstring            fullId;
+
+                fullId.append( templatePart->Id->Str );
+                fullId.append( templatePart->ArgumentString->Str );
+
+                hr = curDecl->FindObject( fullId.c_str(), newDecl.Ref() );
+                if ( FAILED( hr ) )
+                    return NULL;
             }
+
+            curDecl = newDecl;
         }
 
         if ( !curDecl->IsType() )
@@ -133,8 +144,11 @@ namespace MagoEE
             }
             else
             {
-                // TODO: TemplateInstancePart
-                _ASSERT( false );
+                TemplateInstancePart*   templatePart = (*it)->AsTemplateInstance();
+
+                fullName.append( 1, L'.' );
+                fullName.append( templatePart->Id->Str );
+                fullName.append( templatePart->ArgumentString->Str );
             }
         }
 
@@ -265,9 +279,27 @@ namespace MagoEE
 
     RefPtr<Type> TypeInstance::Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
     {
-        // TODO:
-        _ASSERT( false );
-        return NULL;
+        UNREFERENCED_PARAMETER( evalData );
+        UNREFERENCED_PARAMETER( typeEnv );
+
+        HRESULT hr = S_OK;
+        RefPtr<Declaration> decl;
+        RefPtr<Type>        resolvedType;
+        std::wstring        fullId;
+
+        fullId.reserve( Instance->Id->Length + Instance->ArgumentString->Length );
+        fullId.append( Instance->Id->Str );
+        fullId.append( Instance->ArgumentString->Str );
+
+        resolvedType = ResolveNamePath( fullId.c_str(), binder );
+        if ( resolvedType != NULL )
+            return resolvedType;
+
+        hr = binder->FindObject( fullId.c_str(), decl.Ref() );
+        if ( FAILED( hr ) )
+            return NULL;
+
+        return ResolveTypeChain( decl );
     }
 
     void TypeInstance::ToString( std::wstring& str )

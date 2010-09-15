@@ -470,8 +470,33 @@ namespace MagoEE
 
     DotTemplateInstanceExpr::DotTemplateInstanceExpr( Expression* child, TemplateInstancePart* instance )
         :   Child( child ),
-            Instance( instance )
+            Instance( instance ),
+            mNamePathLen( 0 )
     {
+    }
+
+    HRESULT DotTemplateInstanceExpr::MakeName( uint32_t capacity, RefPtr<SharedString>& namePath )
+    {
+        HRESULT hr = S_OK;
+
+        if ( mNamePath == NULL )
+        {
+            const uint32_t  ourLen = Instance->Id->Length + Instance->ArgumentString->Length;
+
+            hr = Child->MakeName( capacity + ourLen + 1, mNamePath );
+            if ( FAILED( hr ) )
+                return hr;
+
+            mNamePath->Append( L"." );
+            mNamePath->Append( Instance->Id->Str );
+            mNamePath->Append( Instance->ArgumentString->Str );
+
+            mNamePathLen = mNamePath->GetLength();
+        }
+
+        namePath = mNamePath;
+
+        return S_OK;
     }
 
 
@@ -552,6 +577,25 @@ namespace MagoEE
     ScopeExpr::ScopeExpr( TemplateInstancePart* instance )
         :   Instance( instance )
     {
+    }
+
+    HRESULT ScopeExpr::MakeName( uint32_t capacity, RefPtr<SharedString>& namePath )
+    {
+        if ( mNamePath == NULL )
+        {
+            const uint32_t  SelfCapacity = 
+                Instance->Id->Length + Instance->ArgumentString->Length;
+
+            if ( !SharedString::Make( capacity + SelfCapacity, mNamePath ) )
+                return E_OUTOFMEMORY;
+
+            mNamePath->Append( Instance->Id->Str );
+            mNamePath->Append( Instance->ArgumentString->Str );
+        }
+
+        namePath = mNamePath;
+
+        return S_OK;
     }
 
 
