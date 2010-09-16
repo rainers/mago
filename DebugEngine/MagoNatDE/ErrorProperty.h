@@ -15,6 +15,7 @@ namespace Mago
         public IDebugProperty2
     {
         CComBSTR        mExprText;
+        CComBSTR        mFullExprText;
         CComBSTR        mValText;
 
     public:
@@ -81,6 +82,9 @@ namespace Mago
             VARIANT* pExtendedInfo );
 
     public:
-        HRESULT Init( const wchar_t* exprText, const wchar_t* valText );
+        HRESULT Init( 
+            const wchar_t* exprText, 
+            const wchar_t* fullExprText, 
+            const wchar_t* valText );
     };
 }

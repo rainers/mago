@@ -890,7 +890,7 @@ namespace MagoEE
         Next->ToString( str );
         str.append( L"[" );
         str.append( numStr );
-        str.append( L"U]" );
+        str.append( L"]" );
     }
 
     RefPtr<Type> TypeSArray::Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
