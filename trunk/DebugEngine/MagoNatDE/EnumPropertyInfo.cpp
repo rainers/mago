@@ -9,6 +9,7 @@
 #include "EnumPropertyInfo.h"
 #include "ExprContext.h"
 #include "Property.h"
+#include "ErrorProperty.h"
 #include <MagoEED.h>
 
 using namespace std;
@@ -79,7 +80,6 @@ namespace Mago
         HRESULT     hr = S_OK;
         uint32_t    countLeft = mEEEnum->GetCount() - mEEEnum->GetIndex();
         uint32_t    i = 0;
-        uint32_t    countStored = 0;
         MagoEE::EvalOptions options = { 0 };
         wstring     name;
         wstring     fullName;
@@ -95,18 +95,80 @@ namespace Mago
             // keep enumerating even if we fail to get an item
             hr = mEEEnum->EvaluateNext( options, result, name, fullName );
             if ( FAILED( hr ) )
+            {
+                hr = GetErrorPropertyInfo( hr, name.c_str(), fullName.c_str(), rgelt[i] );
+                if ( FAILED( hr ) )
+                    return hr;
                 continue;
+            }
 
-            hr = GetPropertyInfo( result, name.c_str(), fullName.c_str(), rgelt[countStored] );
+            hr = GetPropertyInfo( result, name.c_str(), fullName.c_str(), rgelt[i] );
             if ( FAILED( hr ) )
+            {
+                hr = GetErrorPropertyInfo( hr, name.c_str(), fullName.c_str(), rgelt[i] );
+                if ( FAILED( hr ) )
+                    return hr;
                 continue;
-
-            countStored++;
+            }
         }
 
-        *pceltFetched = countStored;
+        *pceltFetched = i;
 
         return S_OK;
+    }
+
+    HRESULT EnumDebugPropertyInfo2::GetErrorPropertyInfo( 
+        HRESULT hrErr,
+        const wchar_t* name,
+        const wchar_t* fullName, 
+        DEBUG_PROPERTY_INFO& info )
+    {
+        HRESULT hr = S_OK;
+        CComPtr<IDebugProperty2>    errProp;
+
+        hr = MakeErrorProperty( hrErr, name, fullName, &errProp );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = errProp->GetPropertyInfo( mFields, mRadix, INFINITE, NULL, 0, &info );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
+    HRESULT EnumDebugPropertyInfo2::MakeErrorProperty( 
+        HRESULT hrErr, 
+        const wchar_t* name,
+        const wchar_t* fullName, 
+        IDebugProperty2** ppResult )
+    {
+        HRESULT     hr = S_OK;
+        CComBSTR    errStr;
+
+        hr = MagoEE::EED::GetErrorString( hrErr, errStr.m_str );
+
+        // use a general error, if original error couldn't be found
+        if ( hr == S_FALSE )
+            hr = MagoEE::EED::GetErrorString( E_MAGOEE_BASE, errStr.m_str );
+
+        if ( hr == S_OK )
+        {
+            RefPtr<ErrorProperty>   errProp;
+
+            hr = MakeCComObject( errProp );
+            if ( SUCCEEDED( hr ) )
+            {
+                hr = errProp->Init( name, fullName, errStr );
+                if ( hr == S_OK )
+                {
+                    *ppResult = errProp.Detach();
+                    return S_OK;
+                }
+            }
+        }
+
+        return hrErr;
     }
 
     HRESULT EnumDebugPropertyInfo2::GetPropertyInfo( 

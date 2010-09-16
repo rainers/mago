@@ -46,7 +46,7 @@ namespace Mago
 
         if ( (dwFields & DEBUGPROP_INFO_FULLNAME) != 0 )
         {
-            pPropertyInfo->bstrFullName = SysAllocString( mExprText );
+            pPropertyInfo->bstrFullName = SysAllocString( mFullExprText );
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_FULLNAME;
         }
 
@@ -143,9 +143,13 @@ namespace Mago
         return E_NOTIMPL;
     }
 
-    HRESULT ErrorProperty::Init( const wchar_t* exprText, const wchar_t* valText )
+    HRESULT ErrorProperty::Init( 
+        const wchar_t* exprText, 
+        const wchar_t* fullExprText, 
+        const wchar_t* valText )
     {
         mExprText = exprText;
+        mFullExprText = fullExprText;
         mValText = valText;
         return S_OK;
     }

@@ -88,7 +88,7 @@ namespace Mago
             hr = MakeCComObject( errProp );
             if ( SUCCEEDED( hr ) )
             {
-                hr = errProp->Init( mExprText, errStr );
+                hr = errProp->Init( mExprText, mExprText, errStr );
                 if ( hr == S_OK )
                 {
                     *ppResult = errProp.Detach();

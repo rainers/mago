@@ -80,5 +80,17 @@ namespace Mago
             const wchar_t* name,
             const wchar_t* fullName,
             DEBUG_PROPERTY_INFO& info );
+
+        HRESULT GetErrorPropertyInfo( 
+            HRESULT hrErr,
+            const wchar_t* name,
+            const wchar_t* fullName, 
+            DEBUG_PROPERTY_INFO& info );
+
+        HRESULT MakeErrorProperty( 
+            HRESULT hrErr, 
+            const wchar_t* name,
+            const wchar_t* fullName, 
+            IDebugProperty2** ppResult );
     };
 }
