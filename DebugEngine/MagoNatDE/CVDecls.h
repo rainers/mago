@@ -128,7 +128,8 @@ namespace Mago
 
     private:
         uint16_t CountMembers();
-        bool NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH );
+        // -1 for non-printable, 0 for no more, 1 for ok
+        int NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH );
     };
 
 
