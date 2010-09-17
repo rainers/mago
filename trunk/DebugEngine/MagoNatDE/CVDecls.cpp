@@ -500,7 +500,12 @@ namespace Mago
         if ( mIndex >= GetCount() )
             return false;
 
-        if ( !NextMember( mListScope, childTH ) )
+        int res;
+        // skip any invalid ones that we skipped during CountMembers
+        while ( (res = NextMember( mListScope, childTH )) < 0 )
+        {
+        }
+        if ( res <= 0 )
             return false;
 
         mIndex++;
@@ -555,7 +560,10 @@ namespace Mago
         {
             MagoST::TypeHandle  memberTH;
 
-            NextMember( mListScope, memberTH );
+            // skip any invalid ones that we skipped during CountMembers
+            while ( NextMember( mListScope, memberTH ) < 0 )
+            {
+            }
         }
 
         return true;
@@ -581,12 +589,17 @@ namespace Mago
         if ( mSession->SetChildTypeScope( flistHandle, flistScope ) != S_OK )
             return 0;
 
-        for ( uint16_t i = 0; i < maxCount; i++ )
+        // TODO: DMD is writing the wrong field list count
+        //       when it's fixed, we should check maxCount again
+        for ( uint16_t i = 0; /*i < maxCount*/; i++ )
         {
             MagoST::TypeHandle      memberTH = { 0 };
 
-            if ( !NextMember( flistScope, memberTH ) )
+            int res = NextMember( flistScope, memberTH );
+            if( res < 0 )
                 continue;
+            if ( res == 0 )
+                break;
 
             count++;
         }
@@ -594,24 +607,24 @@ namespace Mago
         return count;
     }
 
-    bool TypeCVDeclMembers::NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH )
+    int TypeCVDeclMembers::NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH )
     {
         MagoST::SymInfoData     infoData;
         MagoST::ISymbolInfo*    symInfo = NULL;
         MagoST::SymTag          tag = MagoST::SymTagNull;
 
         if ( !mSession->NextType( scope, memberTH ) )
-            return false;
+            return 0;
 
         if ( mSession->GetTypeInfo( memberTH, infoData, symInfo ) != S_OK )
-            return false;
+            return 0;
 
         tag = symInfo->GetSymTag();
 
         if ( (tag != MagoST::SymTagData) && (tag != MagoST::SymTagBaseClass) )
-            return false;
+            return -1;
 
-        return true;
+        return 1;
     }
 
 
