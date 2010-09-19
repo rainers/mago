@@ -17,10 +17,10 @@ namespace Mago
         DWORD                       mId;
         RefPtr<IModule>             mCoreMod;
         DWORD                       mLoadIndex;
-        RefPtr<MagoST::IDataSource> mDataSource;
         RefPtr<MagoST::ISession>    mSession;
         CComBSTR                    mLoadedSymPath;
         CComBSTR                    mSearchText;
+        Guard                       mSessionGuard;
 
     public:
         Module();
@@ -62,6 +62,7 @@ namespace Mago
         DWORD   GetId();
         void    SetId( DWORD id );
         void    SetCoreModule( ::IModule* module );
+        void    Dispose();
 
         // TODO: could this benefit from r-value refs?
         void    GetName( CComBSTR& name );
@@ -73,5 +74,9 @@ namespace Mago
         bool    GetSymbolSession( RefPtr<MagoST::ISession>& session );
 
         HRESULT LoadSymbols( bool sendEvent );
+
+    private:
+        RefPtr<MagoST::ISession>    GetSession();
+        void    SetSession( MagoST::ISession* session );
     };
 }

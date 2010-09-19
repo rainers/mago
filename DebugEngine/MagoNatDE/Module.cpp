@@ -108,7 +108,7 @@ namespace Mago
         {
             pInfo->m_dwModuleFlags = 0;
 
-            if ( mSession != NULL )
+            if ( GetSession() != NULL )
                 pInfo->m_dwModuleFlags |= MODULE_FLAG_SYMBOLS;
 
             pInfo->dwValidFields |= MIF_FLAGS;
@@ -143,7 +143,7 @@ namespace Mago
 
         if ( (dwFields & SSIF_VERBOSE_SEARCH_INFO) != 0 )
         {
-            if ( mSession != NULL )
+            if ( GetSession() != NULL )
             {
                 pInfo->bstrVerboseSearchInfo = mSearchText.Copy();
                 if ( pInfo->bstrVerboseSearchInfo != NULL )
@@ -162,29 +162,33 @@ namespace Mago
     HRESULT Module::LoadSymbols( bool sendEvent )
     {
         HRESULT hr = S_OK;
-        RefPtr<DiaLoadCallback> callback;
+        RefPtr<DiaLoadCallback>     callback;
+        RefPtr<MagoST::ISession>    session;
+        RefPtr<MagoST::IDataSource> dataSource;
 
         callback = new DiaLoadCallback();
         if ( callback == NULL )
             return E_OUTOFMEMORY;
 
-        hr = MagoST::MakeDataSource( mDataSource.Ref() );
+        hr = MagoST::MakeDataSource( dataSource.Ref() );
         if ( FAILED( hr ) )
             return hr;
 
-        hr = mDataSource->LoadDataForExe( mCoreMod->GetExePath(), NULL, callback );
+        hr = dataSource->LoadDataForExe( mCoreMod->GetExePath(), NULL, callback );
         if ( FAILED( hr ) )
             return hr;
 
-        hr = mDataSource->InitDebugInfo();
+        hr = dataSource->InitDebugInfo();
         if ( FAILED( hr ) )
             return hr;
 
-        hr = mDataSource->OpenSession( mSession.Ref() );
+        hr = dataSource->OpenSession( session.Ref() );
         if ( FAILED( hr ) )
             return hr;
 
-        mSession->SetLoadAddress( mCoreMod->GetImageBase() );
+        session->SetLoadAddress( mCoreMod->GetImageBase() );
+
+        SetSession( session );
 
         // it's OK to fail here, we'll just return a blank string
         callback->GetSearchText( &mSearchText );
@@ -238,6 +242,14 @@ namespace Mago
         mCoreMod = module;
     }
 
+    void    Module::Dispose()
+    {
+        // these have to be closed when we're told to close
+        // all other resources can be left open
+
+        SetSession( NULL );
+    }
+
     void    Module::GetName( CComBSTR& name )
     {
         wchar_t fname[_MAX_FNAME] = L"";
@@ -288,7 +300,19 @@ namespace Mago
 
     bool    Module::GetSymbolSession( RefPtr<MagoST::ISession>& session )
     {
-        session = mSession;
+        session = GetSession();
         return session != NULL;
+    }
+
+    RefPtr<MagoST::ISession>    Module::GetSession()
+    {
+        GuardedArea guard( mSessionGuard );
+        return mSession;
+    }
+
+    void    Module::SetSession( MagoST::ISession* session )
+    {
+        GuardedArea guard( mSessionGuard );
+        mSession = session;
     }
 }
