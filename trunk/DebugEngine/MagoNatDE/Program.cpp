@@ -417,7 +417,15 @@ namespace Mago
     void Program::Dispose()
     {
         mThreadMap.clear();
+
+        for ( ModuleMap::iterator it = mModMap.begin(); it != mModMap.end(); it++ )
+        {
+            it->second->Dispose();
+        }
+
         mModMap.clear();
+
+        mProgMod.Release();
         mEngine.Release();
     }
 
@@ -654,6 +662,8 @@ namespace Mago
         }
 
         mModMap.erase( mod->GetAddress() );
+
+        mod->Dispose();
     }
 
     void Program::ForeachModule( ModuleCallback* callback )
