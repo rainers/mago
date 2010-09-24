@@ -49,6 +49,7 @@ namespace Mago
         virtual bool GetSize( uint32_t& size );
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
         virtual bool GetUdtKind( MagoEE::UdtKind& kind );
+        virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
 
         virtual bool IsField();
         virtual bool IsVar();
@@ -93,9 +94,48 @@ namespace Mago
         virtual bool GetType( MagoEE::Type*& type );
         virtual bool GetSize( uint32_t& size );
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
+        virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
 
         virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
         virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
+
+    private:
+        bool FindBaseClass( 
+            const char* baseName, 
+            size_t baseNameLen,
+            MagoST::TypeHandle fieldListTH, 
+            size_t fieldCount,
+            int& offset );
+
+        struct FindBaseClassParams
+        {
+            const char* Name;
+            size_t      NameLen;
+            int         OutOffset;
+            bool        OutFound;
+        };
+
+        typedef bool (TypeCVDecl::*BaseClassFunc)( 
+            MagoST::ISymbolInfo* memberInfo,
+            MagoST::ISymbolInfo* classInfo,
+            void* context );
+
+        void ForeachBaseClass(
+            MagoST::TypeHandle fieldListTH, 
+            size_t fieldCount,
+            BaseClassFunc functor,
+            void* context
+        );
+
+        bool FindClassInList(
+            MagoST::ISymbolInfo* memberInfo,
+            MagoST::ISymbolInfo* classInfo,
+            void* context );
+
+        bool RecurseClasses(
+            MagoST::ISymbolInfo* memberInfo,
+            MagoST::ISymbolInfo* classInfo,
+            void* context );
     };
 
 
@@ -153,6 +193,7 @@ namespace Mago
         virtual bool GetSize( uint32_t& size );
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
         virtual bool GetUdtKind( MagoEE::UdtKind& kind );
+        virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
 
         virtual bool IsField();
         virtual bool IsVar();

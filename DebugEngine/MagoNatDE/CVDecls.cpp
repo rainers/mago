@@ -125,6 +125,11 @@ namespace Mago
         return true;
     }
 
+    bool CVDecl::GetBaseClassOffset( Declaration* baseClass, int& offset )
+    {
+        return false;
+    }
+
     bool CVDecl::IsField()
     {
         MagoST::DataKind   kind = MagoST::DataIsUnknown;
@@ -341,6 +346,202 @@ namespace Mago
         return true;
     }
 
+    bool TypeCVDecl::GetBaseClassOffset( Declaration* baseClass, int& offset )
+    {
+        MagoEE::UdtKind kind;
+
+        if ( (baseClass == NULL) || !baseClass->IsType()
+            || !baseClass->GetUdtKind( kind ) )
+            return false;
+
+        const wchar_t*  name16 = GetName();
+        const wchar_t*  baseName16 = baseClass->GetName();
+
+        if ( (name16 == NULL) || (baseName16 == NULL) )
+            return false;
+
+        if ( wcscmp( baseName16, name16 ) == 0 )
+        {
+            offset = 0;
+            return true;
+        }
+
+        HRESULT         hr = S_OK;
+        size_t          baseNameLen16 = wcslen( baseName16 );
+        size_t          baseNameLen8 = 0;
+        CAutoVectorPtr<char>    baseName8;
+
+        hr = Utf16To8( baseName16, baseNameLen16, baseName8.m_p, baseNameLen8 );
+        if ( FAILED( hr ) )
+            return false;
+
+        uint16_t            fieldCount = 0;
+        MagoST::TypeIndex   fieldListTI = 0;
+        MagoST::TypeHandle  fieldListTH = { 0 };
+
+        if ( !mSymInfo->GetFieldCount( fieldCount ) )
+            return false;
+
+        if ( !mSymInfo->GetFieldList( fieldListTI ) )
+            return false;
+
+        if ( !mSession->GetTypeFromTypeIndex( fieldListTI, fieldListTH ) )
+            return false;
+
+        return FindBaseClass( baseName8, baseNameLen8, fieldListTH, fieldCount, offset );
+    }
+
+    bool TypeCVDecl::FindBaseClass( 
+        const char* baseName, 
+        size_t baseNameLen,
+        MagoST::TypeHandle fieldListTH, 
+        size_t fieldCount,
+        int& offset )
+    {
+        FindBaseClassParams nameParams = { 0 };
+
+        nameParams.Name = baseName;
+        nameParams.NameLen = baseNameLen;
+
+        ForeachBaseClass( fieldListTH, fieldCount, &TypeCVDecl::FindClassInList, &nameParams );
+
+        if ( !nameParams.OutFound )
+        {
+            ForeachBaseClass( fieldListTH, fieldCount, &TypeCVDecl::RecurseClasses, &nameParams );
+        }
+
+        if ( nameParams.OutFound )
+        {
+            offset = nameParams.OutOffset;
+            return true;
+        }
+
+        return false;
+    }
+
+    void TypeCVDecl::ForeachBaseClass(
+        MagoST::TypeHandle fieldListTH, 
+        size_t fieldCount,
+        BaseClassFunc functor,
+        void* context
+        )
+    {
+        MagoST::TypeScope   flistScope = { 0 };
+
+        if ( mSession->SetChildTypeScope( fieldListTH, flistScope ) != S_OK )
+            return;
+
+        // TODO: DMD is writing the wrong field list count
+        //       when it's fixed, we should check fieldCount again
+        for ( uint16_t i = 0; /*i < fieldCount*/; i++ )
+        {
+            MagoST::TypeHandle      memberTH = { 0 };
+            MagoST::SymInfoData     memberInfoData = { 0 };
+            MagoST::ISymbolInfo*    memberInfo = NULL;
+            MagoST::SymTag          tag = MagoST::SymTagNull;
+            MagoST::TypeIndex       classTI = 0;
+            MagoST::TypeHandle      classTH = { 0 };
+            MagoST::SymInfoData     classInfoData = { 0 };
+            MagoST::ISymbolInfo*    classInfo = NULL;
+
+            if ( !mSession->NextType( flistScope, memberTH ) )
+                // no more
+                break;
+
+            if ( mSession->GetTypeInfo( memberTH, memberInfoData, memberInfo ) != S_OK )
+                continue;
+
+            tag = memberInfo->GetSymTag();
+            if ( tag != MagoST::SymTagBaseClass )
+                continue;
+
+            if ( !memberInfo->GetType( classTI ) )
+                continue;
+
+            if ( !mSession->GetTypeFromTypeIndex( classTI, classTH ) )
+                continue;
+
+            if ( mSession->GetTypeInfo( classTH, classInfoData, classInfo ) != S_OK )
+                continue;
+
+            if ( classInfo->GetSymTag() != SymTagUDT )
+                continue;
+
+            if ( !(this->*functor)( memberInfo, classInfo, context ) )
+                break;
+        }
+    }
+
+    bool TypeCVDecl::FindClassInList(
+        MagoST::ISymbolInfo* memberInfo,
+        MagoST::ISymbolInfo* classInfo,
+        void* context )
+    {
+        _ASSERT( memberInfo != NULL );
+        _ASSERT( classInfo != NULL );
+        _ASSERT( context != NULL );
+
+        FindBaseClassParams*    params = (FindBaseClassParams*) context;
+        PasString*              className = NULL;
+
+        if ( !classInfo->GetName( className ) )
+            return true;
+
+        if ( (className->GetLength() != params->NameLen) 
+            || (strncmp( className->GetName(), params->Name, params->NameLen ) != 0) )
+            return true;
+
+        if ( !memberInfo->GetOffset( params->OutOffset ) )
+            // found the we want one, but we can't get the offset, so quit
+            return false;
+
+        params->OutFound = true;
+
+        return false;       // we found it, quit the search
+    }
+
+    bool TypeCVDecl::RecurseClasses(
+        MagoST::ISymbolInfo* memberInfo,
+        MagoST::ISymbolInfo* classInfo,
+        void* context )
+    {
+        _ASSERT( memberInfo != NULL );
+        _ASSERT( classInfo != NULL );
+        _ASSERT( context != NULL );
+
+        FindBaseClassParams*  params = (FindBaseClassParams*) context;
+        uint16_t            fieldCount = 0;
+        MagoST::TypeIndex   fieldListTI = 0;
+        MagoST::TypeHandle  fieldListTH = { 0 };
+        int                 offset = 0;
+        int                 ourOffset = 0;
+
+        if ( !memberInfo->GetOffset( ourOffset ) )
+            return true;
+
+        if ( !classInfo->GetFieldCount( fieldCount ) )
+            return true;
+
+        if ( !classInfo->GetFieldList( fieldListTI ) )
+            return true;
+
+        if ( !mSession->GetTypeFromTypeIndex( fieldListTI, fieldListTH ) )
+            return true;
+
+        if ( !FindBaseClass( 
+            params->Name, 
+            params->NameLen, 
+            fieldListTH, 
+            fieldCount, 
+            offset ) )
+            return true;
+
+        params->OutFound = true;
+        params->OutOffset = ourOffset + offset;
+
+        return false;
+    }
+
     HRESULT TypeCVDecl::FindObject( const wchar_t* name, Declaration*& decl )
     {
         HRESULT             hr = S_OK;
@@ -449,6 +650,11 @@ namespace Mago
 
         return true;
     }
+
+
+//----------------------------------------------------------------------------
+//  TypeCVDeclMembers
+//----------------------------------------------------------------------------
 
     TypeCVDeclMembers::TypeCVDeclMembers( 
         ExprContext* symStore,
@@ -693,6 +899,11 @@ namespace Mago
     }
 
     bool ClassRefDecl::GetUdtKind( MagoEE::UdtKind& kind )
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::GetBaseClassOffset( Declaration* baseClass, int& offset )
     {
         return false;
     }

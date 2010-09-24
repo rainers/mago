@@ -65,6 +65,11 @@ bool DeclDataElement::GetUdtKind( MagoEE::UdtKind& kind )
     return false;
 }
 
+bool DeclDataElement::GetBaseClassOffset( Declaration* baseClass, int& offset )
+{
+    return false;
+}
+
 bool DeclDataElement::IsField()
 {
     return false;
