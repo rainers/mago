@@ -375,6 +375,7 @@ namespace MagoEE
         // TODO: where do we put the method that returns all the members?
 
         virtual UdtKind GetUdtKind() = 0;
+        virtual bool GetBaseClassOffset( Type* baseClass, int& offset ) = 0;
     };
 
 
@@ -395,6 +396,7 @@ namespace MagoEE
         // ITypeStruct
         virtual RefPtr<Declaration> FindObject( const wchar_t* name );
         virtual UdtKind GetUdtKind();
+        virtual bool GetBaseClassOffset( Type* baseClass, int& offset );
     };
 
 

@@ -34,6 +34,7 @@ namespace MagoEE
         virtual bool GetSize( uint32_t& size ) = 0;
         virtual bool GetBackingTy( ENUMTY& ty ) = 0;
         virtual bool GetUdtKind( UdtKind& kind ) = 0;
+        virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset ) = 0;
 
         virtual bool IsField() = 0;
         virtual bool IsVar() = 0;

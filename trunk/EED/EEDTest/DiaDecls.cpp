@@ -138,6 +138,11 @@ bool DiaDecl::GetUdtKind( MagoEE::UdtKind& kind )
     return true;
 }
 
+bool DiaDecl::GetBaseClassOffset( Declaration* baseClass, int& offset )
+{
+    return false;
+}
+
 bool DiaDecl::IsField()
 {
     MagoST::DataKind   kind = MagoST::DataIsUnknown;

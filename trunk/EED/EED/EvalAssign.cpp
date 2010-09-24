@@ -123,9 +123,6 @@ namespace MagoEE
 
     bool CastExpr::CanImplicitCast( Type* source, Type* dest )
     {
-        // TODO: what about other things like:
-        //       casting a pointer to a derived class object into a pointer to a base class object
-
         // even though the D langauge doesn't allow the assignment of a float to a pointer,
         // we'll allow it here to for our own simplicity and convenience, and to 
         // match VC++'s debugger.
@@ -144,8 +141,6 @@ namespace MagoEE
 
     bool CastExpr::CanCast( Type* source, Type* dest )
     {
-        // TODO: what about other things, like static array to pointer?
-        //       or casting a pointer to a derived class object into a pointer to a base class object
         if (    (dest->IsIntegral() && source->IsIntegral())
             ||  (dest->IsIntegral() && source->IsFloatingPoint())
             ||  (dest->IsIntegral() && source->IsPointer())
@@ -181,8 +176,6 @@ namespace MagoEE
         Type*   destType = dest._Type;
         Type*   srcType = source._Type;
 
-        // TODO: what about other things, like static array to pointer?
-        //       or casting a pointer to a derived class object into a pointer to a base class object
         if ( destType->IsBool() )
         {
             dest.Value.UInt64Value = ConvertToBool( source ) ? 1 : 0;
@@ -298,6 +291,20 @@ namespace MagoEE
             }
             else if ( srcType->IsPointer() )
             {
+                RefPtr<Type>    nextSrc = srcType->AsTypeNext()->GetNext();
+                RefPtr<Type>    nextDest = destType->AsTypeNext()->GetNext();
+
+                if ( (nextSrc != NULL) && (nextSrc->AsTypeStruct() != NULL)
+                    && (nextDest != NULL) && (nextDest->AsTypeStruct() != NULL) )
+                {
+                    int offset = 0;
+
+                    if ( nextSrc->AsTypeStruct()->GetBaseClassOffset( nextDest, offset ) )
+                    {
+                        source.Value.Addr += offset;
+                    }
+                }
+
                 dest.Value.Addr = source.Value.Addr;
             }
             else if ( srcType->IsDArray() )

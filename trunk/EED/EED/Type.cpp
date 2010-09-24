@@ -1234,6 +1234,15 @@ namespace MagoEE
         return kind;
     }
 
+    bool TypeStruct::GetBaseClassOffset( Type* baseClass, int& offset )
+    {
+        _ASSERT( baseClass != NULL );
+        if ( (baseClass == NULL) || (baseClass->AsTypeStruct() == NULL) )
+            return false;
+
+        return mDecl->GetBaseClassOffset( baseClass->GetDeclaration(), offset );
+    }
+
     bool TypeStruct::Equals( Type* other )
     {
         if ( Ty != other->Ty )
