@@ -10,6 +10,7 @@
 #include "RegisterSet.h"
 #include "EnumPropertyInfo.h"
 #include "FormatNum.h"
+#include <Real.h>
 
 
 namespace Mago
@@ -292,8 +293,13 @@ namespace Mago
 
         if ( (dwFields & DEBUGPROP_INFO_ATTRIB) != 0 )
         {
+            bool    readOnly = true;
+
+            mRegSet->IsReadOnly( mReg->FullReg, readOnly );
+
             pPropertyInfo->dwAttrib = DBG_ATTRIB_STORAGE_REGISTER;
-            pPropertyInfo->dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
+            if ( readOnly )
+                pPropertyInfo->dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
             if ( !isValid )
                 pPropertyInfo->dwAttrib |= DBG_ATTRIB_VALUE_NAT;
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_ATTRIB;
@@ -307,7 +313,88 @@ namespace Mago
         DWORD dwRadix,
         DWORD dwTimeout )
     {
-        return E_NOTIMPL;
+        HRESULT         hr = S_OK;
+        RegisterType    regType = GetRegisterType( mReg->FullReg );
+        RegisterValue   regVal = { 0 };
+        uint64_t        limit = 0;
+        size_t          strValLen = wcslen( pszValue );
+
+        regVal.Type = regType;
+
+        switch ( regType )
+        {
+        case RegType_Int8:  limit = std::numeric_limits<uint8_t>::max();  goto Ints;
+        case RegType_Int16: limit = std::numeric_limits<uint16_t>::max(); goto Ints;
+        case RegType_Int32: limit = std::numeric_limits<uint32_t>::max(); goto Ints;
+        case RegType_Int64: limit = std::numeric_limits<uint64_t>::max(); goto Ints;
+        Ints:
+            {
+                _set_errno( 0 );
+                wchar_t*    endPtr = NULL;
+                uint64_t    val = _wcstoui64( pszValue, &endPtr, 16 );
+
+                if ( (errno != 0) || (val > limit) 
+                    || ((size_t) (endPtr - pszValue) < strValLen) )
+                    return E_FAIL;
+
+                if ( mReg->Length > 0 )
+                {
+                    RegisterValue   oldRegVal = { 0 };
+                    uint64_t        oldVal = 0;
+
+                    hr = mRegSet->GetValue( mReg->FullReg, oldRegVal );
+                    if ( FAILED( hr ) )
+                        return hr;
+
+                    oldVal = oldRegVal.GetInt();
+
+                    val = (val & mReg->Mask) << mReg->Shift;
+                    val |= oldVal & ~((uint64_t) mReg->Mask << mReg->Shift);
+                }
+
+                regVal.SetInt( val );
+            }
+            break;
+
+        case RegType_Float32:
+        case RegType_Float64:
+            {
+                _set_errno( 0 );
+                wchar_t*    endPtr = NULL;
+                double      val = wcstod( pszValue, &endPtr );
+
+                if ( (errno != 0) 
+                    || ((size_t) (endPtr - pszValue) < strValLen) )
+                    return E_FAIL;
+
+                switch ( regType )
+                {
+                case RegType_Float32: regVal.Value.F32 = (float) val;   break;
+                case RegType_Float64: regVal.Value.F64 = (double) val;  break;
+                }
+            }
+            break;
+
+        case RegType_Float80:
+            {
+                Real10  r;
+
+                if ( Real10::Parse( pszValue, r ) != 0 )
+                    return E_FAIL;
+
+                memcpy( regVal.Value.F80Bytes, r.Words, sizeof r.Words );
+            }
+            break;
+
+        default:
+            return E_FAIL;
+        }
+
+        hr = mRegSet->SetValue( mReg->FullReg, regVal );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
     }
 
     HRESULT RegisterProperty::SetValueAsReference( 
