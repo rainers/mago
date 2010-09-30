@@ -40,6 +40,9 @@ namespace Mago
         } Value;
 
         RegisterType    Type;
+
+        uint64_t    GetInt() const;
+        void        SetInt( uint64_t n );
     };
 
 
@@ -223,6 +226,9 @@ namespace Mago
         //  Returns S_FALSE if register is unavailable. 
         //      value will be zero with the right type.
         virtual HRESULT GetValue( uint32_t regId, RegisterValue& value ) = 0;
+
+        virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value ) = 0;
+        virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly ) = 0;
     };
 
 
@@ -242,6 +248,8 @@ namespace Mago
         virtual void Release();
 
         virtual HRESULT GetValue( uint32_t regId, RegisterValue& value );
+        virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value );
+        virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly );
     };
 
 
@@ -262,5 +270,10 @@ namespace Mago
         virtual void Release();
 
         virtual HRESULT GetValue( uint32_t regId, RegisterValue& value );
+        virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value );
+        virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly );
     };
+
+
+    RegisterType GetRegisterType( uint32_t regId );
 }

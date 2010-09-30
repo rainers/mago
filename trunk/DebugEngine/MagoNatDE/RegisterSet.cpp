@@ -256,6 +256,47 @@ namespace Mago
     }
 
 
+    uint64_t    RegisterValue::GetInt() const
+    {
+        uint64_t    n = 0;
+
+        switch ( Type )
+        {
+        case RegType_Int8:  n = this->Value.I8;  break;
+        case RegType_Int16: n = this->Value.I16; break;
+        case RegType_Int32: n = this->Value.I32; break;
+        case RegType_Int64: n = this->Value.I64; break;
+        default:
+            _ASSERT( false );
+            break;
+        }
+
+        return n;
+    }
+
+    void        RegisterValue::SetInt( uint64_t n )
+    {
+        switch ( Type )
+        {
+        case RegType_Int8:  this->Value.I8 = (uint8_t) n;   break;
+        case RegType_Int16: this->Value.I16 = (uint16_t) n; break;
+        case RegType_Int32: this->Value.I32 = (uint32_t) n; break;
+        case RegType_Int64: this->Value.I64 = (uint64_t) n; break;
+        default:
+            _ASSERT( false );
+            break;
+        }
+    }
+
+    RegisterType GetRegisterType( uint32_t regId )
+    {
+        if ( regId >= _countof( gRegDesc ) )
+            return RegType_None;
+
+        return (RegisterType) gRegDesc[regId].Type;
+    }
+
+
     //------------------------------------------------------------------------
     //  RegisterSet
     //------------------------------------------------------------------------
@@ -320,6 +361,77 @@ namespace Mago
 
         value.Type = (RegisterType) regDesc.Type;
 
+        return S_OK;
+    }
+
+    HRESULT RegisterSet::SetValue( uint32_t regId, const RegisterValue& value )
+    {
+        BOOL        bRet = FALSE;
+        BYTE        backup[ sizeof( RegisterValue ) ] = { 0 };
+        uint32_t    backupOffset = 0;
+        uint32_t    backupSize = 0;
+
+        if ( regId >= _countof( gRegDesc ) )
+            return E_INVALIDARG;
+
+        const RegisterDesc& regDesc = gRegDesc[regId];
+        if ( regDesc.Type == RegType_None )
+            return E_FAIL;
+
+        if ( value.Type != regDesc.Type )
+            return E_INVALIDARG;
+
+        if ( IsInteger( (RegisterType) regDesc.Type ) && (regDesc.ParentRegId != 0) )
+        {
+            const RegisterDesc& parentRegDesc = gRegDesc[regDesc.ParentRegId];
+            uint64_t    shiftedMask = regDesc.SubregMask << regDesc.SubregOffset;
+            uint64_t    oldN = 0;
+            uint64_t    newN = 0;
+
+            newN = value.GetInt();
+
+            oldN = ReadInt( 
+                (uint8_t*) &mContext, 
+                parentRegDesc.ContextOffset, 
+                parentRegDesc.ContextSize, 
+                false );
+
+            newN = (oldN & ~shiftedMask) | ((newN << regDesc.SubregOffset) & shiftedMask);
+
+            backupOffset = parentRegDesc.ContextOffset;
+            backupSize = parentRegDesc.ContextSize;
+
+            memcpy( backup, (BYTE*) &mContext + backupOffset, backupSize );
+            WriteInteger( newN, mContext, parentRegDesc.ContextOffset, parentRegDesc.ContextSize );
+        }
+        else
+        {
+            _ASSERT( (regDesc.ContextOffset + regDesc.ContextSize) <= sizeof mContext );
+            BYTE*   bytes = (BYTE*) &mContext;
+
+            backupOffset = regDesc.ContextOffset;
+            backupSize = regDesc.ContextSize;
+
+            memcpy( backup, bytes + regDesc.ContextOffset, regDesc.ContextSize );
+            memcpy( bytes + regDesc.ContextOffset, &value.Value, regDesc.ContextSize );
+        }
+
+        bRet = SetThreadContext( mCoreThread->GetHandle(), &mContext );
+        if ( !bRet )
+        {
+            memcpy( (BYTE*) &mContext + backupOffset, backup, backupSize );
+            return GetLastHr();
+        }
+
+        return S_OK;
+    }
+
+    HRESULT RegisterSet::IsReadOnly( uint32_t regId, bool& readOnly )
+    {
+        if ( regId >= _countof( gRegDesc ) )
+            return E_INVALIDARG;
+
+        readOnly = false;
         return S_OK;
     }
 
@@ -398,6 +510,20 @@ namespace Mago
             return S_FALSE;
         }
 
+        return S_OK;
+    }
+
+    HRESULT TinyRegisterSet::SetValue( uint32_t regId, const RegisterValue& value )
+    {
+        return E_NOTIMPL;
+    }
+
+    HRESULT TinyRegisterSet::IsReadOnly( uint32_t regId, bool& readOnly )
+    {
+        if ( regId >= _countof( gRegDesc ) )
+            return E_INVALIDARG;
+
+        readOnly = true;
         return S_OK;
     }
 }
