@@ -15,6 +15,7 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #include "afxres.h"
+#include "MagoVersion.h"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -42,6 +43,7 @@ END
 2 TEXTINCLUDE 
 BEGIN
     "#include ""afxres.h""\r\n"
+    "#include ""MagoVersion.h""\r\n"
     "\0"
 END
 
@@ -60,8 +62,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
+ FILEVERSION MAGO_FILEVERSION
+ PRODUCTVERSION MAGO_PRODVERSION
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -77,13 +79,13 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "Aldo J. Nunez"
-            VALUE "FileDescription", "CVSTI CodeView Symbol Access"
-            VALUE "FileVersion", "1, 0, 0, 1"
+            VALUE "FileDescription", "CodeView Symbol Access"
+            VALUE "FileVersion", MAGO_FILEVERSION_STR
             VALUE "InternalName", "CVSTI"
             VALUE "LegalCopyright", "(c) 2010 Aldo J. Nunez.  All rights reserved."
             VALUE "OriginalFilename", "CVSTI.dll"
             VALUE "ProductName", "Mago D Debugger"
-            VALUE "ProductVersion", "1, 0, 0, 1"
+            VALUE "ProductVersion", MAGO_PRODVERSION_STR
         END
     END
     BLOCK "VarFileInfo"

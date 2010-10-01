@@ -54,6 +54,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\..\Include&quot;"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -127,6 +128,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\..\Include&quot;"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"

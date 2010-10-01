@@ -8,6 +8,7 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #include "afxres.h"
+#include "MagoVersion.h"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -35,6 +36,7 @@ END
 2 TEXTINCLUDE 
 BEGIN
     "#include ""afxres.h""\r\n"
+    "#include ""MagoVersion.h""\r\n"
     "\0"
 END
 
@@ -53,8 +55,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
+ FILEVERSION 1,7,0,0
+ PRODUCTVERSION MAGO_PRODVERSION
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -71,12 +73,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Vivek Thampi"
             VALUE "FileDescription", "udis86 Library"
-            VALUE "FileVersion", "1, 0, 0, 1"
+            VALUE "FileVersion", "1, 7, 0, 0"
             VALUE "InternalName", "udis86"
             VALUE "LegalCopyright", "(c) Vivek Thampi"
             VALUE "OriginalFilename", "udis86.lib"
-            VALUE "ProductName", "udis86 Library"
-            VALUE "ProductVersion", "1, 0, 0, 1"
+            VALUE "ProductName", "Mago D Debugger"
+            VALUE "ProductVersion", MAGO_PRODVERSION_STR
         END
     END
     BLOCK "VarFileInfo"
