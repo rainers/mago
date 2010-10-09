@@ -86,76 +86,76 @@ namespace Mago
         { 0, RegType_Int32, 0, 0, 0, offsetof( CONTEXT, FloatSave.ErrorOffset ), 4 }, // FPEIP
         { 0, RegType_Int32, 0, 0, 0, offsetof( CONTEXT, FloatSave.DataOffset ), 4 },   // FPEDO
 
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MM0
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MM1
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MM2
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MM3
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MM4
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MM5
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MM6
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MM7
+        { 0, RegType_Int64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, FloatSave.RegisterArea[ 0 * 10 ] ), 8 },    // MM0
+        { 0, RegType_Int64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, FloatSave.RegisterArea[ 1 * 10 ] ), 8 },    // MM1
+        { 0, RegType_Int64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, FloatSave.RegisterArea[ 2 * 10 ] ), 8 },    // MM2
+        { 0, RegType_Int64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, FloatSave.RegisterArea[ 3 * 10 ] ), 8 },    // MM3
+        { 0, RegType_Int64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, FloatSave.RegisterArea[ 4 * 10 ] ), 8 },    // MM4
+        { 0, RegType_Int64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, FloatSave.RegisterArea[ 5 * 10 ] ), 8 },    // MM5
+        { 0, RegType_Int64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, FloatSave.RegisterArea[ 6 * 10 ] ), 8 },    // MM6
+        { 0, RegType_Int64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, FloatSave.RegisterArea[ 7 * 10 ] ), 8 },    // MM7
 
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM0
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM1
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM2
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM3
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM4
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM5
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM6
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM7
+        { 0, RegType_Vector128, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 10 * 16 ] ), 16 },    // XMM0
+        { 0, RegType_Vector128, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 11 * 16 ] ), 16 },    // XMM1
+        { 0, RegType_Vector128, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 12 * 16 ] ), 16 },    // XMM2
+        { 0, RegType_Vector128, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 13 * 16 ] ), 16 },    // XMM3
+        { 0, RegType_Vector128, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 14 * 16 ] ), 16 },    // XMM4
+        { 0, RegType_Vector128, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 15 * 16 ] ), 16 },    // XMM5
+        { 0, RegType_Vector128, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 16 * 16 ] ), 16 },    // XMM6
+        { 0, RegType_Vector128, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 17 * 16 ] ), 16 },    // XMM7
 
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM00
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM01
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM02
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM03
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM10
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM11
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM12
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM13
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM20
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM21
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM22
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM23
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM30
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM31
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM32
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM33
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM40
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM41
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM42
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM43
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM50
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM51
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM52
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM53
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM60
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM61
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM62
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM63
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM70
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM71
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM72
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM73
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 10 * 16 ] ) + 12, 4 },  // XMM00
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 10 * 16 ] ) + 8, 4 },   // XMM01
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 10 * 16 ] ) + 4, 4 },   // XMM02
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 10 * 16 ] ) + 0, 4 },   // XMM03
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 11 * 16 ] ) + 12, 4 },  // XMM10
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 11 * 16 ] ) + 8, 4 },   // XMM11
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 11 * 16 ] ) + 4, 4 },   // XMM12
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 11 * 16 ] ) + 0, 4 },   // XMM13
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 12 * 16 ] ) + 12, 4 },  // XMM20
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 12 * 16 ] ) + 8, 4 },   // XMM21
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 12 * 16 ] ) + 4, 4 },   // XMM22
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 12 * 16 ] ) + 0, 4 },   // XMM23
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 13 * 16 ] ) + 12, 4 },  // XMM30
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 13 * 16 ] ) + 8, 4 },   // XMM31
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 13 * 16 ] ) + 4, 4 },   // XMM32
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 13 * 16 ] ) + 0, 4 },   // XMM33
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 14 * 16 ] ) + 12, 4 },  // XMM40
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 14 * 16 ] ) + 8, 4 },   // XMM41
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 14 * 16 ] ) + 4, 4 },   // XMM42
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 14 * 16 ] ) + 0, 4 },   // XMM43
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 15 * 16 ] ) + 12, 4 },  // XMM50
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 15 * 16 ] ) + 8, 4 },   // XMM51
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 15 * 16 ] ) + 4, 4 },   // XMM52
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 15 * 16 ] ) + 0, 4 },   // XMM53
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 16 * 16 ] ) + 12, 4 },  // XMM60
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 16 * 16 ] ) + 8, 4 },   // XMM61
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 16 * 16 ] ) + 4, 4 },   // XMM62
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 16 * 16 ] ) + 0, 4 },   // XMM63
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 17 * 16 ] ) + 12, 4 },  // XMM70
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 17 * 16 ] ) + 8, 4 },   // XMM71
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 17 * 16 ] ) + 4, 4 },   // XMM72
+        { 0, RegType_Float32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 17 * 16 ] ) + 0, 4 },   // XMM73
 
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM0L
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM1L
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM2L
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM3L
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM4L
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM5L
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM6L
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM7L
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 10 * 16 ] ) + 8, 8 },   // XMM0L
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 11 * 16 ] ) + 8, 8 },   // XMM1L
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 12 * 16 ] ) + 8, 8 },   // XMM2L
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 13 * 16 ] ) + 8, 8 },   // XMM3L
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 14 * 16 ] ) + 8, 8 },   // XMM4L
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 15 * 16 ] ) + 8, 8 },   // XMM5L
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 16 * 16 ] ) + 8, 8 },   // XMM6L
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 17 * 16 ] ) + 8, 8 },   // XMM7L
 
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM0H
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM1H
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM2H
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM3H
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM4H
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM5H
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM6H
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // XMM7H
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 10 * 16 ] ) + 0, 8 },   // XMM0H
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 11 * 16 ] ) + 0, 8 },   // XMM1H
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 12 * 16 ] ) + 0, 8 },   // XMM2H
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 13 * 16 ] ) + 0, 8 },   // XMM3H
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 14 * 16 ] ) + 0, 8 },   // XMM4H
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 15 * 16 ] ) + 0, 8 },   // XMM5H
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 16 * 16 ] ) + 0, 8 },   // XMM6H
+        { 0, RegType_Float64, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 17 * 16 ] ) + 0, 8 },   // XMM7H
 
-        { 0, RegType_None, 0, 0, 0, 0, 0 },    // MXCSR
+        { 0, RegType_Int32, 0, 0, 0, (uint16_t) offsetof( CONTEXT, ExtendedRegisters[ 24 ] ), 4 },    // MXCSR
 
         { 0, RegType_None, 0, 0, 0, 0, 0 },    // EMM0L
         { 0, RegType_None, 0, 0, 0, 0, 0 },    // EMM1L

@@ -136,7 +136,7 @@ namespace Mago
 
         // TODO: we should get this another way
         context.ContextFlags = CONTEXT_FULL 
-            | CONTEXT_FLOATING_POINT;
+            | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
         if ( !GetThreadContext( mCoreThread->GetHandle(), &context ) )
             return GetLastHr();
 

@@ -23,6 +23,9 @@ enum StringIds
     IDS_REGGROUP_CPU_SEGMENTS,
     IDS_REGGROUP_FLOATING_POINT,
     IDS_REGGROUP_FLAGS,
+    IDS_REGGROUP_MMX,
+    IDS_REGGROUP_SSE,
+    IDS_REGGROUP_SSE2,
 };
 
 const wchar_t* GetString( DWORD strId );

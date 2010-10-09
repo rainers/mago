@@ -25,6 +25,9 @@ static const wchar_t*   gStrings[] =
     L"CPU Segments",
     L"Floating Point",
     L"Flags",
+    L"MMX",
+    L"SSE",
+    L"SSE2",
 };
 
 

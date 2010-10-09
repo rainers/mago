@@ -147,6 +147,11 @@ namespace Mago
         if ( array.Get() == NULL )
             return E_OUTOFMEMORY;
 
+        // TODO: as usual, Exec should check for the feature instead of here
+        if ( (mGroup->NeededFeature != 0) 
+            && !IsProcessorFeaturePresent( mGroup->NeededFeature ) )
+            return E_FAIL;
+
         for ( uint32_t i = 0; i < mGroup->RegCount; i++ )
         {
             RefPtr<RegisterProperty>    regProp;
@@ -386,6 +391,34 @@ namespace Mago
             }
             break;
 
+        case RegType_Vector128:
+            {
+                // 16 byte value, 32 character string, 2 hex chars each byte
+                const int   ValSize = 16;
+                const int   ByteChars = 2;
+                wchar_t*    endPtr = NULL;
+                wchar_t     byteStr[ByteChars + 1] = L"";
+
+                if ( strValLen != ValSize * ByteChars )
+                    return E_FAIL;
+
+                for ( size_t i = 0; i < ValSize; i++ )
+                {
+                    uint32_t    byte = 0;
+
+                    wcsncpy_s( byteStr, &pszValue[ i * ByteChars ], ByteChars );
+                    _set_errno( 0 );
+                    byte = wcstoul( byteStr, &endPtr, 16 );
+
+                    if ( (errno != 0) || (byte > std::numeric_limits<uint8_t>::max()) 
+                        || ((size_t) (endPtr - byteStr) < ByteChars) )
+                        return E_FAIL;
+
+                    regVal.Value.V8[i] = (uint8_t) byte;
+                }
+            }
+            break;
+
         default:
             return E_FAIL;
         }
@@ -542,6 +575,14 @@ namespace Mago
 
         case RegType_Float80:
             FormatFloat80( val.Value.F80Bytes, str, ::Float80DecStrLen + 1 );
+            break;
+
+        case RegType_Vector128:
+            // 16 byte value, 32 character string, 2 hex chars each byte
+            for ( int i = 0; i < sizeof val.Value.V8; i++ )
+            {
+                swprintf_s( &str[i * 2], _countof( str ) - (i * 2), L"%02X", val.Value.V8[i] );
+            }
             break;
         }
 

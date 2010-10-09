@@ -29,6 +29,7 @@ namespace Mago
         uint32_t    StrId;
         const Reg*  Regs;
         uint32_t    RegCount;
+        uint32_t    NeededFeature;
     };
 
 
