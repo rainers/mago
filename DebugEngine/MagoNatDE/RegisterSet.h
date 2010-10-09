@@ -23,6 +23,7 @@ namespace Mago
         RegType_Float32,
         RegType_Float64,
         RegType_Float80,
+        RegType_Vector128,
     };
 
 
@@ -37,6 +38,7 @@ namespace Mago
             float       F32;
             double      F64;
             uint8_t     F80Bytes[10];
+            uint8_t     V8[16];
         } Value;
 
         RegisterType    Type;
