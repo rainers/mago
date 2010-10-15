@@ -22,12 +22,15 @@ namespace MagoST
     struct SegmentInfo;
     struct FileInfo;
     struct LineInfo;
+    struct FileSegmentInfo;
 
 
     struct LineNumber
     {
         uint16_t    CompilandIndex;
         uint16_t    FileIndex;
+        uint16_t    SegmentInstanceIndex;
+        uint16_t    LineIndex;
         uint16_t    Number;
         uint16_t    NumberEnd;
         uint16_t    Section;
@@ -105,6 +108,8 @@ namespace MagoST
         virtual HRESULT GetFileInfo( uint16_t compilandIndex, uint16_t fileIndex, FileInfo& info ) = 0;
         virtual HRESULT GetFileSegmentInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t count, SegmentInfo* infos ) = 0;
         virtual HRESULT GetLineInfo( uint16_t compIndex, uint16_t fileIndex, uint16_t segIndex, uint16_t count, LineInfo* infos) = 0;
+
+        virtual bool GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo ) = 0;
 
         virtual bool FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber ) = 0;
         virtual bool FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber) = 0;

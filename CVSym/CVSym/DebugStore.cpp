@@ -1137,7 +1137,7 @@ namespace MagoST
         return S_OK;
     }
 
-    HRESULT DebugStore::GetLineInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t segIndex, uint16_t count, LineInfo* infos )
+    HRESULT DebugStore::GetLineInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t segInstanceIndex, uint16_t count, LineInfo* infos )
     {
         if ( infos == NULL )
             return E_INVALIDARG;
@@ -1160,10 +1160,10 @@ namespace MagoST
         OMFSourceFile*  file = (OMFSourceFile*) ((BYTE*) srcMod + filePtrTable[fileIndex]);
         DWORD*          srcLinePtrTable = (DWORD*) ((BYTE*) file + 4);
 
-        if ( segIndex >= file->cSeg )
+        if ( segInstanceIndex >= file->cSeg )
             return E_FAIL;
 
-        OMFSourceLine*  line = (OMFSourceLine*) ((BYTE*) srcMod + srcLinePtrTable[segIndex]);
+        OMFSourceLine*  line = (OMFSourceLine*) ((BYTE*) srcMod + srcLinePtrTable[segInstanceIndex]);
         DWORD*          offsetTable = (DWORD*) ((BYTE*) line + 4);
         WORD*           numberTable = (WORD*) (offsetTable + line->cLnOff);
 
@@ -1177,6 +1177,49 @@ namespace MagoST
         }
 
         return S_OK;
+    }
+
+    bool DebugStore::GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo )
+    {
+        if ( (compIndex < 1) || (compIndex > mCompilandCount) )
+            return false;
+
+        const uint16_t      zCompIx = compIndex - 1;
+        OMFSourceModule*    srcMod = NULL;
+
+        if ( mCompilandDetails[zCompIx].SourceEntry != NULL )
+            srcMod = GetCVPtr<OMFSourceModule>( mCompilandDetails[zCompIx].SourceEntry->lfo );
+
+        if ( srcMod == NULL )
+            return false;
+
+        DWORD*      filePtrTable = (DWORD*) (((BYTE*) srcMod) + 4);
+
+        if ( fileIndex >= srcMod->cFile )
+            return false;
+
+        OMFSourceFile*  file = (OMFSourceFile*) ((BYTE*) srcMod + filePtrTable[fileIndex]);
+
+        DWORD*          srcLinePtrTable = (DWORD*) ((BYTE*) file + 4);
+        OffsetPair*     startEndTable = (OffsetPair*) (srcLinePtrTable + file->cSeg);
+
+        if ( segInstanceIndex >= file->cSeg )
+            return false;
+
+        OMFSourceLine*  srcLine = (OMFSourceLine*) ((BYTE*) srcMod + srcLinePtrTable[segInstanceIndex]);
+
+        DWORD*  offsetTable = (DWORD*) ((BYTE*) srcLine + 4);
+        WORD*   numberTable = (WORD*) (offsetTable + srcLine->cLnOff);
+
+        segInfo.SegmentIndex = srcLine->Seg;
+        segInfo.SegmentInstance = segInstanceIndex;
+        segInfo.Start = startEndTable[segInstanceIndex].first;
+        segInfo.End = startEndTable[segInstanceIndex].second;
+        segInfo.LineCount = srcLine->cLnOff;
+        segInfo.Offsets = offsetTable;
+        segInfo.LineNumbers = numberTable;
+
+        return true;
     }
 
     bool    DebugStore::FindCompilandFileSegment( uint16_t line, uint16_t compIndex, uint16_t fileIndex, FileSegmentInfo& segInfo )
@@ -1341,24 +1384,24 @@ namespace MagoST
 
         for ( uint16_t zModSegIx = 0; zModSegIx < srcMod->cSeg; zModSegIx++ )
         {
-            if ( segTable[zModSegIx] == seg )
-            {
-                if ( ((offsetTable[zModSegIx].first == 0) && (offsetTable[zModSegIx].second == 0))
-                    || ((offset >= offsetTable[zModSegIx].first) && (offset <= offsetTable[zModSegIx].second)) )
-                {
-                    for ( uint16_t zFileIx = 0; zFileIx < srcMod->cFile; zFileIx++ )
-                    {
-                        OMFSourceFile*  file = (OMFSourceFile*) ((BYTE*) srcMod + filePtrTable[zFileIx]);
+            if ( segTable[zModSegIx] != seg )
+                continue;
 
-                        if ( FindFileSegment( seg, offset, srcMod, file, fileSegInfo ) )
-                        {
-                            fileIndex = zFileIx;
-                            return true;
-                        }
+            if ( ((offsetTable[zModSegIx].first == 0) && (offsetTable[zModSegIx].second == 0))
+                || ((offset >= offsetTable[zModSegIx].first) && (offset <= offsetTable[zModSegIx].second)) )
+            {
+                for ( uint16_t zFileIx = 0; zFileIx < srcMod->cFile; zFileIx++ )
+                {
+                    OMFSourceFile*  file = (OMFSourceFile*) ((BYTE*) srcMod + filePtrTable[zFileIx]);
+
+                    if ( FindFileSegment( seg, offset, srcMod, file, fileSegInfo ) )
+                    {
+                        fileIndex = zFileIx;
+                        return true;
                     }
                 }
-                break;
             }
+            break;
         }
 
         return false;
@@ -1378,24 +1421,25 @@ namespace MagoST
         {
             OMFSourceLine*  line = (OMFSourceLine*) ((BYTE*) srcMod + srcLinePtrTable[zSegIx]);
 
-            if ( line->Seg == seg )
-            {
-                if ( ((startEndTable[zSegIx].first == 0) && (startEndTable[zSegIx].second == 0))
-                    || ((startEndTable[zSegIx].first <= offset) && (startEndTable[zSegIx].second >= offset)) )
-                {
-                    DWORD*  offsetTable = (DWORD*) ((BYTE*) line + 4);
-                    WORD*   numberTable = (WORD*) (offsetTable + line->cLnOff);
+            if ( line->Seg != seg )
+                continue;
 
-                    fileSegInfo.SegmentIndex = line->Seg;
-                    fileSegInfo.Start = startEndTable[zSegIx].first;
-                    fileSegInfo.End = startEndTable[zSegIx].second;
-                    fileSegInfo.LineCount = line->cLnOff;
-                    fileSegInfo.LineNumbers = numberTable;
-                    fileSegInfo.Offsets = offsetTable;
-                    return true;
-                }
-                // don't leave yet, because the addr might be in another file/segment instance
+            if ( ((startEndTable[zSegIx].first == 0) && (startEndTable[zSegIx].second == 0))
+                || ((startEndTable[zSegIx].first <= offset) && (startEndTable[zSegIx].second >= offset)) )
+            {
+                DWORD*  offsetTable = (DWORD*) ((BYTE*) line + 4);
+                WORD*   numberTable = (WORD*) (offsetTable + line->cLnOff);
+
+                fileSegInfo.SegmentIndex = line->Seg;
+                fileSegInfo.SegmentInstance = zSegIx;
+                fileSegInfo.Start = startEndTable[zSegIx].first;
+                fileSegInfo.End = startEndTable[zSegIx].second;
+                fileSegInfo.LineCount = line->cLnOff;
+                fileSegInfo.LineNumbers = numberTable;
+                fileSegInfo.Offsets = offsetTable;
+                return true;
             }
+            // don't leave yet, because the addr might be in another file/segment instance
         }
 
         return false;

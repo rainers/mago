@@ -19,7 +19,8 @@ namespace Mago
         :   mScope( 0 ),
             mAnchorAddr( 0 ),
             mReadAddr( 0 ),
-            mInvalidInstLenAtReadPtr( 0 )
+            mInvalidInstLenAtReadPtr( 0 ),
+            mStartOfRead( false )
     {
     }
 
@@ -101,6 +102,57 @@ namespace Mago
             pDisassembly->bstrOpcode = SysAllocString( opcodeStr );
             pDisassembly->dwFields |= DSF_OPCODE;
         }
+
+        if ( (dwFields & DSF_DOCUMENTURL) != 0 )
+        {
+            // we want to return a filename on a document change except if 
+            // we're at the beginning of a block
+
+            if ( mStartOfRead || (mDocInfo.HasLineInfo() && mDocInfo.DocChanged()) )
+            {
+                pDisassembly->bstrDocumentUrl = mDocInfo.GetFilename();
+                if ( pDisassembly->bstrDocumentUrl != NULL )
+                    pDisassembly->dwFields |= DSF_DOCUMENTURL;
+            }
+        }
+
+        if ( (dwFields & DSF_POSITION) != 0 )
+        {
+            if ( mDocInfo.HasLineInfo() )
+            {
+                // only need to set the line info if at the beginning of an instruction
+                if ( mDocInfo.GetByteOffset() == 0 )
+                {
+                    // no source code is shown if the end column is zero
+                    // since there's no column data, span all columns
+
+                    pDisassembly->posBeg.dwLine = mDocInfo.GetLine() - 1;
+                    pDisassembly->posBeg.dwColumn = 0;
+                    pDisassembly->posEnd.dwLine = mDocInfo.GetLineEnd() - 1;
+                    pDisassembly->posEnd.dwColumn = 0xFFFFFFFF;
+                    pDisassembly->dwFields |= DSF_POSITION;
+                }
+            }
+        }
+
+        if ( (dwFields & DSF_BYTEOFFSET) != 0 )
+        {
+            if ( mDocInfo.HasLineInfo() )
+            {
+                pDisassembly->dwByteOffset = mDocInfo.GetByteOffset();
+                pDisassembly->dwFields |= DSF_BYTEOFFSET;
+            }
+        }
+
+        if ( (dwFields & DSF_FLAGS) != 0 )
+        {
+            pDisassembly->dwFlags = 0;
+            if ( mDocInfo.HasLineInfo() )
+                pDisassembly->dwFlags |= DF_HASSOURCE;
+            if ( mDocInfo.DocChanged() )
+                pDisassembly->dwFlags |= DF_DOCUMENTCHANGE;
+            pDisassembly->dwFields |= DSF_FLAGS;
+        }
     }
 
     HRESULT DisassemblyStream::Read( 
@@ -155,6 +207,14 @@ namespace Mago
             mReadAddr++;
         }
 
+        mStartOfRead = true;
+
+        // update for the byte before the first one in the range, so that we 
+        // always get an accurate document change indication no matter where 
+        // we start reading
+
+        mDocInfo.Update( mReadAddr - 1 );
+
         for ( instLen = reader.Disassemble( mReadAddr ); 
             (instLen != 0) && (instFound < instToFind); 
             instLen = reader.Disassemble( mReadAddr ) )
@@ -163,7 +223,9 @@ namespace Mago
 
             if ( ud->mnemonic != UD_Iinvalid )
             {
+                mDocInfo.Update( mReadAddr );
                 FillInstDisasmData( ud, dwFields, &prgDisassembly[instFound] );
+                mStartOfRead = false;
 
                 instFound++;
                 mReadAddr += instLen;
@@ -344,15 +406,20 @@ namespace Mago
         Program* program, 
         DebuggerProxy* debugger )
     {
+        _ASSERT( program != NULL );
+
         HRESULT hr = S_OK;
 
         hr = mInstCache.Init( program, debugger );
         if ( FAILED( hr ) )
             return hr;
 
+        mDocInfo.Init( program );
+
         mScope = disasmScope;
         mAnchorAddr = address;
         mReadAddr = address;
+        mProg = program;
 
         return S_OK;
     }

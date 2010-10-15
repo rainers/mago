@@ -315,4 +315,10 @@ namespace Mago
         GuardedArea guard( mSessionGuard );
         mSession = session;
     }
+
+    bool    Module::Contains( Address addr )
+    {
+        Address modAddr = GetAddress();
+        return (addr >= modAddr) && ((addr - modAddr) < GetSize());
+    }
 }
