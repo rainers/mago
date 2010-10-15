@@ -107,5 +107,10 @@ namespace Mago
             const ud_t* ud, 
             DISASSEMBLY_STREAM_FIELDS dwFields, 
             DisassemblyData* pDisassembly );
+
+        bool GetDocContext( 
+            Address address, 
+            Module* mod, 
+            IDebugDocumentContext2** docContext );
     };
 }
