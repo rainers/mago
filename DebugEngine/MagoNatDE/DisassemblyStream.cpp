@@ -104,6 +104,23 @@ namespace Mago
             pDisassembly->dwFields |= DSF_OPCODE;
         }
 
+        if ( (dwFields & DSF_CODEBYTES) != 0 )
+        {
+            uint32_t        len = ud_insn_len( (ud_t*) ud );
+            const uint8_t*  bytes = ud_insn_ptr( (ud_t*) ud );
+            CComBSTR        hexChars( len * 3 );            // 2 hex chars + 1 space
+            wchar_t*        pchar = hexChars;
+            wchar_t*        pcharEnd = pchar + hexChars.Length();
+
+            for ( uint32_t i = 0; i < len; i++, pchar += 3 )
+            {
+                swprintf( pchar, pcharEnd - pchar, L"%02X ", bytes[i] );
+            }
+
+            pDisassembly->bstrCodeBytes = hexChars.Detach();
+            pDisassembly->dwFields |= DSF_CODEBYTES;
+        }
+
         if ( (dwFields & DSF_DOCUMENTURL) != 0 )
         {
             // we want to return a filename on a document change except if 
