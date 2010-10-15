@@ -10,6 +10,7 @@
 #include "Program.h"
 #include "Module.h"
 #include "CodeContext.h"
+#include "SingleDocumentContext.h"
 #include <udis86.h>
 
 
@@ -338,6 +339,75 @@ namespace Mago
         return S_OK;
     }
 
+    bool DisassemblyStream::GetDocContext( 
+        Address address, 
+        Module* mod, 
+        IDebugDocumentContext2** docContext )
+    {
+        _ASSERT( mod != NULL );
+        _ASSERT( docContext != NULL );
+
+        if ( (mod == NULL) || (docContext == NULL) )
+            return false;
+
+        RefPtr<MagoST::ISession>        session;
+        RefPtr<SingleDocumentContext>   docCtx;
+
+        HRESULT             hr = S_OK;
+        CComBSTR            filename;
+        CComBSTR            langName;
+        GUID                langGuid;
+        TEXT_POSITION       posBegin = { 0 };
+        TEXT_POSITION       posEnd = { 0 };
+        MagoST::FileInfo    fileInfo = { 0 };
+        MagoST::LineNumber  line = { 0 };
+        uint16_t            section = 0;
+        uint32_t            offset = 0;
+
+        if ( !mod->GetSymbolSession( session ) )
+            return false;
+
+        section = session->GetSecOffsetFromVA( address, offset );
+        if ( section == 0 )
+            return false;
+
+        if ( !session->FindLine( section, offset, line ) )
+            return false;
+
+        hr = session->GetFileInfo( line.CompilandIndex, line.FileIndex, fileInfo );
+        if ( FAILED( hr ) )
+            return false;
+
+        hr = Utf8To16( fileInfo.Name, fileInfo.NameLength, filename.m_str );
+        if ( FAILED( hr ) )
+            return false;
+
+        // TODO:
+        //compiland->get_language();
+
+        posBegin.dwLine = line.Number;
+        posEnd.dwLine = line.NumberEnd;
+
+        // AD7 lines are 0-based, DIA ones are 1-based
+        posBegin.dwLine--;
+        posEnd.dwLine--;
+
+        hr = MakeCComObject( docCtx );
+        if ( FAILED( hr ) )
+            return false;
+
+        hr = docCtx->Init( filename, posBegin, posEnd, langName, langGuid );
+        if ( FAILED( hr ) )
+            return false;
+
+        hr = docCtx->QueryInterface( 
+            __uuidof( IDebugDocumentContext2 ), (void**) docContext );
+        if ( FAILED( hr ) )
+            return false;
+
+        return true;
+    }
+
     HRESULT DisassemblyStream::GetCodeContext( 
         UINT64               uCodeLocationId,
         IDebugCodeContext2** ppCodeContext )
@@ -348,7 +418,29 @@ namespace Mago
             OutputDebugStringA( msg );
         }
 
-        return E_NOTIMPL;
+        HRESULT             hr = S_OK;
+        Address             addr = (Address) uCodeLocationId;
+        RefPtr<CodeContext> codeContext;
+        RefPtr<Module>      mod;
+        CComPtr<IDebugDocumentContext2> docCtx;
+
+        if ( mProg->FindModuleContainingAddress( addr, mod ) )
+        {
+            GetDocContext( addr, mod, &docCtx );
+            // it's OK if doc's not found
+        }
+        // it's OK if module's not found
+
+        hr = MakeCComObject( codeContext );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = codeContext->Init( addr, mod, docCtx );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return codeContext->QueryInterface( 
+            __uuidof( IDebugCodeContext2 ), (void**) ppCodeContext );
     }
 
     HRESULT DisassemblyStream::GetCurrentLocation( 
