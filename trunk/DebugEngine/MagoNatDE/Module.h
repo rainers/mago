@@ -74,6 +74,7 @@ namespace Mago
         bool    GetSymbolSession( RefPtr<MagoST::ISession>& session );
 
         HRESULT LoadSymbols( bool sendEvent );
+        bool    Contains( Address addr );
 
     private:
         RefPtr<MagoST::ISession>    GetSession();

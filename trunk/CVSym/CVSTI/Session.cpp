@@ -338,6 +338,11 @@ namespace MagoST
         return mStore->GetLineInfo( compIndex, fileIndex, segIndex, count, infos );
     }
 
+    bool Session::GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo )
+    {
+        return mStore->GetFileSegment( compIndex, fileIndex, segInstanceIndex, segInfo );
+    }
+
     bool Session::FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber )
     {
         uint16_t        compIx = 0;
@@ -441,6 +446,8 @@ namespace MagoST
     {
         lineNumber.CompilandIndex = compIx;
         lineNumber.FileIndex = fileIx;
+        lineNumber.SegmentInstanceIndex = segInfo.SegmentInstance;
+        lineNumber.LineIndex = lineIndex;
 
         lineNumber.Number = segInfo.LineNumbers[ lineIndex ];
         lineNumber.Offset = segInfo.Offsets[ lineIndex ];

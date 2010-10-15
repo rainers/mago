@@ -204,6 +204,7 @@ namespace MagoST
     struct FileSegmentInfo
     {
         WORD            SegmentIndex;
+        WORD            SegmentInstance;
         DWORD           Start;
         DWORD           End;
         WORD            LineCount;

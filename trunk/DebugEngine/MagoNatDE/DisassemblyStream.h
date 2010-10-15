@@ -8,6 +8,7 @@
 #pragma once
 
 #include "InstCache.h"
+#include "DocTracker.h"
 
 
 namespace Mago
@@ -27,6 +28,17 @@ namespace Mago
         uint32_t            mInvalidInstLenAtReadPtr;
 
         InstCache           mInstCache;
+        DocTracker          mDocInfo;
+
+        // When we start reading a block of instructions in a Read call, we 
+        // want to force returning the document for the first instruction in 
+        // the block. Normally, we would only return the document for an 
+        // instruction if the document changed between that instruction and the
+        // one before.
+
+        bool                mStartOfRead;
+
+        RefPtr<Program>     mProg;
 
     public:
         DisassemblyStream();

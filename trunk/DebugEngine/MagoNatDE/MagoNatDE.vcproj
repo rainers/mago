@@ -529,6 +529,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\DocTracker.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\DocumentContext.cpp"
 				>
 			</File>
@@ -720,6 +724,10 @@
 			</File>
 			<File
 				RelativePath=".\dllmain.h"
+				>
+			</File>
+			<File
+				RelativePath=".\DocTracker.h"
 				>
 			</File>
 			<File
