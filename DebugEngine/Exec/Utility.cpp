@@ -73,14 +73,9 @@ HRESULT ReadMemory(
         if ( sizeRet == 0 )
             return HRESULT_FROM_WIN32( ERROR_PARTIAL_COPY );
 
-        if ( memInfo.State != MEM_COMMIT )
-            readable = false;
-        else if ( ((memInfo.Protect & PAGE_EXECUTE_READ) == 0)
-            && ((memInfo.Protect & PAGE_EXECUTE_READWRITE) == 0)
-            && ((memInfo.Protect & PAGE_EXECUTE_WRITECOPY) == 0)
-            && ((memInfo.Protect & PAGE_READONLY) == 0)
-            && ((memInfo.Protect & PAGE_READWRITE) == 0)
-            && ((memInfo.Protect & PAGE_WRITECOPY) == 0) )
+        if ( (memInfo.State != MEM_COMMIT)
+            || (memInfo.Protect == 0)
+            || ((memInfo.Protect & PAGE_NOACCESS) != 0) )
             readable = false;
 
         SIZE_T  curSize = memInfo.RegionSize - (nextAddr - (UINT_PTR) memInfo.BaseAddress);
