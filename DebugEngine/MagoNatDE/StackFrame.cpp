@@ -332,7 +332,7 @@ namespace Mago
     {
         _ASSERT( regSet != NULL );
         _ASSERT( thread != NULL );
-        _ASSERT( module != NULL );
+        // there might be no module
 
         mPC = pc;
         mRegSet = regSet;
