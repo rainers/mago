@@ -5,4 +5,5 @@ Windows Registry Editor Version 5.00
 "Name"="Mago Native"
 "ENC"=dword:00000000
 "Disassembly"=dword:00000001
+"Exceptions"=dword:00000001
 
