@@ -198,10 +198,8 @@ HRESULT Exec::ContinueDebug( bool handleException )
     DWORD   status = handleException ? DBG_CONTINUE : DBG_EXCEPTION_NOT_HANDLED;
 
     Process*    proc = FindProcess( mLastEvent.dwProcessId );
-    if ( proc != NULL )
+    if ( (proc != NULL) && !proc->IsTerminating() )
     {
-        proc->SetStopped( false );
-
         IMachine*   machine = proc->GetMachine();
         _ASSERT( machine != NULL );
 
@@ -226,6 +224,9 @@ HRESULT Exec::ContinueDebug( bool handleException )
     }
     
     CleanupLastDebugEvent();
+
+    if ( proc != NULL )
+        proc->SetStopped( false );
 
 Error:
     return hr;
@@ -387,16 +388,16 @@ HRESULT Exec::DispatchEvent()
 
                 if ( result == MacRes_NotHandled )
                 {
+                    hr = S_FALSE;
                     if ( mCallback != NULL )
                     {
-                        mCallback->OnException( 
+                        if ( mCallback->OnException( 
                             proc, 
                             mLastEvent.dwThreadId,
                             (mLastEvent.u.Exception.dwFirstChance > 0),
-                            &mLastEvent.u.Exception.ExceptionRecord );
+                            &mLastEvent.u.Exception.ExceptionRecord ) )
+                            hr = S_OK;
                     }
-
-                    hr = S_FALSE;
                 }
                 else if ( result == MacRes_HandledStopped )
                 {

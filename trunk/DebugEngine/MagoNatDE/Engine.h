@@ -19,6 +19,14 @@ namespace Mago
     class Program;
     class PendingBreakpoint;
 
+    struct ExceptionInfo
+    {
+        // leaving out unimportant info from EXCEPTION_INFO
+        CComBSTR bstrExceptionName;
+        DWORD dwCode;
+        EXCEPTION_STATE dwState;
+        GUID guidType;
+    };
 
     // Engine
 
@@ -30,6 +38,7 @@ namespace Mago
     {
         typedef std::map< DWORD, RefPtr<Program> >  ProgramMap;
         typedef std::map< DWORD, RefPtr<PendingBreakpoint> >    BPMap;
+        typedef std::vector<ExceptionInfo> EIVector;
 
         DebuggerProxy       mDebugger;
         bool                mPollThreadStarted;
@@ -40,6 +49,8 @@ namespace Mago
         DWORD               mLastModId;
         CComPtr<IDebugEventCallback2>   mCallback;
         Guard               mPendingBPGuard;
+        Guard               mExceptionGuard;
+        EIVector            mExceptionInfos;
 
     public:
         Engine();
@@ -117,6 +128,13 @@ namespace Mago
         void OnPendingBPDelete( PendingBreakpoint* pendingBP );
         DWORD GetNextModuleId();
         void ForeachProgram( ProgramCallback* callback );
+
+        // Returns true if exception info was found.
+        // If found, then returns info in output param. A copy is returned instead 
+        // of a pointer to the entry, because another thread can change the list 
+        // before the user gets around to using the info.
+        bool FindExceptionInfo( const GUID& guid, DWORD code, ExceptionInfo& excInfo );
+        bool FindExceptionInfo( const GUID& guid, LPCOLESTR name, ExceptionInfo& excInfo );
 
         HRESULT BindPendingBPsToModule( Module* mod, Program* prog );
         HRESULT UnbindPendingBPsFromModule( Module* mod, Program* prog );

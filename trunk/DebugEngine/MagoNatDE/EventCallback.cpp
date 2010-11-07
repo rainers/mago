@@ -300,8 +300,10 @@ namespace Mago
         hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    bool EventCallback::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
+        const DWORD DefaultState = EXCEPTION_STOP_SECOND_CHANCE;
+
         OutputDebugStringA( "EventCallback::OnException\n" );
 
         HRESULT     hr = S_OK;
@@ -310,20 +312,63 @@ namespace Mago
         RefPtr<Thread>              thread;
 
         if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return;
+            return false;
 
         if ( !prog->FindThread( threadId, thread ) )
-            return;
+            return false;
 
         prog->NotifyException( firstChance, exceptRec );
 
         hr = MakeCComObject( event );
         if ( FAILED( hr ) )
-            return;
+            return false;
 
         event->Init( prog.Get(), firstChance, exceptRec, prog->CanPassExceptionToDebuggee() );
 
-        hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
+        DWORD state = DefaultState;
+        if ( event->GetGUID() == GetEngineId() )
+        {
+            ExceptionInfo info;
+            if ( mEngine->FindExceptionInfo( event->GetGUID(), event->GetExcpetionName(), info ) )
+                state = info.dwState;
+            // TODO: if not found, then check against the "D Exceptions" entry
+        }
+        else
+        {
+            ExceptionInfo info;
+            if ( mEngine->FindExceptionInfo( event->GetGUID(), event->GetCode(), info ) )
+            {
+                event->SetExceptionName( info.bstrExceptionName );
+                state = info.dwState;
+            }
+        }
+
+        if ( (  firstChance && ( state & EXCEPTION_STOP_FIRST_CHANCE ) ) ||
+             ( !firstChance && ( state & EXCEPTION_STOP_SECOND_CHANCE ) ) )
+        {
+            hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
+            return false;
+        }
+        else
+        {
+            RefPtr<MessageTextEvent>    msgEvent;
+            CComBSTR                    desc;
+
+            hr = MakeCComObject( msgEvent );
+            if ( FAILED( hr ) )
+                return true;
+
+            hr = event->GetExceptionDescription( &desc );
+            if ( FAILED( hr ) )
+                return true;
+
+            desc.Append( L"\n" );
+
+            msgEvent->Init( MT_REASON_EXCEPTION, desc );
+
+            hr = SendEvent( msgEvent.Get(), prog.Get(), thread.Get() );
+            return true; // wants to continue
+        }
     }
 
     void EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )

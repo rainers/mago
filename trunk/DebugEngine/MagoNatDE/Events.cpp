@@ -10,6 +10,10 @@
 #include "Program.h"
 
 
+static const GUID   GuidWin32ExceptionType = {0x3B476D35,0xA401,0x11D2,{0xAA,0xD4,0x00,0xC0,0x4F,0x99,0x01,0x71}};
+static const DWORD  DExceptionCode = 0xE0440001;
+
+
 namespace Mago
 {
 //----------------------------------------------------------------------------
@@ -344,13 +348,29 @@ namespace Mago
     {
         mProg = prog;
         mState = firstChance ? EXCEPTION_STOP_FIRST_CHANCE : EXCEPTION_STOP_SECOND_CHANCE;
-        mGuidType = GetEngineId();
         mCode = record->ExceptionCode;
         mCanPassToDebuggee = canPassToDebuggee;
 
         wchar_t name[100] = L"";
-        swprintf_s( name, L"%08x", record->ExceptionCode );
-        mExceptionName = name;
+        if ( record->ExceptionCode == DExceptionCode )
+        {
+            mGuidType = GetEngineId();
+            if ( IProcess* process = prog->GetCoreProcess() )
+            {
+                GetClassName( process, record->ExceptionInformation[0], &mExceptionName );
+                GetExceptionInfo( process, record->ExceptionInformation[0], &mExceptionInfo );
+            }
+
+            if ( mExceptionName == NULL )
+                mExceptionName = L"D Exception";
+        }
+        else
+        {
+            // make it a Win32 exception
+            mGuidType = GuidWin32ExceptionType;
+            swprintf_s( name, L"%08x", record->ExceptionCode );
+            mExceptionName = name;
+        }
     }
 
     HRESULT ExceptionEvent::GetException( EXCEPTION_INFO* pExceptionInfo )
@@ -380,10 +400,22 @@ namespace Mago
 
         bool    firstChance = (mState & EXCEPTION_STOP_FIRST_CHANCE) != 0;
         wchar_t msg[256] = L"";
-        swprintf_s( msg, L"%ls exception: %08x", (firstChance ? L"First-chance" : L"Unhandled"), mCode );
+        swprintf_s( msg, L"%ls exception: %s ", (firstChance ? L"First-chance" : L"Unhandled"), mExceptionName.m_str );
 
-        *pbstrDescription = SysAllocString( msg );
+        if ( mExceptionInfo )
+        {
+            CComBSTR bmsg( msg );
+            bmsg.Append( mExceptionInfo );
+            *pbstrDescription = bmsg.Detach();
+        }
+        else
+            *pbstrDescription = SysAllocString( msg );
         return S_OK;
+    }
+
+    void ExceptionEvent::SetExceptionName( LPCOLESTR name )
+    {
+        mExceptionName = name;
     }
 
     HRESULT ExceptionEvent::CanPassToDebuggee()
@@ -394,6 +426,54 @@ namespace Mago
     HRESULT ExceptionEvent::PassToDebuggee( BOOL fPass )
     {
         mProg->SetPassExceptionToDebuggee( fPass ? true : false );
+        return S_OK;
+    }
+
+
+//----------------------------------------------------------------------------
+//  MessageTextEvent
+//----------------------------------------------------------------------------
+
+    MessageTextEvent::MessageTextEvent()
+        :   mMessageType( MT_OUTPUTSTRING )
+    {
+    }
+
+    void MessageTextEvent::Init( 
+        MESSAGETYPE reason, const wchar_t* msg )
+    {
+        _ASSERT( msg != NULL );
+        mMessageType = (reason & MT_REASON_MASK) | MT_OUTPUTSTRING;
+        mMessage = msg;
+    }
+
+    HRESULT MessageTextEvent::GetMessageW( 
+            MESSAGETYPE*    pMessageType,
+            BSTR*           pbstrMessage,
+            DWORD*          pdwType,
+            BSTR*           pbstrHelpFileName,
+            DWORD*          pdwHelpId )
+    {
+        if ( (pMessageType == NULL)
+            || (pbstrMessage == NULL)
+            || (pdwType == NULL)
+            || (pbstrHelpFileName == NULL)
+            || (pdwHelpId == NULL) )
+            return E_INVALIDARG;
+
+        *pbstrMessage = mMessage.Copy();
+        if ( *pbstrMessage == NULL )
+            return E_OUTOFMEMORY;
+
+        *pMessageType = mMessageType;
+        *pdwType = 0;
+        *pbstrHelpFileName = NULL;
+        *pdwHelpId = 0;
+        return S_OK;
+    }
+
+    HRESULT MessageTextEvent::SetResponse( DWORD dwResponse )
+    {
         return S_OK;
     }
 }

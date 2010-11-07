@@ -36,7 +36,7 @@ namespace Mago
         virtual void OnModuleUnload( IProcess* process, Address baseAddr );
         virtual void OnOutputString( IProcess* process, const wchar_t* outputString );
         virtual void OnLoadComplete( IProcess* process, DWORD threadId );
-        virtual void OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec );
+        virtual bool OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec );
         virtual void OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter );
         virtual void OnStepComplete( IProcess* process, uint32_t threadId );
         virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId );

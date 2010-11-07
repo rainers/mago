@@ -212,6 +212,7 @@ namespace Mago
     {
         RefPtr<Program>         mProg;
         CComBSTR                mExceptionName;
+        CComBSTR                mExceptionInfo;
         DWORD                   mCode;
         EXCEPTION_STATE         mState;
         GUID                    mGuidType;
@@ -225,5 +226,31 @@ namespace Mago
         STDMETHOD( GetExceptionDescription )( BSTR* pbstrDescription );
         STDMETHOD( CanPassToDebuggee )();
         STDMETHOD( PassToDebuggee )( BOOL fPass );
+
+        EXCEPTION_STATE GetState() const { return mState; }
+        DWORD GetCode() const { return mCode; }
+        const GUID& GetGUID() const { return mGuidType; }
+        LPCOLESTR GetExcpetionName() const { return mExceptionName; }
+        
+        void SetExceptionName( LPCOLESTR name );
+    };
+
+    class MessageTextEvent : public EventImpl<IDebugMessageEvent2>
+    {
+        MESSAGETYPE     mMessageType;
+        CComBSTR        mMessage;
+
+    public:
+        MessageTextEvent();
+        void Init( MESSAGETYPE reason, const wchar_t* msg );
+
+        STDMETHOD( GetMessage )(
+            MESSAGETYPE*    pMessageType,
+            BSTR*           pbstrMessage,
+            DWORD*          pdwType,
+            BSTR*           pbstrHelpFileName,
+            DWORD*          pdwHelpId );
+
+        STDMETHOD( SetResponse )( DWORD dwResponse );
     };
 }

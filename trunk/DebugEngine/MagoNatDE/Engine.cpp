@@ -77,11 +77,85 @@ namespace Mago
     }
 
     HRESULT Engine::SetException( EXCEPTION_INFO* pException )
-    { return E_NOTIMPL; }
+    {
+        ExceptionInfo info;
+        info.bstrExceptionName = pException->bstrExceptionName;
+        info.dwCode = pException->dwCode;
+        info.dwState = pException->dwState;
+        info.guidType = pException->guidType;
+
+        GuardedArea area( mExceptionGuard );
+        mExceptionInfos.push_back( info );
+        return S_OK;
+    }
+
     HRESULT Engine::RemoveSetException( EXCEPTION_INFO* pException )
-    { return E_NOTIMPL; }
+    {
+        GuardedArea area( mExceptionGuard );
+
+        for ( EIVector::iterator it = mExceptionInfos.begin(); it != mExceptionInfos.end(); it++ )
+        {
+            ExceptionInfo& info = *it;
+            if ( info.bstrExceptionName == pException->bstrExceptionName &&
+                info.dwCode == pException->dwCode &&
+                info.guidType == pException->guidType )
+            {
+                mExceptionInfos.erase( it );
+                return S_OK;
+            }
+        }
+        return S_FALSE;
+    }
+
     HRESULT Engine::RemoveAllSetExceptions( REFGUID guidType )
-    { return E_NOTIMPL; }
+    {
+        GuardedArea area( mExceptionGuard );
+
+        if ( guidType == GUID_NULL )
+        {
+            mExceptionInfos.clear();
+            return S_OK;
+        }
+
+        for ( EIVector::iterator it = mExceptionInfos.begin(); it != mExceptionInfos.end(); )
+        {
+            if ( (*it).guidType == guidType )
+                it = mExceptionInfos.erase( it );
+            else
+                ++it;
+        }
+        return S_OK;
+    }
+
+    bool Engine::FindExceptionInfo( const GUID& guid, DWORD code, ExceptionInfo& excInfo )
+    {
+        GuardedArea area( mExceptionGuard );
+        for ( EIVector::iterator it = mExceptionInfos.begin(); it != mExceptionInfos.end(); it++ )
+        {
+            ExceptionInfo& info = *it;
+            if ( info.guidType == guid && info.dwCode == code )
+            {
+                excInfo = info;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool Engine::FindExceptionInfo( const GUID& guid, LPCOLESTR name, ExceptionInfo& excInfo )
+    {
+        GuardedArea area( mExceptionGuard );
+        for ( EIVector::iterator it = mExceptionInfos.begin(); it != mExceptionInfos.end(); it++ )
+        {
+            ExceptionInfo& info = *it;
+            if ( info.guidType == guid && info.bstrExceptionName == name )
+            {
+                excInfo = info;
+                return true;
+            }
+        }
+        return false;
+    }
 
     HRESULT Engine::GetEngineId( GUID* pguidEngine )
     {

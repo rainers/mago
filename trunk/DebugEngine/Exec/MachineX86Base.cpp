@@ -708,6 +708,9 @@ HRESULT MachineX86Base::OnContinue()
         return S_OK;
 
     hr = GetCurrentPC( mStoppedThreadId, pc );
+    if ( hr == E_ACCESSDENIED )
+        // TODO: should we do this for all errors or only access denied?
+        return S_OK;
     if ( FAILED( hr ) )
         return hr;
 
@@ -1137,6 +1140,8 @@ HRESULT MachineX86Base::SetStepInstruction( bool stepIn, bool sourceMode )
         hr = MakeStepInStepper( stepMac, mExceptAddr, sourceMode, cookie, stepper );
     else
         hr = MakeStepOverStepper( stepMac, mExceptAddr, cookie, stepper );
+
+    // TODO: shouldn't we get out if making the stepper failed?
 
     hr = CancelStep();
     if ( FAILED( hr ) )

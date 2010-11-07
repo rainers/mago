@@ -99,8 +99,9 @@ void EventCallbackBase::OnLoadComplete( IProcess* process, DWORD threadId )
     mLoadCompleted = true;
 }
 
-void EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+bool EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
 {
+    return false;
 }
 
 void EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )

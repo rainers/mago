@@ -181,7 +181,7 @@ namespace MagoEE
         catch ( int errCode )
         {
             UNREFERENCED_PARAMETER( errCode );
-            _RPT1( _CRT_ERROR, "Failed to parse, error %d.\n", errCode );
+            _RPT2( _CRT_ERROR, "Failed to parse, error %d. Text=\"%ls\".\n", errCode, text );
             return E_MAGOEE_SYNTAX_ERROR;
         }
 

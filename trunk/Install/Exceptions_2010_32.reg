@@ -1,0 +1,254 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.exception.AssertError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.exception.FinalizeError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.exception.HiddenFuncError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.exception.OutOfMemoryError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.exception.RangeError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.exception.SwitchError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.exception.UnicodeException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.sync.exception.SyncException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.thread.FiberException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\core.thread.ThreadException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\object.Error]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\object.Exception]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.base64.Base64CharException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.base64.Base64Exception]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.boxer.UnboxException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.concurrency.LinkTerminated]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.concurrency.MailboxFull]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.concurrency.MessageMismatch]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.concurrency.OwnerTerminated]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.conv.ConvError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.conv.ConvOverflowError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.dateparse.DateParseError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.demangle.MangleException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.encoding.EncodingException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.encoding.UnrecognizedEncodingException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.exception.ErrnoException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.file.FileException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.format.FormatError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.json.JSONException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.loader.ExeModuleException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.math.NotImplemented]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.regexp.RegExpException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.socket.AddressException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.socket.HostException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.socket.SocketAcceptException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.socket.SocketException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.stdio.StdioException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.stream.OpenException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.stream.ReadException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.stream.SeekException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.stream.StreamException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.stream.StreamFileException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.stream.WriteException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.typecons.NotImplementedError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.uri.URIerror]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.utf.UtfError]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.utf.UtfException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.variant.VariantException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.windows.registry.RegistryException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.windows.registry.Win32Exception]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.CDataException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.CheckException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.CommentException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.DecodeException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.InvalidTypeException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.PIException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.TagException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.TextException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.XIException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.xml.XMLException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.zip.ZipException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\10.0\AD7Metrics\Exception\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}\D Exceptions\std.zlib.ZlibException]
+"State"=dword:0000000c
+"Code"=dword:00000000
+
