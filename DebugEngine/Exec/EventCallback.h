@@ -43,7 +43,9 @@ public:
     virtual void OnModuleUnload( IProcess* process, Address baseAddr ) = 0;
     virtual void OnOutputString( IProcess* process, const wchar_t* outputString ) = 0;
     virtual void OnLoadComplete( IProcess* process, DWORD threadId ) = 0;
-    virtual void OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec ) = 0;
+
+    // Returns true to continue onto run mode, false to stay in break mode.
+    virtual bool OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec ) = 0;
     virtual void OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter ) = 0;
     virtual void OnStepComplete( IProcess* process, uint32_t threadId ) = 0;
     virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId ) = 0;

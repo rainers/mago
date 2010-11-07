@@ -138,12 +138,13 @@ public:
 #endif
     }
 
-    virtual void OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    virtual bool OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  %p %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
         else
             printf( "  %08I64x %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
+        return false;
     }
 
     virtual void OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )

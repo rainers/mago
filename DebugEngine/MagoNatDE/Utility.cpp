@@ -404,3 +404,158 @@ HRESULT WriteFloat( uint8_t* buffer, uint32_t bufSize, MagoEE::Type* type, const
 
     return S_OK;
 }
+
+////////////////////////////////////////////////////////////////////////
+template<typename T>
+struct DynamicArray
+{
+    size_t length;
+    T* ptr;
+};
+
+struct Interface;
+struct MemberInfo;
+struct OffsetTypeInfo;
+class Object;
+
+// D class info
+struct TypeInfo_Class
+{
+    void* pvtbl; // vtable pointer of TypeInfo_Class object
+    void* monitor;
+
+    DynamicArray<uint8_t> init;   // class static initializer
+    DynamicArray<char>    name;   // class name
+    DynamicArray<void*>   vtbl;   // virtual function pointer table
+    DynamicArray<Interface*> interfaces;
+    TypeInfo_Class*       base;
+    void*                 destructor;
+    void (*classInvariant)(Object);
+    uint32_t              m_flags;
+    //  1:      // is IUnknown or is derived from IUnknown
+    //  2:      // has no possible pointers into GC memory
+    //  4:      // has offTi[] member
+    //  8:      // has constructors
+    // 16:      // has xgetMembers member
+    // 32:      // has typeinfo member
+    void*                 deallocator;
+    DynamicArray<OffsetTypeInfo> m_offTi;
+    void*                 defaultConstructor;
+    const DynamicArray<MemberInfo> (*xgetMembers)(DynamicArray<char*>);
+};
+
+HRESULT GetClassName( IProcess* process, MachineAddress addr, BSTR* pbstrClassName )
+{
+    _ASSERT( process != NULL );
+    _ASSERT( pbstrClassName != NULL );
+    _ASSERT( process->GetMachine() != NULL );
+
+    IMachine* machine = process->GetMachine();
+    MachineAddress vtbl, classinfo;
+    SIZE_T read, unread;
+    HRESULT hr = machine->ReadMemory( addr, sizeof( vtbl ), read, unread, (uint8_t*) &vtbl );
+    if ( SUCCEEDED( hr ) )
+    {
+        hr = machine->ReadMemory( vtbl, sizeof( classinfo ), read, unread, (uint8_t*) &classinfo );
+        if ( SUCCEEDED( hr ) )
+        {
+            DynamicArray<char> className;
+            hr = machine->ReadMemory( classinfo + offsetof( TypeInfo_Class, name ), sizeof( className ), read, unread, (uint8_t*) &className );
+            if ( SUCCEEDED( hr ) )
+            {
+                if ( className.length < 4096 )
+                {
+                    char* buf = new char[className.length];
+                    if ( buf == NULL )
+                        return E_OUTOFMEMORY;
+                    hr = machine->ReadMemory( (MachineAddress) className.ptr, className.length, read, unread, (uint8_t*) buf );
+                    if ( SUCCEEDED( hr ) )
+                    {
+                        // read at most className.length
+                        hr = Utf8To16( buf, read, *pbstrClassName );
+                    }
+                    delete [] buf;
+                }
+                else
+                {
+                    *pbstrClassName = SysAllocString( L"" );
+                    if ( *pbstrClassName == NULL )
+                        hr = E_OUTOFMEMORY;
+                }
+            }
+        }
+    }
+    return hr;
+}
+
+struct Throwable
+{
+    void* pvtbl; // vtable pointer of TypeInfo_Class object
+    void* monitor;
+
+    DynamicArray<uint8_t> msg;
+    DynamicArray<uint8_t> file;
+    size_t                line;
+    // ...
+};
+
+HRESULT GetExceptionInfo( IProcess* process, MachineAddress addr, BSTR* pbstrInfo )
+{
+    _ASSERT( process != NULL );
+    _ASSERT( pbstrInfo != NULL );
+    _ASSERT( process->GetMachine() != NULL );
+
+    IMachine* machine = process->GetMachine();
+    Throwable throwable;
+    SIZE_T read, unread;
+    HRESULT hr = S_OK;
+    
+    hr = machine->ReadMemory( addr, sizeof( throwable ), read, unread, (uint8_t*) &throwable );
+    if ( FAILED( hr ) )
+        return hr;
+    if ( read < sizeof( throwable ) )
+        return HRESULT_FROM_WIN32( ERROR_PARTIAL_COPY );
+
+    if ( throwable.msg.length >= 1024 || throwable.file.length >= 1024 )
+    {
+        *pbstrInfo = SysAllocString( L"" );
+        if ( *pbstrInfo == NULL )
+            return E_OUTOFMEMORY;
+    }
+    else
+    {
+        CAutoVectorPtr<char>    buf;
+        if ( !buf.Allocate( throwable.msg.length + throwable.file.length + 30 ) )
+            return E_OUTOFMEMORY;
+        char* p = buf;
+        if ( throwable.msg.length > 0 )
+        {
+            hr = machine->ReadMemory( (MachineAddress) throwable.msg.ptr, throwable.msg.length, 
+                                        read, unread, (uint8_t*) p );
+            if ( SUCCEEDED( hr ) )
+            {
+                p += read;    // read at most throwable.msg.length
+                *p++ = ' ';
+            }
+        }
+        if ( throwable.file.length > 0 )
+        {
+            *p++ = 'a';
+            *p++ = 't';
+            *p++ = ' ';
+            hr = machine->ReadMemory( (MachineAddress) throwable.file.ptr, throwable.file.length, 
+                                        read, unread, (uint8_t*) p );
+            if ( SUCCEEDED( hr ) )
+            {
+                p += read;    // read at most throwable.file.length
+                *p++ = '(';
+                p += sprintf_s( p, 12, "%d", throwable.line );
+                *p++ = ')';
+            }
+        }
+        hr = Utf8To16( buf, p - buf, *pbstrInfo );
+        if ( FAILED( hr ) )
+            return hr;
+    }
+    return S_OK;
+}
