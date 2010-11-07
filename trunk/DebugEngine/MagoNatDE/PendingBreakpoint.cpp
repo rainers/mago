@@ -511,13 +511,14 @@ namespace Mago
         }
         else if ( callback.GetErrorBPCount() > 0 )
         {
-            // send an error event
+            // At the beginning, Bind was called, which bound to all mods at the
+            // time. If it sent out a bound BP event, then there can be no error.
+            // If it sent out an error BP event, then there's no need to repeat it.
+            // If you do send out this unneeded event here, then it slows down mod
+            // loading a lot. For ex., with 160 mods, mod loading takes ~10x longer.
 
-            RefPtr<ErrorBreakpoint> errorBP;
-
-            callback.GetLastErrorBP( errorBP );
-
-            hr = SendErrorEvent( errorBP.Get() );
+            // So, don't send an error event!
+            hr = S_OK;
         }
         else
             hr = E_FAIL;
@@ -563,6 +564,7 @@ namespace Mago
                 lastErrorBP = bind.ErrorBP;
         }
 
+        // TODO: do we always get an error bp when out of bound ones?
         if ( (boundBPCount == 0) && (lastErrorBP.Get() != NULL) )
         {
             SendErrorEvent( lastErrorBP.Get() );
