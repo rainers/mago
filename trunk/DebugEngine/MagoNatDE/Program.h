@@ -37,6 +37,7 @@ namespace Mago
         RefPtr<Engine>                  mEngine;
         Guard                           mThreadGuard;
         Guard                           mModGuard;
+        DWORD                           mNextModLoadIndex;  // protected by mod guard
         RefPtr<Module>                  mProgMod;
 
     public:

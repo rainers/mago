@@ -564,7 +564,10 @@ namespace Mago
                 lastErrorBP = bind.ErrorBP;
         }
 
-        // TODO: do we always get an error bp when out of bound ones?
+        // if there're no more bound BPs, then send an error BP event
+        // there should always be at least one error BP, because there should 
+        // always be at least one module - the EXE
+
         if ( (boundBPCount == 0) && (lastErrorBP.Get() != NULL) )
         {
             SendErrorEvent( lastErrorBP.Get() );
