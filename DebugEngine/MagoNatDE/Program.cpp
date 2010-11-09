@@ -54,7 +54,8 @@ namespace Mago
         mAttached( false ),
         mPassExceptionToDebuggee( true ),
         mCanPassExceptionToDebuggee( true ),
-        mDebugger( NULL )
+        mDebugger( NULL ),
+        mNextModLoadIndex( 0 )
     {
     }
 
@@ -600,7 +601,7 @@ namespace Mago
 
         mModMap.insert( ModuleMap::value_type( addr, mod ) );
 
-        DWORD   index = mModMap.size() - 1;
+        DWORD   index = mNextModLoadIndex++;
 
         mod->SetLoadIndex( index );
 
@@ -645,21 +646,7 @@ namespace Mago
     {
         GuardedArea guard( mModGuard );
 
-        // decrement the load index of all modules after that deleted one
-
-        for ( ModuleMap::iterator it = mModMap.begin();
-            it != mModMap.end();
-            it++ )
-        {
-            Module* curMod = it->second.Get();
-            DWORD   curIndex = curMod->GetLoadIndex();
-            DWORD   deletedIndex = mod->GetLoadIndex();
-
-            if ( curIndex > deletedIndex )
-            {
-                curMod->SetLoadIndex( curIndex - 1 );
-            }
-        }
+        // no need to decrement the load index of all modules after that deleted one
 
         mModMap.erase( mod->GetAddress() );
 
