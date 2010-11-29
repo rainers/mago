@@ -40,6 +40,9 @@
 #undef min
 #undef max
 
+// Magus
+#include <SmartPtr.h>
+
 
 const DWORD     NO_DEBUG_EVENT = 0;
 

@@ -8,7 +8,6 @@
 #pragma once
 
 #include "Enumerator.h"
-#include "SmartPtr.h"
 
 
 template <class T, class TIt>

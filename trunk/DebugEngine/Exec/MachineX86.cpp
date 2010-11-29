@@ -8,7 +8,6 @@
 #include "Common.h"
 #include "MachineX86.h"
 #include "Thread.h"
-#include "SmartPtr.h"
 
 
 HRESULT MakeMachineX86( IMachine*& machine )
