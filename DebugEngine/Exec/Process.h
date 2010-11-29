@@ -8,7 +8,6 @@
 #pragma once
 
 #include "IProcess.h"
-#include "SmartPtr.h"
 
 
 class Process : public IProcess

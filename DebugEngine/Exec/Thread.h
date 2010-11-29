@@ -17,7 +17,7 @@ class Thread
     Address         mTlsBase;
 
 public:
-    Thread( HANDLE hProcess, uint32_t id, Address startAddr, Address tlsBase );
+    Thread( HANDLE hThread, uint32_t id, Address startAddr, Address tlsBase );
     ~Thread();
 
     void            AddRef();

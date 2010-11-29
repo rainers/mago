@@ -49,4 +49,7 @@ public:
     {
         mGuard.Leave();
     }
+
+private:
+    GuardedArea& operator =( GuardedArea& other );
 };

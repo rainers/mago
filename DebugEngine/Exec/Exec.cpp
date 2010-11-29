@@ -10,7 +10,6 @@
 #include "Process.h"
 #include "Thread.h"
 #include "Module.h"
-#include "SmartPtr.h"
 #include "PathResolver.h"
 #include "EventCallback.h"
 #include "Machine.h"
