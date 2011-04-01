@@ -44,8 +44,7 @@ namespace Mago
 
         CComPtr<IDebugDocumentContext2> docContext;
         hr = GetDocumentContext( &docContext );
-        if ( FAILED( hr ) )
-            return hr;
+        // there doesn't have to be a document context
 
         hr = codeContext->Init( mPC, mModule, docContext );
         if ( FAILED( hr ) )
