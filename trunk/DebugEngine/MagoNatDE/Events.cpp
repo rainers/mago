@@ -10,7 +10,6 @@
 #include "Program.h"
 
 
-static const GUID   GuidWin32ExceptionType = {0x3B476D35,0xA401,0x11D2,{0xAA,0xD4,0x00,0xC0,0x4F,0x99,0x01,0x71}};
 static const DWORD  DExceptionCode = 0xE0440001;
 
 
@@ -336,7 +335,9 @@ namespace Mago
     ExceptionEvent::ExceptionEvent()
         :   mCode( 0 ),
             mState( EXCEPTION_NONE ),
-            mGuidType( GUID_NULL )
+            mGuidType( GUID_NULL ),
+            mRootExceptionName( NULL ),
+            mSearchKey( Code )
     {
     }
 
@@ -354,7 +355,9 @@ namespace Mago
         wchar_t name[100] = L"";
         if ( record->ExceptionCode == DExceptionCode )
         {
-            mGuidType = GetEngineId();
+            mGuidType = GetDExceptionType();
+            mRootExceptionName = GetRootDExceptionName();
+            mSearchKey = Name;
             if ( IProcess* process = prog->GetCoreProcess() )
             {
                 GetClassName( process, record->ExceptionInformation[0], &mExceptionName );
@@ -367,8 +370,10 @@ namespace Mago
         else
         {
             // make it a Win32 exception
-            mGuidType = GuidWin32ExceptionType;
+            mGuidType = GetWin32ExceptionType();
             swprintf_s( name, L"%08x", record->ExceptionCode );
+            mRootExceptionName = GetRootWin32ExceptionName();
+            mSearchKey = Code;
             mExceptionName = name;
         }
     }

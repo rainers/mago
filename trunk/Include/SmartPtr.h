@@ -425,3 +425,20 @@ private:
         TCloser()( h );
     }
 };
+
+
+#ifdef _WINNT_
+
+class RegCloser
+{
+public:
+    void operator()( HKEY hKey )
+    {
+        RegCloseKey( hKey );
+    }
+};
+
+
+typedef HandlePtrBase2<HKEY, NULL, RegCloser> RegHandlePtr;
+
+#endif

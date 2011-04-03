@@ -78,83 +78,32 @@ namespace Mago
 
     HRESULT Engine::SetException( EXCEPTION_INFO* pException )
     {
-        ExceptionInfo info;
-        info.bstrExceptionName = pException->bstrExceptionName;
-        info.dwCode = pException->dwCode;
-        info.dwState = pException->dwState;
-        info.guidType = pException->guidType;
-
         GuardedArea area( mExceptionGuard );
-        mExceptionInfos.push_back( info );
-        return S_OK;
+        return mExceptionInfos.SetException( pException );
     }
 
     HRESULT Engine::RemoveSetException( EXCEPTION_INFO* pException )
     {
         GuardedArea area( mExceptionGuard );
-
-        for ( EIVector::iterator it = mExceptionInfos.begin(); it != mExceptionInfos.end(); it++ )
-        {
-            ExceptionInfo& info = *it;
-            if ( info.bstrExceptionName == pException->bstrExceptionName &&
-                info.dwCode == pException->dwCode &&
-                info.guidType == pException->guidType )
-            {
-                mExceptionInfos.erase( it );
-                return S_OK;
-            }
-        }
-        return S_FALSE;
+        return mExceptionInfos.RemoveSetException( pException );
     }
 
     HRESULT Engine::RemoveAllSetExceptions( REFGUID guidType )
     {
         GuardedArea area( mExceptionGuard );
-
-        if ( guidType == GUID_NULL )
-        {
-            mExceptionInfos.clear();
-            return S_OK;
-        }
-
-        for ( EIVector::iterator it = mExceptionInfos.begin(); it != mExceptionInfos.end(); )
-        {
-            if ( (*it).guidType == guidType )
-                it = mExceptionInfos.erase( it );
-            else
-                ++it;
-        }
-        return S_OK;
+        return mExceptionInfos.RemoveAllSetExceptions( guidType );
     }
 
     bool Engine::FindExceptionInfo( const GUID& guid, DWORD code, ExceptionInfo& excInfo )
     {
         GuardedArea area( mExceptionGuard );
-        for ( EIVector::iterator it = mExceptionInfos.begin(); it != mExceptionInfos.end(); it++ )
-        {
-            ExceptionInfo& info = *it;
-            if ( info.guidType == guid && info.dwCode == code )
-            {
-                excInfo = info;
-                return true;
-            }
-        }
-        return false;
+        return mExceptionInfos.FindExceptionInfo( guid, code, excInfo );
     }
 
     bool Engine::FindExceptionInfo( const GUID& guid, LPCOLESTR name, ExceptionInfo& excInfo )
     {
         GuardedArea area( mExceptionGuard );
-        for ( EIVector::iterator it = mExceptionInfos.begin(); it != mExceptionInfos.end(); it++ )
-        {
-            ExceptionInfo& info = *it;
-            if ( info.guidType == guid && info.bstrExceptionName == name )
-            {
-                excInfo = info;
-                return true;
-            }
-        }
-        return false;
+        return mExceptionInfos.FindExceptionInfo( guid, name, excInfo );
     }
 
     HRESULT Engine::GetEngineId( GUID* pguidEngine )
@@ -189,10 +138,24 @@ namespace Mago
 
     HRESULT Engine::SetLocale( WORD wLangID )
     { return E_NOTIMPL; } 
+
     HRESULT Engine::SetRegistryRoot( LPCOLESTR pszRegistryRoot )
-    { return E_NOTIMPL; } 
+    {
+        HRESULT hr = S_OK;
+
+        hr = mExceptionInfos.SetRegistryRoot( pszRegistryRoot );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
     HRESULT Engine::SetMetric( LPCOLESTR pszMetric, VARIANT varValue )
-    { return E_NOTIMPL; } 
+    {
+        _RPT1( _CRT_WARN, "SetMetric '%ls'\n", pszMetric );
+        return E_NOTIMPL;
+    }
+
     HRESULT Engine::CauseBreak()
     { return E_NOTIMPL; } 
 

@@ -14,6 +14,10 @@
 static const GUID gGuidDLang = 
 { 0xb9d303a5, 0x4ec7, 0x4444, { 0xa7, 0xf8, 0x6b, 0xfa, 0x4c, 0x79, 0x77, 0xef } };
 
+// {3B476D35-A401-11D2-AAD4-00C04F990171}
+static const GUID gGuidWin32ExceptionType = 
+{ 0x3B476D35, 0xA401, 0x11D2, { 0xAA, 0xD4, 0x00, 0xC0, 0x4F, 0x99, 0x01, 0x71 } };
+
 static const wchar_t*   gStrings[] = 
 {
     NULL,
@@ -44,6 +48,27 @@ const wchar_t* GetEngineName()
 const GUID& GetDLanguageId()
 {
     return gGuidDLang;
+}
+
+const GUID& GetDExceptionType()
+{
+    // we use the engine ID as the guid type for D exceptions
+    return __uuidof( MagoNativeEngine );
+}
+
+const GUID& GetWin32ExceptionType()
+{
+    return gGuidWin32ExceptionType;
+}
+
+const wchar_t* GetRootDExceptionName()
+{
+    return L"D Exceptions";
+}
+
+const wchar_t* GetRootWin32ExceptionName()
+{
+    return L"Win32 Exceptions";
 }
 
 const wchar_t* GetString( DWORD strId )

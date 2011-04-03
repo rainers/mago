@@ -210,12 +210,22 @@ namespace Mago
 
     class ExceptionEvent : public EventImpl<IDebugExceptionEvent2, EVENT_ASYNC_STOP>
     {
+    public:
+        enum SearchKey
+        {
+            Name,
+            Code
+        };
+
+    private:
         RefPtr<Program>         mProg;
         CComBSTR                mExceptionName;
         CComBSTR                mExceptionInfo;
         DWORD                   mCode;
         EXCEPTION_STATE         mState;
         GUID                    mGuidType;
+        const wchar_t*          mRootExceptionName;
+        SearchKey               mSearchKey;
         bool                    mCanPassToDebuggee;
 
     public:
@@ -227,11 +237,23 @@ namespace Mago
         STDMETHOD( CanPassToDebuggee )();
         STDMETHOD( PassToDebuggee )( BOOL fPass );
 
+        // information that's useful for exception handling and ignoring
+
         EXCEPTION_STATE GetState() const { return mState; }
         DWORD GetCode() const { return mCode; }
         const GUID& GetGUID() const { return mGuidType; }
-        LPCOLESTR GetExcpetionName() const { return mExceptionName; }
-        
+        LPCOLESTR GetExceptionName() const { return mExceptionName; }
+
+        // If exception info can't be found based on the exception name or code, 
+        // the user needs to look up the info for the root exception.
+        // For example, the root exception of "Access Violation" is "Win32 Exceptions".
+
+        LPCOLESTR GetRootExceptionName() const { return mRootExceptionName; }
+        SearchKey GetSearchKey() const { return mSearchKey; }
+
+        // If we have incomplete info based on calling Init, we can update it 
+        // with this.
+
         void SetExceptionName( LPCOLESTR name );
     };
 

@@ -13,6 +13,12 @@ const wchar_t* GetEngineName();
 
 const GUID& GetDLanguageId();
 
+const GUID& GetDExceptionType();
+const GUID& GetWin32ExceptionType();
+
+const wchar_t* GetRootDExceptionName();
+const wchar_t* GetRootWin32ExceptionName();
+
 enum StringIds
 {
     IDS_NONE,

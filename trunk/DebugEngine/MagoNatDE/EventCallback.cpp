@@ -326,21 +326,27 @@ namespace Mago
         event->Init( prog.Get(), firstChance, exceptRec, prog->CanPassExceptionToDebuggee() );
 
         DWORD state = DefaultState;
-        if ( event->GetGUID() == GetEngineId() )
+        ExceptionInfo info;
+        bool found = false;
+
+        if ( event->GetSearchKey() == ExceptionEvent::Name )
         {
-            ExceptionInfo info;
-            if ( mEngine->FindExceptionInfo( event->GetGUID(), event->GetExcpetionName(), info ) )
-                state = info.dwState;
-            // TODO: if not found, then check against the "D Exceptions" entry
+            found = mEngine->FindExceptionInfo( event->GetGUID(), event->GetExceptionName(), info );
         }
-        else
+        else // search by code
         {
-            ExceptionInfo info;
-            if ( mEngine->FindExceptionInfo( event->GetGUID(), event->GetCode(), info ) )
-            {
+            found = mEngine->FindExceptionInfo( event->GetGUID(), event->GetCode(), info );
+        }
+
+        // if not found, then check against the catch-all entry
+        if ( !found )
+            found = mEngine->FindExceptionInfo( event->GetGUID(), event->GetRootExceptionName(), info );
+
+        if ( found )
+        {
+            if ( event->GetSearchKey() == ExceptionEvent::Code )
                 event->SetExceptionName( info.bstrExceptionName );
-                state = info.dwState;
-            }
+            state = info.dwState;
         }
 
         if ( (  firstChance && ( state & EXCEPTION_STOP_FIRST_CHANCE ) ) ||
