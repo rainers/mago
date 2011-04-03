@@ -12,21 +12,13 @@
 #include "resource.h"       // main symbols
 #include "MagoNatDE_i.h"
 #include "DebuggerProxy.h"
+#include "ExceptionTable.h"
 
 
 namespace Mago
 {
     class Program;
     class PendingBreakpoint;
-
-    struct ExceptionInfo
-    {
-        // leaving out unimportant info from EXCEPTION_INFO
-        CComBSTR bstrExceptionName;
-        DWORD dwCode;
-        EXCEPTION_STATE dwState;
-        GUID guidType;
-    };
 
     // Engine
 
@@ -38,7 +30,6 @@ namespace Mago
     {
         typedef std::map< DWORD, RefPtr<Program> >  ProgramMap;
         typedef std::map< DWORD, RefPtr<PendingBreakpoint> >    BPMap;
-        typedef std::vector<ExceptionInfo> EIVector;
 
         DebuggerProxy       mDebugger;
         bool                mPollThreadStarted;
@@ -50,7 +41,7 @@ namespace Mago
         CComPtr<IDebugEventCallback2>   mCallback;
         Guard               mPendingBPGuard;
         Guard               mExceptionGuard;
-        EIVector            mExceptionInfos;
+        EngineExceptionTable    mExceptionInfos;
 
     public:
         Engine();
