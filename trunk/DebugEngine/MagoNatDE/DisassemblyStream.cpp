@@ -182,12 +182,8 @@ namespace Mago
         if ( (pdwInstructionsRead == NULL) || (prgDisassembly == NULL) )
             return E_INVALIDARG;
 
-        {
-            char    msg[500] = "";
-            sprintf_s( msg, "Read began: anchor=%08x read=%08x iInst=%d\n", 
-                mAnchorAddr, mReadAddr, dwInstructions );
-            OutputDebugStringA( msg );
-        }
+        _RPT3( _CRT_WARN, "Read began: anchor=%08x read=%08x iInst=%d\n", 
+            mAnchorAddr, mReadAddr, dwInstructions );
 
         HRESULT     hr = S_OK;
         int         instWanted = std::min<DWORD>( dwInstructions, INT_MAX );
@@ -279,12 +275,8 @@ namespace Mago
 
         *pdwInstructionsRead = instFound;
 
-        {
-            char    msg[500] = "";
-            sprintf_s( msg, "Read ended: anchor=%08x read=%08x found=%d\n", 
-                mAnchorAddr, mReadAddr, instFound );
-            OutputDebugStringA( msg );
-        }
+        _RPT3( _CRT_WARN, "Read ended: anchor=%08x read=%08x found=%d\n", 
+            mAnchorAddr, mReadAddr, instFound );
 
         return S_OK;
     }
@@ -298,7 +290,8 @@ namespace Mago
         switch ( dwSeekStart )
         {
         case SEEK_START_CURRENT:
-            // we don't need to change the anchor
+            // the read address is where we left off, so set the anchor there
+            mAnchorAddr = mReadAddr;
             break;
 
         case SEEK_START_CODECONTEXT:
@@ -327,12 +320,8 @@ namespace Mago
             return E_NOTIMPL;
         }
 
-        {
-            char    msg[500] = "";
-            sprintf_s( msg, "Seek: anchor=%08x iInst=%I64d\n", 
-                mAnchorAddr, iInstructions );
-            OutputDebugStringA( msg );
-        }
+        _RPT2( _CRT_WARN, "Seek: anchor=%08x iInst=%I64d\n", 
+            mAnchorAddr, iInstructions );
 
         return SeekOffset( iInstructions );
     }
@@ -429,11 +418,7 @@ namespace Mago
         UINT64               uCodeLocationId,
         IDebugCodeContext2** ppCodeContext )
     {
-        {
-            char    msg[500] = "";
-            sprintf_s( msg, "DisassemblyStream::GetCodeContext: %08x\n", (UINT32) uCodeLocationId );
-            OutputDebugStringA( msg );
-        }
+        _RPT1( _CRT_WARN, "DisassemblyStream::GetCodeContext: %08x\n", (UINT32) uCodeLocationId );
 
         HRESULT             hr = S_OK;
         Address             addr = (Address) uCodeLocationId;
@@ -468,12 +453,8 @@ namespace Mago
 
         *puCodeLocationId = mReadAddr;
 
-        {
-            char    msg[500] = "";
-            sprintf_s( msg, "GetCurrentLocation: anchor=%08x read=%08x\n", 
-                mAnchorAddr, mReadAddr );
-            OutputDebugStringA( msg );
-        }
+        _RPT2( _CRT_WARN, "GetCurrentLocation: anchor=%08x read=%08x\n", 
+            mAnchorAddr, mReadAddr );
 
         return S_OK;
     }
@@ -631,12 +612,8 @@ namespace Mago
             }
         }
 
-        {
-            char    msg[500] = "";
-            sprintf_s( msg, "SeekBack ended: anchor=%08x read=%08x iInst=%d found=%d\n", 
-                mAnchorAddr, mReadAddr, iInstructions, instFound );
-            OutputDebugStringA( msg );
-        }
+        _RPT4( _CRT_WARN, "SeekBack ended: anchor=%08x read=%08x iInst=%d found=%d\n", 
+            mAnchorAddr, mReadAddr, iInstructions, instFound );
 
         return S_OK;
     }
@@ -684,12 +661,8 @@ namespace Mago
             }
         }
 
-        {
-            char    msg[500] = "";
-            sprintf_s( msg, "SeekForward ended: anchor=%08x read=%08x iInst=%d found=%d\n", 
-                mAnchorAddr, mReadAddr, iInstructions, instFound );
-            OutputDebugStringA( msg );
-        }
+        _RPT4( _CRT_WARN, "SeekForward ended: anchor=%08x read=%08x iInst=%d found=%d\n", 
+            mAnchorAddr, mReadAddr, iInstructions, instFound );
 
         return S_OK;
     }
