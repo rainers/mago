@@ -573,6 +573,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ExceptionTable.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Expr.cpp"
 				>
 			</File>
@@ -768,6 +772,10 @@
 			</File>
 			<File
 				RelativePath=".\Events.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ExceptionTable.h"
 				>
 			</File>
 			<File
