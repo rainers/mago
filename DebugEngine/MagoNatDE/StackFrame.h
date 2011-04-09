@@ -22,6 +22,7 @@ namespace Mago
         struct LineInfo
         {
             CComBSTR        Filename;
+            Address         Address;
             TEXT_POSITION   LineBegin;
             TEXT_POSITION   LineEnd;
             CComBSTR        LangName;
@@ -100,9 +101,28 @@ namespace Mago
 
     private:
         HRESULT GetLineInfo( LineInfo& info );
-        HRESULT GetFunctionName( BSTR* funcName );
-        HRESULT GetFunctionNameWithSymbols( BSTR* funcName );
-        HRESULT GetFunctionNameWithAddress( BSTR* funcName );
+
+        HRESULT GetFunctionName( 
+            FRAMEINFO_FLAGS flags, 
+            UINT radix, 
+            BSTR* funcName );
+
+        HRESULT AppendFunctionNameWithSymbols( 
+            FRAMEINFO_FLAGS flags, 
+            UINT radix, 
+            CString& fullName );
+
+        HRESULT AppendFunctionNameWithAddress( 
+            FRAMEINFO_FLAGS flags, 
+            UINT radix, 
+            CString& fullName );
+
+        HRESULT AppendFunctionNameWithSymbols( 
+            FRAMEINFO_FLAGS flags, 
+            UINT radix, 
+            MagoST::ISession* session,
+            MagoST::ISymbolInfo* symInfo, 
+            CString& fullName );
 
         HRESULT FindFunction();
 
