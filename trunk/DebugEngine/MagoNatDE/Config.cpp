@@ -32,6 +32,9 @@ static const wchar_t*   gStrings[] =
     L"MMX",
     L"SSE",
     L"SSE2",
+
+    L"Line",
+    L"bytes",
 };
 
 

@@ -148,7 +148,7 @@ namespace Mago
 
         if ( (dwFieldSpec & FIF_FUNCNAME) != 0 )
         {
-            hr = GetFunctionName( &pFrameInfo->m_bstrFuncName );
+            hr = GetFunctionName( dwFieldSpec, nRadix, &pFrameInfo->m_bstrFuncName );
             if ( SUCCEEDED( hr ) )
                 pFrameInfo->m_dwValidFields |= FIF_FUNCNAME;
         }
@@ -173,8 +173,14 @@ namespace Mago
 
         if ( (dwFieldSpec & FIF_MODULE) != 0 )
         {
-            //pFrameInfo->m_bstrModule;
-            //pFrameInfo->m_dwValidFields |= FIF_MODULE;
+            if ( mModule != NULL )
+            {
+                CComBSTR modName;
+                mModule->GetName( modName );
+                pFrameInfo->m_bstrModule = modName.Detach();
+                if ( pFrameInfo->m_bstrModule != NULL )
+                    pFrameInfo->m_dwValidFields |= FIF_MODULE;
+            }
         }
 
         //FIF_STALECODE m_fStaleCode
@@ -375,6 +381,8 @@ namespace Mago
         if ( info.LineEnd.dwColumn > 0 )
             info.LineEnd.dwColumn--;
 
+        info.Address = (Address) session->GetVAFromSecOffset( line.Section, line.Offset );
+
         MagoST::FileInfo    fileInfo = { 0 };
         hr = session->GetFileInfo( line.CompilandIndex, line.FileIndex, fileInfo );
         if ( FAILED( hr ) )
@@ -391,38 +399,55 @@ namespace Mago
         return hr;
     }
 
-    HRESULT StackFrame::GetFunctionName( BSTR* funcName )
+    HRESULT StackFrame::GetFunctionName( 
+        FRAMEINFO_FLAGS flags, 
+        UINT radix, 
+        BSTR* funcName )
     {
         _ASSERT( funcName != NULL );
         HRESULT hr = S_OK;
+        CString fullName;
 
-        hr = GetFunctionNameWithSymbols( funcName );
+        if ( (flags & FIF_FUNCNAME_MODULE) != 0 )
+        {
+            if ( mModule != NULL )
+            {
+                CComBSTR modNameBstr;
+                mModule->GetName( modNameBstr );
+                fullName.Append( modNameBstr );
+                fullName.AppendChar( L'!' );
+            }
+        }
+
+        hr = AppendFunctionNameWithSymbols( flags, radix, fullName );
         if ( FAILED( hr ) )
         {
-            hr = GetFunctionNameWithAddress( funcName );
+            hr = AppendFunctionNameWithAddress( flags, radix, fullName );
+            if ( FAILED( hr ) )
+                return hr;
         }
+
+        *funcName = fullName.AllocSysString();
 
         return hr;
     }
 
-    HRESULT StackFrame::GetFunctionNameWithAddress( BSTR* funcName )
+    HRESULT StackFrame::AppendFunctionNameWithAddress( 
+        FRAMEINFO_FLAGS flags, 
+        UINT radix, 
+        CString& fullName )
     {
-        _ASSERT( funcName != NULL );
-        wchar_t addrStr[ 8 + 1 ] = L"";
-
-        _ASSERT( sizeof mPC == 4 );
-        swprintf_s( addrStr, L"%08x", mPC );
-        
-        *funcName = SysAllocString( addrStr );
-        if ( *funcName == NULL )
-            return E_OUTOFMEMORY;
+        C_ASSERT( sizeof mPC == 4 );
+        fullName.AppendFormat( L"%08x", mPC );
 
         return S_OK;
     }
 
-    HRESULT StackFrame::GetFunctionNameWithSymbols( BSTR* funcName )
+    HRESULT StackFrame::AppendFunctionNameWithSymbols( 
+        FRAMEINFO_FLAGS flags, 
+        UINT radix, 
+        CString& fullName )
     {
-        _ASSERT( funcName != NULL );
         HRESULT hr = S_OK;
         RefPtr<MagoST::ISession>    session;
         MagoST::SymInfoData         infoData = { 0 };
@@ -442,18 +467,73 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        PasString*  pstrName = NULL;
-        if ( !symInfo->GetName( pstrName ) )
-            return E_NOT_FOUND;
-
-        hr = Utf8To16( pstrName->GetName(), pstrName->GetLength(), *funcName );
-        if ( FAILED( hr ) )
-            return hr;
+        hr = AppendFunctionNameWithSymbols( flags, radix, session, symInfo, fullName );
 
         // for reference: you get the language by going to a lexical ancestor
         // that's a compiland, then you get a compiland detail from it
 
         return hr;
+    }
+
+    HRESULT StackFrame::AppendFunctionNameWithSymbols( 
+        FRAMEINFO_FLAGS flags, 
+        UINT radix, 
+        MagoST::ISession* session,
+        MagoST::ISymbolInfo* symInfo, 
+        CString& fullName )
+    {
+        _ASSERT( session != NULL );
+        _ASSERT( symInfo != NULL );
+        HRESULT hr = S_OK;
+        CComBSTR funcNameBstr;
+
+        PasString*  pstrName = NULL;
+        if ( !symInfo->GetName( pstrName ) )
+            return E_NOT_FOUND;
+
+        hr = Utf8To16( pstrName->GetName(), pstrName->GetLength(), funcNameBstr.m_str );
+        if ( FAILED( hr ) )
+            return hr;
+
+        fullName.Append( funcNameBstr );
+        fullName.AppendChar( L'(' );
+        fullName.AppendChar( L')' );
+
+        bool hasLineInfo = false;
+        Address baseAddr = 0;
+
+        if ( (flags & FIF_FUNCNAME_LINES) != 0 )
+        {
+            LineInfo line;
+            if ( SUCCEEDED( GetLineInfo( line ) ) )
+            {
+                hasLineInfo = true;
+                baseAddr = line.Address;
+                // lines are 1-based to user, but 0-based from symbol store
+                DWORD lineNumber = line.LineBegin.dwLine + 1;
+                const wchar_t* lineStr = GetString( IDS_LINE );
+
+                fullName.AppendFormat( L" %s %u", lineStr, lineNumber );
+            }
+        }
+
+        if ( !hasLineInfo )
+        {
+            uint16_t sec = 0;
+            uint32_t offset = 0;
+
+            symInfo->GetAddressSegment( sec );
+            symInfo->GetAddressOffset( offset );
+            baseAddr = (Address) session->GetVAFromSecOffset( sec, offset );
+        }
+
+        if ( ((flags & FIF_FUNCNAME_OFFSET) != 0) && (mPC != baseAddr) )
+        {
+            const wchar_t* bytesStr = GetString( IDS_BYTES );
+            fullName.AppendFormat( L" + 0x%x %s", mPC - baseAddr, bytesStr );
+        }
+
+        return S_OK;
     }
 
     HRESULT StackFrame::FindFunction()

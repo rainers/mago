@@ -32,6 +32,9 @@ enum StringIds
     IDS_REGGROUP_MMX,
     IDS_REGGROUP_SSE,
     IDS_REGGROUP_SSE2,
+
+    IDS_LINE,
+    IDS_BYTES,
 };
 
 const wchar_t* GetString( DWORD strId );
