@@ -124,6 +124,8 @@ namespace Mago
             MagoST::ISymbolInfo* symInfo, 
             CString& fullName );
 
+        HRESULT GetLanguageName( BSTR* langName );
+
         HRESULT FindFunction();
 
         HRESULT MakeExprContext();
