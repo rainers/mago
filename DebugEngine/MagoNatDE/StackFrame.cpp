@@ -167,8 +167,9 @@ namespace Mago
 
         if ( (dwFieldSpec & FIF_LANGUAGE) != 0 )
         {
-            pFrameInfo->m_bstrLanguage = SysAllocString( L"D" );
-            pFrameInfo->m_dwValidFields |= FIF_LANGUAGE;
+            hr = GetLanguageName( &pFrameInfo->m_bstrLanguage );
+            if ( SUCCEEDED( hr ) )
+                pFrameInfo->m_dwValidFields |= FIF_LANGUAGE;
         }
 
         if ( (dwFieldSpec & FIF_MODULE) != 0 )
@@ -532,6 +533,24 @@ namespace Mago
             const wchar_t* bytesStr = GetString( IDS_BYTES );
             fullName.AppendFormat( L" + 0x%x %s", mPC - baseAddr, bytesStr );
         }
+
+        return S_OK;
+    }
+
+    HRESULT StackFrame::GetLanguageName( BSTR* langName )
+    {
+        _ASSERT( langName != NULL );
+        HRESULT hr = S_OK;
+
+        hr = FindFunction();
+        if ( FAILED( hr ) )
+            return hr;
+
+        // if a function was found for our address, then it has a language
+        // we'll assume it's D for now
+        *langName = SysAllocString( L"D" );
+        if ( *langName == NULL )
+            return E_OUTOFMEMORY;
 
         return S_OK;
     }
