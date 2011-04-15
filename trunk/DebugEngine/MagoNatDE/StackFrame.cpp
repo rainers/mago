@@ -14,6 +14,7 @@
 #include "ExprContext.h"
 #include "FrameProperty.h"
 #include "RegisterSet.h"
+#include "MagoCVConst.h"
 
 
 namespace Mago
@@ -498,6 +499,12 @@ namespace Mago
 
         fullName.Append( funcNameBstr );
         fullName.AppendChar( L'(' );
+
+        if ( (flags & FIF_FUNCNAME_ARGS_ALL) != 0 )
+        {
+            AppendArgs( flags, radix, session, symInfo, fullName );
+        }
+
         fullName.AppendChar( L')' );
 
         bool hasLineInfo = false;
@@ -533,6 +540,92 @@ namespace Mago
             const wchar_t* bytesStr = GetString( IDS_BYTES );
             fullName.AppendFormat( L" + 0x%x %s", mPC - baseAddr, bytesStr );
         }
+
+        return S_OK;
+    }
+
+    HRESULT StackFrame::AppendArgs(
+        FRAMEINFO_FLAGS flags, 
+        UINT radix, 
+        MagoST::ISession* session,
+        MagoST::ISymbolInfo* symInfo, 
+        CString& outputStr )
+    {
+        _ASSERT( session != NULL );
+        _ASSERT( symInfo != NULL );
+        HRESULT             hr = S_OK;
+        MagoST::SymbolScope funcScope = { 0 };
+        MagoST::SymHandle   childSH = { 0 };
+        int                 paramCount = 0;
+        std::wstring        typeStr;
+
+        hr = MakeExprContext();
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = session->SetChildSymbolScope( mFuncSH, funcScope );
+        if ( FAILED( hr ) )
+            return hr;
+
+        while ( session->NextSymbol( funcScope, childSH ) )
+        {
+            MagoST::SymInfoData     childData = { 0 };
+            MagoST::ISymbolInfo*    childSym = NULL;
+            MagoST::SymTag          tag = MagoST::SymTagNull;
+            RefPtr<MagoEE::Type>    type;
+            RefPtr<MagoEE::Declaration> decl;
+
+            session->GetSymbolInfo( childSH, childData, childSym );
+            if ( childSym == NULL )
+                continue;
+
+            tag = childSym->GetSymTag();
+            if ( tag == MagoST::SymTagEndOfArgs )
+                break;
+
+            mExprContext->MakeDeclarationFromSymbol( childSH, decl.Ref() );
+            if ( decl == NULL )
+                continue;
+
+            if ( paramCount > 0 )
+                outputStr.AppendChar( L',' );
+
+            if ( (flags & FIF_FUNCNAME_ARGS_TYPES) != 0 )
+            {
+                if ( decl->GetType( type.Ref() ) )
+                {
+                    typeStr.clear();
+                    type->ToString( typeStr );
+                    outputStr.AppendFormat( L" %.*s", typeStr.size(), typeStr.c_str() );
+                }
+            }
+
+            if ( (flags & FIF_FUNCNAME_ARGS_NAMES) != 0 )
+            {
+                outputStr.AppendFormat( L" %s", decl->GetName() );
+            }
+
+            if ( (flags & FIF_FUNCNAME_ARGS_VALUES) != 0 )
+            {
+                MagoEE::DataObject resultObj = { 0 };
+                CComBSTR valueBstr;
+
+                hr = mExprContext->Evaluate( decl, resultObj );
+                if ( hr == S_OK )
+                {
+                    hr = MagoEE::EED::FormatValue( mExprContext, resultObj, radix, valueBstr.m_str );
+                    if ( hr == S_OK )
+                    {
+                        outputStr.AppendFormat( L" = %.*s", valueBstr.Length(), valueBstr.m_str );
+                    }
+                }
+            }
+
+            paramCount++;
+        }
+
+        if ( paramCount > 0 )
+            outputStr.AppendChar( L' ' );
 
         return S_OK;
     }

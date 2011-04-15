@@ -95,6 +95,23 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT ExprContext::Evaluate( 
+        MagoEE::Declaration* decl, 
+        MagoEE::DataObject& resultObj )
+    {
+        HRESULT hr = S_OK;
+
+        hr = GetValue( decl, resultObj.Value );
+        if ( FAILED( hr ) )
+            return hr;
+
+        decl->GetType( resultObj._Type.Ref() );
+
+        decl->GetAddress( resultObj.Addr );
+
+        return S_OK;
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////// 
     // MagoEE::IValueBinder

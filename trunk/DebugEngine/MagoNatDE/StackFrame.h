@@ -124,6 +124,13 @@ namespace Mago
             MagoST::ISymbolInfo* symInfo, 
             CString& fullName );
 
+        HRESULT AppendArgs(
+            FRAMEINFO_FLAGS flags, 
+            UINT radix, 
+            MagoST::ISession* session,
+            MagoST::ISymbolInfo* symInfo, 
+            CString& outputStr );
+
         HRESULT GetLanguageName( BSTR* langName );
 
         HRESULT FindFunction();

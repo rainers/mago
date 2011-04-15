@@ -123,6 +123,10 @@ namespace Mago
             MagoEE::Type* type,
             MagoEE::Declaration*& decl );
 
+        HRESULT Evaluate( 
+            MagoEE::Declaration* decl, 
+            MagoEE::DataObject& resultObj );
+
     public:
         HRESULT Init( 
             Module* module,

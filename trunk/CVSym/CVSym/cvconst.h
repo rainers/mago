@@ -53,6 +53,7 @@ namespace MagoST
         SymTagMethod,
         SymTagMethodOverloads,
         SymTagNestedType,
+        SymTagEndOfArgs,
 
         SymTagMax
     };

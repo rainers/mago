@@ -215,4 +215,13 @@ namespace MagoST
         virtual bool GetType( TypeIndex& index );
         virtual bool GetName( PasString*& name );
     };
+
+
+    class EndOfArgsSymbol : public NonTypeSymbol
+    {
+    public:
+        EndOfArgsSymbol( const SymHandleIn& handle );
+
+        virtual SymTag GetSymTag();
+    };
 }
