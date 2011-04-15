@@ -647,4 +647,20 @@ namespace MagoST
         name = &mData.Symbol.Handle.Sym->udt.p_name;
         return true;
     }
+
+
+    //------------------------------------------------------------------------
+    //  EndOfArgsSymbol
+    //------------------------------------------------------------------------
+
+    EndOfArgsSymbol::EndOfArgsSymbol( const SymHandleIn& handle )
+        :   NonTypeSymbol( handle )
+    {
+        C_ASSERT( sizeof( *this ) == sizeof( SymbolInfo ) );
+    }
+
+    SymTag EndOfArgsSymbol::GetSymTag()
+    {
+        return SymTagEndOfArgs;
+    }
 }

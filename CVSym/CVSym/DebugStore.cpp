@@ -613,6 +613,7 @@ namespace MagoST
         case S_LTHREAD32:
         case S_GTHREAD32:   symInfo = new (&privateData) TLSSymbol( *internalHandle ); break;
         case S_UDT:         symInfo = new (&privateData) UdtSymbol( *internalHandle ); break;
+        case S_ENDARG:      symInfo = new (&privateData) EndOfArgsSymbol( *internalHandle ); break;
         default:
             return E_FAIL;
         }
