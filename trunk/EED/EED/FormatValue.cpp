@@ -391,11 +391,14 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        outStr.append( L" ptr=" );
+        if ( !arrayType->GetElement()->IsChar() )
+        {
+            outStr.append( L" ptr=" );
 
-        hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
-        if ( FAILED( hr ) )
-            return hr;
+            hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
+            if ( FAILED( hr ) )
+                return hr;
+        }
 
         if ( arrayType->GetElement()->IsChar() )
         {
