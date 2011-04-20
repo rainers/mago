@@ -208,6 +208,25 @@ namespace MagoEE
         return S_OK;
     }
 
+    HRESULT FormatEnum( const DataObject& objVal, int radix, std::wstring& outStr )
+    {
+        UNREFERENCED_PARAMETER( radix );
+        _ASSERT( objVal._Type->AsTypeEnum() != NULL );
+
+        HRESULT hr = S_OK;
+
+        if ( (objVal._Type == NULL) || (objVal._Type->AsTypeEnum() == NULL) )
+            return E_FAIL;
+
+        // TODO: enum: look up enum member that corresponds to integer value
+
+        hr = FormatInt( objVal, radix, outStr );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
     template <class T> T* tmemchr( T* buf, T c, size_t size );
     template <> char*    tmemchr( char* buf, char c, size_t size ) { return (char*) memchr( buf, c, size ); }
     template <> wchar_t* tmemchr( wchar_t* buf, wchar_t c, size_t size ) { return wmemchr( buf, c, size ); }
@@ -687,7 +706,10 @@ namespace MagoEE
         {
             hr = FormatBasicValue( objVal, radix, outStr );
         }
-        // TODO: enum: look up enum member that corresponds to integer value
+        else if ( type->AsTypeEnum() != NULL )
+        {
+            hr = FormatEnum( objVal, radix, outStr );
+        }
         else if ( type->IsSArray() )
         {
             hr = FormatSArray( binder, objVal.Addr, objVal._Type, radix, outStr );
