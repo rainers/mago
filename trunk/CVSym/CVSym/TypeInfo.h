@@ -33,7 +33,6 @@ namespace MagoST
         virtual bool GetLength( uint32_t& length );
         virtual bool GetBasicType( DWORD& basicType );
 
-    private:
         static bool GetBasicLengthAndType( TypeIndex index, DWORD& basicType, uint32_t& length );
     };
 
@@ -135,6 +134,8 @@ namespace MagoST
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
         virtual bool GetName( PasString*& name );
+
+        virtual bool GetLength( uint32_t& length );
 
         virtual bool GetFieldCount( uint16_t& count );
         virtual bool GetFieldList( TypeIndex& index );

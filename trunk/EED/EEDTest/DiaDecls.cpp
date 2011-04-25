@@ -228,6 +228,11 @@ bool DiaDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
     return false;
 }
 
+HRESULT DiaDecl::FindObjectByValue( uint64_t intVal, Declaration*& decl )
+{
+    return HRESULT_FROM_WIN32( ERROR_NOT_FOUND );
+}
+
 
 //----------------------------------------------------------------------------
 //  GeneralDiaDecl

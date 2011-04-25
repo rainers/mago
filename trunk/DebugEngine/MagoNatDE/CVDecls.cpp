@@ -213,6 +213,11 @@ namespace Mago
         return false;
     }
 
+    HRESULT CVDecl::FindObjectByValue( uint64_t intVal, Declaration*& decl )
+    {
+        return E_NOT_FOUND;
+    }
+
 
 //----------------------------------------------------------------------------
 //  GeneralCVDecl
@@ -632,6 +637,86 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT TypeCVDecl::FindObjectByValue( uint64_t intVal, Declaration*& decl )
+    {
+        HRESULT             hr = S_OK;
+        MagoST::TypeHandle  childTH = { 0 };
+        MagoST::TypeIndex   flistIndex = 0;
+        MagoST::TypeHandle  flistHandle = { 0 };
+        MagoST::TypeScope   scope = { 0 };
+        bool                found = false;
+
+        if ( !mSymInfo->GetFieldList( flistIndex ) )
+            return E_NOT_FOUND;
+
+        if ( !mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
+            return E_NOT_FOUND;
+
+        hr = mSession->SetChildTypeScope( flistHandle, scope );
+        if ( FAILED( hr ) )
+            return hr;
+
+        for ( ; !found && mSession->NextType( scope, childTH ); )
+        {
+            ISymbolInfo*    childInfo = NULL;
+            SymInfoData     childData = { 0 };
+            Variant         value = { 0 };
+            uint64_t        u64 = 0;
+
+            hr = mSession->GetTypeInfo( childTH, childData, childInfo );
+            if ( hr != S_OK )
+                continue;
+
+            if ( !childInfo->GetValue( value ) )
+                continue;
+
+            switch ( value.Tag )
+            {
+            case MagoST::VarTag_Char:       u64 = value.Data.I8;  break;
+            case MagoST::VarTag_Short:      u64 = value.Data.I16; break;
+            case MagoST::VarTag_UShort:     u64 = value.Data.U16; break;
+            case MagoST::VarTag_Long:       u64 = value.Data.I32; break;
+            case MagoST::VarTag_ULong:      u64 = value.Data.U32; break;
+            case MagoST::VarTag_Quadword:   u64 = value.Data.I64; break;
+            case MagoST::VarTag_UQuadword:  u64 = value.Data.U64; break;
+            default:
+                continue;
+            }
+
+            if ( u64 == intVal )
+                found = true;
+        }
+
+        if ( !found )
+            return E_NOT_FOUND;
+
+        if ( mSymInfo->GetSymTag() == MagoST::SymTagEnum )
+        {
+            MagoST::SymInfoData     childInfoData = { 0 };
+            MagoST::ISymbolInfo*    childSymInfo = NULL;
+            RefPtr<MagoEE::Type>    type;
+
+            hr = mSession->GetTypeInfo( childTH, childInfoData, childSymInfo );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( !GetType( type.Ref() ) )
+                return E_FAIL;
+
+            hr = mSymStore->MakeDeclarationFromDataSymbol( childInfoData, childSymInfo, type, decl );
+            if ( FAILED( hr ) )
+                return hr;
+        }
+        else
+        {
+            hr = mSymStore->MakeDeclarationFromSymbol( childTH, decl );
+            if ( FAILED( hr ) )
+                return hr;
+        }
+
+        return S_OK;
+    }
+
     bool TypeCVDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
     {
         RefPtr<TypeCVDeclMembers>   cvMembers;
@@ -941,5 +1026,10 @@ namespace Mago
     bool ClassRefDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
     {
         return false;
+    }
+
+    HRESULT ClassRefDecl::FindObjectByValue( uint64_t intVal, Declaration*& decl )
+    {
+        return E_NOT_FOUND;
     }
 }

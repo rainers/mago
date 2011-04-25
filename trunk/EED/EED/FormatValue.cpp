@@ -218,11 +218,29 @@ namespace MagoEE
         if ( (objVal._Type == NULL) || (objVal._Type->AsTypeEnum() == NULL) )
             return E_FAIL;
 
-        // TODO: enum: look up enum member that corresponds to integer value
+        ITypeEnum*  enumType = objVal._Type->AsTypeEnum();
+        RefPtr<Declaration> decl;
+        const wchar_t* name = NULL;
 
-        hr = FormatInt( objVal, radix, outStr );
-        if ( FAILED( hr ) )
-            return hr;
+        decl = enumType->FindObjectByValue( objVal.Value.UInt64Value );
+
+        if ( decl != NULL )
+        {
+            name = decl->GetName();
+        }
+
+        if ( name != NULL )
+        {
+            objVal._Type->ToString( outStr );
+            outStr.append( 1, L'.' );
+            outStr.append( name );
+        }
+        else
+        {
+            hr = FormatInt( objVal, radix, outStr );
+            if ( FAILED( hr ) )
+                return hr;
+        }
 
         return S_OK;
     }

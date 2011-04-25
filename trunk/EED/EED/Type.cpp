@@ -1328,6 +1328,18 @@ namespace MagoEE
         return childDecl;
     }
 
+    RefPtr<Declaration> TypeEnum::FindObjectByValue( uint64_t intVal )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<Declaration> childDecl;
+
+        hr = mDecl->FindObjectByValue( intVal, childDecl.Ref() );
+        if ( FAILED( hr ) )
+            return NULL;
+
+        return childDecl;
+    }
+
     bool TypeEnum::Equals( Type* other )
     {
         if ( Ty != other->Ty )

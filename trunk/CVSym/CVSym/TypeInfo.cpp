@@ -465,6 +465,14 @@ namespace MagoST
         return true;
     }
 
+    bool EnumTypeSymbol::GetLength( uint32_t& length )
+    {
+        CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
+        DWORD           basic = 0;
+        return BaseTypeSymbol::GetBasicLengthAndType( 
+            type->_enum.type, basic, length );
+    }
+
     bool EnumTypeSymbol::GetFieldCount( uint16_t& count )
     {
         CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;

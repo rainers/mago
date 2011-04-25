@@ -404,8 +404,7 @@ namespace MagoEE
     {
     public:
         virtual RefPtr<Declaration> FindObject( const wchar_t* name ) = 0;
-
-        // TODO: where do we put the method that returns the name of an enum member that maps to a given integer?
+        virtual RefPtr<Declaration> FindObjectByValue( uint64_t intVal ) = 0;
     };
 
 
@@ -429,6 +428,7 @@ namespace MagoEE
 
         // ITypeEnum
         virtual RefPtr<Declaration> FindObject( const wchar_t* name );
+        virtual RefPtr<Declaration> FindObjectByValue( uint64_t intVal );
     };
 
 

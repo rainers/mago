@@ -44,6 +44,7 @@ namespace MagoEE
 
         virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl ) = 0;
         virtual bool EnumMembers( IEnumDeclarationMembers*& members ) = 0;
+        virtual HRESULT FindObjectByValue( uint64_t intVal, Declaration*& decl ) = 0;
     };
 
 
