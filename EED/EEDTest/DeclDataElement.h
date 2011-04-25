@@ -48,6 +48,7 @@ public:
 
     virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl );
     virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
+    virtual HRESULT FindObjectByValue( uint64_t intVal, Declaration*& decl );
 };
 
 

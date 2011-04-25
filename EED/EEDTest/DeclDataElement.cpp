@@ -105,6 +105,11 @@ bool DeclDataElement::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
     return false;
 }
 
+HRESULT DeclDataElement::FindObjectByValue( uint64_t intVal, Declaration*& decl )
+{
+    return E_FAIL;
+}
+
 
 //----------------------------------------------------------------------------
 // VarDataElement
