@@ -117,7 +117,6 @@ static Keyword gKeywords[] =
     { L"synchronized", TOKsynchronized },
 
     { L"template", TOKtemplate },
-    { L"this", TOKthis },
     { L"throw", TOKthrow },
     { L"true", TOKtrue },
     { L"try", TOKtry },

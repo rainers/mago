@@ -875,7 +875,7 @@ namespace MagoEE
 
         // has to have a type
         if ( !Decl->GetType( _Type.Ref() ) )
-            return E_FAIL;
+            return E_MAGOEE_NO_TYPE;
 
         // and the type has to be struct compatible: struct or ptr to struct
         if ( !_Type->CanRefMember() )
