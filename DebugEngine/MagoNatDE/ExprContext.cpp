@@ -16,6 +16,8 @@
 #include "winternl2.h"
 #include <MagoCVConst.h>
 
+#include <algorithm>
+
 using namespace MagoST;
 
 // use references instead of pointers to classes
@@ -707,7 +709,38 @@ namespace Mago
         if ( !mModule->GetSymbolSession( session ) )
             return E_NOT_FOUND;
 
-        return FindGlobalSymbol( session, name, nameLen, globalSH );
+        HRESULT hr = FindGlobalSymbol( session, name, nameLen, globalSH );
+        if ( FAILED( hr ) )
+        {
+            // look for static and global symbols by adding the scope to the name
+            // the scope is determined from the current function name, so it does
+            // not work with extern(C) functions
+            SymInfoData     infoData = { 0 };
+            ISymbolInfo*    symInfo = NULL;
+
+            hr = session->GetSymbolInfo( mFuncSH, infoData, symInfo );
+            if ( SUCCEEDED( hr ) && symInfo )
+            {
+                PasString*      pstrName = NULL;
+                if ( symInfo->GetName( pstrName ) )
+                {
+                    std::string sym( name, nameLen );
+                    std::string scopeName( pstrName->GetName(), pstrName->GetLength() );
+                    while ( scopeName.length() > 0 )
+                    {
+                        std::string symName = scopeName + "." + sym;
+                        hr = FindGlobalSymbol( session, symName.c_str(), symName.length(), globalSH );
+                        if ( SUCCEEDED( hr ) )
+                            break;
+                        std::string::reverse_iterator it = std::find( scopeName.rbegin(), scopeName.rend(), '.' );
+                        if( it == scopeName.rend() )
+                            break;
+                        scopeName.erase( it.base() - 1, scopeName.end() );
+                    }
+                }
+            }
+        }
+        return hr;
     }
 
     HRESULT ExprContext::FindLocalSymbol( 
