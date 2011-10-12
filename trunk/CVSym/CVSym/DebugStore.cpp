@@ -29,7 +29,8 @@ namespace MagoST
             mDirs( NULL ),
             mGlobalTypesDir( NULL ),
             mCompilandCount( 0 ),
-            mTLSSegment( 0 )
+            mTLSSegment( 0 ),
+            mTextSegment( 2 )
     {
         memset( mSymsDir, 0, sizeof mSymsDir );
 
@@ -126,6 +127,11 @@ namespace MagoST
         mTLSSegment = seg;
     }
 
+    void DebugStore::SetTextSegment( WORD seg )
+    {
+        mTextSegment = seg;
+    }
+
     HRESULT DebugStore::ProcessDirEntry( OMFDirEntry* entry )
     {
         _ASSERT( entry != NULL );
@@ -140,6 +146,8 @@ namespace MagoST
             if ( mCompilandDetails.get() == NULL )
                 mCompilandCount++;
             // else, ignore all the ones after this stage, because they shouldn't be here
+            
+            MarkLineNumbers( entry );
             break;
 
         case sstAlignSym:
@@ -162,6 +170,8 @@ namespace MagoST
                 mCompilandDetails[ entry->iMod - 1 ].SourceEntry = entry;
             else
                 _ASSERT( false );
+
+            MarkLineNumbers( entry );
             break;
 
         case sstGlobalTypes:
@@ -1266,6 +1276,7 @@ namespace MagoST
         segInfo.Offsets = offsetTable;
         segInfo.LineNumbers = numberTable;
 
+        FixEndOffset( segInfo.Offsets[segInfo.LineCount - 1], segInfo.End );
         return true;
     }
 
@@ -1316,6 +1327,7 @@ namespace MagoST
                 segInfo.Offsets = offsetTable;
                 segInfo.Start = startEndTable[zSegIx].first;
                 segInfo.End = startEndTable[zSegIx].second;
+                FixEndOffset( segInfo.Offsets[segInfo.LineCount - 1], segInfo.End );
                 return true;
             }
 
@@ -1366,6 +1378,7 @@ namespace MagoST
             segInfo.Offsets = offsetTable;
             segInfo.Start = startEndTable[zClosestSegIx].first;
             segInfo.End = startEndTable[zClosestSegIx].second;
+            FixEndOffset( segInfo.Offsets[segInfo.LineCount - 1], segInfo.End );
         }
 
         return true;
@@ -1471,16 +1484,19 @@ namespace MagoST
             if ( line->Seg != seg )
                 continue;
 
-            if ( ((startEndTable[zSegIx].first == 0) && (startEndTable[zSegIx].second == 0))
-                || ((startEndTable[zSegIx].first <= offset) && (startEndTable[zSegIx].second >= offset)) )
-            {
-                DWORD*  offsetTable = (DWORD*) ((BYTE*) line + 4);
-                WORD*   numberTable = (WORD*) (offsetTable + line->cLnOff);
+            DWORD*  offsetTable = (DWORD*) ((BYTE*) line + 4);
+            WORD*   numberTable = (WORD*) (offsetTable + line->cLnOff);
 
+            DWORD end = startEndTable[zSegIx].second;
+            FixEndOffset( offsetTable[line->cLnOff - 1], end );
+
+            if ( ((startEndTable[zSegIx].first == 0) && (startEndTable[zSegIx].second == 0))
+                || ((startEndTable[zSegIx].first <= offset) && (end >= offset)) )
+            {
                 fileSegInfo.SegmentIndex = line->Seg;
                 fileSegInfo.SegmentInstance = zSegIx;
                 fileSegInfo.Start = startEndTable[zSegIx].first;
-                fileSegInfo.End = startEndTable[zSegIx].second;
+                fileSegInfo.End = end;
                 fileSegInfo.LineCount = line->cLnOff;
                 fileSegInfo.LineNumbers = numberTable;
                 fileSegInfo.Offsets = offsetTable;
@@ -1644,4 +1660,124 @@ namespace MagoST
 
         return (pb >= mCVBuf) && (pbLimit >= pb) && (pbLimit <= (mCVBuf + mCVBufSize));
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // optlink creates bad end offsets in the OMFSourceFile data: the end
+    //  contains the offset of the last line number in the section, but not
+    //  the last code byte. This causes the debugger to switch to assembly
+    //  because there is a gap without associated source
+    //
+    // workaround: create a bitmap of all available line offsets plus some
+    //  more offsets that are probable function boundaries, and expand the
+    //  end offset up to the next found line offset
+
+    bool DebugStore::MarkLineOffsetInBitmap( size_t adr )
+    {
+        if ( adr >= mMarkOffsets.size() )
+            mMarkOffsets.resize( adr + 10000 );
+
+        mMarkOffsets[adr] = true;
+        return true;
+    }
+
+    bool DebugStore::MarkLineNumbers( OMFDirEntry* entry )
+    {
+        if ( entry->SubSection == sstAlignSym )
+        {
+            // mark function start/end
+        }
+        else if ( entry->SubSection == sstSrcModule )
+        {
+            // mark line numbers
+            OMFSourceModule* srcMod = GetCVPtr<OMFSourceModule>( entry->lfo );
+            if ( srcMod != NULL )
+            {
+                DWORD*      srcFilePtrTable = (DWORD*) ((BYTE*) srcMod + 4);
+                OffsetPair* offsetTable = (OffsetPair*) (srcFilePtrTable + srcMod->cFile);
+
+                for ( uint16_t f = 0; f < srcMod->cFile; f++)
+                {
+                    int cvoff = entry->lfo + srcMod->baseSrcFile[f];
+                    if( OMFSourceFile* srcFile = GetCVPtr<OMFSourceFile>( cvoff ) )
+                    {
+                        for ( uint16_t s = 0; s < srcFile->cSeg; s++ )
+                        {
+                            int lnoff = entry->lfo + srcFile->baseSrcLn[s];
+                            OMFSourceLine* srcLine = GetCVPtr<OMFSourceLine>( lnoff );
+
+                            if( srcLine->Seg == mTextSegment )
+                            {
+                                // also mark the start of the line info segment
+                                MarkLineOffsetInBitmap( offsetTable[s].first );
+
+                                uint16_t cnt = srcLine->cLnOff;
+                                for( uint16_t ln = 0; ln < cnt; ln++ )
+                                    MarkLineOffsetInBitmap( srcLine->offset[ln] );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if ( entry->SubSection == sstModule )
+        {
+            // mark the beginning/end of each section
+            OMFModule* module   = GetCVPtr<OMFModule>( entry->lfo );
+            OMFSegDesc* segDesc = GetCVPtr<OMFSegDesc>( entry->lfo + sizeof( OMFModule ) );
+
+            for (uint16_t s = 0; s < module->cSeg; s++)
+                if( segDesc[s].Seg == mTextSegment )
+                {
+                    MarkLineOffsetInBitmap( segDesc[s].Off );
+                    MarkLineOffsetInBitmap( segDesc[s].Off + segDesc[s].cbSeg );
+                }
+        }
+        return true;
+    }
+
+    bool DebugStore::FixEndOffset( DWORD lastLineOffset, DWORD& off )
+    {
+        if( lastLineOffset != off )
+            return false;
+
+        for ( ; off + 1 < mMarkOffsets.size(); off++ )
+            if( mMarkOffsets[off + 1] )
+                return true;
+        return false;
+    }
+
+    // this cannot be used because writing to the image is not allowed!
+    bool DebugStore::PatchLineNumberInfo()
+    {
+        for( uint16_t zCompIx = 0; zCompIx < mCompilandCount; zCompIx++ )
+        {
+            OMFDirEntry* entry = mCompilandDetails[zCompIx].SourceEntry;
+            if ( entry == NULL )
+                continue;
+
+            OMFSourceModule* srcMod = GetCVPtr<OMFSourceModule>( entry->lfo );
+            if ( srcMod == NULL )
+                return false;
+
+            DWORD*      srcFilePtrTable = (DWORD*) ((BYTE*) srcMod + 4);
+            OffsetPair* offsetTable = (OffsetPair*) (srcFilePtrTable + srcMod->cFile);
+
+            for ( uint16_t f = 0; f < srcMod->cFile; f++)
+            {
+                int cvoff = entry->lfo + srcMod->baseSrcFile[f];
+                if( OMFSourceFile* srcFile = GetCVPtr<OMFSourceFile>( cvoff ) )
+                {
+                    for ( uint16_t s = 0; s < srcFile->cSeg; s++ )
+                    {
+                        int lnoff = entry->lfo + srcFile->baseSrcLn[s];
+                        if( OMFSourceLine* srcLine = GetCVPtr<OMFSourceLine>( lnoff ) )
+                            if( srcLine->Seg == mTextSegment )
+                                FixEndOffset( srcLine->offset[srcLine->cLnOff - 1], offsetTable[s].second );
+                    }
+                }
+            }
+        }
+        return true;
+    }
 }
+

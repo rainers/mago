@@ -82,7 +82,10 @@ namespace MagoST
     HRESULT DataSource::InitDebugInfo()
     {
         if( mAddrMap )
+        {
             mStore.SetTLSSegment( mAddrMap->FindSection( ".tls" ) );
+            mStore.SetTextSegment( mAddrMap->FindSection( "_TEXT" ) );
+        }
 
         return mStore.InitDebugInfo( mDebugView, mDebugSize );
     }
