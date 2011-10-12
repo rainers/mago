@@ -201,6 +201,8 @@ namespace MagoST
     {
         if ( heapId >= SymHeap_Max )
             return E_INVALIDARG;
+        if ( mSymsDir[heapId] == NULL )
+            return E_FAIL;
 
         return SetSymHashScope( mSymsDir[heapId], scope );
     }
@@ -390,6 +392,8 @@ namespace MagoST
     {
         if ( heapId >= SymHeap_Max )
             return E_INVALIDARG;
+        if ( mSymsDir[heapId] == NULL )
+            return E_FAIL;
 
         return FindFirstSymHashSymbol( nameChars, nameLen, mSymsDir[heapId], data );
     }
@@ -548,6 +552,8 @@ namespace MagoST
     {
         if ( heapId >= SymHeap_Max )
             return E_INVALIDARG;
+        if ( mSymsDir[heapId] == NULL )
+            return E_FAIL;
 
         return FindSymHashSymbol( segment, offset, mSymsDir[heapId], handle );
     }
