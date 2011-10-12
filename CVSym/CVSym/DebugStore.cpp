@@ -28,7 +28,8 @@ namespace MagoST
             mDirHeader( NULL ),
             mDirs( NULL ),
             mGlobalTypesDir( NULL ),
-            mCompilandCount( 0 )
+            mCompilandCount( 0 ),
+            mTLSSegment( 0 )
     {
         memset( mSymsDir, 0, sizeof mSymsDir );
 
@@ -118,6 +119,11 @@ namespace MagoST
         mDirs = (OMFDirEntry*) dirStart;
 
         return S_OK;
+    }
+
+    void DebugStore::SetTLSSegment( WORD seg )
+    {
+        mTLSSegment = seg;
     }
 
     HRESULT DebugStore::ProcessDirEntry( OMFDirEntry* entry )
@@ -613,6 +619,15 @@ namespace MagoST
         return S_OK;
     }
 
+    bool DebugStore::isTLSData( SymHandleIn& internalHandle )
+    {
+        uint16_t        segment;
+        if( !QuickGetAddrSegment( internalHandle.Sym, segment ) )
+            return false;
+
+        return segment == mTLSSegment;
+    }
+
     HRESULT DebugStore::GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo )
     {
         SymHandleIn*    internalHandle = (SymHandleIn*) &handle;
@@ -628,7 +643,12 @@ namespace MagoST
         case S_MANYREG:     symInfo = new (&privateData) ManyRegsSymbol( *internalHandle ); break;
         case S_BPREL32:     symInfo = new (&privateData) BPRelSymbol( *internalHandle ); break;
         case S_LDATA32:
-        case S_GDATA32:     symInfo = new (&privateData) DataSymbol( *internalHandle ); break;
+        case S_GDATA32:
+            if( isTLSData( *internalHandle ) )
+                            symInfo = new (&privateData) TLSSymbol( *internalHandle );
+            else
+                            symInfo = new (&privateData) DataSymbol( *internalHandle );
+            break;
         case S_PUB32:       symInfo = new (&privateData) PublicSymbol( *internalHandle ); break;
         case S_LPROC32:
         case S_GPROC32:     symInfo = new (&privateData) ProcSymbol( *internalHandle ); break;
