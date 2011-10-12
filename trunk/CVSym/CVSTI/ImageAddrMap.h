@@ -18,6 +18,7 @@ namespace MagoST
         {
             uint32_t    RVA;
             uint32_t    Size;
+            char        Name[8];
         };
 
         long    mRefCount;
@@ -32,6 +33,7 @@ namespace MagoST
 
         virtual uint32_t MapSecOffsetToRVA( uint16_t secIndex, uint32_t offset );
         virtual uint16_t MapRVAToSecOffset( uint32_t rva, uint32_t& offset );
+        virtual uint16_t FindSection( const char* name );
 
         HRESULT LoadFromSections( uint16_t count, const IMAGE_SECTION_HEADER* secHeaders );
     };

@@ -23,3 +23,4 @@ uint32_t GetUIntValue( uint16_t* numericLeaf );
 DWORD    GetFieldLength( CodeViewFieldType* type );
 bool     QuickGetAddrOffset( CodeViewSymbol* sym, uint32_t& offset );
 bool     QuickGetName( CodeViewSymbol* sym, PasString*& name );
+bool     QuickGetAddrSegment( CodeViewSymbol* sym, uint16_t& segment );

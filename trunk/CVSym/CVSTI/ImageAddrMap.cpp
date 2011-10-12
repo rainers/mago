@@ -70,6 +70,15 @@ namespace MagoST
         return 0;
     }
 
+    uint16_t ImageAddrMap::FindSection( const char* name )
+    {
+        for ( uint16_t i = 0; i < mSecCount; i++ )
+            if( strncmp( name, mSections[i].Name, sizeof( mSections[i].Name ) ) == 0 )
+                return i + 1;      // remember it's 1-based
+
+        return 0;
+    }
+
     HRESULT ImageAddrMap::LoadFromSections( uint16_t count, const IMAGE_SECTION_HEADER* secHeaders )
     {
         _ASSERT( secHeaders != NULL );
@@ -94,6 +103,7 @@ namespace MagoST
 
             mSections[i].RVA = secHeaders[i].VirtualAddress;
             mSections[i].Size = size;
+            strncpy( mSections[i].Name, (const char*) secHeaders[i].Name, sizeof( mSections[i].Name ) );
         }
 
         return S_OK;

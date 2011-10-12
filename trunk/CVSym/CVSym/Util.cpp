@@ -221,6 +221,44 @@ bool     QuickGetAddrOffset( CodeViewSymbol* sym, uint32_t& offset )
     return true;
 }
 
+bool     QuickGetAddrSegment( CodeViewSymbol* sym, uint16_t& segment )
+{
+    _ASSERT( sym != NULL );
+
+    switch ( sym->Generic.id )
+    {
+    case S_LDATA32:
+    case S_GDATA32:
+    case S_PUB32:
+    case S_LTHREAD32:
+    case S_GTHREAD32:
+        segment = sym->data.segment;
+        break;
+
+    case S_LPROC32:
+    case S_GPROC32:
+        segment = sym->proc.segment;
+        break;
+
+    case S_THUNK32:
+        segment = sym->thunk.segment;
+        break;
+
+    case S_BLOCK32:
+        segment = sym->block.segment;
+        break;
+
+    case S_LABEL32:
+        segment = sym->label.segment;
+        break;
+
+    default:
+        return false;
+    }
+
+    return true;
+}
+
 
 bool     QuickGetName( CodeViewSymbol* sym, PasString*& name )
 {

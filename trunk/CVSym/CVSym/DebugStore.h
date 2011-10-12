@@ -63,6 +63,7 @@ namespace MagoST
         OMFDirEntry*    mGlobalTypesDir;
         OMFDirEntry*    mSymsDir[SymHeap_Count];
 
+        WORD    mTLSSegment;
         DWORD   mCompilandCount;
         boost::scoped_array<CompilandDetails>   mCompilandDetails;
 
@@ -73,6 +74,8 @@ namespace MagoST
         HRESULT InitDebugInfo( BYTE* buffer, DWORD size );
         HRESULT InitDebugInfo();
         void CloseDebugInfo();
+
+        void SetTLSSegment( WORD seg );
 
         // symbols
 
@@ -89,6 +92,8 @@ namespace MagoST
         HRESULT FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle );
 
         HRESULT GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo );
+
+        bool isTLSData( SymHandleIn& internalHandle );
 
         // types
 
