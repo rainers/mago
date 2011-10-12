@@ -67,6 +67,9 @@ namespace MagoST
         DWORD   mCompilandCount;
         boost::scoped_array<CompilandDetails>   mCompilandDetails;
 
+        uint16_t mTextSegment;
+        std::vector<bool> mMarkOffsets;
+
     public:
         DebugStore();
         virtual ~DebugStore();
@@ -76,6 +79,7 @@ namespace MagoST
         void CloseDebugInfo();
 
         void SetTLSSegment( WORD seg );
+        void SetTextSegment( WORD seg );
 
         // symbols
 
@@ -184,5 +188,11 @@ namespace MagoST
             OMFSourceModule* srcMod, 
             OMFSourceFile* file, 
             FileSegmentInfo& segInfo );
+
+        // patching line info
+        bool MarkLineNumbers( OMFDirEntry* entry );
+        bool MarkLineOffsetInBitmap( size_t adr );
+        bool FixEndOffset( DWORD lastLineOffset, DWORD& off );
+        bool PatchLineNumberInfo();
     };
 }
