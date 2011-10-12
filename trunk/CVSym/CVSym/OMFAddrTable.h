@@ -94,7 +94,8 @@ public:
                 }
             }
         }
-
-        return false;
+        if( found )
+            symOffset = offsets[last].first;
+        return found;
     }
 };

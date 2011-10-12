@@ -144,6 +144,7 @@ namespace MagoST
         HRESULT GetSymHashSymbolHeapBase( OMFDirEntry* entry, BYTE*& heapBase );
         HRESULT GetCompilandSymbolHeapBase( OMFDirEntry* entry, BYTE*& heapBase );
 
+        int ModuleSize( CodeViewSymbol* origSym );
         bool FollowReference( CodeViewSymbol* origSym, SymHandleIn* internalHandle );
 
         bool NextTypeGlobal( TypeScope& scope, TypeHandle& handle );

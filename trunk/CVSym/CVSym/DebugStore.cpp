@@ -360,6 +360,21 @@ namespace MagoST
         return true;
     }
 
+    int DebugStore::ModuleSize( CodeViewSymbol* origSym )
+    {
+        if ( (origSym->Generic.id == S_PROCREF) || (origSym->Generic.id == S_DATAREF) )
+        {
+            DWORD   compilandIndex = origSym->symref.imod;
+
+            if ( (compilandIndex >= 1) && (compilandIndex <= mCompilandCount) )
+            {
+                OMFDirEntry*    entry = mCompilandDetails[ compilandIndex - 1 ].SymbolEntry;
+                return entry->cb;
+            }
+        }
+        return -1;
+    }
+
     bool DebugStore::FollowReference( CodeViewSymbol* origSym, SymHandleIn* internalHandle )
     {
         // try to chase down the reference
@@ -585,7 +600,12 @@ namespace MagoST
         CodeViewSymbol*     sym = (CodeViewSymbol*) symPtr;
 
         if ( FollowReference( sym, internalHandle ) )
+        {
+            // validate the offset is not out of bounds of the module
+            if( (int) offset >= ModuleSize( sym ) )
+                return E_FAIL;
             return S_OK;
+        }
 
         internalHandle->Sym = sym;
         internalHandle->HeapDir = entry;
