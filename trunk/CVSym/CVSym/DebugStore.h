@@ -97,7 +97,7 @@ namespace MagoST
 
         HRESULT GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo );
 
-        bool isTLSData( SymHandleIn& internalHandle );
+        bool IsTLSData( SymHandleIn& internalHandle );
 
         // types
 
@@ -153,7 +153,6 @@ namespace MagoST
         HRESULT GetSymHashSymbolHeapBase( OMFDirEntry* entry, BYTE*& heapBase );
         HRESULT GetCompilandSymbolHeapBase( OMFDirEntry* entry, BYTE*& heapBase );
 
-        int ModuleSize( CodeViewSymbol* origSym );
         bool FollowReference( CodeViewSymbol* origSym, SymHandleIn* internalHandle );
 
         bool NextTypeGlobal( TypeScope& scope, TypeHandle& handle );

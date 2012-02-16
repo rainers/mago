@@ -24,3 +24,4 @@ DWORD    GetFieldLength( CodeViewFieldType* type );
 bool     QuickGetAddrOffset( CodeViewSymbol* sym, uint32_t& offset );
 bool     QuickGetName( CodeViewSymbol* sym, PasString*& name );
 bool     QuickGetAddrSegment( CodeViewSymbol* sym, uint16_t& segment );
+bool     QuickGetLength( CodeViewSymbol* sym, uint32_t& length );

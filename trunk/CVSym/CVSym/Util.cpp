@@ -329,3 +329,30 @@ bool     QuickGetName( CodeViewSymbol* sym, PasString*& name )
 
     return true;
 }
+
+
+bool     QuickGetLength( CodeViewSymbol* sym, uint32_t& length )
+{
+    _ASSERT( sym != NULL );
+
+    switch ( sym->Generic.id )
+    {
+    case S_LPROC32:
+    case S_GPROC32:
+        length = sym->proc.length;
+        break;
+
+    case S_THUNK32:
+        length = sym->thunk.length;
+        break;
+
+    case S_BLOCK32:
+        length = sym->block.length;
+        break;
+
+    default:
+        return false;
+    }
+
+    return true;
+}
