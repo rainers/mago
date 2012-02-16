@@ -376,21 +376,6 @@ namespace MagoST
         return true;
     }
 
-    int DebugStore::ModuleSize( CodeViewSymbol* origSym )
-    {
-        if ( (origSym->Generic.id == S_PROCREF) || (origSym->Generic.id == S_DATAREF) )
-        {
-            DWORD   compilandIndex = origSym->symref.imod;
-
-            if ( (compilandIndex >= 1) && (compilandIndex <= mCompilandCount) )
-            {
-                OMFDirEntry*    entry = mCompilandDetails[ compilandIndex - 1 ].SymbolEntry;
-                return entry->cb;
-            }
-        }
-        return -1;
-    }
-
     bool DebugStore::FollowReference( CodeViewSymbol* origSym, SymHandleIn* internalHandle )
     {
         // try to chase down the reference
@@ -615,21 +600,27 @@ namespace MagoST
 
         CodeViewSymbol*     sym = (CodeViewSymbol*) symPtr;
 
-        if ( FollowReference( sym, internalHandle ) )
+        if ( !FollowReference( sym, internalHandle ) )
         {
-            // validate the offset is not out of bounds of the module
-            if( (int) offset >= ModuleSize( sym ) )
-                return E_FAIL;
-            return S_OK;
+            internalHandle->Sym = sym;
+            internalHandle->HeapDir = entry;
         }
 
-        internalHandle->Sym = sym;
-        internalHandle->HeapDir = entry;
+        uint32_t length = 0;
+        uint32_t addrOffset = 0;
+
+        // if it's a procedure, then validate the offset is inside it
+        if ( QuickGetLength( internalHandle->Sym, length ) )
+        {
+            if ( !QuickGetAddrOffset( internalHandle->Sym, addrOffset )
+                || (offset < addrOffset) || (offset >= (addrOffset + length)) )
+                return E_FAIL;
+        }
 
         return S_OK;
     }
 
-    bool DebugStore::isTLSData( SymHandleIn& internalHandle )
+    bool DebugStore::IsTLSData( SymHandleIn& internalHandle )
     {
         uint16_t        segment;
         if( !QuickGetAddrSegment( internalHandle.Sym, segment ) )
@@ -654,7 +645,7 @@ namespace MagoST
         case S_BPREL32:     symInfo = new (&privateData) BPRelSymbol( *internalHandle ); break;
         case S_LDATA32:
         case S_GDATA32:
-            if( isTLSData( *internalHandle ) )
+            if ( IsTLSData( *internalHandle ) )
                             symInfo = new (&privateData) TLSSymbol( *internalHandle );
             else
                             symInfo = new (&privateData) DataSymbol( *internalHandle );
