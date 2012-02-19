@@ -73,12 +73,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Vivek Thampi"
             VALUE "FileDescription", "udis86 Library"
-            VALUE "FileVersion", "1, 7, 0, 0"
+            VALUE "FileVersion", "1.7.0.0"
             VALUE "InternalName", "udis86"
             VALUE "LegalCopyright", "(c) Vivek Thampi"
             VALUE "OriginalFilename", "udis86.lib"
             VALUE "ProductName", "Mago D Debugger"
-            VALUE "ProductVersion", MAGO_PRODVERSION_STR
+            VALUE "ProductVersion", MAGO_FILEVERSION_STR
         END
     END
     BLOCK "VarFileInfo"
