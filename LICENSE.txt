@@ -255,3 +255,10 @@ For the udis86 component:
   ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+For SuperFastHash:
+
+  Paul Hsieh's SuperFastHash algorithm is described here:
+    http://www.azillionmonkeys.com/qed/hash.html
+  It is protected by the following open source license:
+    http://www.azillionmonkeys.com/qed/weblicense.html

@@ -33,6 +33,7 @@ enum
     E_MAGOEE_DIVIDE_BY_ZERO,
     E_MAGOEE_BAD_INDEX,
     E_MAGOEE_SYMBOL_NOT_FOUND,
+    E_MAGOEE_ELEMENT_NOT_FOUND,
 
     // TODO: maybe something like RUNTIME_ERROR or DEBUG_INFO_ERROR
     //  for cases like this: Decl->GetType( _Type.Ref() )   (see ThisExpr::Semantic)
