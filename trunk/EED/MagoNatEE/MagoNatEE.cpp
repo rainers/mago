@@ -116,6 +116,7 @@ namespace MagoEE
             L"Divide by zero",
             L"Bad indexing operation",
             L"Symbol not found",
+            L"Element not found",
         };
 
         // returns: S_FALSE on error not found

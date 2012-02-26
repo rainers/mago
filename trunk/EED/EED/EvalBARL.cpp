@@ -1566,11 +1566,11 @@ namespace MagoEE
 
             if ( commonType->IsComplex() )
             {
-                obj.Value.UInt64Value = ComplexRelational( OpCode, left, right ) ? 1 : 0;
+                obj.Value.UInt64Value = ComplexRelational( OpCode, commonType, left, right ) ? 1 : 0;
             }
             else if ( commonType->IsFloatingPoint() )
             {
-                obj.Value.UInt64Value = FloatingRelational( OpCode, left, right ) ? 1 : 0;
+                obj.Value.UInt64Value = FloatingRelational( OpCode, commonType, left, right ) ? 1 : 0;
             }
             else
             {
@@ -1598,7 +1598,7 @@ namespace MagoEE
         }
     }
 
-    bool CompareExpr::FloatingRelational( TOK code, DataObject& leftObj, DataObject& rightObj )
+    bool CompareExpr::FloatingRelational( TOK code, Type* exprType, DataObject& leftObj, DataObject& rightObj )
     {
         if ( ((leftObj._Type->IsReal() || leftObj._Type->IsIntegral()) && rightObj._Type->IsImaginary())
             || (leftObj._Type->IsImaginary() && (rightObj._Type->IsReal() || rightObj._Type->IsIntegral())) )
@@ -1606,17 +1606,17 @@ namespace MagoEE
             rightObj.Value.Float80Value.Zero();
         }
 
-        Real10      leftVal = ConvertToFloat( leftObj );
-        Real10      rightVal = ConvertToFloat( rightObj );
+        Real10      leftVal = ConvertToFloat( exprType, leftObj );
+        Real10      rightVal = ConvertToFloat( exprType, rightObj );
         uint16_t    status = Real10::Compare( leftVal, rightVal );
 
         return FloatingRelational( code, status );
     }
 
-    bool CompareExpr::ComplexRelational( TOK code, DataObject& leftObj, DataObject& rightObj )
+    bool CompareExpr::ComplexRelational( TOK code, Type* exprType, DataObject& leftObj, DataObject& rightObj )
     {
-        Complex10   leftVal = ConvertToComplex( leftObj );
-        Complex10   rightVal = ConvertToComplex( rightObj );
+        Complex10   leftVal = ConvertToComplex( exprType, leftObj );
+        Complex10   rightVal = ConvertToComplex( exprType, rightObj );
         uint16_t    status = Complex10::Compare( leftVal, rightVal );
 
         return FloatingRelational( code, status );

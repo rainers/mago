@@ -31,6 +31,23 @@ using namespace MagoST;
 #define DMD_OEM_DELEGATE    3
 
 
+struct aaA
+{
+    uint32_t    next;
+    uint32_t    hash;
+    // key
+    // value
+};
+
+struct BB
+{
+    uint32_t    bLength;
+    uint32_t    bAddr;
+    uint32_t    nodes;
+    uint32_t    keyti;
+};
+
+
 namespace Mago
 {
     // ExprContext
@@ -408,8 +425,9 @@ namespace Mago
             && !type->IsDelegate() )
             return S_OK;
 
+        _ASSERT( targetSize <= sizeof targetBuf );
         if ( targetSize > sizeof targetBuf )
-            targetSize = sizeof targetBuf;
+            return E_UNEXPECTED;
 
         hr = debuggerProxy->ReadMemory( 
             mThread->GetCoreProcess(), 
@@ -423,46 +441,229 @@ namespace Mago
         if ( lenRead < targetSize )
             return HRESULT_FROM_WIN32( ERROR_PARTIAL_COPY );
 
+        return FromRawValue( targetBuf, type, value );
+    }
+
+    HRESULT ExprContext::FromRawValue( const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value )
+    {
+        _ASSERT( srcBuf != NULL );
+        _ASSERT( type != NULL );
+
+        size_t size = type->GetSize();
+
         if ( type->IsPointer() )
         {
-            value.Addr = ReadInt( targetBuf, 0, targetSize, false );
+            value.Addr = ReadInt( srcBuf, 0, size, false );
         }
         else if ( type->IsIntegral() )
         {
-            value.UInt64Value = ReadInt( targetBuf, 0, targetSize, type->IsSigned() );
+            value.UInt64Value = ReadInt( srcBuf, 0, size, type->IsSigned() );
         }
         else if ( type->IsReal() || type->IsImaginary() )
         {
-            value.Float80Value = ReadFloat( targetBuf, 0, type );
+            value.Float80Value = ReadFloat( srcBuf, 0, type );
         }
         else if ( type->IsComplex() )
         {
             const size_t    PartSize = type->GetSize() / 2;
 
-            value.Complex80Value.RealPart = ReadFloat( targetBuf, 0, type );
-            value.Complex80Value.ImaginaryPart = ReadFloat( targetBuf, PartSize, type );
+            value.Complex80Value.RealPart = ReadFloat( srcBuf, 0, type );
+            value.Complex80Value.ImaginaryPart = ReadFloat( srcBuf, PartSize, type );
         }
         else if ( type->IsDArray() )
         {
             const size_t LengthSize = type->AsTypeDArray()->GetLengthType()->GetSize();
             const size_t AddressSize = type->AsTypeDArray()->GetPointerType()->GetSize();
 
-            value.Array.Length = (MagoEE::dlength_t) ReadInt( targetBuf, 0, LengthSize, false );
-            value.Array.Addr = ReadInt( targetBuf, LengthSize, AddressSize, false );
+            value.Array.Length = (MagoEE::dlength_t) ReadInt( srcBuf, 0, LengthSize, false );
+            value.Array.Addr = ReadInt( srcBuf, LengthSize, AddressSize, false );
         }
         else if ( type->IsAArray() )
         {
-            value.Addr = ReadInt( targetBuf, 0, targetSize, false );
+            value.Addr = ReadInt( srcBuf, 0, size, false );
         }
         else if ( type->IsDelegate() )
         {
             const size_t AddressSize = mTypeEnv->GetVoidPointerType()->GetSize();
 
-            value.Delegate.ContextAddr = (MagoEE::dlength_t) ReadInt( targetBuf, 0, AddressSize, false );
-            value.Delegate.FuncAddr = ReadInt( targetBuf, AddressSize, AddressSize, false );
+            value.Delegate.ContextAddr = (MagoEE::dlength_t) ReadInt( srcBuf, 0, AddressSize, false );
+            value.Delegate.FuncAddr = ReadInt( srcBuf, AddressSize, AddressSize, false );
         }
         else
             return E_FAIL;
+
+        return S_OK;
+    }
+
+    uint32_t AlignTSize( uint32_t size )
+    {
+        return (size + sizeof( uint32_t ) - 1) & ~(sizeof( uint32_t ) - 1);
+    }
+
+    HRESULT ExprContext::GetHash( MagoEE::Type* type, const MagoEE::DataValue& value, uint32_t& hash )
+    {
+        _ASSERT( type != NULL );
+
+        if ( type->IsPointer() )
+        {
+            hash = (uint32_t) value.Addr;
+        }
+        else if ( type->IsIntegral() && (type->GetSize() <= sizeof( uint32_t )) )
+        {
+            hash = (uint32_t) value.UInt64Value;
+        }
+        else if ( type->GetBackingTy() == MagoEE::Tfloat32 || type->GetBackingTy() == MagoEE::Timaginary32 )
+        {
+            float f = value.Float80Value.ToFloat();
+            hash = *(uint32_t*) &f;
+        }
+        else if ( type->IsIntegral() && (type->GetSize() > sizeof( uint32_t )) )
+        {
+            hash = HashOf( &value.UInt64Value, sizeof value.UInt64Value );
+        }
+        else if ( type->GetBackingTy() == MagoEE::Tfloat64 || type->GetBackingTy() == MagoEE::Timaginary64 )
+        {
+            double d = value.Float80Value.ToDouble();
+            hash = HashOf( &d, sizeof d );
+        }
+        else if ( type->GetBackingTy() == MagoEE::Tfloat80 || type->GetBackingTy() == MagoEE::Timaginary80 )
+        {
+            hash = HashOf( &value.Float80Value, sizeof value.Float80Value );
+        }
+        else if ( type->GetBackingTy() == MagoEE::Tcomplex32 )
+        {
+            float c[2] = { value.Complex80Value.RealPart.ToFloat(), value.Complex80Value.ImaginaryPart.ToFloat() };
+            hash = HashOf( c, sizeof c );
+        }
+        else if ( type->GetBackingTy() == MagoEE::Tcomplex64 )
+        {
+            double c[2] = { value.Complex80Value.RealPart.ToDouble(), value.Complex80Value.ImaginaryPart.ToDouble() };
+            hash = HashOf( c, sizeof c );
+        }
+        else if ( type->GetBackingTy() == MagoEE::Tcomplex80 )
+        {
+            hash = HashOf( &value.Complex80Value, sizeof value.Complex80Value );
+        }
+        else if ( type->IsDelegate() )
+        {
+            uint32_t delPtrs[2] = { (uint32_t) value.Delegate.ContextAddr, (uint32_t) value.Delegate.FuncAddr };
+            hash = HashOf( delPtrs, sizeof delPtrs );
+        }
+        else
+            return E_FAIL;
+
+        return S_OK;
+    }
+
+    bool EqualFloat( size_t typeSize, const Real10& left, const Real10& right )
+    {
+        if ( left.IsNan() && right.IsNan() )
+            return true;
+
+        switch ( typeSize )
+        {
+        case 4: return left.ToFloat() == right.ToFloat();
+        case 8: return left.ToDouble() == right.ToDouble();
+        case 10: 
+            uint16_t comp = Real10::Compare( left, right );
+            return Real10::IsEqual( comp );
+        }
+
+        return false;
+    }
+
+    bool EqualValue( MagoEE::Type* type, const MagoEE::DataValue& left, const MagoEE::DataValue& right )
+    {
+        if ( type->IsPointer() )
+        {
+            return left.Addr == right.Addr;
+        }
+        else if ( type->IsIntegral() )
+        {
+            return left.UInt64Value == right.UInt64Value;
+        }
+        else if ( type->IsReal() || type->IsImaginary() )
+        {
+            return EqualFloat( type->GetSize(), left.Float80Value, right.Float80Value );
+        }
+        else if ( type->IsComplex() )
+        {
+            size_t size = type->GetSize() / 2;
+            if ( !EqualFloat( size, left.Complex80Value.RealPart, right.Complex80Value.RealPart ) )
+                return false;
+
+            return EqualFloat( size, left.Complex80Value.ImaginaryPart, right.Complex80Value.ImaginaryPart );
+        }
+        else if ( type->IsDelegate() )
+        {
+            return (left.Delegate.ContextAddr == right.Delegate.ContextAddr) 
+                && (left.Delegate.FuncAddr == right.Delegate.FuncAddr);
+        }
+
+        return false;
+    }
+
+    HRESULT ExprContext::GetValue(
+        MagoEE::Address aArrayAddr, 
+        MagoEE::Type* keyType, 
+        const MagoEE::DataValue& keyValue, 
+        MagoEE::Address& valueAddr )
+    {
+        const int MAX_AA_SEARCH_NODES = 1000000;
+
+        HRESULT     hr = S_OK;
+        BB          bb = { 0 };
+        uint8_t     aaaBuf[ sizeof( aaA ) + sizeof( MagoEE::DataValue ) ] = { 0 };
+        aaA*        aaa = (aaA*) aaaBuf;
+        uint32_t    hash = 0;
+
+        hr = GetHash( keyType, keyValue, hash );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = ReadMemory( aArrayAddr, sizeof bb, &bb );
+        if ( FAILED( hr ) )
+            return hr;
+
+        if ( (bb.bAddr == 0) || (bb.bLength == 0) )
+            return E_FAIL;
+
+        uint32_t    bucketIndex = hash % bb.bLength;
+        uint32_t    aaAAddr = 0;
+        uint32_t    lenToRead = sizeof( aaA ) + keyType->GetSize();
+        uint32_t    lenBeforeValue = sizeof( aaA ) + AlignTSize( keyType->GetSize() );
+
+        _ASSERT( lenToRead <= sizeof aaaBuf );
+
+        hr = ReadMemory( bb.bAddr + (bucketIndex * sizeof aaAAddr), sizeof aaAAddr, &aaAAddr );
+        if ( FAILED( hr ) )
+            return hr;
+
+        valueAddr = 0;
+
+        for ( int i = 0; (i < MAX_AA_SEARCH_NODES) && (aaAAddr != 0); i++ )
+        {
+            MagoEE::DataValue nodeKey = { 0 };
+
+            hr = ReadMemory( aaAAddr, lenToRead, aaa );
+            if ( FAILED( hr ) )
+                return hr;
+
+            hr = FromRawValue( aaa + 1, keyType, nodeKey );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( (aaa->hash == hash) && EqualValue( keyType, keyValue, nodeKey ) )
+            {
+                valueAddr = aaAAddr + lenBeforeValue;
+                break;
+            }
+
+            aaAAddr = aaa->next;
+        }
+
+        if ( valueAddr == 0 )
+            return E_NOT_FOUND;
 
         return S_OK;
     }
@@ -648,6 +849,20 @@ namespace Mago
             return hr;
 
         sizeRead = lenRead;
+
+        return S_OK;
+    }
+
+    HRESULT ExprContext::ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, void* buffer )
+    {
+        HRESULT     hr = S_OK;
+        uint32_t    sizeRead = 0;
+
+        hr = ReadMemory( addr, sizeToRead, sizeRead, (uint8_t*) buffer );
+        if ( FAILED( hr ) )
+            return hr;
+        if ( sizeRead < sizeToRead )
+            return HRESULT_FROM_WIN32( ERROR_PARTIAL_COPY );
 
         return S_OK;
     }

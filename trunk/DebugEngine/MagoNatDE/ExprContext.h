@@ -74,6 +74,12 @@ namespace Mago
             MagoEE::Type* type, 
             MagoEE::DataValue& value );
 
+        virtual HRESULT GetValue(
+            MagoEE::Address aArrayAddr, 
+            MagoEE::Type* keyType, 
+            const MagoEE::DataValue& keyValue, 
+            MagoEE::Address& valueAddr );
+
         virtual HRESULT SetValue( 
             MagoEE::Declaration* decl, 
             const MagoEE::DataValue& value );
@@ -190,5 +196,10 @@ namespace Mago
             MagoEE::Type*& type );
 
         HRESULT GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value );
+
+        HRESULT GetHash( MagoEE::Type* type, const MagoEE::DataValue& value, uint32_t& hash );
+        HRESULT FromRawValue( const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value );
+
+        HRESULT ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, void* buffer );
     };
 }

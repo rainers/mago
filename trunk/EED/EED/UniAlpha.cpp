@@ -396,7 +396,7 @@ namespace MagoEE
 
     int Utf8To16( const char* utf8Str, int utf8Len, wchar_t* utf16Str, int utf16Len )
     {
-        const DWORD     Flags = MB_COMPOSITE | MB_ERR_INVALID_CHARS;
+        const DWORD     Flags = MB_ERR_INVALID_CHARS;
 
         return MultiByteToWideChar( 
             CP_UTF8,

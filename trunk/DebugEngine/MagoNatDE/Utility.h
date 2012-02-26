@@ -142,10 +142,12 @@ struct Real10;
 
 void ConvertVariantToDataVal( const MagoST::Variant& var, MagoEE::DataValue& dataVal );
 
-uint64_t ReadInt( uint8_t* srcBuf, uint32_t bufOffset, size_t size, bool isSigned );
-Real10 ReadFloat( uint8_t* srcBuf, uint32_t bufOffset, MagoEE::Type* type );
+uint64_t ReadInt( const void* srcBuf, uint32_t bufOffset, size_t size, bool isSigned );
+Real10 ReadFloat( const void* srcBuf, uint32_t bufOffset, MagoEE::Type* type );
 HRESULT WriteInt( uint8_t* buffer, uint32_t bufSize, MagoEE::Type* type, uint64_t val );
 HRESULT WriteFloat( uint8_t* buffer, uint32_t bufSize, MagoEE::Type* type, const Real10& val );
 
 HRESULT GetClassName( IProcess* process, MachineAddress addr, BSTR* pbstrClassName );
 HRESULT GetExceptionInfo( IProcess* process, MachineAddress addr, BSTR* pbstrInfo );
+
+uint32_t HashOf( const void* buffer, uint32_t length );

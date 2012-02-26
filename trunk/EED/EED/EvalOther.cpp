@@ -239,7 +239,8 @@ namespace MagoEE
             return E_MAGOEE_NO_TYPE;
 
         Type*   childType = Child->_Type;
-        if ( !childType->IsPointer() && !childType->IsSArray() && !childType->IsDArray() )
+        if ( !childType->IsPointer() && !childType->IsSArray() && !childType->IsDArray()
+            && !childType->IsAArray() )
             return E_MAGOEE_BAD_INDEX;
 
         if ( childType->IsReference() )
@@ -272,7 +273,17 @@ namespace MagoEE
             return E_MAGOEE_VALUE_EXPECTED;
         if ( index->_Type == NULL )
             return E_MAGOEE_NO_TYPE;
-        if ( !index->_Type->IsIntegral() )
+        if ( childType->IsAArray() )
+        {
+            if ( !index->_Type->IsBasic()
+                && !index->_Type->IsPointer()
+                && (index->_Type->AsTypeEnum() == NULL)
+                && !index->_Type->IsDelegate() )
+                return E_MAGOEE_BAD_INDEX;
+            if ( !CastExpr::CanCast( index->_Type, childType->AsTypeAArray()->GetIndex() ) )
+                return E_MAGOEE_BAD_INDEX;
+        }
+        else if ( !index->_Type->IsIntegral() )
             return E_MAGOEE_BAD_INDEX;
 
         _Type = typeNext->GetNext();
@@ -282,8 +293,6 @@ namespace MagoEE
 
     HRESULT IndexExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& elem )
     {
-        // TODO: consider assoc. arrays (tables)
-
         // TODO: if index value is a signed integral, then should we allow negative?
         //  pointers allow it and work as expected
         //  static arrays don't allow it at compile time
@@ -293,6 +302,7 @@ namespace MagoEE
         DataObject  array = { 0 };
         DataObject  index = { 0 };
         EvalData    indexData = evalData;
+        Address     addr = 0;
 
         hr = Child->Evaluate( EvalMode_Value, evalData, binder, array );
         if ( FAILED( hr ) )
@@ -316,6 +326,9 @@ namespace MagoEE
         else if ( Child->_Type->IsPointer() )
         // else if it's a pointer, then value already has address
             ;
+        else if ( Child->_Type->IsAArray() )
+        // assoc. arrays are handled differently
+            ;
         else
         {
             _ASSERT( false );
@@ -326,10 +339,25 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        uint32_t    size = _Type->GetSize();
-        doffset_t   offset = size * index.Value.Int64Value;
+        if ( Child->_Type->IsAArray() )
+        {
+            DataObject  finalIndex = { 0 };
 
-        elem.Addr = array.Value.Addr + offset;
+            finalIndex._Type = Child->_Type->AsTypeAArray()->GetIndex();
+            CastExpr::AssignValue( index, finalIndex );
+
+            hr = binder->GetValue( array.Value.Addr, finalIndex._Type, finalIndex.Value, addr );
+            if ( FAILED( hr ) )
+                return E_MAGOEE_ELEMENT_NOT_FOUND;
+        }
+        else
+        {
+            uint32_t    size = _Type->GetSize();
+            doffset_t   offset = size * index.Value.Int64Value;
+            addr = array.Value.Addr + offset;
+        }
+
+        elem.Addr = addr;
         elem._Type = _Type;
 
         if ( mode == EvalMode_Value )

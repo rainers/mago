@@ -224,7 +224,7 @@ void ConvertVariantToDataVal( const MagoST::Variant& var, MagoEE::DataValue& dat
 }
 
 
-uint64_t ReadInt( uint8_t* srcBuf, uint32_t bufOffset, size_t size, bool isSigned )
+uint64_t ReadInt( const void* srcBuf, uint32_t bufOffset, size_t size, bool isSigned )
 {
     union Integer
     {
@@ -236,7 +236,9 @@ uint64_t ReadInt( uint8_t* srcBuf, uint32_t bufOffset, size_t size, bool isSigne
     Integer     i = { 0 };
     uint64_t    u = 0;
 
-    memcpy( &i, srcBuf + bufOffset, size );
+    _ASSERT( size <= sizeof u );
+
+    memcpy( &i, (uint8_t*) srcBuf + bufOffset, size );
 
     switch ( size )
     {
@@ -269,7 +271,7 @@ uint64_t ReadInt( uint8_t* srcBuf, uint32_t bufOffset, size_t size, bool isSigne
     return u;
 }
 
-Real10 ReadFloat( uint8_t* srcBuf, uint32_t bufOffset, MagoEE::Type* type )
+Real10 ReadFloat( const void* srcBuf, uint32_t bufOffset, MagoEE::Type* type )
 {
     union Float
     {
@@ -310,7 +312,7 @@ Real10 ReadFloat( uint8_t* srcBuf, uint32_t bufOffset, MagoEE::Type* type )
     case MagoEE::Tfloat80:  size = 10;  break;
     }
 
-    memcpy( &f, srcBuf + bufOffset, size );
+    memcpy( &f, (uint8_t*) srcBuf + bufOffset, size );
 
     switch ( ty )
     {
@@ -558,4 +560,69 @@ HRESULT GetExceptionInfo( IProcess* process, MachineAddress addr, BSTR* pbstrInf
             return hr;
     }
     return S_OK;
+}
+
+
+static uint32_t Get16bits( const uint8_t* x )
+{
+    return *(uint16_t*) x;
+}
+
+uint32_t HashOf( const void* buffer, uint32_t length )
+{
+    // This is what druntime uses to hash most values longer than 32 bits
+    /*
+    * This is Paul Hsieh's SuperFastHash algorithm, described here:
+    *   http://www.azillionmonkeys.com/qed/hash.html
+    * It is protected by the following open source license:
+    *   http://www.azillionmonkeys.com/qed/weblicense.html
+    */
+    _ASSERT( buffer != NULL );
+    _ASSERT( length != NULL );
+
+    const uint8_t* data = (uint8_t*) buffer;
+    int rem = 0;
+    uint32_t hash = 0;
+
+    rem = length & 3;
+    length >>= 2;
+
+    for ( ; length > 0; length-- )
+    {
+        hash += Get16bits( data );
+        uint32_t temp = (Get16bits( data + 2 ) << 11) ^ hash;
+        hash = (hash << 16) ^ temp;
+        data += 2 * sizeof( uint16_t );
+        hash += hash >> 11;
+    }
+
+    /* Handle end cases */
+    switch ( rem )
+    {
+    case 3: hash += Get16bits( data );
+            hash ^= hash << 16;
+            hash ^= data[sizeof( uint16_t )] << 18;
+            hash += hash >> 11;
+            break;
+    case 2: hash += Get16bits( data );
+            hash ^= hash << 11;
+            hash += hash >> 17;
+            break;
+    case 1: hash += *data;
+            hash ^= hash << 10;
+            hash += hash >> 1;
+            break;
+        default:
+            break;
+    }
+
+    /* Force "avalanching" of final 127 bits */
+    hash ^= hash << 3;
+    hash += hash >> 5;
+    hash ^= hash << 4;
+    hash += hash >> 17;
+    hash ^= hash << 25;
+    hash += hash >> 6;
+
+    return hash;
 }

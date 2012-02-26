@@ -100,6 +100,11 @@ namespace MagoEE
 
     Complex10 Expression::ConvertToComplex( DataObject& x )
     {
+        return ConvertToComplex( NULL, x );
+    }
+
+    Complex10 Expression::ConvertToComplex( Type* commonType, DataObject& x )
+    {
         Complex10  result;
 
         Type*   type = x._Type.Get();
@@ -133,11 +138,29 @@ namespace MagoEE
             result = x.Value.Complex80Value;
         }
 
+        if ( commonType != NULL )
+        {
+            if ( commonType->GetBackingTy() == Tcomplex32 )
+            {
+                result.RealPart.FromFloat( result.RealPart.ToFloat() );
+                result.ImaginaryPart.FromFloat( result.ImaginaryPart.ToFloat() );
+            }
+            else if ( commonType->GetBackingTy() == Tcomplex64 )
+            {
+                result.RealPart.FromDouble( result.RealPart.ToDouble() );
+                result.ImaginaryPart.FromDouble( result.ImaginaryPart.ToDouble() );
+            }
+        }
+
         return result;
     }
 
-    // TODO: what's the right name for this? Is it really ReinterpretFloat? ...Real?
     Real10 Expression::ConvertToFloat( DataObject& x )
+    {
+        return ConvertToFloat( NULL, x );
+    }
+
+    Real10 Expression::ConvertToFloat( Type* commonType, DataObject& x )
     {
         Real10  result;
 
@@ -154,6 +177,20 @@ namespace MagoEE
         {
             _ASSERT( type->IsReal() || type->IsImaginary() );
             result = x.Value.Float80Value;
+        }
+
+        if ( commonType != NULL )
+        {
+            ENUMTY backingTy = commonType->GetBackingTy();
+
+            if ( (backingTy == Tfloat32) || (backingTy == Timaginary32) )
+            {
+                result.FromFloat( result.ToFloat() );
+            }
+            else if ( (backingTy == Tfloat64) || (backingTy == Timaginary64) )
+            {
+                result.FromDouble( result.ToDouble() );
+            }
         }
 
         return result;

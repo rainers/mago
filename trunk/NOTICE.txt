@@ -52,3 +52,9 @@ Vivek Thampi's x86-64 disassembly routines are covered by the following license:
   ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Paul Hsieh's SuperFastHash algorithm and its license are described here:
+
+    http://www.azillionmonkeys.com/qed/hash.html
+    http://www.azillionmonkeys.com/qed/weblicense.html

@@ -75,7 +75,9 @@ namespace MagoEE
 
         static bool ConvertToBool( DataObject& obj );
         static Complex10 ConvertToComplex( DataObject& x );
+        static Complex10 ConvertToComplex( Type* commonType, DataObject& x );
         static Real10 ConvertToFloat( DataObject& x );
+        static Real10 ConvertToFloat( Type* commonType, DataObject& x );
         static void ConvertToDArray( const DataObject& source, DataObject& dest );
         static void PromoteInPlace( DataObject& x );
         static void PromoteInPlace( DataObject& x, Type* targetType );
@@ -305,8 +307,8 @@ namespace MagoEE
         }
 
         static bool IntegerRelational( TOK code, Type* exprType, DataObject& left, DataObject& right );
-        static bool FloatingRelational( TOK code, DataObject& left, DataObject& right );
-        static bool ComplexRelational( TOK code, DataObject& left, DataObject& right );
+        static bool FloatingRelational( TOK code, Type* exprType, DataObject& left, DataObject& right );
+        static bool ComplexRelational( TOK code, Type* exprType, DataObject& left, DataObject& right );
         static bool FloatingRelational( TOK code, uint16_t status );
         static bool ArrayRelational( TOK code, DataObject& left, DataObject& right );
         static bool DelegateRelational( TOK code, DataObject& left, DataObject& right );
