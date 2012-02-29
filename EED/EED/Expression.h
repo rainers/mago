@@ -73,11 +73,11 @@ namespace MagoEE
         //          if this node does not support making up a dotted name
         virtual HRESULT MakeName( uint32_t capacity, RefPtr<SharedString>& namePath );
 
-        static bool ConvertToBool( DataObject& obj );
-        static Complex10 ConvertToComplex( DataObject& x );
-        static Complex10 ConvertToComplex( Type* commonType, DataObject& x );
-        static Real10 ConvertToFloat( DataObject& x );
-        static Real10 ConvertToFloat( Type* commonType, DataObject& x );
+        static bool ConvertToBool( const DataObject& obj );
+        static Complex10 ConvertToComplex( const DataObject& x );
+        static Complex10 ConvertToComplex( Type* commonType, const DataObject& x );
+        static Real10 ConvertToFloat( const DataObject& x );
+        static Real10 ConvertToFloat( Type* commonType, const DataObject& x );
         static void ConvertToDArray( const DataObject& source, DataObject& dest );
         static void PromoteInPlace( DataObject& x );
         static void PromoteInPlace( DataObject& x, Type* targetType );
@@ -340,6 +340,7 @@ namespace MagoEE
     {
     public:
         InExpr( Expression* left, Expression* right );
+        virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
     };
 
@@ -596,7 +597,7 @@ namespace MagoEE
 
         static bool CanImplicitCast( Type* source, Type* dest );
         static bool CanCast( Type* source, Type* dest );
-        static void AssignValue( DataObject& source, DataObject& dest );
+        static void AssignValue( const DataObject& source, DataObject& dest );
     };
 
 

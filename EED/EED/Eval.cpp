@@ -40,7 +40,7 @@ namespace MagoEE
     //  Conversions
     //----------------------------------------------------------------------------
 
-    bool Expression::ConvertToBool( DataObject& obj )
+    bool Expression::ConvertToBool( const DataObject& obj )
     {
         if ( obj._Type->IsPointer() )
         {
@@ -98,12 +98,12 @@ namespace MagoEE
         return false;
     }
 
-    Complex10 Expression::ConvertToComplex( DataObject& x )
+    Complex10 Expression::ConvertToComplex( const DataObject& x )
     {
         return ConvertToComplex( NULL, x );
     }
 
-    Complex10 Expression::ConvertToComplex( Type* commonType, DataObject& x )
+    Complex10 Expression::ConvertToComplex( Type* commonType, const DataObject& x )
     {
         Complex10  result;
 
@@ -155,12 +155,12 @@ namespace MagoEE
         return result;
     }
 
-    Real10 Expression::ConvertToFloat( DataObject& x )
+    Real10 Expression::ConvertToFloat( const DataObject& x )
     {
         return ConvertToFloat( NULL, x );
     }
 
-    Real10 Expression::ConvertToFloat( Type* commonType, DataObject& x )
+    Real10 Expression::ConvertToFloat( Type* commonType, const DataObject& x )
     {
         Real10  result;
 
