@@ -171,7 +171,7 @@ namespace MagoEE
     }
 
     // TODO: is this OK not returning anything?
-    void CastExpr::AssignValue( DataObject& source, DataObject& dest )
+    void CastExpr::AssignValue( const DataObject& source, DataObject& dest )
     {
         Type*   destType = dest._Type;
         Type*   srcType = source._Type;
@@ -293,6 +293,7 @@ namespace MagoEE
             {
                 RefPtr<Type>    nextSrc = srcType->AsTypeNext()->GetNext();
                 RefPtr<Type>    nextDest = destType->AsTypeNext()->GetNext();
+                Address         srcAddr = source.Value.Addr;
 
                 if ( (nextSrc != NULL) && (nextSrc->AsTypeStruct() != NULL)
                     && (nextDest != NULL) && (nextDest->AsTypeStruct() != NULL) )
@@ -301,11 +302,11 @@ namespace MagoEE
 
                     if ( nextSrc->AsTypeStruct()->GetBaseClassOffset( nextDest, offset ) )
                     {
-                        source.Value.Addr += offset;
+                        srcAddr += offset;
                     }
                 }
 
-                dest.Value.Addr = source.Value.Addr;
+                dest.Value.Addr = srcAddr;
             }
             else if ( srcType->IsDArray() )
             {

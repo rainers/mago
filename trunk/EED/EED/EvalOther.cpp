@@ -20,6 +20,9 @@
 #include "TypeUnresolved.h"
 
 
+const HRESULT E_NOT_FOUND = HRESULT_FROM_WIN32( ERROR_NOT_FOUND );
+
+    
 namespace MagoEE
 {
     HRESULT Eval( IValueBinder* binder, Declaration* decl, DataObject& obj )
@@ -36,6 +39,42 @@ namespace MagoEE
 
             return binder->GetValue( obj.Addr, obj._Type, obj.Value );
         }
+    }
+
+    HRESULT TypeCheckAAKey( Type* actualKeyType, Type* declaredKeyType )
+    {
+        _ASSERT( actualKeyType != NULL );
+        _ASSERT( declaredKeyType != NULL );
+
+        if ( !declaredKeyType->IsBasic()
+            && !declaredKeyType->IsPointer()
+            && (declaredKeyType->AsTypeEnum() == NULL)
+            && !declaredKeyType->IsDelegate() )
+            return E_MAGOEE_BAD_INDEX;
+        if ( declaredKeyType->IsReference() )
+            return E_MAGOEE_BAD_INDEX;
+        if ( !CastExpr::CanCast( actualKeyType, declaredKeyType ) )
+            return E_MAGOEE_BAD_INDEX;
+
+        return S_OK;
+    }
+
+    HRESULT FindAAElement( 
+        const DataObject& array, 
+        const DataObject& key, 
+        Type* keyType, 
+        IValueBinder* binder, 
+        Address& addr )
+    {
+        _ASSERT( keyType != NULL );
+        _ASSERT( binder != NULL );
+
+        DataObject  finalKey = { 0 };
+
+        finalKey._Type = keyType;
+        CastExpr::AssignValue( key, finalKey );
+
+        return binder->GetValue( array.Value.Addr, finalKey._Type, finalKey.Value, addr );
     }
 
 
@@ -275,13 +314,9 @@ namespace MagoEE
             return E_MAGOEE_NO_TYPE;
         if ( childType->IsAArray() )
         {
-            if ( !index->_Type->IsBasic()
-                && !index->_Type->IsPointer()
-                && (index->_Type->AsTypeEnum() == NULL)
-                && !index->_Type->IsDelegate() )
-                return E_MAGOEE_BAD_INDEX;
-            if ( !CastExpr::CanCast( index->_Type, childType->AsTypeAArray()->GetIndex() ) )
-                return E_MAGOEE_BAD_INDEX;
+            hr = TypeCheckAAKey( index->_Type, childType->AsTypeAArray()->GetIndex() );
+            if ( FAILED( hr ) )
+                return hr;
         }
         else if ( !index->_Type->IsIntegral() )
             return E_MAGOEE_BAD_INDEX;
@@ -341,14 +376,11 @@ namespace MagoEE
 
         if ( Child->_Type->IsAArray() )
         {
-            DataObject  finalIndex = { 0 };
-
-            finalIndex._Type = Child->_Type->AsTypeAArray()->GetIndex();
-            CastExpr::AssignValue( index, finalIndex );
-
-            hr = binder->GetValue( array.Value.Addr, finalIndex._Type, finalIndex.Value, addr );
-            if ( FAILED( hr ) )
+            hr = FindAAElement( array, index, Child->_Type->AsTypeAArray()->GetIndex(), binder, addr );
+            if ( hr == E_NOT_FOUND )
                 return E_MAGOEE_ELEMENT_NOT_FOUND;
+            if ( FAILED( hr ) )
+                return hr;
         }
         else
         {
@@ -1170,11 +1202,85 @@ namespace MagoEE
         return E_MAGOEE_VALUE_EXPECTED;
     }
 
-#if 1
-    // for assoc. arrays (tables)
+
+    //----------------------------------------------------------------------------
+    //  InExpr
+    //----------------------------------------------------------------------------
+
+    HRESULT InExpr::Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
+    {
+        HRESULT hr = S_OK;
+        ClearEvalData();
+
+        hr = Right->Semantic( evalData, typeEnv, binder );
+        if ( FAILED( hr ) )
+            return hr;
+        if ( Right->Kind != DataKind_Value )
+            return E_MAGOEE_VALUE_EXPECTED;
+        if ( Right->_Type == NULL )
+            return E_MAGOEE_NO_TYPE;
+
+        Type*   childType = Right->_Type;
+        if ( !childType->IsAArray() )
+            return E_MAGOEE_BAD_INDEX;
+
+        ITypeNext*  typeNext = Right->_Type->AsTypeNext();
+        _ASSERT( typeNext != NULL );
+        if ( typeNext->GetNext() == NULL )
+            return E_MAGOEE_BAD_INDEX;
+
+        RefPtr<Type>    voidType = typeEnv->GetType( Tvoid );
+        if ( typeNext->GetNext()->Equals( voidType ) )
+            return E_MAGOEE_BAD_TYPES_FOR_OP;
+
+        hr = Left->Semantic( evalData, typeEnv, binder );
+        if ( FAILED( hr ) )
+            return hr;
+        if ( Left->Kind != DataKind_Value )
+            return E_MAGOEE_VALUE_EXPECTED;
+        if ( Left->_Type == NULL )
+            return E_MAGOEE_NO_TYPE;
+
+        hr = TypeCheckAAKey( Left->_Type, childType->AsTypeAArray()->GetIndex() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = typeEnv->NewPointer( typeNext->GetNext(), _Type.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        Kind = DataKind_Value;
+        return S_OK;
+    }
+
     HRESULT InExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
     {
-        return E_NOTIMPL;
+        if ( mode == EvalMode_Address )
+            return E_MAGOEE_NO_ADDRESS;
+
+        HRESULT     hr = S_OK;
+        DataObject  array = { 0 };
+        DataObject  index = { 0 };
+        Address     addr = 0;
+
+        hr = Right->Evaluate( EvalMode_Value, evalData, binder, array );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = Left->Evaluate( EvalMode_Value, evalData, binder, index );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = FindAAElement( array, index, Right->_Type->AsTypeAArray()->GetIndex(), binder, addr );
+        if ( hr == E_NOT_FOUND )
+            addr = 0;
+        else if ( FAILED( hr ) )
+            return hr;
+
+        obj.Addr = 0;
+        obj._Type = _Type;
+        obj.Value.Addr = addr;
+
+        return S_OK;
     }
-#endif
 }
