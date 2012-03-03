@@ -344,7 +344,7 @@ HRESULT DataEnvBinder::GetValue( MagoEE::Address addr, MagoEE::Type* type, MagoE
     return S_OK;
 }
 
-HRESULT DataEnvBinder::GetValue( MagoEE::Address aArrayAddr, MagoEE::Type* keyType, const MagoEE::DataValue& keyValue, MagoEE::Address& valueAddr )
+HRESULT DataEnvBinder::GetValue( MagoEE::Address aArrayAddr, const MagoEE::DataObject& key, MagoEE::Address& valueAddr )
 {
     return E_NOTIMPL;
 }

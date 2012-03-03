@@ -60,7 +60,7 @@ public:
 
     virtual HRESULT GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& value );
     virtual HRESULT GetValue( MagoEE::Address addr, MagoEE::Type* type, MagoEE::DataValue& value );
-    virtual HRESULT GetValue( MagoEE::Address aArrayAddr, MagoEE::Type* keyType, const MagoEE::DataValue& keyValue, MagoEE::Address& valueAddr );
+    virtual HRESULT GetValue( MagoEE::Address aArrayAddr, const MagoEE::DataObject& key, MagoEE::Address& valueAddr );
 
     virtual HRESULT SetValue( MagoEE::Declaration* decl, const MagoEE::DataValue& value );
     virtual HRESULT SetValue( MagoEE::Address addr, MagoEE::Type* type, const MagoEE::DataValue& value );

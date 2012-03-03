@@ -49,12 +49,21 @@ namespace MagoEE
         if ( !declaredKeyType->IsBasic()
             && !declaredKeyType->IsPointer()
             && (declaredKeyType->AsTypeEnum() == NULL)
-            && !declaredKeyType->IsDelegate() )
+            && !declaredKeyType->IsDelegate()
+            && (declaredKeyType->AsTypeStruct() == NULL) )
             return E_MAGOEE_BAD_INDEX;
         if ( declaredKeyType->IsReference() )
             return E_MAGOEE_BAD_INDEX;
-        if ( !CastExpr::CanCast( actualKeyType, declaredKeyType ) )
-            return E_MAGOEE_BAD_INDEX;
+        if ( declaredKeyType->AsTypeStruct() != NULL )
+        {
+            if ( !actualKeyType->Equals( declaredKeyType ) )
+                return E_MAGOEE_BAD_INDEX;
+        }
+        else
+        {
+            if ( !CastExpr::CanCast( actualKeyType, declaredKeyType ) )
+                return E_MAGOEE_BAD_INDEX;
+        }
 
         return S_OK;
     }
@@ -72,9 +81,19 @@ namespace MagoEE
         DataObject  finalKey = { 0 };
 
         finalKey._Type = keyType;
-        CastExpr::AssignValue( key, finalKey );
+        finalKey.Addr = key.Addr;
 
-        return binder->GetValue( array.Value.Addr, finalKey._Type, finalKey.Value, addr );
+        if ( keyType->AsTypeStruct() != NULL )
+        {
+            if ( key.Addr == 0 )
+                return E_FAIL;
+        }
+        else
+        {
+            CastExpr::AssignValue( key, finalKey );
+        }
+
+        return binder->GetValue( array.Value.Addr, finalKey, addr );
     }
 
 
