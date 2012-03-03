@@ -137,7 +137,7 @@ namespace MagoST
         _ASSERT( entry != NULL );
 
         if ( NULL == GetCVPtr<void>( entry->lfo, entry->cb ) )
-            return E_BAD_FORMAT;
+            return S_OK; // was E_BAD_FORMAT; optlink produces some bad records, so ignore them
 
         switch ( entry->SubSection )
         {
