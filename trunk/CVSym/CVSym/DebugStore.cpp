@@ -1691,6 +1691,7 @@ namespace MagoST
                     int cvoff = entry->lfo + srcMod->baseSrcFile[f];
                     if( OMFSourceFile* srcFile = GetCVPtr<OMFSourceFile>( cvoff ) )
                     {
+                        OffsetPair* lnSegOffsetTable = GetCVPtr<OffsetPair>( cvoff + 4 + 4 * srcFile->cSeg );
                         for ( uint16_t s = 0; s < srcFile->cSeg; s++ )
                         {
                             int lnoff = entry->lfo + srcFile->baseSrcLn[s];
@@ -1699,7 +1700,7 @@ namespace MagoST
                             if( srcLine->Seg == mTextSegment )
                             {
                                 // also mark the start of the line info segment
-                                MarkLineOffsetInBitmap( offsetTable[s].first );
+                                MarkLineOffsetInBitmap( lnSegOffsetTable[s].first );
 
                                 uint16_t cnt = srcLine->cLnOff;
                                 for( uint16_t ln = 0; ln < cnt; ln++ )
