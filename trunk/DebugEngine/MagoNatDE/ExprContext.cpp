@@ -47,6 +47,25 @@ struct BB
     uint32_t    keyti;
 };
 
+struct TypeInfo_Struct
+{
+    uint32_t    vptr;
+    uint32_t    monitor;
+    uint32_t    nameLength;
+    uint32_t    namePtr;
+    uint32_t    m_initLength;
+    uint32_t    m_initPtr;
+    uint32_t    xtoHash;
+    uint32_t    xopEquals;
+    uint32_t    xopCmp;
+    uint32_t    xtoString;
+    uint32_t    m_flags;
+    uint32_t    xgetMembers;
+    uint32_t    xdtor;
+    uint32_t    xpostblit;
+    uint32_t    m_align;
+};
+
 
 namespace Mago
 {
@@ -603,10 +622,44 @@ namespace Mago
         return false;
     }
 
+    HRESULT ExprContext::GetStructHash( 
+        const MagoEE::DataObject& key, 
+        const BB& bb, 
+        HeapPtr& keyBuf, 
+        uint32_t& hash )
+    {
+        _ASSERT( keyBuf.IsEmpty() );
+
+        HRESULT hr = S_OK;
+        TypeInfo_Struct tiStruct;
+
+        if ( (key.Addr == 0) || (bb.keyti == 0) )
+            return E_FAIL;
+
+        hr = ReadMemory( bb.keyti, sizeof tiStruct, &tiStruct );
+        if ( FAILED( hr ) )
+            return hr;
+
+        // if the user defined hash and compare functions,
+        // then we can't do the standard hash and compare
+        if ( (tiStruct.xtoHash != 0) || (tiStruct.xopCmp != 0) )
+            return E_FAIL;
+
+        keyBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, key._Type->GetSize() );
+        if ( keyBuf.IsEmpty() )
+            return E_OUTOFMEMORY;
+
+        hr = ReadMemory( key.Addr, key._Type->GetSize(), keyBuf );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hash = HashOf( keyBuf, key._Type->GetSize() );
+        return S_OK;
+    }
+
     HRESULT ExprContext::GetValue(
         MagoEE::Address aArrayAddr, 
-        MagoEE::Type* keyType, 
-        const MagoEE::DataValue& keyValue, 
+        const MagoEE::DataObject& key, 
         MagoEE::Address& valueAddr )
     {
         const int MAX_AA_SEARCH_NODES = 1000000;
@@ -616,10 +669,7 @@ namespace Mago
         uint8_t     aaaBuf[ sizeof( aaA ) + sizeof( MagoEE::DataValue ) ] = { 0 };
         aaA*        aaa = (aaA*) aaaBuf;
         uint32_t    hash = 0;
-
-        hr = GetHash( keyType, keyValue, hash );
-        if ( FAILED( hr ) )
-            return hr;
+        HeapPtr     keyBuf;
 
         hr = ReadMemory( aArrayAddr, sizeof bb, &bb );
         if ( FAILED( hr ) )
@@ -628,12 +678,33 @@ namespace Mago
         if ( (bb.bAddr == 0) || (bb.bLength == 0) )
             return E_FAIL;
 
+        if ( key._Type->AsTypeStruct() != NULL )
+        {
+            hr = GetStructHash( key, bb, keyBuf, hash );
+            if ( FAILED( hr ) )
+                return hr;
+        }
+        else
+        {
+            hr = GetHash( key._Type, key.Value, hash );
+            if ( FAILED( hr ) )
+                return hr;
+        }
+
         uint32_t    bucketIndex = hash % bb.bLength;
         uint32_t    aaAAddr = 0;
-        uint32_t    lenToRead = sizeof( aaA ) + keyType->GetSize();
-        uint32_t    lenBeforeValue = sizeof( aaA ) + AlignTSize( keyType->GetSize() );
+        uint32_t    lenToRead = sizeof( aaA ) + key._Type->GetSize();
+        uint32_t    lenBeforeValue = sizeof( aaA ) + AlignTSize( key._Type->GetSize() );
+        HeapPtr     nodeBuf;
 
-        _ASSERT( lenToRead <= sizeof aaaBuf );
+        if ( lenToRead > sizeof aaaBuf )
+        {
+            nodeBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, lenToRead );
+            if ( nodeBuf.IsEmpty() )
+                return E_OUTOFMEMORY;
+
+            aaa = (aaA*) nodeBuf.Get();
+        }
 
         hr = ReadMemory( bb.bAddr + (bucketIndex * sizeof aaAAddr), sizeof aaAAddr, &aaAAddr );
         if ( FAILED( hr ) )
@@ -644,16 +715,29 @@ namespace Mago
         for ( int i = 0; (i < MAX_AA_SEARCH_NODES) && (aaAAddr != 0); i++ )
         {
             MagoEE::DataValue nodeKey = { 0 };
+            bool    found = false;
 
             hr = ReadMemory( aaAAddr, lenToRead, aaa );
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = FromRawValue( aaa + 1, keyType, nodeKey );
-            if ( FAILED( hr ) )
-                return hr;
+            if ( aaa->hash == hash )
+            {
+                if ( key._Type->AsTypeStruct() != NULL )
+                {
+                    found = memcmp( keyBuf, aaa + 1, key._Type->GetSize() ) == 0;
+                }
+                else
+                {
+                    hr = FromRawValue( aaa + 1, key._Type, nodeKey );
+                    if ( FAILED( hr ) )
+                        return hr;
 
-            if ( (aaa->hash == hash) && EqualValue( keyType, keyValue, nodeKey ) )
+                    found = EqualValue( key._Type, key.Value, nodeKey );
+                }
+            }
+
+            if ( found )
             {
                 valueAddr = aaAAddr + lenBeforeValue;
                 break;

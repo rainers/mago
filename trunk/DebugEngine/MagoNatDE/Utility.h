@@ -151,3 +151,15 @@ HRESULT GetClassName( IProcess* process, MachineAddress addr, BSTR* pbstrClassNa
 HRESULT GetExceptionInfo( IProcess* process, MachineAddress addr, BSTR* pbstrInfo );
 
 uint32_t HashOf( const void* buffer, uint32_t length );
+
+
+class HeapCloser
+{
+public:
+    void operator()( uint8_t* p )
+    {
+        HeapFree( GetProcessHeap(), 0, p );
+    }
+};
+
+typedef HandlePtrBase2<uint8_t*, NULL, HeapCloser> HeapPtr;

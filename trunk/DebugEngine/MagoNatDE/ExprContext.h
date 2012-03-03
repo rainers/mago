@@ -10,6 +10,9 @@
 #include <MagoEED.h>
 
 
+struct BB;
+
+
 namespace Mago
 {
     class Thread;
@@ -76,8 +79,7 @@ namespace Mago
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 
-            MagoEE::Type* keyType, 
-            const MagoEE::DataValue& keyValue, 
+            const MagoEE::DataObject& key, 
             MagoEE::Address& valueAddr );
 
         virtual HRESULT SetValue( 
@@ -196,6 +198,14 @@ namespace Mago
             MagoEE::Type*& type );
 
         HRESULT GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value );
+
+        HRESULT GetStructHash( 
+            const MagoEE::DataObject& key, 
+            const BB& bb, 
+            // To hash a struct, we need to read the key memory into a buffer.
+            // Return it, because the caller needs it, too.
+            HeapPtr& keyBuf,
+            uint32_t& hash );
 
         HRESULT GetHash( MagoEE::Type* type, const MagoEE::DataValue& value, uint32_t& hash );
         HRESULT FromRawValue( const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value );
