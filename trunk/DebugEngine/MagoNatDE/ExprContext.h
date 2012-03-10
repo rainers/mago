@@ -207,6 +207,35 @@ namespace Mago
             HeapPtr& keyBuf,
             uint32_t& hash );
 
+        HRESULT GetArrayHash( 
+            const MagoEE::DataObject& key, 
+            // To hash an array, we need to read the key memory into a buffer.
+            // Return it, because the caller needs it, too.
+            HeapPtr& keyBuf,
+            uint32_t& hash );
+
+        bool EqualArray(
+            MagoEE::Type* elemType,
+            uint32_t length,
+            const void* keyBuf, 
+            const void* nodeArrayBuf );
+
+        bool EqualSArray(
+            const MagoEE::DataObject& key, 
+            const void* keyBuf, 
+            const void* nodeArrayBuf );
+
+        bool EqualDArray(
+            const MagoEE::DataObject& key, 
+            const void* keyBuf, 
+            HeapPtr& inout_nodeArrayBuf, 
+            const MagoEE::DataValue& nodeKey );
+
+        bool EqualStruct(
+            const MagoEE::DataObject& key, 
+            const void* keyBuf, 
+            const void* nodeArrayBuf );
+
         HRESULT GetHash( MagoEE::Type* type, const MagoEE::DataValue& value, uint32_t& hash );
         HRESULT FromRawValue( const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value );
 

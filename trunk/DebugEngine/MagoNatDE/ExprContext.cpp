@@ -591,6 +591,108 @@ namespace Mago
         return false;
     }
 
+    bool EqualFloat32( const void* leftBuf, const void* rightBuf )
+    {
+        const float* left = (const float*) leftBuf;
+        const float* right = (const float*) rightBuf;
+
+        // NaNs have to match
+        if ( (*left != *left) && (*right != *right) )
+            return true;
+
+        return *left == *right;
+    }
+
+    bool EqualFloat64( const void* leftBuf, const void* rightBuf )
+    {
+        const double* left = (const double*) leftBuf;
+        const double* right = (const double*) rightBuf;
+
+        // NaNs have to match
+        if ( (*left != *left) && (*right != *right) )
+            return true;
+
+        return *left == *right;
+    }
+
+    bool EqualFloat80( const void* leftBuf, const void* rightBuf )
+    {
+        const Real10* left = (const Real10*) leftBuf;
+        const Real10* right = (const Real10*) rightBuf;
+
+        if ( left->IsNan() && right->IsNan() )
+            return true;
+
+        uint16_t comp = Real10::Compare( *left, *right );
+        return Real10::IsEqual( comp );
+    }
+
+    bool EqualComplex32( const void* leftBuf, const void* rightBuf )
+    {
+        const float* left = (const float*) leftBuf;
+        const float* right = (const float*) rightBuf;
+
+        if ( !EqualFloat32( &left[0], &right[0] ) )
+            return false;
+
+        return EqualFloat32( &left[1], &right[1] );
+    }
+
+    bool EqualComplex64( const void* leftBuf, const void* rightBuf )
+    {
+        const double* left = (const double*) leftBuf;
+        const double* right = (const double*) rightBuf;
+
+        if ( !EqualFloat64( &left[0], &right[0] ) )
+            return false;
+
+        return EqualFloat64( &left[1], &right[1] );
+    }
+
+    bool EqualComplex80( const void* leftBuf, const void* rightBuf )
+    {
+        const Real10* left = (const Real10*) leftBuf;
+        const Real10* right = (const Real10*) rightBuf;
+
+        if ( !EqualFloat80( &left[0], &right[0] ) )
+            return false;
+
+        return EqualFloat80( &left[1], &right[1] );
+    }
+
+    typedef bool (*EqualsFunc)( const void* leftBuf, const void* rightBuf );
+
+    EqualsFunc GetFloatingEqualsFunc( MagoEE::Type* type )
+    {
+        _ASSERT( type != NULL );
+        _ASSERT( type->IsFloatingPoint() );
+
+        EqualsFunc  equals = NULL;
+
+        if ( type->IsComplex() )
+        {
+            switch ( type->GetSize() )
+            {
+            case 8: equals = EqualComplex32;  break;
+            case 16: equals = EqualComplex64;  break;
+            case 20: equals = EqualComplex80;  break;
+            default: _ASSERT( false ); break;
+            }
+        }
+        else
+        {
+            switch ( type->GetSize() )
+            {
+            case 4: equals = EqualFloat32;  break;
+            case 8: equals = EqualFloat64;  break;
+            case 10: equals = EqualFloat80;  break;
+            default: _ASSERT( false ); break;
+            }
+        }
+
+        return equals;
+    }
+
     bool EqualValue( MagoEE::Type* type, const MagoEE::DataValue& left, const MagoEE::DataValue& right )
     {
         if ( type->IsPointer() )
@@ -653,8 +755,203 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
+        // TODO: we only need to hash upto init().length, but we can't get that 
+        //       from the CV debug info. So, hope that the size is the same
         hash = HashOf( keyBuf, key._Type->GetSize() );
         return S_OK;
+    }
+
+    HRESULT ExprContext::GetArrayHash( 
+        const MagoEE::DataObject& key, 
+        HeapPtr& keyBuf, 
+        uint32_t& hash )
+    {
+        _ASSERT( keyBuf.IsEmpty() );
+        _ASSERT( key._Type->IsSArray() || key._Type->IsDArray() );
+
+        HRESULT         hr = S_OK;
+        MagoEE::Address addr = 0;
+        uint32_t        size = 0;
+        RefPtr<MagoEE::Type> elemType;
+
+        elemType = key._Type->AsTypeNext()->GetNext();
+
+        if ( key._Type->IsSArray() )
+        {
+            addr = key.Addr;
+            size = key._Type->GetSize();
+        }
+        else
+        {
+            addr = key.Value.Array.Addr;
+            size = (uint32_t) key.Value.Array.Length * elemType->GetSize();
+        }
+
+        if ( addr == 0 )
+            return E_FAIL;
+
+        keyBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, size );
+        if ( keyBuf.IsEmpty() )
+            return E_OUTOFMEMORY;
+
+        hr = ReadMemory( addr, size, keyBuf );
+        if ( FAILED( hr ) )
+            return hr;
+
+        if ( key._Type->IsSArray() )
+        {
+            uint32_t    length = key._Type->AsTypeSArray()->GetLength();
+            uint32_t    elemSize = elemType->GetSize();
+
+            // TODO: for structs, we only need to hash upto init().length, but we can't 
+            //       get that from the CV debug info. So, hope that the size is the same
+            uint32_t    initSize = elemType->GetSize();
+
+            hash = 0;
+
+            for ( uint32_t i = 0; i < length; i++ )
+            {
+                uint32_t    offset = i * elemSize;
+                uint32_t    elemHash = 0;
+
+                if ( elemType->AsTypeStruct() != NULL )
+                {
+                    elemHash = HashOf( keyBuf + offset, initSize );
+                }
+                else
+                {
+                    MagoEE::DataValue elem = { 0 };
+
+                    hr = FromRawValue( keyBuf + offset, elemType, elem );
+                    if ( FAILED( hr ) )
+                        return hr;
+
+                    hr = GetHash( elemType, elem, elemHash );
+                    if ( FAILED( hr ) )
+                        return hr;
+                }
+
+                hash += elemHash;
+            }
+        }
+        else
+        {
+            if ( elemType->IsBasic() && elemType->IsChar() && (elemType->GetSize() == 1) )
+            {
+                hash = 0;
+
+                for ( uint32_t i = 0; i < key.Value.Array.Length; i++ )
+                {
+                    hash = hash * 11 + keyBuf[i];
+                }
+            }
+            // TODO: There's a bug in druntime, where the length in elements is used as the size in bytes to hash
+            //       merge the non-basic case into the basic one when it's fixed
+            else if ( elemType->IsBasic() )
+            {
+                hash = HashOf( keyBuf, size );
+            }
+            else
+            {
+                hash = HashOf( keyBuf, (uint32_t) key.Value.Array.Length );
+            }
+        }
+
+        return S_OK;
+    }
+
+    bool ExprContext::EqualArray(
+        MagoEE::Type* elemType,
+        uint32_t length,
+        const void* keyBuf, 
+        const void* nodeArrayBuf )
+    {
+        // key and nodeKey array lengths match, because they're the same type
+        uint32_t        size = length * elemType->GetSize();
+
+        if ( elemType->IsIntegral() 
+            || elemType->IsPointer() 
+            || elemType->IsDelegate() )
+        {
+            return memcmp( keyBuf, nodeArrayBuf, size ) == 0;
+        }
+        else if ( elemType->IsFloatingPoint() )
+        {
+            uint32_t    elemSize = elemType->GetSize();
+            EqualsFunc  equals = GetFloatingEqualsFunc( elemType );
+
+            if ( equals == NULL )
+                return false;
+
+            for ( uint32_t i = 0; i < length; i++ )
+            {
+                uint32_t    offset = i * elemSize;
+                if ( !equals( (uint8_t*) keyBuf + offset, (uint8_t*) nodeArrayBuf + offset ) )
+                    return false;
+            }
+
+            return true;
+        }
+        else if ( elemType->AsTypeStruct() != NULL )
+        {
+            // TODO: you have to compare each element
+            //       with structs, only compare upto init().length
+            return memcmp( keyBuf, nodeArrayBuf, size ) == 0;
+        }
+
+        return false;
+    }
+
+    bool ExprContext::EqualSArray(
+        const MagoEE::DataObject& key, 
+        const void* keyBuf, 
+        const void* nodeArrayBuf )
+    {
+        _ASSERT( key._Type->IsSArray() );
+
+        MagoEE::Type*   elemType = key._Type->AsTypeSArray()->GetElement();
+        uint32_t        length = key._Type->AsTypeSArray()->GetLength();
+
+        return EqualArray( elemType, length, keyBuf, nodeArrayBuf );
+    }
+
+    bool ExprContext::EqualDArray( 
+        const MagoEE::DataObject& key, 
+        const void* keyBuf, 
+        HeapPtr& inout_nodeArrayBuf, 
+        const MagoEE::DataValue& nodeKey )
+    {
+        _ASSERT( key._Type->IsDArray() );
+
+        HRESULT         hr = S_OK;
+        MagoEE::Type*   elemType = key._Type->AsTypeDArray()->GetElement();
+        uint32_t        size = (uint32_t) nodeKey.Array.Length * elemType->GetSize();
+
+        if ( nodeKey.Array.Length != key.Value.Array.Length )
+            return false;
+
+        if ( inout_nodeArrayBuf.IsEmpty() )
+        {
+            inout_nodeArrayBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, size );
+            if ( inout_nodeArrayBuf.IsEmpty() )
+                return false;
+        }
+
+        hr = ReadMemory( nodeKey.Array.Addr, size, inout_nodeArrayBuf );
+        if ( FAILED( hr ) )
+            return false;
+
+        return EqualArray( elemType, (uint32_t) nodeKey.Array.Length, keyBuf, inout_nodeArrayBuf );
+    }
+
+    bool ExprContext::EqualStruct(
+        const MagoEE::DataObject& key, 
+        const void* keyBuf, 
+        const void* nodeArrayBuf )
+    {
+        // we would also check and run TypeInfo_Struct.xopCmp, if we supported func eval
+        // TODO: actually, you have to compare upto init().length
+        return memcmp( keyBuf, nodeArrayBuf, key._Type->GetSize() ) == 0;
     }
 
     HRESULT ExprContext::GetValue(
@@ -684,6 +981,12 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
         }
+        else if ( key._Type->IsSArray() || key._Type->IsDArray() )
+        {
+            hr = GetArrayHash( key, keyBuf, hash );
+            if ( FAILED( hr ) )
+                return hr;
+        }
         else
         {
             hr = GetHash( key._Type, key.Value, hash );
@@ -696,6 +999,7 @@ namespace Mago
         uint32_t    lenToRead = sizeof( aaA ) + key._Type->GetSize();
         uint32_t    lenBeforeValue = sizeof( aaA ) + AlignTSize( key._Type->GetSize() );
         HeapPtr     nodeBuf;
+        HeapPtr     nodeArrayBuf;
 
         if ( lenToRead > sizeof aaaBuf )
         {
@@ -725,7 +1029,19 @@ namespace Mago
             {
                 if ( key._Type->AsTypeStruct() != NULL )
                 {
-                    found = memcmp( keyBuf, aaa + 1, key._Type->GetSize() ) == 0;
+                    found = EqualStruct( key, keyBuf, aaa + 1 );
+                }
+                else if ( key._Type->IsSArray() )
+                {
+                    found = EqualSArray( key, keyBuf, aaa + 1 );
+                }
+                else if ( key._Type->IsDArray() )
+                {
+                    hr = FromRawValue( aaa + 1, key._Type, nodeKey );
+                    if ( FAILED( hr ) )
+                        return hr;
+
+                    found = EqualDArray( key, keyBuf, nodeArrayBuf, nodeKey );
                 }
                 else
                 {
