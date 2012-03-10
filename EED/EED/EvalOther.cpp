@@ -50,11 +50,27 @@ namespace MagoEE
             && !declaredKeyType->IsPointer()
             && (declaredKeyType->AsTypeEnum() == NULL)
             && !declaredKeyType->IsDelegate()
-            && (declaredKeyType->AsTypeStruct() == NULL) )
+            && (declaredKeyType->AsTypeStruct() == NULL) 
+            && !declaredKeyType->IsSArray() 
+            && !declaredKeyType->IsDArray() )
             return E_MAGOEE_BAD_INDEX;
         if ( declaredKeyType->IsReference() )
             return E_MAGOEE_BAD_INDEX;
-        if ( declaredKeyType->AsTypeStruct() != NULL )
+        if ( declaredKeyType->IsSArray() || declaredKeyType->IsDArray() )
+        {
+            RefPtr<Type>    elemType = declaredKeyType->AsTypeNext()->GetNext();
+
+            if ( !elemType->IsBasic()
+                && !elemType->IsPointer()
+                && (elemType->AsTypeEnum() == NULL)
+                && !elemType->IsDelegate()
+                && (elemType->AsTypeStruct() == NULL) )
+                return E_MAGOEE_BAD_INDEX;
+            if ( elemType->IsReference() )
+                return E_MAGOEE_BAD_INDEX;
+        }
+        if ( (declaredKeyType->AsTypeStruct() != NULL) 
+            || declaredKeyType->IsSArray() )
         {
             if ( !actualKeyType->Equals( declaredKeyType ) )
                 return E_MAGOEE_BAD_INDEX;
@@ -83,7 +99,8 @@ namespace MagoEE
         finalKey._Type = keyType;
         finalKey.Addr = key.Addr;
 
-        if ( keyType->AsTypeStruct() != NULL )
+        if ( (keyType->AsTypeStruct() != NULL)
+            || keyType->IsSArray() )
         {
             if ( key.Addr == 0 )
                 return E_FAIL;
