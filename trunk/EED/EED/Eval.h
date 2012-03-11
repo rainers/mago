@@ -13,12 +13,14 @@ namespace MagoEE
     class Type;
     class Declaration;
     class ITypeEnv;
+    struct String;
 
 
     struct DArray
     {
         dlength_t   Length;
         Address     Addr;
+        String*     LiteralString;
     };
 
 

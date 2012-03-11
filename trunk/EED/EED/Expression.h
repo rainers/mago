@@ -823,6 +823,8 @@ namespace MagoEE
         String*     Value;
 
         StringExpr( String* value );
+        virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
+        virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
     };
 
 

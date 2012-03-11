@@ -11,6 +11,7 @@
 #include "Eval.h"
 #include "Type.h"
 #include "ITypeEnv.h"
+#include "NameTable.h"
 
 
 namespace MagoEE
@@ -132,5 +133,62 @@ namespace MagoEE
         }
 
         return false;
+    }
+
+
+    //----------------------------------------------------------------------------
+    //  StringExpr
+    //----------------------------------------------------------------------------
+
+    HRESULT StringExpr::Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
+    {
+        UNREFERENCED_PARAMETER( evalData );
+        UNREFERENCED_PARAMETER( binder );
+
+        HRESULT hr = S_OK;
+        ENUMTY  charTy = Tnone;
+        Type*   charType = NULL;
+        RefPtr<Type>    immutableCharType;
+
+        _Type = NULL;
+
+        Kind = DataKind_Value;
+
+        switch ( Value->Kind )
+        {
+        case StringKind_Byte:   charTy = Tchar; break;
+        case StringKind_Utf16:  charTy = Twchar; break;
+        case StringKind_Utf32:  charTy = Tdchar; break;
+        default:
+            return E_UNEXPECTED;
+        }
+
+        charType = typeEnv->GetType( charTy );
+
+        immutableCharType = charType->MakeInvariant();
+        if ( immutableCharType == NULL )
+            return E_OUTOFMEMORY;
+
+        hr = typeEnv->NewDArray( immutableCharType, _Type.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
+    HRESULT StringExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
+    {
+        UNREFERENCED_PARAMETER( evalData );
+        UNREFERENCED_PARAMETER( binder );
+
+        if ( mode == EvalMode_Address )
+            return E_MAGOEE_NO_ADDRESS;
+
+        obj._Type = _Type;
+        obj.Addr = 0;
+        obj.Value.Array.Addr = 0;
+        obj.Value.Array.Length = Value->Length;
+        obj.Value.Array.LiteralString = Value;
+        return S_OK;
     }
 }
