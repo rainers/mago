@@ -232,6 +232,9 @@ namespace MagoEE
 
         dest.Value.Array.Addr = addr;
         dest.Value.Array.Length = destLen;
+
+        if ( srcType->IsDArray() )
+            dest.Value.Array.LiteralString = source.Value.Array.LiteralString;
     }
 
     void Expression::PromoteInPlace( DataObject& x )

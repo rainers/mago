@@ -623,30 +623,56 @@ namespace Mago
         MagoEE::Address addr = 0;
         uint32_t        size = 0;
         RefPtr<MagoEE::Type> elemType;
+        const uint8_t*  buf = NULL;
 
         elemType = key._Type->AsTypeNext()->GetNext();
 
-        if ( key._Type->IsSArray() )
+        if ( key._Type->IsDArray() && (key.Value.Array.LiteralString != NULL) )
         {
-            addr = key.Addr;
-            size = key._Type->GetSize();
+            switch ( key.Value.Array.LiteralString->Kind )
+            {
+            case MagoEE::StringKind_Byte:
+                buf = (uint8_t*) ((MagoEE::ByteString*) key.Value.Array.LiteralString)->Str;
+                break;
+            case MagoEE::StringKind_Utf16:
+                buf = (uint8_t*) ((MagoEE::Utf16String*) key.Value.Array.LiteralString)->Str;
+                break;
+            case MagoEE::StringKind_Utf32:
+                buf = (uint8_t*) ((MagoEE::Utf32String*) key.Value.Array.LiteralString)->Str;
+                break;
+            default:
+                _ASSERT( false );
+                return E_UNEXPECTED;
+            }
+
+            size = key.Value.Array.LiteralString->Length * elemType->GetSize();
         }
         else
         {
-            addr = key.Value.Array.Addr;
-            size = (uint32_t) key.Value.Array.Length * elemType->GetSize();
+            if ( key._Type->IsSArray() )
+            {
+                addr = key.Addr;
+                size = key._Type->GetSize();
+            }
+            else
+            {
+                addr = key.Value.Array.Addr;
+                size = (uint32_t) key.Value.Array.Length * elemType->GetSize();
+            }
+
+            if ( addr == 0 )
+                return E_FAIL;
+
+            keyBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, size );
+            if ( keyBuf.IsEmpty() )
+                return E_OUTOFMEMORY;
+
+            hr = ReadMemory( addr, size, keyBuf );
+            if ( FAILED( hr ) )
+                return hr;
+
+            buf = keyBuf;
         }
-
-        if ( addr == 0 )
-            return E_FAIL;
-
-        keyBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, size );
-        if ( keyBuf.IsEmpty() )
-            return E_OUTOFMEMORY;
-
-        hr = ReadMemory( addr, size, keyBuf );
-        if ( FAILED( hr ) )
-            return hr;
 
         if ( key._Type->IsSArray() )
         {
@@ -666,13 +692,13 @@ namespace Mago
 
                 if ( elemType->AsTypeStruct() != NULL )
                 {
-                    elemHash = HashOf( keyBuf + offset, initSize );
+                    elemHash = HashOf( buf + offset, initSize );
                 }
                 else
                 {
                     MagoEE::DataValue elem = { 0 };
 
-                    hr = FromRawValue( keyBuf + offset, elemType, elem );
+                    hr = FromRawValue( buf + offset, elemType, elem );
                     if ( FAILED( hr ) )
                         return hr;
 
@@ -692,18 +718,18 @@ namespace Mago
 
                 for ( uint32_t i = 0; i < key.Value.Array.Length; i++ )
                 {
-                    hash = hash * 11 + keyBuf[i];
+                    hash = hash * 11 + buf[i];
                 }
             }
             // TODO: There's a bug in druntime, where the length in elements is used as the size in bytes to hash
             //       merge the non-basic case into the basic one when it's fixed
             else if ( elemType->IsBasic() )
             {
-                hash = HashOf( keyBuf, size );
+                hash = HashOf( buf, size );
             }
             else
             {
-                hash = HashOf( keyBuf, (uint32_t) key.Value.Array.Length );
+                hash = HashOf( buf, (uint32_t) key.Value.Array.Length );
             }
         }
 
@@ -776,6 +802,7 @@ namespace Mago
         HRESULT         hr = S_OK;
         MagoEE::Type*   elemType = key._Type->AsTypeDArray()->GetElement();
         uint32_t        size = (uint32_t) nodeKey.Array.Length * elemType->GetSize();
+        const void*     buf = keyBuf;
 
         if ( nodeKey.Array.Length != key.Value.Array.Length )
             return false;
@@ -791,7 +818,26 @@ namespace Mago
         if ( FAILED( hr ) )
             return false;
 
-        return EqualArray( elemType, (uint32_t) nodeKey.Array.Length, keyBuf, inout_nodeArrayBuf );
+        if ( key.Value.Array.LiteralString != NULL )
+        {
+            switch ( key.Value.Array.LiteralString->Kind )
+            {
+            case MagoEE::StringKind_Byte:
+                buf = (uint8_t*) ((MagoEE::ByteString*) key.Value.Array.LiteralString)->Str;
+                break;
+            case MagoEE::StringKind_Utf16:
+                buf = (uint8_t*) ((MagoEE::Utf16String*) key.Value.Array.LiteralString)->Str;
+                break;
+            case MagoEE::StringKind_Utf32:
+                buf = (uint8_t*) ((MagoEE::Utf32String*) key.Value.Array.LiteralString)->Str;
+                break;
+            default:
+                _ASSERT( false );
+                return E_UNEXPECTED;
+            }
+        }
+
+        return EqualArray( elemType, (uint32_t) nodeKey.Array.Length, buf, inout_nodeArrayBuf );
     }
 
     bool ExprContext::EqualStruct(
