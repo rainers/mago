@@ -831,10 +831,11 @@ Done:
             break;
 
         case TOKstring:
+        case TOKcstring:
         case TOKwstring:
         case TOKdstring:
             // TODO: combine strings next to each other
-            e = new StringExpr( token->Utf16Str );
+            e = new StringExpr( token->Utf16Str, token->Code != TOKstring );
             NextToken();
             break;
 

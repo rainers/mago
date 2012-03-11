@@ -680,9 +680,11 @@ namespace MagoEE
     //  StringExpr
     //----------------------------------------------------------------------------
 
-    StringExpr::StringExpr( String* value )
-        :   Value( value )
+    StringExpr::StringExpr( String* value, bool isSpecificType )
+        :   Value( value ),
+            IsSpecificType( isSpecificType )
     {
+        _ASSERT( value != NULL );
     }
 
 
