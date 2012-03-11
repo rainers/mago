@@ -821,8 +821,9 @@ namespace MagoEE
     {
     public:
         String*     Value;
+        bool        IsSpecificType;
 
-        StringExpr( String* value );
+        StringExpr( String* value, bool isSpecificType );
         virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
     };

@@ -732,7 +732,6 @@ uint32_t HashOf( const void* buffer, uint32_t length )
     *   http://www.azillionmonkeys.com/qed/weblicense.html
     */
     _ASSERT( buffer != NULL );
-    _ASSERT( length != NULL );
 
     const uint8_t* data = (uint8_t*) buffer;
     int rem = 0;

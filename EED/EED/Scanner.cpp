@@ -1535,7 +1535,10 @@ namespace MagoEE
         {
             // when the string is a char[], it doesn't have to be UTF-8
             mTok.ByteStr = mNameTable->AddString( &buf.front(), buf.size() - 1 );
-            mTok.Code = TOKstring;
+            if ( postfix == L'c' )
+                mTok.Code = TOKcstring;
+            else
+                mTok.Code = TOKstring;
         }
         else if ( postfix == L'w' )
         {
@@ -1562,7 +1565,10 @@ namespace MagoEE
         {
             char*       astr = ConvertUtf16To8( str.c_str() );
             mTok.ByteStr = mNameTable->AddString( astr, strlen( astr ) );
-            mTok.Code = TOKstring;
+            if ( postfix == L'c' )
+                mTok.Code = TOKcstring;
+            else
+                mTok.Code = TOKstring;
             delete [] astr;
         }
         else if ( postfix == L'w' )

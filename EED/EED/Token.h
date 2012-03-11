@@ -98,7 +98,7 @@ enum TOK
     TOKthis,    TOKsuper,
     TOKhalt,    TOKtuple,
     TOKerror,
-    TOKwstring, TOKdstring,
+    TOKcstring, TOKwstring, TOKdstring,
 
     // Basic types
     TOKvoid,
