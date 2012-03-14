@@ -833,7 +833,7 @@ namespace Mago
                 break;
             default:
                 _ASSERT( false );
-                return E_UNEXPECTED;
+                return false;
             }
         }
 
