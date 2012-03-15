@@ -103,7 +103,7 @@ namespace MagoST
 
             mSections[i].RVA = secHeaders[i].VirtualAddress;
             mSections[i].Size = size;
-            strncpy_s( mSections[i].Name, (const char*) secHeaders[i].Name, sizeof( mSections[i].Name ) );
+            memcpy( mSections[i].Name, (const char*) secHeaders[i].Name, sizeof( mSections[i].Name ) );
         }
 
         return S_OK;

@@ -353,6 +353,8 @@ namespace MagoEE
             hr = TypeCheckAAKey( index->_Type, childType->AsTypeAArray()->GetIndex() );
             if ( FAILED( hr ) )
                 return hr;
+
+            index->TrySetType( childType->AsTypeAArray()->GetIndex() );
         }
         else if ( !index->_Type->IsIntegral() )
             return E_MAGOEE_BAD_INDEX;
@@ -1280,6 +1282,8 @@ namespace MagoEE
         hr = TypeCheckAAKey( Left->_Type, childType->AsTypeAArray()->GetIndex() );
         if ( FAILED( hr ) )
             return hr;
+
+        Left->TrySetType( childType->AsTypeAArray()->GetIndex() );
 
         hr = typeEnv->NewPointer( typeNext->GetNext(), _Type.Ref() );
         if ( FAILED( hr ) )
