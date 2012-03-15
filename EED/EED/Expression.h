@@ -10,6 +10,7 @@
 #include "Token.h"
 #include "Object.h"
 #include "Eval.h"
+#include "Strings.h"
 
 
 namespace MagoEE
@@ -819,6 +820,27 @@ namespace MagoEE
 
     class StringExpr : public Expression
     {
+        class AlternateStrings
+        {
+            Utf16String     mNewUtf16Str;
+            Utf32String     mNewUtf32Str;
+
+            boost::scoped_array<wchar_t>    mStrBuf16;
+            boost::scoped_array<dchar_t>    mStrBuf32;
+
+        public:
+            AlternateStrings();
+
+            Utf16String* GetUtf16String();
+            Utf32String* GetUtf32String();
+
+            HRESULT SetUtf16String( const char* utf8Str, int utf8Length );
+            HRESULT SetUtf32String( const char* utf8Str, int utf8Length );
+        };
+
+        ByteString* mUntypedStr;
+        std::auto_ptr<AlternateStrings> mAlternates;
+
     public:
         String*     Value;
         bool        IsSpecificType;
@@ -826,6 +848,7 @@ namespace MagoEE
         StringExpr( String* value, bool isSpecificType );
         virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
+        virtual bool TrySetType( Type* type );
     };
 
 

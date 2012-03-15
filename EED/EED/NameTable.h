@@ -7,37 +7,11 @@
 
 #pragma once
 
+#include "Strings.h"
+
 
 namespace MagoEE
 {
-    enum StringKind
-    {
-        StringKind_Byte,
-        StringKind_Utf16,
-        StringKind_Utf32
-    };
-
-    struct String
-    {
-        StringKind  Kind;
-        uint32_t    Length;
-    };
-
-    struct ByteString : public String
-    {
-        char*       Str;
-    };
-
-    struct Utf16String : public String
-    {
-        wchar_t*    Str;
-    };
-
-    struct Utf32String : public String
-    {
-        dchar_t*    Str;
-    };
-
     class NameTable
     {
     public:

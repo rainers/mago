@@ -682,9 +682,16 @@ namespace MagoEE
 
     StringExpr::StringExpr( String* value, bool isSpecificType )
         :   Value( value ),
-            IsSpecificType( isSpecificType )
+            IsSpecificType( isSpecificType ),
+            mUntypedStr( NULL )
     {
         _ASSERT( value != NULL );
+
+        if ( !isSpecificType )
+        {
+            _ASSERT( value->Kind == StringKind_Byte );
+            mUntypedStr = (ByteString*) value;
+        }
     }
 
 

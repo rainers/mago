@@ -248,6 +248,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Strings.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Type.cpp"
 				>
 			</File>
@@ -351,6 +355,10 @@
 			</File>
 			<File
 				RelativePath=".\SimpleNameTable.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Strings.h"
 				>
 			</File>
 			<File

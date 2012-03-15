@@ -33,6 +33,7 @@
 
 // Boost
 #include <boost/tr1/memory.hpp>
+#include <boost/scoped_array.hpp>
 
 // Windows
 #include <windows.h>
