@@ -1,0 +1,16 @@
+;
+;   Copyright (c) 2010 Aldo J. Nunez
+;
+;   Licensed under the Apache License, Version 2.0.
+;   See the LICENSE text file for details.
+;
+; MagoNatDE.def : Declares the module parameters.
+
+LIBRARY      "MagoNatDE.DLL"
+
+EXPORTS
+	DllCanUnloadNow		PRIVATE
+	DllGetClassObject	PRIVATE
+	DllRegisterServer	PRIVATE
+	DllUnregisterServer	PRIVATE
+	DllInstall		PRIVATE
