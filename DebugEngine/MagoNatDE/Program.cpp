@@ -665,4 +665,15 @@ namespace Mago
                 break;
         }
     }
+
+
+    HRESULT Program::SetInternalBreakpoint( Address address, BPCookie cookie )
+    {
+        return mDebugger->SetBreakpoint( mCoreProc, address, cookie );
+    }
+
+    HRESULT Program::RemoveInternalBreakpoint( Address address, BPCookie cookie )
+    {
+        return mDebugger->RemoveBreakpoint( mCoreProc, address, cookie );
+    }
 }

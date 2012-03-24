@@ -26,11 +26,15 @@ typedef CComEnumWithCount<
 > EnumDebugBoundBreakpoints;
 
 
+const BPCookie EntryPointCookie = 1;
+
+
 namespace Mago
 {
     EventCallback::EventCallback( Engine* engine )
         :   mRefCount( 0 ),
-            mEngine( engine )
+            mEngine( engine ),
+            mEntryPoint( 0 )
     {
     }
 
@@ -278,6 +282,50 @@ namespace Mago
         hr = SendEvent( event.Get(), prog.Get(), NULL );
     }
 
+    // find the entry point that the user defined in their program
+
+    bool FindUserEntryPoint( Module* mainMod, Address& entryPoint )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<MagoST::ISession> session;
+
+        if ( !mainMod->GetSymbolSession( session ) )
+            return false;
+
+        MagoST::EnumNamedSymbolsData enumData = { 0 };
+
+        hr = session->FindFirstSymbol( MagoST::SymHeap_GlobalSymbols, "D main", 6, enumData );
+        if ( hr != S_OK )
+            return false;
+
+        MagoST::SymHandle handle;
+
+        hr = session->GetCurrentSymbol( enumData, handle );
+        if ( FAILED( hr ) )
+            return false;
+
+        MagoST::SymInfoData infoData = { 0 };
+        MagoST::ISymbolInfo* symInfo = NULL;
+
+        hr = session->GetSymbolInfo( handle, infoData, symInfo );
+        if ( FAILED( hr ) )
+            return false;
+
+        uint16_t section = 0;
+        uint32_t offset = 0;
+
+        if ( !symInfo->GetAddressSegment( section ) 
+            || !symInfo->GetAddressOffset( offset ) )
+            return false;
+
+        uint64_t addr = session->GetVAFromSecOffset( section, offset );
+        if ( addr == 0 )
+            return false;
+
+        entryPoint = (Address) addr;
+        return true;
+    }
+
     void EventCallback::OnLoadComplete( IProcess* process, DWORD threadId )
     {
         OutputDebugStringA( "EventCallback::OnLoadComplete\n" );
@@ -298,6 +346,27 @@ namespace Mago
             return;
 
         hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
+
+        IProcess*   coreProc = prog->GetCoreProcess();
+
+        mEntryPoint = coreProc->GetEntryPoint();
+
+        if ( mEntryPoint != 0 )
+        {
+            RefPtr<Module> mod;
+
+            if ( prog->FindModuleContainingAddress( mEntryPoint, mod ) )
+            {
+                Address userEntryPoint = 0;
+                if ( FindUserEntryPoint( mod, userEntryPoint ) )
+                    mEntryPoint = userEntryPoint;
+            }
+
+            hr = prog->SetInternalBreakpoint( mEntryPoint, EntryPointCookie );
+            // if we couldn't set the BP, then don't expect it later
+            if ( FAILED( hr ) )
+                mEntryPoint = 0;
+        }
     }
 
     bool EventCallback::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
@@ -377,15 +446,86 @@ namespace Mago
         }
     }
 
+    bool EventCallback::OnBreakpointInternal( Program* prog, Thread* thread, Address address, Enumerator< BPCookie >* iter )
+    {
+        HRESULT     hr = S_OK;
+        int         stoppingBPs = 0;
+
+        while ( iter->MoveNext() )
+        {
+            if ( iter->GetCurrent() != EntryPointCookie )
+            {
+                stoppingBPs++;
+            }
+        }
+
+        iter->Reset();
+
+        if ( stoppingBPs > 0 )
+        {
+            RefPtr<BreakpointEvent>     event;
+            CComPtr<IEnumDebugBoundBreakpoints2>    enumBPs;
+
+            hr = MakeCComObject( event );
+            if ( FAILED( hr ) )
+                return true;
+
+            InterfaceArray<IDebugBoundBreakpoint2>  array( stoppingBPs );
+
+            if ( array.Get() == NULL )
+                return true;
+
+            int i = 0;
+            while ( iter->MoveNext() )
+            {
+                if ( iter->GetCurrent() != EntryPointCookie )
+                {
+                    IDebugBoundBreakpoint2* bp = (IDebugBoundBreakpoint2*) iter->GetCurrent();
+
+                    _ASSERT( i < stoppingBPs );
+                    array[i] = bp;
+                    array[i]->AddRef();
+                    i++;
+                }
+            }
+
+            hr = MakeEnumWithCount<EnumDebugBoundBreakpoints>( array, &enumBPs );
+            if ( FAILED( hr ) )
+                return true;
+
+            event->Init( enumBPs );
+
+            hr = SendEvent( event, prog, thread );
+            if ( FAILED( hr ) )
+                return true;
+
+            return false;
+        }
+        else if ( (mEntryPoint != 0) && (address == mEntryPoint) )
+        {
+            RefPtr<EntryPointEvent> entryPointEvent;
+
+            hr = MakeCComObject( entryPointEvent );
+            if ( FAILED( hr ) )
+                return true;
+
+            hr = SendEvent( entryPointEvent, prog, thread );
+            if ( FAILED( hr ) )
+                return true;
+
+            return false;
+        }
+
+        return true;
+    }
+
     void EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
     {
         OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
 
-        HRESULT     hr = S_OK;
-        RefPtr<BreakpointEvent>     event;
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
-        CComPtr<IEnumDebugBoundBreakpoints2>    enumBPs;
+        bool        stopped = false;
 
         if ( !mEngine->FindProgram( process->GetId(), prog ) )
             return;
@@ -393,30 +533,20 @@ namespace Mago
         if ( !prog->FindThread( threadId, thread ) )
             return;
 
-        hr = MakeCComObject( event );
-        if ( FAILED( hr ) )
-            return;
+        stopped = !OnBreakpointInternal( prog, thread, address, iter );
 
-        InterfaceArray<IDebugBoundBreakpoint2>  array( iter->GetCount() );
+        // If we stopped because of a regular BP before reaching the entry point, 
+        // then we shouldn't stop at the entry point
 
-        if ( array.Get() == NULL )
-            return;
+        // Test if we're at the entrypoint, in addition to whether we stopped, because 
+        // we could have decided to keep going even though we're at the entry point
 
-        for ( int i = 0; iter->MoveNext(); i++ )
+        if ( (mEntryPoint != 0) && (stopped || (address == mEntryPoint)) )
         {
-            IDebugBoundBreakpoint2* bp = (IDebugBoundBreakpoint2*) iter->GetCurrent();
+            prog->RemoveInternalBreakpoint( mEntryPoint, EntryPointCookie );
 
-            array[i] = bp;
-            array[i]->AddRef();
+            mEntryPoint = 0;
         }
-
-        hr = MakeEnumWithCount<EnumDebugBoundBreakpoints>( array, &enumBPs );
-        if ( FAILED( hr ) )
-            return;
-
-        event->Init( enumBPs );
-
-        hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
     void EventCallback::OnStepComplete( IProcess* process, uint32_t threadId )

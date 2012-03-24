@@ -280,6 +280,7 @@ HRESULT Exec::DispatchEvent()
                 goto Error;
 
             proc->AddThread( thread.Get() );
+            proc->SetEntryPoint( (Address) mLastEvent.u.CreateProcessInfo.lpStartAddress );
 
             // TODO: here we can customize the machine (ask for the right one based on module)
             mMachine->SetProcess( proc->GetHandle(), proc->GetId(), proc );

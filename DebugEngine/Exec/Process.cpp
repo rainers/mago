@@ -19,6 +19,7 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     mhSuspendedThread( NULL ),
     mId( id ),
     mExePath( exePath ),
+    mEntryPoint( 0 ),
     mMachine( NULL ),
     mReachedLoaderBp( false ),
     mTerminating( false ),
@@ -84,6 +85,16 @@ uint32_t Process::GetId()
 const wchar_t*  Process::GetExePath()
 {
     return mExePath.c_str();
+}
+
+Address Process::GetEntryPoint()
+{
+    return mEntryPoint;
+}
+
+void Process::SetEntryPoint( Address entryPoint )
+{
+    mEntryPoint = entryPoint;
 }
 
 HANDLE Process::GetLaunchedSuspendedThread()
