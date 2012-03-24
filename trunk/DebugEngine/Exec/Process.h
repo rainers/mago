@@ -21,6 +21,7 @@ class Process : public IProcess
     HANDLE          mhSuspendedThread;
     uint32_t        mId;
     std::wstring    mExePath;
+    Address         mEntryPoint;
     IMachine*       mMachine;
 
     bool            mReachedLoaderBp;
@@ -41,6 +42,8 @@ public:
     HANDLE          GetHandle();
     uint32_t        GetId();
     const wchar_t*  GetExePath();
+    Address         GetEntryPoint();
+    void            SetEntryPoint( Address entryPoint );
     HANDLE          GetLaunchedSuspendedThread();
     void            SetLaunchedSuspendedThread( HANDLE hThread );
 

@@ -119,6 +119,9 @@ namespace Mago
 
         void        ForeachModule( ModuleCallback* callback );
 
+        HRESULT     SetInternalBreakpoint( Address address, BPCookie cookie );
+        HRESULT     RemoveInternalBreakpoint( Address address, BPCookie cookie );
+
     private:
         HRESULT     StepInternal( IDebugThread2* pThread, STEPKIND sk, STEPUNIT step );
 

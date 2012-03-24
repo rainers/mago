@@ -32,6 +32,7 @@ public:
     virtual HANDLE          GetHandle() = 0;
     virtual uint32_t        GetId() = 0;
     virtual const wchar_t*  GetExePath() = 0;
+    virtual Address         GetEntryPoint() = 0;
     virtual HANDLE          GetLaunchedSuspendedThread() = 0;
     virtual void            SetLaunchedSuspendedThread( HANDLE hThread ) = 0;
     

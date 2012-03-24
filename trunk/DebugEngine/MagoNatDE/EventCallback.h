@@ -21,6 +21,7 @@ namespace Mago
         long    mRefCount;
 
         RefPtr<Engine>          mEngine;
+        Address                 mEntryPoint;
 
     public:
         EventCallback( Engine* engine );
@@ -46,5 +47,8 @@ namespace Mago
 
     private:
         HRESULT SendEvent( EventBase* eventBase, Program* program, Thread* thread );
+
+        // return whether the debuggee should continue
+        bool OnBreakpointInternal( Program* program, Thread* thread, Address address, Enumerator< BPCookie >* iter );
     };
 }
