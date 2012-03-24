@@ -519,7 +519,7 @@ namespace Mago
         return true;
     }
 
-    void EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+    bool EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
     {
         OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
 
@@ -528,10 +528,10 @@ namespace Mago
         bool        stopped = false;
 
         if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return;
+            return true;
 
         if ( !prog->FindThread( threadId, thread ) )
-            return;
+            return true;
 
         stopped = !OnBreakpointInternal( prog, thread, address, iter );
 
@@ -547,6 +547,8 @@ namespace Mago
 
             mEntryPoint = 0;
         }
+
+        return !stopped;
     }
 
     void EventCallback::OnStepComplete( IProcess* process, uint32_t threadId )

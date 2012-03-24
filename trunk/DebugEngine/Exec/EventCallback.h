@@ -46,7 +46,7 @@ public:
 
     // Returns true to continue onto run mode, false to stay in break mode.
     virtual bool OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec ) = 0;
-    virtual void OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter ) = 0;
+    virtual bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter ) = 0;
     virtual void OnStepComplete( IProcess* process, uint32_t threadId ) = 0;
     virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId ) = 0;
     virtual void OnError( IProcess* process, HRESULT hrErr, EventCode event ) = 0;

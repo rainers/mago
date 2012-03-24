@@ -927,8 +927,10 @@ HRESULT    MachineX86Base::DispatchBreakpoint( Breakpoint* bp, MachineResult& re
             bp->GetHighPriCookies().end(), 
             bp->GetHighPriCookies().size() );
 
-        mCallback->OnBreakpoint( mProcess, mStoppedThreadId, bp->GetAddress(), &en );
-        result = MacRes_HandledStopped;
+        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, bp->GetAddress(), &en ) )
+            result = MacRes_HandledContinue;
+        else
+            result = MacRes_HandledStopped;
     }
 
     if ( bp->GetLowPriCookies().size() > 0 )
