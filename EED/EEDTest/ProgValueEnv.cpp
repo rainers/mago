@@ -59,11 +59,12 @@ public:
         return true;
     }
 
-    void OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+    bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
     {
         mLastThreadId = threadId;
         mBPHit = true;
         mBPCookie = iter->GetCurrent();
+        return false;
     }
 };
 

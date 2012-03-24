@@ -147,7 +147,7 @@ public:
         return false;
     }
 
-    virtual void OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
+    virtual bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  breakpoint at %p\n", address );
@@ -169,6 +169,8 @@ public:
         //mExec->SetBreakpoint( process, baseAddr + 0x0001137A, (void*) 257 );
         //mExec->RemoveBreakpoint( process, baseAddr + 0x00011395, (void*) 129 );
         //mExec->SetBreakpoint( process, baseAddr + 0x00011395, (void*) 129 );
+
+        return false;
     }
 
     virtual void OnStepComplete( IProcess* process, uint32_t threadId )

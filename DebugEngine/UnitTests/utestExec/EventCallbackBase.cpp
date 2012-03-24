@@ -268,7 +268,7 @@ bool EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool fir
     return false;
 }
 
-void EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+bool EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
 {
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
@@ -284,6 +284,7 @@ void EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Addr
         
         TrackEvent( node );
     }
+    return false;
 }
 
 void EventCallbackBase::OnStepComplete( IProcess* process, uint32_t threadId )
