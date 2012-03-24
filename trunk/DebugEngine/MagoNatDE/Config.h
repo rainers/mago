@@ -22,8 +22,10 @@ const wchar_t* GetRootWin32ExceptionName();
 enum StringIds
 {
     IDS_NONE,
+
     IDS_NO_SYMS_FOR_DOC,
     IDS_NO_CODE_FOR_LINE,
+    IDS_INVALID_ADDRESS,
 
     IDS_REGGROUP_CPU,
     IDS_REGGROUP_CPU_SEGMENTS,

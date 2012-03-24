@@ -243,8 +243,6 @@ namespace Mago
 
     void BPBinderCallback::AddBoundBP( UINT64 address, Module* mod, ModuleBinding* binding )
     {
-        _ASSERT( mDocContextInterface != NULL );
-
         HRESULT hr = S_OK;
         RefPtr<CodeContext>             code;
         RefPtr<BreakpointResolution>    res;
