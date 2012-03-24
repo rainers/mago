@@ -9,10 +9,15 @@
 #include "BPBinders.h"
 #include "BpResolutionLocation.h"
 #include "Module.h"
+#include "CodeContext.h"
 
 
 namespace Mago
 {
+    //----------------------------------------------------------------------------
+    //  BPCodeFileLineBinder
+    //----------------------------------------------------------------------------
+
     BPCodeFileLineBinder::BPCodeFileLineBinder(
         IDebugBreakpointRequest2* request )
         :   mReqLineStart( 0 ),
@@ -26,6 +31,8 @@ namespace Mago
         TEXT_POSITION   posEnd = { 0 };
 
         hr = request->GetRequestInfo( BPREQI_BPLOCATION, &reqInfo );
+
+        _ASSERT( reqInfo.bpLocation.bpLocationType == BPLT_CODE_FILE_LINE );
 
         reqInfo.bpLocation.bpLocation.bplocCodeFileLine.pDocPos->GetFileName( &mFilename );
         reqInfo.bpLocation.bpLocation.bplocCodeFileLine.pDocPos->GetRange( &posBegin, &posEnd );
@@ -55,7 +62,14 @@ namespace Mago
             BindToFile( false, u8FileName, u8FileNameLen, mod, binding, maker, err );
     }
 
-    bool BPCodeFileLineBinder::BindToFile( bool exactMatch, const char* fileName, size_t fileNameLen, Module* mod, ModuleBinding* binding, BPBoundBPMaker* maker, Error& err )
+    bool BPCodeFileLineBinder::BindToFile( 
+        bool exactMatch, 
+        const char* fileName, 
+        size_t fileNameLen, 
+        Module* mod, 
+        ModuleBinding* binding, 
+        BPBoundBPMaker* maker, 
+        Error& err )
     {
         HRESULT                     hr = S_OK;
         RefPtr<MagoST::ISession>    session;
@@ -129,5 +143,53 @@ namespace Mago
     void BPCodeFileLineBinder::PutLineError( Error& err )
     {
         err.PutError( BPET_TYPE_WARNING, BPET_SEV_GENERAL, IDS_NO_CODE_FOR_LINE );
+    }
+
+
+    //----------------------------------------------------------------------------
+    //  BPCodeAddressBinder
+    //----------------------------------------------------------------------------
+
+    BPCodeAddressBinder::BPCodeAddressBinder( IDebugBreakpointRequest2* request )
+        :   mAddress( 0 )
+    {
+        _ASSERT( request != NULL );
+
+        HRESULT             hr = S_OK;
+        BpRequestInfo       reqInfo;
+
+        hr = request->GetRequestInfo( BPREQI_BPLOCATION, &reqInfo );
+
+        _ASSERT( reqInfo.bpLocation.bpLocationType == BPLT_CODE_ADDRESS 
+            || reqInfo.bpLocation.bpLocationType == BPLT_CODE_CONTEXT );
+
+        if ( reqInfo.bpLocation.bpLocationType == BPLT_CODE_ADDRESS )
+        {
+            // will return 0 on error, which is a good invalid address
+            uint64_t addr = _wcstoui64( reqInfo.bpLocation.bpLocation.bplocCodeAddress.bstrAddress, NULL, 0 );
+
+            if ( addr <= std::numeric_limits<Address>::max() )
+                mAddress = (Address) addr;
+        }
+        else
+        {
+            CComPtr<IMagoMemoryContext> memContext;
+
+            hr = reqInfo.bpLocation.bpLocation.bplocCodeContext.pCodeContext->QueryInterface( &memContext );
+            if ( SUCCEEDED( hr ) )
+                memContext->GetAddress( mAddress );
+        }
+    }
+
+    void BPCodeAddressBinder::Bind( Module* mod, ModuleBinding* binding, BPBoundBPMaker* maker, Error& err )
+    {
+        if ( (mAddress != 0) && mod->Contains( mAddress ) )
+        {
+            maker->AddBoundBP( mAddress, mod, binding );
+        }
+        else
+        {
+            err.PutError( BPET_TYPE_ERROR, BPET_SEV_GENERAL, IDS_INVALID_ADDRESS );
+        }
     }
 }

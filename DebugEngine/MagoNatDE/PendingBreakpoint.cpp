@@ -351,6 +351,33 @@ namespace Mago
         return cmd.OutHResult;
     }
 
+    HRESULT MakeBinder( IDebugBreakpointRequest2* bpRequest, auto_ptr<BPBinder>& binder )
+    {
+        BP_LOCATION_TYPE    locType = 0;
+
+        bpRequest->GetLocationType( &locType );
+
+        if ( locType == BPLT_CODE_FILE_LINE )
+        {
+            binder.reset( new BPCodeFileLineBinder( bpRequest ) );
+        }
+        else if ( locType == BPLT_CODE_ADDRESS )
+        {
+            binder.reset( new BPCodeAddressBinder( bpRequest ) );
+        }
+        else if ( locType == BPLT_CODE_CONTEXT )
+        {
+            binder.reset( new BPCodeAddressBinder( bpRequest ) );
+        }
+        else
+            return E_FAIL;
+
+        if ( binder.get() == NULL )
+            return E_OUTOFMEMORY;
+
+        return S_OK;
+    }
+
     // The job of Bind:
     // - Generate bound or error breakpoints
     // - Establish the document context
@@ -368,19 +395,9 @@ namespace Mago
         BpRequestInfo           reqInfo;
         auto_ptr<BPBinder>      binder;
 
-        hr = mBPRequest->GetRequestInfo( BPREQI_BPLOCATION, &reqInfo );
+        hr = MakeBinder( mBPRequest, binder );
         if ( FAILED( hr ) )
             return hr;
-
-        if ( reqInfo.bpLocation.bpLocationType == BPLT_CODE_FILE_LINE )
-        {
-            binder.reset( new BPCodeFileLineBinder( mBPRequest ) );
-        }
-        else
-            return E_FAIL;
-
-        if ( binder.get() == NULL )
-            return E_OUTOFMEMORY;
 
         // generate bound and error breakpoints
         BPBinderCallback        callback( binder.get(), this, mDocContext.Get(), mDebugger );
@@ -456,19 +473,9 @@ namespace Mago
         BpRequestInfo           reqInfo;
         auto_ptr<BPBinder>      binder;
 
-        hr = mBPRequest->GetRequestInfo( BPREQI_BPLOCATION, &reqInfo );
+        hr = MakeBinder( mBPRequest, binder );
         if ( FAILED( hr ) )
             return hr;
-
-        if ( reqInfo.bpLocation.bpLocationType == BPLT_CODE_FILE_LINE )
-        {
-            binder.reset( new BPCodeFileLineBinder( mBPRequest ) );
-        }
-        else
-            return E_FAIL;
-
-        if ( binder.get() == NULL )
-            return E_OUTOFMEMORY;
 
         // generate bound and error breakpoints
         BPBinderCallback        callback( binder.get(), this, mDocContext.Get(), mDebugger );

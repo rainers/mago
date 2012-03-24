@@ -24,6 +24,7 @@ static const wchar_t*   gStrings[] =
 
     L"No symbols have been loaded for this document.",
     L"No executable code is associated with this line.",
+    L"This is an invalid address.",
 
     L"CPU",
     L"CPU Segments",

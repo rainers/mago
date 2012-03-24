@@ -261,7 +261,10 @@ namespace Mago
         {
             BpRequestInfo   reqInfo;
             pBPRequest->GetRequestInfo( BPREQI_BPLOCATION, &reqInfo );
-            if ( reqInfo.bpLocation.bpLocationType != BPLT_CODE_FILE_LINE )
+
+            if ( (reqInfo.bpLocation.bpLocationType != BPLT_CODE_FILE_LINE)
+                && (reqInfo.bpLocation.bpLocationType != BPLT_CODE_ADDRESS)
+                && (reqInfo.bpLocation.bpLocationType != BPLT_CODE_CONTEXT) )
                 return E_FAIL;
         }
 

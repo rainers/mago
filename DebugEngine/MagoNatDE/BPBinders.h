@@ -29,4 +29,15 @@ namespace Mago
 
         bool BindToFile( bool exactMatch, const char* fileName, size_t fileNameLen, Module* mod, ModuleBinding* binding, BPBoundBPMaker* maker, Error& err );
     };
+
+
+    class BPCodeAddressBinder : public BPBinder
+    {
+        Address     mAddress;
+
+    public:
+        BPCodeAddressBinder( IDebugBreakpointRequest2* request );
+
+        virtual void Bind( Module* mod, ModuleBinding* binding, BPBoundBPMaker* maker, Error& err );
+    };
 }
