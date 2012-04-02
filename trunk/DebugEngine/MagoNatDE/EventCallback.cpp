@@ -501,6 +501,22 @@ namespace Mago
 
             return false;
         }
+        else if ( iter->GetCount() == 0 )
+        {
+            RefPtr<EmbeddedBreakpointEvent> event;
+
+            hr = MakeCComObject( event );
+            if ( FAILED( hr ) )
+                return true;
+
+            event->Init( prog );
+
+            hr = SendEvent( event, prog, thread );
+            if ( FAILED( hr ) )
+                return true;
+
+            return false;
+        }
         else if ( (mEntryPoint != 0) && (address == mEntryPoint) )
         {
             RefPtr<EntryPointEvent> entryPointEvent;
