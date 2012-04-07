@@ -1,0 +1,103 @@
+﻿<!--
+   Copyright (c) 2010 Aldo J. Nunez
+
+   Licensed under the Apache License, Version 2.0.
+   See the LICENSE text file for details.
+-->
+
+<!--
+<stdproperty name="sizeof">
+	<basictype name="ubyte"/>
+</stdproperty>
+-->
+<!--
+<id name="alphaInt"/>
+-->
+<!--
+<id name="betaConstUInt"/>
+-->
+
+<!--
+<member name="t">
+	<id name="gammaS"/>
+</member>
+-->
+
+<!--
+<member name="f">
+	<member name="t">
+		<id name="gammaS"/>
+	</member>
+</member>
+-->
+
+<!--
+<index>
+	<id name="epsilonArray"/>
+	<intvalue value="2"/>
+</index>
+-->
+
+<!--
+<address>
+	<member name="g">
+		<member name="t">
+			<id name="gammaS"/>
+		</member>
+	</member>
+</address>
+-->
+
+<!--
+<address>
+	<index>
+		<id name="epsilonArray"/>
+		<intvalue value="2"/>
+	</index>
+</address>
+-->
+
+<!--
+<pointer>
+<group>
+<ptradd>
+	<address>
+		<member name="f">
+			<member name="t">
+				<id name="gammaS"/>
+			</member>
+		</member>
+	</address>
+	<intvalue value="3"/>
+</ptradd>
+</group>
+</pointer>
+-->
+
+<!-- *(cast(uint*) ((cast(byte*) &gamma.t.f) + 0)) -->
+<pointer>
+	<group>
+	<cast>
+		<pointertype>
+			<basictype name="uint"/>
+		</pointertype>
+		<group>
+		<ptradd>
+			<cast>
+				<pointertype>
+					<basictype name="byte"/>
+				</pointertype>
+				<address>
+					<member name="f">
+						<member name="t">
+							<id name="gammaS"/>
+						</member>
+					</member>
+				</address>
+			</cast>
+			<intvalue value="0"/>
+		</ptradd>
+		</group>
+	</cast>
+	</group>
+</pointer>
