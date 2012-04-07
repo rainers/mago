@@ -36,8 +36,6 @@ static const wchar_t*   gStrings[] =
 
     L"Line",
     L"bytes",
-
-    L"%1$s has triggered a breakpoint.",
 };
 
 

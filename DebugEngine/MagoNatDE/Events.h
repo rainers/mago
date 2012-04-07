@@ -257,22 +257,6 @@ namespace Mago
         void SetExceptionName( LPCOLESTR name );
     };
 
-    class EmbeddedBreakpointEvent : public EventImpl<IDebugExceptionEvent2, EVENT_ASYNC_STOP>
-    {
-    private:
-        RefPtr<Program>         mProg;
-        CComBSTR                mExceptionName;
-
-    public:
-        EmbeddedBreakpointEvent();
-        void Init( Program* prog );
-
-        STDMETHOD( GetException )( EXCEPTION_INFO* pExceptionInfo );
-        STDMETHOD( GetExceptionDescription )( BSTR* pbstrDescription );
-        STDMETHOD( CanPassToDebuggee )();
-        STDMETHOD( PassToDebuggee )( BOOL fPass );
-    };
-
     class MessageTextEvent : public EventImpl<IDebugMessageEvent2>
     {
         MESSAGETYPE     mMessageType;

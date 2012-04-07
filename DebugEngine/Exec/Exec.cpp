@@ -208,9 +208,7 @@ HRESULT Exec::ContinueDebug( bool handleException )
             goto Error;
     }
 
-    // always treat the SS exception as a step complete
-    // always treat the BP exception as a user BP, instead of an exception
-
+    // TODO: what if the BP and SS weren't used by debugger, and were embedded?
     if ( mLastEvent.dwDebugEventCode == EXCEPTION_DEBUG_EVENT 
         && ((mLastEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT)
         || (mLastEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_SINGLE_STEP)) )

@@ -37,8 +37,6 @@ enum StringIds
 
     IDS_LINE,
     IDS_BYTES,
-
-    IDS_BP_TRIGGERED,
 };
 
 const wchar_t* GetString( DWORD strId );

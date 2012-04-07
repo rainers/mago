@@ -511,18 +511,16 @@ HRESULT MachineX86Base::UnpatchBreakpoint( Breakpoint* bp )
     BOOL    bRet = FALSE;
     uint8_t origData = bp->GetOriginalInstructionByte();
     SIZE_T  bytesWritten = 0;
-    void*   address = (void*) bp->GetAddress();
 
     // looks like we don't have to worry about memory protection; VS doesn't
     // As a debugger, the only thing we can't write to is PAGE_NOACCESS.
-    bRet = ::WriteProcessMemory( mhProcess, address, &origData, 1, &bytesWritten );
+    bRet = ::WriteProcessMemory( mhProcess, (void*) bp->GetAddress(), &origData, 1, &bytesWritten );
     if ( !bRet )
     {
         hr = GetLastHr();
         goto Error;
     }
 
-    ::FlushInstructionCache( mhProcess, address, 1 );
     bp->SetPatched( false );
 
 Error:
@@ -902,15 +900,6 @@ HRESULT MachineX86Base::DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRe
 
         if ( result == MacRes_HandledStopped )
             result = MacRes_HandledContinue;
-    }
-
-    // always treat the SS exception as a step complete, instead of an exception
-    // even if the user wasn't stepping
-
-    if ( result == MacRes_NotHandled )
-    {
-        mCallback->OnStepComplete( mProcess, mStoppedThreadId );
-        result = MacRes_HandledStopped;
     }
 
     return hr;
