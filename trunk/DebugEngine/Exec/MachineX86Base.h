@@ -23,6 +23,7 @@ class IStepper;
 class IStepperMachine
 {
 public:
+    virtual ThreadX86Base* GetStoppedThread() = 0;
     virtual HRESULT SetStepperSingleStep( bool enable ) = 0;
     virtual HRESULT SetStepperBreakpoint( MachineAddress address, BPCookie cookie ) = 0;
     virtual HRESULT RemoveStepperBreakpoint( MachineAddress address, BPCookie cookie ) = 0;
@@ -112,7 +113,7 @@ public:
     virtual void    OnDestroyProcess();
 
 protected:
-    virtual HRESULT Rewind( uint32_t threadId, uint32_t byteCount ) = 0;
+    virtual HRESULT ChangeCurrentPC( uint32_t threadId, int32_t byteOffset ) = 0;
     virtual HRESULT SetSingleStep( uint32_t threadId, bool enable ) = 0;
     virtual HRESULT GetCurrentPC( uint32_t threadId, MachineAddress& address ) = 0;
 
@@ -122,6 +123,7 @@ protected:
     bool    Stopped();
 
     // IStepperMachine
+    virtual ThreadX86Base* GetStoppedThread();
     virtual HRESULT SetStepperSingleStep( bool enable );
     virtual HRESULT SetStepperBreakpoint( MachineAddress address, BPCookie cookie );
     virtual HRESULT RemoveStepperBreakpoint( MachineAddress address, BPCookie cookie );
@@ -147,7 +149,7 @@ private:
     void UnlockBreakpoint( Breakpoint* bp );
 
     HRESULT DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRec, MachineResult& result );
-    HRESULT DispatchBreakpoint( Breakpoint* bp, MachineResult& result );
+    HRESULT DispatchBreakpoint( MachineAddress address, bool embedded, Breakpoint* bp, MachineResult& result );
 
     HRESULT PatchBreakpoint( Breakpoint* bp );
     HRESULT UnpatchBreakpoint( Breakpoint* bp );
@@ -155,8 +157,12 @@ private:
     HRESULT SuspendProcess( Enumerator< Thread* >*  threads );
     HRESULT ResumeProcess( Enumerator< Thread* >*  threads );
 
+    HRESULT Rewind();
+    HRESULT SkipBPOnResume();
+    bool AtEmbeddedBP( MachineAddress pc );
+
     HRESULT RestoreBPEnvironment();
-    HRESULT SetupRestoreBPEnvironment( Breakpoint* bp );
+    HRESULT SetupRestoreBPEnvironment( Breakpoint* bp, MachineAddress pc );
     bool    ShouldIsolateBPRestoringThread( uint32_t threadId, Breakpoint* bp );
     HRESULT IsolateBPRestoringThread();
     HRESULT UnisolateBPRestoringThread();

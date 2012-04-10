@@ -21,6 +21,7 @@ enum InstructionType
     Inst_Call,
     Inst_RepString,
     Inst_Jmp,
+    Inst_Breakpoint,
 };
 
 

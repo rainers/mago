@@ -158,6 +158,11 @@ InstructionType GetInstructionTypeAndSize( uint8_t* mem, int memLen, CpuSizeMode
 
     switch ( mem[0] )
     {
+    case 0xCC:
+        instSize = 1;
+        type = Inst_Breakpoint;
+        break;
+
         // call instructions
     case 0xE8:
         if ( prefixes.Pre32.OperandSize && (mode == Cpu_32) )

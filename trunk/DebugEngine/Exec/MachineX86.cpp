@@ -26,7 +26,7 @@ HRESULT MakeMachineX86( IMachine*& machine )
     return S_OK;
 }
 
-HRESULT MachineX86::Rewind( uint32_t threadId, uint32_t byteCount )
+HRESULT MachineX86::ChangeCurrentPC( uint32_t threadId, int32_t byteOffset )
 {
     HRESULT hr = S_OK;
     BOOL    bRet = FALSE;
@@ -60,7 +60,7 @@ HRESULT MachineX86::Rewind( uint32_t threadId, uint32_t byteCount )
         goto Error;
     }
 
-    context.Eip -= byteCount;
+    context.Eip += byteOffset;
 
 #ifdef _WIN64
     bRet = Wow64SetThreadContext( hThread, &context );
