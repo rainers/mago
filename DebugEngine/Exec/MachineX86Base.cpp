@@ -436,32 +436,6 @@ Error:
     return hr;
 }
 
-void MachineX86Base::LockBreakpoint( Breakpoint* bp )
-{
-    bp->Lock();
-}
-
-void MachineX86Base::UnlockBreakpoint( Breakpoint* bp )
-{
-    bp->Unlock();
-
-    if ( bp->IsLocked() )
-        return;
-    if ( bp->IsActive() )
-        return;
-
-    BPAddressTable::iterator    it = mAddrTable->find( bp->GetAddress() );
-
-    if ( it == mAddrTable->end() )
-        return;
-
-    // not active, but still in table, so get rid of it
-
-    mAddrTable->erase( it );
-
-    bp->Release();
-}
-
 HRESULT MachineX86Base::PatchBreakpoint( Breakpoint* bp )
 {
     _ASSERT( bp != NULL );
@@ -638,16 +612,22 @@ HRESULT MachineX86Base::OnException( uint32_t threadId, const EXCEPTION_DEBUG_IN
     }
 
     BPAddressTable::iterator    it = mAddrTable->find( mExceptAddr );
+    bool                        embedded = false;
+    RefPtr<Breakpoint>          bp;
 
     if ( it == mAddrTable->end() )
     {
-        result = MacRes_NotHandled;
-        return S_OK;
+        // this is an embedded breakpoint only
+        embedded = true;
+    }
+    else
+    {
+        bp = it->second;
+        if ( bp->GetOriginalInstructionByte() == BreakpointInstruction )
+            embedded = true;
     }
 
-    RefPtr<Breakpoint>  bp = it->second;
-
-    return DispatchBreakpoint( bp.Get(), result );
+    return DispatchBreakpoint( mExceptAddr, embedded, bp, result );
 }
 
 HRESULT MachineX86Base::RestoreBPEnvironment()
@@ -711,7 +691,7 @@ HRESULT MachineX86Base::OnContinue()
 
     hr = GetCurrentPC( mStoppedThreadId, pc );
     if ( hr == E_ACCESSDENIED )
-        // TODO: should we do this for all errors or only access denied?
+        // the thread already died, move along
         return S_OK;
     if ( FAILED( hr ) )
         return hr;
@@ -719,11 +699,31 @@ HRESULT MachineX86Base::OnContinue()
     BPAddressTable::iterator    it = mAddrTable->find( pc );
 
     if ( it == mAddrTable->end() )
+    {
+        // at an embedded BP only
+        if ( AtEmbeddedBP( pc ) 
+            && ((mCurThread->GetStepper() == NULL) || mCurThread->GetStepper()->CanSkipEmbeddedBP()) )
+        {
+            SkipBPOnResume();
+        }
         return S_OK;
+    }
 
     // we're continuing from a breakpoint we own
 
     Breakpoint* bp = it->second;
+
+    if ( bp->GetOriginalInstructionByte() == BreakpointInstruction )
+    {
+        if ( (mCurThread->GetStepper() == NULL) || mCurThread->GetStepper()->CanSkipEmbeddedBP() )
+        {
+            SkipBPOnResume();
+            return S_OK;
+        }
+    }
+
+    if ( bp->GetHighPriCookies().size() == 0 )
+        return S_OK;
 
     hr = UnpatchBreakpoint( bp );
     if ( FAILED( hr ) )
@@ -733,7 +733,7 @@ HRESULT MachineX86Base::OnContinue()
     mRestoreBPAddress = pc;
     mBPRestoringThreadId = mStoppedThreadId;
 
-    hr = SetupRestoreBPEnvironment( bp );
+    hr = SetupRestoreBPEnvironment( bp, pc );
     if ( FAILED( hr ) )
         return hr;
 
@@ -745,29 +745,65 @@ HRESULT MachineX86Base::OnContinue()
     return S_OK;
 }
 
-HRESULT MachineX86Base::SetupRestoreBPEnvironment( Breakpoint* bp )
+bool MachineX86Base::AtEmbeddedBP( MachineAddress pc )
 {
     HRESULT hr = S_OK;
-    bool    useResumptionStepper = true;
+    BOOL    bRet = FALSE;
+    uint8_t origData = 0;
+    SIZE_T  bytesRead = 0;
+    void*   address = (void*) pc;
+
+    bRet = ::ReadProcessMemory( mhProcess, address, &origData, 1, &bytesRead );
+    if ( !bRet )
+    {
+        hr = GetLastHr();
+        goto Error;
+    }
+
+    if ( origData == BreakpointInstruction )
+    {
+        return true;
+    }
+
+Error:
+    return false;
+}
+
+HRESULT MachineX86Base::Rewind()
+{
+    return ChangeCurrentPC( mStoppedThreadId, -1 );
+}
+
+HRESULT MachineX86Base::SkipBPOnResume()
+{
+    // when we came to break mode, we rewound the PC
+    // move it back, because we don't want to run the BP instruction again
+
+    return ChangeCurrentPC( mStoppedThreadId, 1 );
+}
+
+HRESULT MachineX86Base::SetupRestoreBPEnvironment( Breakpoint* bp, MachineAddress pc )
+{
+    HRESULT hr = S_OK;
 
     if ( mCurThread->GetStepper() != NULL )
     {
-        hr = mCurThread->GetStepper()->RequestSingleStep();
+        hr = mCurThread->GetStepper()->RequestStepAway( pc );
         if ( FAILED( hr ) )
             return hr;
-
-        if ( hr == S_OK )
-            useResumptionStepper = false;
-        // else hr == S_FALSE: use a resumption stepper
     }
-
-    if ( useResumptionStepper )
+    else
     {
         _ASSERT( mCurThread->GetResumeStepper() == NULL );
         auto_ptr<IStepper>  stepper;
         BPCookie            cookie = mCurThread->GetResumeStepperCookie();
+        MachineAddress      pc = 0;
 
-        hr = MakeResumeStepper( static_cast<IStepperMachine*>( this ), mExceptAddr, cookie, stepper );
+        hr = GetCurrentPC( mStoppedThreadId, pc );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = MakeResumeStepper( static_cast<IStepperMachine*>( this ), pc, cookie, stepper );
         if ( FAILED( hr ) )
             return hr;
 
@@ -916,22 +952,52 @@ HRESULT MachineX86Base::DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRe
     return hr;
 }
 
-HRESULT    MachineX86Base::DispatchBreakpoint( Breakpoint* bp, MachineResult& result )
+HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embedded, Breakpoint* bp, MachineResult& result )
 {
-    _ASSERT( bp != NULL );
-    _ASSERT( (bp->GetHighPriCookies().size() > 0) || (bp->GetLowPriCookies().size() > 0) );
+    _ASSERT( (bp == NULL) || ((bp->GetHighPriCookies().size() > 0) || (bp->GetLowPriCookies().size() > 0)) );
 
     HRESULT hr = S_OK;
 
     result = MacRes_NotHandled;
 
-    // TODO: for now, this works correctly, but it looks weird to the user
-    if ( bp->GetOriginalInstructionByte() != BreakpointInstruction )
+    if ( mCurThread->GetStepper() != NULL )
     {
-        Rewind( mStoppedThreadId, 1 );
+        bool rewindPC = true;
+
+        hr = mCurThread->GetStepper()->OnBreakpoint( address, result, rewindPC );
+        if ( FAILED( hr ) )
+            return hr;
+
+        if ( (result == MacRes_NotHandled) || rewindPC )
+            Rewind();
+
+        CheckStepperEnded();
+        // if stepper ended, then it handled the exception and stopped
+    }
+    else if ( mCurThread->GetResumeStepper() != NULL )
+    {
+        Rewind();
+        result = MacRes_HandledContinue;
+    }
+    else
+    {
+        Rewind();
     }
 
-    if ( bp->GetHighPriCookies().size() > 0 )
+    if ( (result == MacRes_NotHandled) && embedded )
+    {
+        CookieList emptyList;
+        ListForwardIterEnum< BPCookie >    en( 
+            emptyList.begin(), 
+            emptyList.end(), 
+            emptyList.size() );
+
+        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, address, &en ) )
+            result = MacRes_HandledContinue;
+        else
+            result = MacRes_HandledStopped;
+    }
+    else if ( (result == MacRes_NotHandled) && (bp != NULL) && (bp->GetHighPriCookies().size() > 0) )
     {
         ListForwardIterEnum< BPCookie >    en( 
             bp->GetHighPriCookies().begin(), 
@@ -942,42 +1008,6 @@ HRESULT    MachineX86Base::DispatchBreakpoint( Breakpoint* bp, MachineResult& re
             result = MacRes_HandledContinue;
         else
             result = MacRes_HandledStopped;
-    }
-
-    if ( bp->GetLowPriCookies().size() > 0 )
-    {
-        if ( mCurThread->GetStepper() != NULL )
-        {
-            MachineResult   stepResult = MacRes_NotHandled;
-            bool            signalStepComplete = (result == MacRes_NotHandled);
-
-            hr = mCurThread->GetStepper()->OnBreakpoint( bp->GetAddress(), stepResult );
-            if ( FAILED( hr ) )
-                return hr;
-
-            CheckStepperEnded( signalStepComplete );
-            if ( result == MacRes_NotHandled )
-                result = stepResult;
-        }
-
-        // it wasn't for a stepper on this thread, it's for another, so let keep running
-        if ( result == MacRes_NotHandled )
-            result = MacRes_HandledContinue;
-    }
-
-    if ( mCurThread->GetResumeStepper() != NULL )
-    {
-        MachineResult   stepResult = MacRes_NotHandled;
-
-        hr = mCurThread->GetResumeStepper()->OnBreakpoint( mExceptAddr, stepResult );
-        if ( FAILED( hr ) )
-            return hr;
-
-        if ( result == MacRes_NotHandled )
-        {
-            if ( stepResult != MacRes_NotHandled )
-                result = MacRes_HandledContinue;
-        }
     }
 
     return hr;
@@ -1115,9 +1145,16 @@ HRESULT MachineX86Base::SetStepOut( Address targetAddress )
     HRESULT hr = S_OK;
     BPCookie                        cookie = mCurThread->GetStepperCookie();
     IStepperMachine*                stepMac = static_cast<IStepperMachine*>( this );
-    auto_ptr< RunToStepper >        stepper( new RunToStepper( 
+    auto_ptr< RunToStepper >        stepper;
+    MachineAddress                  pc = 0;
+
+    hr = GetCurrentPC( mStoppedThreadId, pc );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    stepper.reset( new RunToStepper( 
         stepMac, 
-        mExceptAddr, 
+        pc, 
         cookie, 
         targetAddress ) );
 
@@ -1148,11 +1185,16 @@ HRESULT MachineX86Base::SetStepInstruction( bool stepIn, bool sourceMode )
     IStepperMachine*                stepMac = static_cast<IStepperMachine*>( this );
     auto_ptr< IStepper >            stepper;
     BPCookie                        cookie = mCurThread->GetStepperCookie();
+    MachineAddress                  pc = 0;
+
+    hr = GetCurrentPC( mStoppedThreadId, pc );
+    if ( FAILED( hr ) )
+        goto Error;
 
     if ( stepIn )
-        hr = MakeStepInStepper( stepMac, mExceptAddr, sourceMode, cookie, stepper );
+        hr = MakeStepInStepper( stepMac, pc, sourceMode, cookie, true, stepper );
     else
-        hr = MakeStepOverStepper( stepMac, mExceptAddr, cookie, stepper );
+        hr = MakeStepOverStepper( stepMac, pc, cookie, true, stepper );
 
     // TODO: shouldn't we get out if making the stepper failed?
 
@@ -1181,11 +1223,18 @@ HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange
     HRESULT hr = S_OK;
     BPCookie                        cookie = mCurThread->GetStepperCookie();
     IStepperMachine*                stepMac = static_cast<IStepperMachine*>( this );
-    auto_ptr< RangeStepper >        stepper( new RangeStepper( 
+    auto_ptr< RangeStepper >        stepper;
+    MachineAddress                  pc = 0;
+
+    hr = GetCurrentPC( mStoppedThreadId, pc );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    stepper.reset( new RangeStepper( 
         stepMac, 
         stepIn, 
         sourceMode, 
-        mExceptAddr, 
+        pc, 
         cookie, 
         ranges, 
         rangeCount ) );
@@ -1204,6 +1253,11 @@ Error:
     return hr;
 }
 
+
+ThreadX86Base* MachineX86Base::GetStoppedThread()
+{
+    return mCurThread;
+}
 
 HRESULT MachineX86Base::SetStepperSingleStep( bool enable )
 {

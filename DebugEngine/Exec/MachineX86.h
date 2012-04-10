@@ -13,7 +13,7 @@
 class MachineX86 : public MachineX86Base
 {
 protected:
-    virtual HRESULT Rewind( uint32_t threadId, uint32_t byteCount );
+    virtual HRESULT ChangeCurrentPC( uint32_t threadId, int32_t byteOffset );
     virtual HRESULT SetSingleStep( uint32_t threadId, bool enable );
     virtual HRESULT GetCurrentPC( uint32_t threadId, MachineAddress& address );
 

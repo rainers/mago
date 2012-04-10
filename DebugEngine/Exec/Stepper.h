@@ -11,12 +11,24 @@ enum MachineResult;
 class IStepperMachine;
 
 
-// IStepper::RequestSingleStep asks the stepper to perform an instruction 
-// single step. If it can or if it shouldn't, then S_OK is returned.
-// Otherwise, S_FALSE is returned, and it's up to the user to make and use 
-// a resumption stepper. This gives us the efficiency of a stepper that's
-// already made handling a single step, and the simplicity or consistency
-// of a resumption stepper in other cases.
+// IStepper::RequestStepAway asks the stepper to perform something like an 
+// instruction single step. The machine wants the stepper to step past the
+// current instruction. Each stepper knows what's appropriate. Normally, a 
+// hardware single step is enough. In the case of REP String instructions, 
+// putting a BP after the instruction is what's needed.
+
+// CanSkipEmbeddedBP
+// If a stepper is ever stopped at any point of its execution by an embedded
+// breakpoint, then it knows if that embedded breakpoint needs to be stepped
+// or if can be skipped. For example, if we begin stepping right at an embedded 
+// BP, then a stepper will expect to step over it instead of skipping it. But,
+// if the embedded BP wasn't part of the stepper's normal execution, then it
+// can safely be skipped. The machine asks about skipping for efficiency.
+
+// OnBreakpoint( ... rewindPC )
+// After a breakpoint instruction, the PC is one past the exception address, 
+// which is at the breakpoint instruction. Each stepper knows if leaving the PC
+// at the breakpoint instruction or moving past it is the intended result.
 
 class IStepper
 {
@@ -26,16 +38,18 @@ public:
     virtual HRESULT         Start() = 0;
     virtual HRESULT         Cancel() = 0;
     virtual bool            IsComplete() = 0;
-    // returns S_FALSE if caller should use a resumption stepper
-    virtual HRESULT         RequestSingleStep() = 0;
+    virtual bool            CanSkipEmbeddedBP() = 0;
+    virtual HRESULT         RequestStepAway( MachineAddress pc ) = 0;
     virtual void            SetAddress( MachineAddress address ) = 0;
 
-    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result ) = 0;
+    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC ) = 0;
     virtual HRESULT         OnSingleStep( MachineAddress address, MachineResult& result ) = 0;
 };
 
 
 // Steps an instruction by single stepping.
+// This isn't meant for the embedded BP instruction, as described for 
+// InstructionStepperEmbeddedBP.
 
 class InstructionStepperSS : public IStepper
 {
@@ -50,17 +64,50 @@ public:
     virtual HRESULT         Start();
     virtual HRESULT         Cancel();
     virtual bool            IsComplete();
-    virtual HRESULT         RequestSingleStep();
+    virtual bool            CanSkipEmbeddedBP();
+    virtual HRESULT         RequestStepAway( MachineAddress pc );
     virtual void            SetAddress( MachineAddress address );
 
-    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result );
+    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC );
+    virtual HRESULT         OnSingleStep( MachineAddress address, MachineResult& result );
+};
+
+
+// Steps over a breakpoint instruction.
+// Execution will stop at the BP exception, but it'll be treated as a step complete.
+// Gives the choice to handle the BP exception as a step complete, or unhandled.
+// Either way, the breakpoint instruction is stepped without a hardware single step,
+// which would have made the following instruction single step.
+
+class InstructionStepperEmbeddedBP : public IStepper
+{
+    IStepperMachine*    mMachine;
+    MachineAddress      mStartingAddr;
+    BPCookie            mCookie;
+    bool                mIsComplete;
+    bool                mHandleBPException;
+
+public:
+    InstructionStepperEmbeddedBP( 
+        IStepperMachine* machine, 
+        MachineAddress curAddress, 
+        bool handleBP, 
+        BPCookie cookie );
+
+    virtual HRESULT         Start();
+    virtual HRESULT         Cancel();
+    virtual bool            IsComplete();
+    virtual bool            CanSkipEmbeddedBP();
+    virtual HRESULT         RequestStepAway( MachineAddress pc );
+    virtual void            SetAddress( MachineAddress address );
+
+    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC );
     virtual HRESULT         OnSingleStep( MachineAddress address, MachineResult& result );
 };
 
 
 // Steps an instruction by running to a breakpoint set at the address right 
-// after the current one that we're stepping. Supports single stepping if
-// allowSS constructor parameter is true.
+// after the current one that we're stepping.
 
 class InstructionStepperBP : public IStepper
 {
@@ -69,31 +116,30 @@ class InstructionStepperBP : public IStepper
     BPCookie            mCookie;
     bool                mIsComplete;
     int                 mInstLen;
-    bool                mAllowSS;
-    bool                mRequestedSS;
     MachineAddress      mAfterCallAddr;
 
 public:
     InstructionStepperBP( 
         IStepperMachine* machine, 
         int instLen, 
-        bool allowSS, 
         MachineAddress curAddress, 
         BPCookie cookie );
 
     virtual HRESULT         Start();
     virtual HRESULT         Cancel();
     virtual bool            IsComplete();
-    virtual HRESULT         RequestSingleStep();
+    virtual bool            CanSkipEmbeddedBP();
+    virtual HRESULT         RequestStepAway( MachineAddress pc );
     virtual void            SetAddress( MachineAddress address );
 
-    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result );
+    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC );
     virtual HRESULT         OnSingleStep( MachineAddress address, MachineResult& result );
 };
 
 
 // Steps a call instruction by running to a breakpoint set at the address right
-// after the current one that we're stepping. Supports single stepping.
+// after the current one that we're stepping. Supports step away by single 
+// stepping the call.
 
 class InstructionStepperBPCall : public IStepper
 {
@@ -105,17 +151,23 @@ class InstructionStepperBPCall : public IStepper
     bool                mRequestedSS;
     MachineAddress      mStartingAddr;
     MachineAddress      mAfterCallAddr;
+    std::auto_ptr<IStepper> mResumeStepper;
 
 public:
-    InstructionStepperBPCall( IStepperMachine* machine, int instLen, MachineAddress curAddress, BPCookie cookie );
+    InstructionStepperBPCall( 
+        IStepperMachine* machine, 
+        int instLen, 
+        MachineAddress curAddress, 
+        BPCookie cookie );
 
     virtual HRESULT         Start();
     virtual HRESULT         Cancel();
     virtual bool            IsComplete();
-    virtual HRESULT         RequestSingleStep();
+    virtual bool            CanSkipEmbeddedBP();
+    virtual HRESULT         RequestStepAway( MachineAddress pc );
     virtual void            SetAddress( MachineAddress address );
 
-    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result );
+    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC );
     virtual HRESULT         OnSingleStep( MachineAddress address, MachineResult& result );
 };
 
@@ -133,18 +185,25 @@ class InstructionStepperProbeCall : public IStepper
     int                 mInstLen;
     MachineAddress      mStartingAddr;
     MachineAddress      mAfterCallAddr;
-    int                 mSSOrder;
+    int                 mSSOrder;           // how many HW SS have been done
+    int                 mSSToHandle;        // how many HW SS to do
+    std::auto_ptr<IStepper> mResumeStepper;
 
 public:
-    InstructionStepperProbeCall( IStepperMachine* machine, int instLen, MachineAddress curAddress, BPCookie cookie );
+    InstructionStepperProbeCall( 
+        IStepperMachine* machine, 
+        int instLen, 
+        MachineAddress curAddress, 
+        BPCookie cookie );
 
     virtual HRESULT         Start();
     virtual HRESULT         Cancel();
     virtual bool            IsComplete();
-    virtual HRESULT         RequestSingleStep();
+    virtual bool            CanSkipEmbeddedBP();
+    virtual HRESULT         RequestStepAway( MachineAddress pc );
     virtual void            SetAddress( MachineAddress address );
 
-    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result );
+    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC );
     virtual HRESULT         OnSingleStep( MachineAddress address, MachineResult& result );
 };
 
@@ -161,6 +220,7 @@ class RangeStepper : public IStepper
     AddressRange        mRangeSingle;
     int                 mRangeCount;
     bool                mIsComplete;
+    bool                mFirstInstruction;
     IStepper*           mInstStepper;
     std::vector<AddressRange>   mRangesMany;
 
@@ -178,16 +238,17 @@ public:
     virtual HRESULT         Start();
     virtual HRESULT         Cancel();
     virtual bool            IsComplete();
-    virtual HRESULT         RequestSingleStep();
+    virtual bool            CanSkipEmbeddedBP();
+    virtual HRESULT         RequestStepAway( MachineAddress pc );
     virtual void            SetAddress( MachineAddress address );
 
-    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result );
+    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC );
     virtual HRESULT         OnSingleStep( MachineAddress address, MachineResult& result );
 
 private:
-    HRESULT StartOneStep();
-    bool    IsAddressInRange( MachineAddress address );
-    HRESULT HandleComplete( MachineAddress address, MachineResult& result );
+    HRESULT StartOneStep( MachineAddress pc );
+    bool    IsAddressInRange( MachineAddress pc );
+    HRESULT HandleComplete( MachineAddress pc, MachineResult& result );
 };
 
 
@@ -200,6 +261,7 @@ class RunToStepper : public IStepper
     BPCookie            mCookie;
     MachineAddress      mTargetAddr;
     bool                mIsComplete;
+    std::auto_ptr<IStepper> mResumeStepper;
 
 public:
     RunToStepper(
@@ -211,10 +273,11 @@ public:
     virtual HRESULT         Start();
     virtual HRESULT         Cancel();
     virtual bool            IsComplete();
-    virtual HRESULT         RequestSingleStep();
+    virtual bool            CanSkipEmbeddedBP();
+    virtual HRESULT         RequestStepAway( MachineAddress pc );
     virtual void            SetAddress( MachineAddress address );
 
-    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result );
+    virtual HRESULT         OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC );
     virtual HRESULT         OnSingleStep( MachineAddress address, MachineResult& result );
 };
 
@@ -230,10 +293,12 @@ HRESULT MakeStepInStepper(
                           MachineAddress curAddress, 
                           bool sourceMode, 
                           BPCookie cookie, 
+                          bool handleBP, 
                           std::auto_ptr<IStepper>& stepper );
 
 HRESULT MakeStepOverStepper( 
                             IStepperMachine* machine, 
                             MachineAddress curAddress, 
                             BPCookie cookie, 
+                            bool handleBP, 
                             std::auto_ptr<IStepper>& stepper );

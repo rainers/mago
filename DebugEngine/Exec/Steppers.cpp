@@ -9,6 +9,7 @@
 #include "Stepper.h"
 #include "MachineX86Base.h"
 #include "DecodeX86.h"
+#include "ThreadX86.h"
 
 using namespace std;
 
@@ -56,7 +57,11 @@ HRESULT MakeResumeStepper(
 
     if ( instType == Inst_RepString )
     {
-        stepper.reset( new InstructionStepperBP( machine, instLen, false, curAddress, cookie ) );
+        stepper.reset( new InstructionStepperBP( machine, instLen, curAddress, cookie ) );
+    }
+    else if ( instType == Inst_Breakpoint )
+    {
+        stepper.reset( new InstructionStepperEmbeddedBP( machine, curAddress, true, cookie ) );
     }
     else
     {
@@ -74,6 +79,7 @@ HRESULT MakeStepInStepper(
                           MachineAddress curAddress, 
                           bool sourceMode, 
                           BPCookie cookie, 
+                          bool handleEmbeddedBP, 
                           std::auto_ptr<IStepper>& stepper )
 {
     HRESULT         hr = S_OK;
@@ -95,6 +101,10 @@ HRESULT MakeStepInStepper(
         else
             stepper.reset( new InstructionStepperSS( machine, curAddress, cookie ) );
     }
+    else if ( instType == Inst_Breakpoint )
+    {
+        stepper.reset( new InstructionStepperEmbeddedBP( machine, curAddress, handleEmbeddedBP, cookie ) );
+    }
     else
     {
         stepper.reset( new InstructionStepperSS( machine, curAddress, cookie ) );
@@ -110,6 +120,7 @@ HRESULT MakeStepOverStepper(
                             IStepperMachine* machine, 
                             MachineAddress curAddress, 
                             BPCookie cookie, 
+                            bool handleEmbeddedBP, 
                             std::auto_ptr<IStepper>& stepper )
 {
     HRESULT         hr = S_OK;
@@ -122,11 +133,15 @@ HRESULT MakeStepOverStepper(
 
     if ( instType == Inst_RepString )
     {
-        stepper.reset( new InstructionStepperBP( machine, instLen, false, curAddress, cookie ) );
+        stepper.reset( new InstructionStepperBP( machine, instLen, curAddress, cookie ) );
     }
     else if ( instType == Inst_Call )
     {
         stepper.reset( new InstructionStepperBPCall( machine, instLen, curAddress, cookie ) );
+    }
+    else if ( instType == Inst_Breakpoint )
+    {
+        stepper.reset( new InstructionStepperEmbeddedBP( machine, curAddress, handleEmbeddedBP, cookie ) );
     }
     else
     {
@@ -169,8 +184,15 @@ bool            InstructionStepperSS::IsComplete()
     return mIsComplete;
 }
 
-HRESULT         InstructionStepperSS::RequestSingleStep()
+bool            InstructionStepperSS::CanSkipEmbeddedBP()
 {
+    return false;
+}
+
+HRESULT         InstructionStepperSS::RequestStepAway( MachineAddress pc )
+{
+    UNREFERENCED_PARAMETER( pc );
+
     // we single step as the main kind of stepping, so nothing extra to do
     return S_OK;
 }
@@ -180,17 +202,104 @@ void            InstructionStepperSS::SetAddress( MachineAddress address )
     mCurAddr = address;
 }
 
-HRESULT     InstructionStepperSS::OnBreakpoint( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperSS::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
 {
-    address;    // not used
+    UNREFERENCED_PARAMETER( address );
 
     result = MacRes_NotHandled;
+    rewindPC = true;
     return S_OK;
 }
 
 HRESULT     InstructionStepperSS::OnSingleStep( MachineAddress address, MachineResult& result )
 {
-    address;    // not used
+    UNREFERENCED_PARAMETER( address );
+
+    mIsComplete = true;
+    result = MacRes_HandledStopped;
+    return S_OK;
+}
+
+
+//----------------------------------------------------------------------------
+//  InstructionStepperEmbeddedBP
+//----------------------------------------------------------------------------
+
+InstructionStepperEmbeddedBP::InstructionStepperEmbeddedBP( 
+    IStepperMachine* machine, 
+    MachineAddress curAddress, 
+    bool handleBP, 
+    BPCookie cookie )
+    :   mMachine( machine ),
+        mStartingAddr( curAddress ),
+        mCookie( cookie ),
+        mIsComplete( false ),
+        mHandleBPException( handleBP )
+{
+    _ASSERT( curAddress != 0 );
+    _ASSERT( machine != NULL );
+}
+
+HRESULT         InstructionStepperEmbeddedBP::Start()
+{
+    return S_OK;
+}
+
+HRESULT         InstructionStepperEmbeddedBP::Cancel()
+{
+    return S_OK;
+}
+
+bool            InstructionStepperEmbeddedBP::IsComplete()
+{
+    return mIsComplete;
+}
+
+bool            InstructionStepperEmbeddedBP::CanSkipEmbeddedBP()
+{
+    return false;
+}
+
+HRESULT         InstructionStepperEmbeddedBP::RequestStepAway( MachineAddress pc )
+{
+    UNREFERENCED_PARAMETER( pc );
+    return S_OK;
+}
+
+void            InstructionStepperEmbeddedBP::SetAddress( MachineAddress address )
+{
+    UNREFERENCED_PARAMETER( address );
+}
+
+HRESULT     InstructionStepperEmbeddedBP::OnBreakpoint( 
+    MachineAddress address, 
+    MachineResult& result, 
+    bool& rewindPC )
+{
+    UNREFERENCED_PARAMETER( address );
+
+    result = MacRes_NotHandled;
+
+    // the point of this stepper is to go past an embedded BP instruction
+    rewindPC = false;
+
+    if ( (address == mStartingAddr) && mHandleBPException )
+    {
+        mIsComplete = true;
+        result = MacRes_HandledStopped;
+    }
+
+    // If the user doesn't want us to handle the BP exception, it's because they want
+    // to single step this instruction and trigger a breakpoint notification, without 
+    // using HW SS. If you HW SS an embedded BP, you end up single stepping the
+    // instruction after the embedded BP, which is almost never intended.
+
+    return S_OK;
+}
+
+HRESULT     InstructionStepperEmbeddedBP::OnSingleStep( MachineAddress address, MachineResult& result )
+{
+    UNREFERENCED_PARAMETER( address );
 
     mIsComplete = true;
     result = MacRes_HandledStopped;
@@ -205,7 +314,6 @@ HRESULT     InstructionStepperSS::OnSingleStep( MachineAddress address, MachineR
 InstructionStepperBP::InstructionStepperBP( 
     IStepperMachine* machine, 
     int instLen, 
-    bool allowSS, 
     MachineAddress curAddress, 
     BPCookie cookie )
     :   mMachine( machine ),
@@ -213,8 +321,6 @@ InstructionStepperBP::InstructionStepperBP(
         mCookie( cookie ),
         mIsComplete( false ),
         mInstLen( instLen ),
-        mAllowSS( allowSS ),
-        mRequestedSS( false ),
         mAfterCallAddr( 0 )
 {
     _ASSERT( curAddress != 0 );
@@ -239,13 +345,14 @@ bool            InstructionStepperBP::IsComplete()
     return mIsComplete;
 }
 
-HRESULT         InstructionStepperBP::RequestSingleStep()
+bool            InstructionStepperBP::CanSkipEmbeddedBP()
 {
-    mRequestedSS = true;
+    return false;
+}
 
-    if ( mAllowSS )
-        return mMachine->SetStepperSingleStep( true );
-
+HRESULT         InstructionStepperBP::RequestStepAway( MachineAddress pc )
+{
+    UNREFERENCED_PARAMETER( pc );
     return S_OK;
 }
 
@@ -254,9 +361,10 @@ void            InstructionStepperBP::SetAddress( MachineAddress address )
     mCurAddr = address;
 }
 
-HRESULT     InstructionStepperBP::OnBreakpoint( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperBP::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
 {
     result = MacRes_NotHandled;
+    rewindPC = true;
 
     if ( address == mAfterCallAddr )
     {
@@ -270,12 +378,9 @@ HRESULT     InstructionStepperBP::OnBreakpoint( MachineAddress address, MachineR
 
 HRESULT     InstructionStepperBP::OnSingleStep( MachineAddress address, MachineResult& result )
 {
-    address;    // not used
+    UNREFERENCED_PARAMETER( address );
 
-    if ( mAllowSS && mRequestedSS )
-        result = MacRes_HandledContinue;
-    else
-        result = MacRes_NotHandled;
+    result = MacRes_NotHandled;
 
     return S_OK;
 }
@@ -313,6 +418,11 @@ HRESULT         InstructionStepperBPCall::Start()
 
 HRESULT         InstructionStepperBPCall::Cancel()
 {
+    if ( mResumeStepper.get() != NULL )
+    {
+        mResumeStepper->Cancel();
+    }
+
     return mMachine->RemoveStepperBreakpoint( mAfterCallAddr, mCookie );
 }
 
@@ -321,8 +431,25 @@ bool            InstructionStepperBPCall::IsComplete()
     return mIsComplete;
 }
 
-HRESULT         InstructionStepperBPCall::RequestSingleStep()
+bool            InstructionStepperBPCall::CanSkipEmbeddedBP()
 {
+    if ( (mCurAddr == mAfterCallAddr)
+        || (mCurAddr == mStartingAddr) )
+    {
+        return false;
+    }
+
+    // We might run across an embedded BP in the middle of a call.
+    // In that case, to resume running the procedure and keep this stepper going,
+    // allow skipping that embedded BP.
+
+    return true;
+}
+
+HRESULT         InstructionStepperBPCall::RequestStepAway( MachineAddress pc )
+{
+    HRESULT hr = S_OK;
+
     if ( mCurAddr == mStartingAddr )
     {
         mRequestedSS = true;
@@ -330,7 +457,20 @@ HRESULT         InstructionStepperBPCall::RequestSingleStep()
         return mMachine->SetStepperSingleStep( true );
     }
 
-    return S_FALSE;
+    if ( mResumeStepper.get() != NULL )
+    {
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+    }
+
+    ThreadX86Base* thread = mMachine->GetStoppedThread();
+    _ASSERT( thread != NULL );
+
+    hr = MakeResumeStepper( mMachine, pc, thread->GetResumeStepperCookie(), mResumeStepper );
+    if ( FAILED( hr ) )
+        return hr;
+
+    return S_OK;
 }
 
 void            InstructionStepperBPCall::SetAddress( MachineAddress address )
@@ -338,16 +478,38 @@ void            InstructionStepperBPCall::SetAddress( MachineAddress address )
     mCurAddr = address;
 }
 
-HRESULT     InstructionStepperBPCall::OnBreakpoint( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperBPCall::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
 {
+    HRESULT hr = S_OK;
+
     mCurAddr = address;
     result = MacRes_NotHandled;
+    rewindPC = true;
 
     if ( address == mAfterCallAddr )
     {
         mIsComplete = true;
         result = MacRes_HandledStopped;
+
+        if ( mResumeStepper.get() != NULL )
+            mResumeStepper->Cancel();
+
         return mMachine->RemoveStepperBreakpoint( mAfterCallAddr, mCookie );
+    }
+    else if ( mResumeStepper.get() != NULL )
+    {
+        // Resume steppers are used for only one step, to move past a user BP.
+        // So, use it, get rid of it, and continue
+
+        hr = mResumeStepper->OnBreakpoint( address, result, rewindPC );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+
+        if ( result == MacRes_HandledStopped )
+            result = MacRes_HandledContinue;
     }
 
     return S_OK;
@@ -355,6 +517,8 @@ HRESULT     InstructionStepperBPCall::OnBreakpoint( MachineAddress address, Mach
 
 HRESULT     InstructionStepperBPCall::OnSingleStep( MachineAddress address, MachineResult& result )
 {
+    HRESULT hr = S_OK;
+
     mCurAddr = address;
     result = MacRes_NotHandled;
 
@@ -362,7 +526,26 @@ HRESULT     InstructionStepperBPCall::OnSingleStep( MachineAddress address, Mach
     {
         mRequestedSS = false;
         result = MacRes_HandledContinue;
+
+        if ( mResumeStepper.get() != NULL )
+            mResumeStepper->Cancel();
+
         return S_OK;
+    }
+    else if ( mResumeStepper.get() != NULL )
+    {
+        // Resume steppers are used for only one step, to move past a user BP.
+        // So, use it, get rid of it, and continue
+
+        hr = mResumeStepper->OnSingleStep( address, result );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+
+        if ( result == MacRes_HandledStopped )
+            result = MacRes_HandledContinue;
     }
 
     return S_OK;
@@ -385,7 +568,8 @@ InstructionStepperProbeCall::InstructionStepperProbeCall(
         mInstLen( instLen ),
         mStartingAddr( curAddress ),
         mAfterCallAddr( 0 ),
-        mSSOrder( 0 )
+        mSSOrder( 0 ),
+        mSSToHandle( 1 )
 {
     _ASSERT( curAddress != 0 );
     _ASSERT( instLen > 0 );
@@ -407,6 +591,11 @@ HRESULT         InstructionStepperProbeCall::Start()
 
 HRESULT         InstructionStepperProbeCall::Cancel()
 {
+    if ( mResumeStepper.get() != NULL )
+    {
+        mResumeStepper->Cancel();
+    }
+
     return mMachine->RemoveStepperBreakpoint( mAfterCallAddr, mCookie );
 }
 
@@ -415,15 +604,45 @@ bool            InstructionStepperProbeCall::IsComplete()
     return mIsComplete;
 }
 
-HRESULT         InstructionStepperProbeCall::RequestSingleStep()
+bool            InstructionStepperProbeCall::CanSkipEmbeddedBP()
 {
+    if ( (mCurAddr == mAfterCallAddr)
+        || (mCurAddr == mStartingAddr) )
+    {
+        return false;
+    }
+
+    // We might run across an embedded BP in the middle of a call.
+    // In that case, to resume running the procedure and keep this stepper going,
+    // allow skipping that embedded BP.
+
+    return true;
+}
+
+HRESULT         InstructionStepperProbeCall::RequestStepAway( MachineAddress pc )
+{
+    HRESULT hr = S_OK;
+
     if ( mCurAddr == mStartingAddr )
     {
         // we single step as the main kind of stepping, so nothing extra to do
         return S_OK;
     }
 
-    return S_FALSE;
+    if ( mResumeStepper.get() != NULL )
+    {
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+    }
+
+    ThreadX86Base* thread = mMachine->GetStoppedThread();
+    _ASSERT( thread != NULL );
+
+    hr = MakeResumeStepper( mMachine, pc, thread->GetResumeStepperCookie(), mResumeStepper );
+    if ( FAILED( hr ) )
+        return hr;
+
+    return S_OK;
 }
 
 void            InstructionStepperProbeCall::SetAddress( MachineAddress address )
@@ -431,16 +650,38 @@ void            InstructionStepperProbeCall::SetAddress( MachineAddress address 
     mCurAddr = address;
 }
 
-HRESULT     InstructionStepperProbeCall::OnBreakpoint( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperProbeCall::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
 {
+    HRESULT hr = S_OK;
+
     mCurAddr = address;
     result = MacRes_NotHandled;
+    rewindPC = true;
 
     if ( address == mAfterCallAddr )
     {
         mIsComplete = true;
         result = MacRes_HandledStopped;
+
+        if ( mResumeStepper.get() != NULL )
+            mResumeStepper->Cancel();
+
         return mMachine->RemoveStepperBreakpoint( mAfterCallAddr, mCookie );
+    }
+    else if ( mResumeStepper.get() != NULL )
+    {
+        // Resume steppers are used for only one step, to move past a user BP.
+        // So, use it, get rid of it, and continue
+
+        hr = mResumeStepper->OnBreakpoint( address, result, rewindPC );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+
+        if ( result == MacRes_HandledStopped )
+            result = MacRes_HandledContinue;
     }
 
     return S_OK;
@@ -453,34 +694,62 @@ HRESULT     InstructionStepperProbeCall::OnSingleStep( MachineAddress address, M
     mCurAddr = address;
     mSSOrder++;
     _ASSERT( mSSOrder != 0 );
+    result = MacRes_NotHandled;
 
-    if ( mSSOrder == 1 )
+    if ( mSSOrder <= mSSToHandle )
     {
-        int             instLen = 0;
-        InstructionType instType = Inst_None;
+        if ( mSSOrder == 1 )
+        {
+            int             instLen = 0;
+            InstructionType instType = Inst_None;
 
-        hr = ReadInstruction( mMachine, address, Cpu_32, instType, instLen );
+            hr = ReadInstruction( mMachine, address, Cpu_32, instType, instLen );
+            if ( FAILED( hr ) )
+                return hr;
+
+            // We have a jmp as the first instruction in called function. Skip it.
+            // This happens when the linker uses incremental linking.
+            if ( instType == Inst_Jmp )
+            {
+                // remember that we're single stepping twice
+                mSSToHandle = 2;
+
+                result = MacRes_HandledContinue;
+                return mMachine->SetStepperSingleStep( true );
+            }
+        }
+
+        if ( mMachine->CanStepperStopAtFunction( address ) )
+        {
+            mIsComplete = true;
+            result = MacRes_HandledStopped;
+
+            if ( mResumeStepper.get() != NULL )
+                mResumeStepper->Cancel();
+
+            return mMachine->RemoveStepperBreakpoint( mAfterCallAddr, mCookie );
+        }
+
+        // go on to the breakpoint we set after the original call instruction
+        result = MacRes_HandledContinue;
+        return S_OK;
+    }
+    else if ( mResumeStepper.get() != NULL )
+    {
+        // Resume steppers are used for only one step, to move past a user BP.
+        // So, use it, get rid of it, and continue
+
+        hr = mResumeStepper->OnSingleStep( address, result );
         if ( FAILED( hr ) )
             return hr;
 
-        // We have a jmp as the first instruction in called function. Skip it.
-        // This happens when the linker uses incremental linking.
-        if ( instType == Inst_Jmp )
-        {
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+
+        if ( result == MacRes_HandledStopped )
             result = MacRes_HandledContinue;
-            return mMachine->SetStepperSingleStep( true );
-        }
     }
 
-    if ( mMachine->CanStepperStopAtFunction( address ) )
-    {
-        mIsComplete = true;
-        result = MacRes_HandledStopped;
-        return mMachine->RemoveStepperBreakpoint( mAfterCallAddr, mCookie );
-    }
-
-    // go on to the breakpoint we set after the original call instruction
-    result = MacRes_HandledContinue;
     return S_OK;
 }
 
@@ -505,6 +774,7 @@ RangeStepper::RangeStepper(
     mSourceMode( sourceMode ),
     mRangeCount( rangeCount ),
     mIsComplete( false ),
+    mFirstInstruction( true ),
     mInstStepper( NULL )
 {
     _ASSERT( curAddress != 0 );
@@ -532,23 +802,31 @@ RangeStepper::~RangeStepper()
 
 HRESULT         RangeStepper::Start()
 {
-    return StartOneStep();
+    return StartOneStep( mCurAddr );
 }
 
-HRESULT         RangeStepper::StartOneStep()
+HRESULT         RangeStepper::StartOneStep( MachineAddress pc )
 {
     _ASSERT( mInstStepper == NULL );
 
     HRESULT hr = S_OK;
     auto_ptr<IStepper> stepper;
 
+    // If the user starts a step at a breakpoint, then they expect to step over 
+    // it as usual. If we hit a breakpoint after that and before the user sets 
+    // another stepper, then don't handle it, so the user is notified.
+
+    bool handleBP = mFirstInstruction;
+
+    mFirstInstruction = false;
+
     if ( mStepIn )
     {
-        hr = MakeStepInStepper( mMachine, mCurAddr, mSourceMode, mCookie, stepper );
+        hr = MakeStepInStepper( mMachine, pc, mSourceMode, mCookie, handleBP, stepper );
     }
     else
     {
-        hr = MakeStepOverStepper( mMachine, mCurAddr, mCookie, stepper );
+        hr = MakeStepOverStepper( mMachine, pc, mCookie, handleBP, stepper );
     }
 
     if ( FAILED( hr ) )
@@ -579,12 +857,20 @@ bool            RangeStepper::IsComplete()
     return mIsComplete;
 }
 
-HRESULT         RangeStepper::RequestSingleStep()
+bool            RangeStepper::CanSkipEmbeddedBP()
+{
+    if ( mInstStepper == NULL )
+        return false;
+
+    return mInstStepper->CanSkipEmbeddedBP();
+}
+
+HRESULT         RangeStepper::RequestStepAway( MachineAddress pc )
 {
     if ( mInstStepper == NULL )
         return E_FAIL;
 
-    return mInstStepper->RequestSingleStep();
+    return mInstStepper->RequestStepAway( pc );
 }
 
 void            RangeStepper::SetAddress( MachineAddress address )
@@ -592,7 +878,7 @@ void            RangeStepper::SetAddress( MachineAddress address )
     mCurAddr = address;
 }
 
-HRESULT     RangeStepper::OnBreakpoint( MachineAddress address, MachineResult& result )
+HRESULT     RangeStepper::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
 {
     HRESULT hr = S_OK;
 
@@ -601,14 +887,24 @@ HRESULT     RangeStepper::OnBreakpoint( MachineAddress address, MachineResult& r
     if ( mInstStepper == NULL )
         return E_FAIL;
 
-    hr = mInstStepper->OnBreakpoint( address, result );
+    hr = mInstStepper->OnBreakpoint( address, result, rewindPC );
     if ( FAILED( hr ) )
         return hr;
 
     if ( !mInstStepper->IsComplete() )
         return hr;
 
-    return HandleComplete( address, result );
+    // After hitting a BP, the PC is one past the exception address.
+    // The instruction stepper might want it there or at the exception address.
+
+    MachineAddress pc = address;
+
+    if ( !rewindPC )
+        pc++;
+
+    // Either way, the PC is where we really need to check for step complete
+
+    return HandleComplete( pc, result );
 }
 
 HRESULT     RangeStepper::OnSingleStep( MachineAddress address, MachineResult& result )
@@ -627,10 +923,13 @@ HRESULT     RangeStepper::OnSingleStep( MachineAddress address, MachineResult& r
     if ( !mInstStepper->IsComplete() )
         return hr;
 
+    // After a HW SS, the PC is at the exception address: 
+    // at the instruction following the one that was stepped
+
     return HandleComplete( address, result );
 }
 
-bool            RangeStepper::IsAddressInRange( MachineAddress address )
+bool            RangeStepper::IsAddressInRange( MachineAddress pc )
 {
     AddressRange*   range = NULL;
 
@@ -641,7 +940,7 @@ bool            RangeStepper::IsAddressInRange( MachineAddress address )
 
     for ( int count = mRangeCount; count > 0; count-- )
     {
-        if ( (address >= range->Begin) && (address <= range->End) )
+        if ( (pc >= range->Begin) && (pc <= range->End) )
             return true;
 
         range++;
@@ -650,15 +949,15 @@ bool            RangeStepper::IsAddressInRange( MachineAddress address )
     return false;
 }
 
-HRESULT RangeStepper::HandleComplete( MachineAddress address, MachineResult& result )
+HRESULT RangeStepper::HandleComplete( MachineAddress pc, MachineResult& result )
 {
     delete mInstStepper;
     mInstStepper = NULL;
 
-    if ( IsAddressInRange( address ) )
+    if ( IsAddressInRange( pc ) )
     {
         result = MacRes_HandledContinue;
-        return StartOneStep();
+        return StartOneStep( pc );
     }
     
     mIsComplete = true;
@@ -694,6 +993,11 @@ HRESULT         RunToStepper::Start()
 
 HRESULT         RunToStepper::Cancel()
 {
+    if ( mResumeStepper.get() != NULL )
+    {
+        mResumeStepper->Cancel();
+    }
+
     return mMachine->RemoveStepperBreakpoint( mTargetAddr, mCookie );
 }
 
@@ -702,9 +1006,38 @@ bool            RunToStepper::IsComplete()
     return mIsComplete;
 }
 
-HRESULT         RunToStepper::RequestSingleStep()
+bool            RunToStepper::CanSkipEmbeddedBP()
 {
-    return S_FALSE;
+    if ( mCurAddr == mTargetAddr )
+    {
+        return false;
+    }
+
+    // We might run across an embedded BP while running to the target.
+    // In that case, to resume running and keep this stepper going,
+    // allow skipping that embedded BP.
+
+    return true;
+}
+
+HRESULT         RunToStepper::RequestStepAway( MachineAddress pc )
+{
+    HRESULT hr = S_OK;
+
+    if ( mResumeStepper.get() != NULL )
+    {
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+    }
+
+    ThreadX86Base* thread = mMachine->GetStoppedThread();
+    _ASSERT( thread != NULL );
+
+    hr = MakeResumeStepper( mMachine, pc, thread->GetResumeStepperCookie(), mResumeStepper );
+    if ( FAILED( hr ) )
+        return hr;
+
+    return S_OK;
 }
 
 void            RunToStepper::SetAddress( MachineAddress address )
@@ -712,15 +1045,37 @@ void            RunToStepper::SetAddress( MachineAddress address )
     mCurAddr = address;
 }
 
-HRESULT     RunToStepper::OnBreakpoint( MachineAddress address, MachineResult& result )
+HRESULT     RunToStepper::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
 {
+    HRESULT hr = S_OK;
+
     result = MacRes_NotHandled;
+    rewindPC = true;
 
     if ( address == mTargetAddr )
     {
         mIsComplete = true;
         result = MacRes_HandledStopped;
+
+        if ( mResumeStepper.get() != NULL )
+            mResumeStepper->Cancel();
+
         return mMachine->RemoveStepperBreakpoint( mTargetAddr, mCookie );
+    }
+    else if ( mResumeStepper.get() != NULL )
+    {
+        // Resume steppers are used for only one step, to move past a user BP.
+        // So, use it, get rid of it, and continue
+
+        hr = mResumeStepper->OnBreakpoint( address, result, rewindPC );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+
+        if ( result == MacRes_HandledStopped )
+            result = MacRes_HandledContinue;
     }
 
     return S_OK;
@@ -728,8 +1083,26 @@ HRESULT     RunToStepper::OnBreakpoint( MachineAddress address, MachineResult& r
 
 HRESULT     RunToStepper::OnSingleStep( MachineAddress address, MachineResult& result )
 {
+    HRESULT hr = S_OK;
+
     mCurAddr = address;
     result = MacRes_NotHandled;
+
+    if ( mResumeStepper.get() != NULL )
+    {
+        // Resume steppers are used for only one step, to move past a user BP.
+        // So, use it, get rid of it, and continue
+
+        hr = mResumeStepper->OnSingleStep( address, result );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mResumeStepper->Cancel();
+        mResumeStepper.reset( NULL );
+
+        if ( result == MacRes_HandledStopped )
+            result = MacRes_HandledContinue;
+    }
 
     return S_OK;
 }
