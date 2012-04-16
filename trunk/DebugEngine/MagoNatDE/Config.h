@@ -39,6 +39,8 @@ enum StringIds
     IDS_BYTES,
 
     IDS_BP_TRIGGERED,
+    IDS_FIRST_CHANCE_EXCEPTION,
+    IDS_UNHANDLED_EXCEPTION,
 };
 
 const wchar_t* GetString( DWORD strId );
