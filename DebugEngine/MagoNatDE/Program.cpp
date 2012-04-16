@@ -454,6 +454,8 @@ namespace Mago
     void Program::SetProcess( IDebugProcess2* proc )
     {
         mProcess = proc;
+
+        proc->GetName( GN_NAME, &mName );
     }
 
     IDebugEventCallback2*   Program::GetCallback()
@@ -472,8 +474,6 @@ namespace Mago
 
         hr = portProgram->GetProgramId( &mProgId );
         _ASSERT( hr == S_OK );
-
-        hr = portProgram->GetName( &mName );
     }
 
     void Program::SetDebuggerProxy( DebuggerProxy* debugger )
