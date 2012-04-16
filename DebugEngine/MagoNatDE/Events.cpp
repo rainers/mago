@@ -405,11 +405,22 @@ namespace Mago
 
         bool    firstChance = (mState & EXCEPTION_STOP_FIRST_CHANCE) != 0;
         wchar_t msg[256] = L"";
-        swprintf_s( msg, L"%ls exception: %s ", (firstChance ? L"First-chance" : L"Unhandled"), mExceptionName.m_str );
+        const wchar_t* format = NULL;
+
+        if ( firstChance )
+            format = GetString( IDS_FIRST_CHANCE_EXCEPTION );
+        else
+            format = GetString( IDS_UNHANDLED_EXCEPTION );
+
+        if ( format != NULL )
+            _swprintf_p( msg, _countof( msg ), format, mExceptionName.m_str );
+        else
+            wcscpy_s( msg, mExceptionName.m_str );
 
         if ( mExceptionInfo )
         {
             CComBSTR bmsg( msg );
+            bmsg.Append( L' ' );
             bmsg.Append( mExceptionInfo );
             *pbstrDescription = bmsg.Detach();
         }

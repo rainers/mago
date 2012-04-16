@@ -38,6 +38,8 @@ static const wchar_t*   gStrings[] =
     L"bytes",
 
     L"%1$s has triggered a breakpoint.",
+    L"First-chance exception: %1$s",
+    L"Unhandled exception: %1$s",
 };
 
 
