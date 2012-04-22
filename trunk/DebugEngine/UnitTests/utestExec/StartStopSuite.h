@@ -24,7 +24,8 @@ public:
 
 private:
     void TestInit();
-    void TestLaunch();
+    void TestLaunchDestroyExecStopped();
+    void TestLaunchDestroyExecRunning();
     void TestBeginToEnd();
     void TestTerminateStopped();
     void TestTerminateRunning();
@@ -40,5 +41,5 @@ private:
                       HandlePtr& errFileRead, HandlePtr& errFileWrite, bool& ok );
 
     void AssertProcessFinished( uint32_t pid );
-    void AssertConsoleWindow( bool newConsole, DWORD procId, const wchar_t* title );
+    void AssertConsoleWindow( bool newConsole, DWORD procId );
 };

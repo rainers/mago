@@ -54,11 +54,11 @@
 #include "Utility.h"
 
 
-const wchar_t   SimplestDebuggee[] = L"F:\\Users\\Magus\\Documents\\Visual Studio 2008\\Projects\\Debugger1\\Debug\\test1.exe";
-const wchar_t   SleepingDebuggee[] = L"F:\\Users\\Magus\\Documents\\Visual Studio 2008\\Projects\\Debugger1\\Debug\\testSleep.exe";
-const wchar_t   OptionsDebuggee[] = L"F:\\Users\\Magus\\Documents\\Visual Studio 2008\\Projects\\Debugger1\\Debug\\testOptions.exe";
-const wchar_t   EventsDebuggee[] = L"F:\\Users\\Magus\\Documents\\Visual Studio 2008\\Projects\\Debugger1\\Debug\\testEvents.exe";
-const wchar_t   StepOneThreadDebuggee[] = L"F:\\Users\\Magus\\Documents\\Visual Studio 2008\\Projects\\Debugger1\\Debug\\testStepOneThread.exe";
+const wchar_t   SimplestDebuggee[] = L"test1.exe";
+const wchar_t   SleepingDebuggee[] = L"testSleep.exe";
+const wchar_t   OptionsDebuggee[] = L"testOptions.exe";
+const wchar_t   EventsDebuggee[] = L"testEvents.exe";
+const wchar_t   StepOneThreadDebuggee[] = L"testStepOneThread.exe";
 
 
 #define TEST_ASSERT_RETURN( expr )                                  \

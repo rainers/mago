@@ -48,6 +48,7 @@ EventCallbackBase::EventCallbackBase()
         mLastThreadId( 0 ),
         mLoadCompleted( false ),
         mProcExited( false ),
+        mProcExitCode( 0 ),
         mCanStepInFuncRetVal( false )
 {
 }
@@ -117,6 +118,11 @@ bool EventCallbackBase::GetProcessExited()
     return mProcExited;
 }
 
+uint32_t EventCallbackBase::GetProcessExitCode()
+{
+    return mProcExitCode;
+}
+
 void EventCallbackBase::AddRef()
 {
     mRefCount++;
@@ -153,6 +159,7 @@ void EventCallbackBase::OnProcessStart( IProcess* process )
 void EventCallbackBase::OnProcessExit( IProcess* process, DWORD exitCode )
 {
     mProcExited = true;
+    mProcExitCode = exitCode;
     mLastThreadId = 0;
     if ( mTrackEvents || mTrackLastEvent )
     {

@@ -149,6 +149,7 @@ class EventCallbackBase : public IEventCallback
     ModuleMap               mModules;
     RefPtr<IModule>         mProcMod;
     uint32_t                mLastThreadId;
+    uint32_t                mProcExitCode;
     bool                    mLoadCompleted;
     bool                    mProcExited;
     bool                    mCanStepInFuncRetVal;
@@ -171,6 +172,7 @@ public:
     boost::shared_ptr<EventNode> GetLastEvent();
     bool GetLoadCompleted();
     bool GetProcessExited();
+    uint32_t GetProcessExitCode();
 
     virtual void AddRef();
     virtual void Release();
