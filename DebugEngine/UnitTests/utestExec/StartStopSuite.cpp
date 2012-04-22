@@ -15,17 +15,18 @@ using namespace std;
 struct CheckWindowInfo
 {
     DWORD           ProcId;
-    const wchar_t*  Title;
-    bool            Found;
+    HWND            DebuggeeHwnd;
 };
 
 const DWORD DefaultTimeoutMillis = 500;
+const DWORD DefaultIOTimeoutMillis = 5 * 1000;
 
 
 StartStopSuite::StartStopSuite()
 {
     TEST_ADD( StartStopSuite::TestInit );
-    TEST_ADD( StartStopSuite::TestLaunch );
+    TEST_ADD( StartStopSuite::TestLaunchDestroyExecStopped );
+    TEST_ADD( StartStopSuite::TestLaunchDestroyExecRunning );
     TEST_ADD( StartStopSuite::TestTerminateStopped );
     TEST_ADD( StartStopSuite::TestTerminateRunning );
     TEST_ADD( StartStopSuite::TestBeginToEnd );
@@ -76,7 +77,57 @@ void StartStopSuite::TestInit()
     TEST_ASSERT( SUCCEEDED( mExec->Init( mMachine, mCallback ) ) );
 }
 
-void StartStopSuite::TestLaunch()
+void StartStopSuite::TestLaunchDestroyExecStopped()
+{
+    uint32_t    pid = 0;
+
+    {
+        Exec    exec;
+
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+
+        LaunchInfo  info = { 0 };
+        wchar_t     cmdLine[ MAX_PATH ] = L"";
+        RefPtr<IProcess>   proc;
+
+        swprintf_s( cmdLine, L"\"%s\"", SimplestDebuggee );
+
+        info.CommandLine = cmdLine;
+        info.Exe = SimplestDebuggee;
+
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, proc.Ref() ) ) );
+
+        pid = proc->GetId();
+
+        bool        sawLoadCompleted = false;
+
+        for ( ; !mCallback->GetProcessExited(); )
+        {
+            HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+
+            TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
+
+            if ( !sawLoadCompleted && mCallback->GetLoadCompleted() )
+            {
+                sawLoadCompleted = true;
+                break;
+            }
+            else
+            {
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+            }
+        }
+
+        TEST_ASSERT( !mCallback->GetProcessExited() );
+    }
+
+    TEST_ASSERT( pid != 0 );
+
+    AssertProcessFinished( pid );
+}
+
+void StartStopSuite::TestLaunchDestroyExecRunning()
 {
     uint32_t    pid = 0;
 
@@ -89,7 +140,7 @@ void StartStopSuite::TestLaunch()
         wchar_t     cmdLine[ MAX_PATH ] = L"";
         IProcess*   proc = NULL;
 
-        swprintf_s( cmdLine, L"\"%s\"", SimplestDebuggee );
+        swprintf_s( cmdLine, L"\"%s\"", SleepingDebuggee );
 
         info.CommandLine = cmdLine;
         info.Exe = SimplestDebuggee;
@@ -97,6 +148,28 @@ void StartStopSuite::TestLaunch()
         TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, proc ) ) );
         pid = proc->GetId();
         proc->Release();
+
+        bool        sawLoadCompleted = false;
+
+        for ( ; !mCallback->GetProcessExited(); )
+        {
+            HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+
+            if ( (hr == E_TIMEOUT) && sawLoadCompleted )
+                break;
+
+            TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
+
+            if ( !sawLoadCompleted && mCallback->GetLoadCompleted() )
+            {
+                sawLoadCompleted = true;
+            }
+
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+        }
+
+        TEST_ASSERT( !mCallback->GetProcessExited() );
     }
 
     TEST_ASSERT( pid != 0 );
@@ -141,6 +214,7 @@ void StartStopSuite::TestBeginToEnd()
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );
     TEST_ASSERT( mCallback->GetProcessExited() );
+    TEST_ASSERT( mCallback->GetProcessExitCode() == 0 );
 
     AssertProcessFinished( pid );
 }
@@ -190,6 +264,7 @@ void StartStopSuite::TestTerminateStopped()
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );
     TEST_ASSERT( mCallback->GetProcessExited() );
+    TEST_ASSERT( mCallback->GetProcessExitCode() == 0 );
 
     AssertProcessFinished( pid );
 }
@@ -235,6 +310,7 @@ void StartStopSuite::TestTerminateRunning()
     TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
     TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
     TEST_ASSERT( mCallback->GetProcessExited() );
+    TEST_ASSERT( mCallback->GetProcessExitCode() == 0 );
 
     AssertProcessFinished( pid );
 }
@@ -251,6 +327,10 @@ void StartStopSuite::TestOptionsNewConsole()
 
 void StartStopSuite::BuildEnv( wchar_t* env, int envSize, char* expectedEnv, int expectedEnvSize, char* requestedEnv, int requestedEnvSize )
 {
+    // there has to be room for a character and the terminator for 3 strings and the environment's terminator
+    _ASSERT( envSize > 2*3 );
+
+    int                 envNoTermSize = envSize - 1;    // leave room for env's terminator
     int                 count = 0;
     int                 pos = 0;
     GUID                guid = { 0 };
@@ -265,16 +345,16 @@ void StartStopSuite::BuildEnv( wchar_t* env, int envSize, char* expectedEnv, int
 
     // ready the environmnent
 
-    count = swprintf_s( &env[pos], envSize - pos, L"myGuid1=%s", guidStr );
-    TEST_ASSERT( count > 0 );
+    count = swprintf_s( &env[pos], envNoTermSize - pos, L"myGuid1=%s", guidStr );
+    TEST_ASSERT_RETURN( count > 0 );
     pos += count + 1;   // including terminator
 
-    count = swprintf_s( &env[pos], envSize - pos, L"ourTime2=%08x,%08x", curFileTime.dwHighDateTime, curFileTime.dwLowDateTime );
-    TEST_ASSERT( count > 0 );
+    count = swprintf_s( &env[pos], envNoTermSize - pos, L"ourTime2=%08x,%08x", curFileTime.dwHighDateTime, curFileTime.dwLowDateTime );
+    TEST_ASSERT_RETURN( count > 0 );
     pos += count + 1;   // including terminator
 
-    count = swprintf_s( &env[pos], envSize - pos, L"theString3=hello yo!" );
-    TEST_ASSERT( count > 0 );
+    count = swprintf_s( &env[pos], envNoTermSize - pos, L"theString3=hello yo!" );
+    TEST_ASSERT_RETURN( count > 0 );
     pos += count + 1;   // including terminator
 
     env[pos] = L'\0';   // put the environment terminator
@@ -330,24 +410,28 @@ void StartStopSuite::TryOptions( bool newConsole )
     HandlePtr           errFileWrite;
     wchar_t             dir[ MAX_PATH ] = L"";
     wchar_t             env[ 512 ] = L"";
-    OVERLAPPED          readOverlapped = { 0 };
+    OVERLAPPED          readErrOverlapped = { 0 };
     OVERLAPPED          readOutOverlapped = { 0 };
     OVERLAPPED          writeOverlapped = { 0 };
-    HandlePtr           readEvent( CreateEvent( NULL, TRUE, FALSE, NULL ) );
+    HandlePtr           readErrEvent( CreateEvent( NULL, TRUE, FALSE, NULL ) );
     HandlePtr           readOutEvent( CreateEvent( NULL, TRUE, FALSE, NULL ) );
     HandlePtr           writeEvent( CreateEvent( NULL, TRUE, FALSE, NULL ) );
     char                expectedEnv[ 256 ] = "";
     char                requestedEnv[ 256 ] = "";
     bool                ok = false;
 
+    // use an unlikely folder
+    TEST_ASSERT_RETURN( GetSystemDirectory( dir, _countof( dir ) ) > 0 );
+
     // debuggee will write these to the error stream in order: 1, 2, 3
     // the C standard streams in debuggee are in ANSI mode, so use char[] here
     const char          ExpectedArgs[] = "is_easy1\r\n_2gamma\r\n3+3\r\n";
     swprintf_s( cmdLine, L"\"%s\" _2gamma \"3+3\" is_easy1", OptionsDebuggee );
 
-    BuildEnv( env, _countof( env ), expectedEnv, _countof( expectedEnv ), requestedEnv, _countof( requestedEnv ) );
+    char expectedArgsAndCurDir[ MAX_PATH ] = "";
+    sprintf_s( expectedArgsAndCurDir, "%s%ls\r\n", ExpectedArgs, dir );
 
-    TEST_ASSERT_RETURN( GetTempPath( _countof( dir ), dir ) > 0 );
+    BuildEnv( env, _countof( env ), expectedEnv, _countof( expectedEnv ), requestedEnv, _countof( requestedEnv ) );
 
     MakeStdPipes( inFileRead, inFileWrite, outFileRead, outFileWrite, errFileRead, errFileWrite, ok );
     TEST_ASSERT_RETURN_MSG( ok, "Couldn't make pipes" );
@@ -371,23 +455,24 @@ void StartStopSuite::TryOptions( bool newConsole )
     BOOL        bRet = FALSE;
     bool        sawLoadComplete = false;
 
-    readOverlapped.hEvent = readEvent.Get();
+    readErrOverlapped.hEvent = readErrEvent.Get();
     readOutOverlapped.hEvent = readOutEvent.Get();
     writeOverlapped.hEvent = writeEvent.Get();
 
-    TEST_ASSERT( !ReadFile( errFileRead.Get(), response, sizeof ExpectedArgs, &bytesRead, &readOverlapped ) );
+    TEST_ASSERT( !ReadFile( errFileRead.Get(), response, strlen( expectedArgsAndCurDir ), &bytesRead, &readErrOverlapped ) );
     TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
 
-    TEST_ASSERT( !WriteFile( inFileWrite.Get(), requestedEnv, (DWORD) strlen( requestedEnv ), &bytesWritten, &writeOverlapped));
+    TEST_ASSERT( !WriteFile( inFileWrite.Get(), requestedEnv, strlen( requestedEnv ), &bytesWritten, &writeOverlapped));
     TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
 
-    TEST_ASSERT( !ReadFile( outFileRead.Get(), outResponse, (DWORD) strlen( expectedEnv ), &bytesRead, &readOutOverlapped ) );
+    TEST_ASSERT( !ReadFile( outFileRead.Get(), outResponse, strlen( expectedEnv ), &bytesRead, &readOutOverlapped ) );
     TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
 
     for ( ; !mCallback->GetProcessExited(); )
     {
         HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
 
+        // one reason for timeout is if debuggee writes more to std files than we expect
         if ( hr == E_TIMEOUT )
             break;
 
@@ -398,7 +483,7 @@ void StartStopSuite::TryOptions( bool newConsole )
         {
             sawLoadComplete = true;
             // now that the app is loaded, its window should be visible if it has one
-            AssertConsoleWindow( newConsole, proc->GetId(), info.Exe );
+            AssertConsoleWindow( newConsole, proc->GetId() );
         }
 
         TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
@@ -406,22 +491,33 @@ void StartStopSuite::TryOptions( bool newConsole )
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );
     TEST_ASSERT( mCallback->GetProcessExited() );
+    TEST_ASSERT( mCallback->GetProcessExitCode() == -333 );
 
-    waitRet = WaitForSingleObject( readEvent.Get(), 5 * 1000 );
+    waitRet = WaitForSingleObject( readErrEvent.Get(), DefaultIOTimeoutMillis );
     TEST_ASSERT( waitRet == WAIT_OBJECT_0 );
-    TEST_ASSERT( GetOverlappedResult( errFileRead.Get(), &readOverlapped, &bytesRead, FALSE ) );
+    TEST_ASSERT( GetOverlappedResult( errFileRead.Get(), &readErrOverlapped, &bytesRead, FALSE ) );
     response[bytesRead] = '\0';
-    TEST_ASSERT( strcmp( response, ExpectedArgs ) == 0 );
+    TEST_ASSERT( strcmp( response, expectedArgsAndCurDir ) == 0 );
 
-    waitRet = WaitForSingleObject( writeEvent.Get(), 5 * 1000 );
+    waitRet = WaitForSingleObject( writeEvent.Get(), DefaultIOTimeoutMillis );
     TEST_ASSERT( waitRet == WAIT_OBJECT_0 );
     TEST_ASSERT( GetOverlappedResult( inFileWrite.Get(), &writeOverlapped, &bytesWritten, FALSE ) );
 
-    waitRet = WaitForSingleObject( readOutEvent.Get(), 5 * 1000 );
+    waitRet = WaitForSingleObject( readOutEvent.Get(), DefaultIOTimeoutMillis );
     TEST_ASSERT( waitRet == WAIT_OBJECT_0 );
     TEST_ASSERT( GetOverlappedResult( outFileRead.Get(), &readOutOverlapped, &bytesRead, FALSE ) );
     outResponse[bytesRead] = '\0';
     TEST_ASSERT( strcmp( outResponse, expectedEnv ) == 0 );
+
+    // was anything else written that shouldn't have?
+
+    TEST_ASSERT( !ReadFile( errFileRead.Get(), response, 1, &bytesRead, &readErrOverlapped ) );
+    TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
+    TEST_ASSERT( bytesRead == 0 );
+
+    TEST_ASSERT( !ReadFile( outFileRead.Get(), outResponse, 1, &bytesRead, &readOutOverlapped ) );
+    TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
+    TEST_ASSERT( bytesRead == 0 );
 }
 
 BOOL CALLBACK CheckWindowProc( HWND hWnd, LPARAM param )
@@ -429,34 +525,27 @@ BOOL CALLBACK CheckWindowProc( HWND hWnd, LPARAM param )
     CheckWindowInfo*    winInfo = (CheckWindowInfo*) param;
     DWORD               procId = 0;
     DWORD               threadId = 0;
-    wchar_t             title[ MAX_PATH ] = L"";
 
     threadId = GetWindowThreadProcessId( hWnd, &procId );
 
     if ( procId == winInfo->ProcId )
     {
-        int nRet = GetWindowText( hWnd, title, _countof( title ) );
-
-        if ( (nRet > 0) && (_wcsicmp( title, winInfo->Title ) == 0) )
-        {
-            winInfo->Found = true;
-            SetLastError( NO_ERROR );
-            return FALSE;
-        }
+        winInfo->DebuggeeHwnd = hWnd;
+        SetLastError( NO_ERROR );
+        return FALSE;
     }
 
     return TRUE;
 }
 
-void StartStopSuite::AssertConsoleWindow( bool newConsole, DWORD procId, const wchar_t* title )
+void StartStopSuite::AssertConsoleWindow( bool newConsole, DWORD procId )
 {
     CheckWindowInfo winInfo = { 0 };
 
     winInfo.ProcId = procId;
-    winInfo.Title = title;
 
     TEST_ASSERT( EnumWindows( CheckWindowProc, (LPARAM) &winInfo ) || (GetLastError() == NO_ERROR) );
-    TEST_ASSERT( winInfo.Found == newConsole );
+    TEST_ASSERT( (winInfo.DebuggeeHwnd != NULL) == newConsole );
 }
 
 void StartStopSuite::AssertProcessFinished( uint32_t pid )

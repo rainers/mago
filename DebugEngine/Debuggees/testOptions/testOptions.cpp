@@ -10,9 +10,14 @@ int _tmain(int argc, _TCHAR* argv[])
     if ( argc != 4 )
         return 1;
 
+    wchar_t dir[ MAX_PATH ] = L"";
+
+    GetCurrentDirectory( _countof( dir ), dir );
+
     fwprintf( stderr, L"%ls\n", argv[3] );
     fwprintf( stderr, L"%ls\n", argv[1] );
     fwprintf( stderr, L"%ls\n", argv[2] );
+    fwprintf( stderr, L"%ls\n", dir );
 
     for ( int i = 0; i < 3; i++ )
     {
@@ -25,10 +30,14 @@ int _tmain(int argc, _TCHAR* argv[])
 
         //OutputDebugStringA( varName );
         //OutputDebugStringA( varVal );
-        
+
         printf( "%s\n", varVal );
     }
 
-    return 0;
+    // flush these in the same order that test will read them
+    fflush( stderr );
+    fflush( stdout );
+
+    return -333;
 }
 
