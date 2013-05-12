@@ -249,13 +249,13 @@ namespace MagoST
         return true;
     }
 
-    bool ArrayTypeSymbol::GetName( PasString*& name )
+    bool ArrayTypeSymbol::GetName( SymString& name )
     {
         CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
 
         uint32_t    offset = GetNumLeafSize( &type->array.arraylen );
 
-        name = (PasString*) ((char*) &type->array.arraylen + offset);
+        assign( name, (PasString*) ((char*) &type->array.arraylen + offset) );
         return true;
     }
 
@@ -289,13 +289,13 @@ namespace MagoST
         return SymTagUDT;
     }
 
-    bool StructOrClassTypeSymbol::GetName( PasString*& name )
+    bool StructOrClassTypeSymbol::GetName( SymString& name )
     {
         CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
 
         uint32_t    offset = GetNumLeafSize( &type->_struct.structlen );
 
-        name = (PasString*) ((char*) &type->_struct.structlen + offset);
+        assign( name, (PasString*) ((char*) &type->_struct.structlen + offset) );
         return true;
     }
 
@@ -391,13 +391,13 @@ namespace MagoST
         return SymTagUDT;
     }
 
-    bool UnionTypeSymbol::GetName( PasString*& name )
+    bool UnionTypeSymbol::GetName( SymString& name )
     {
         CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
 
         uint32_t    offset = GetNumLeafSize( &type->_union.unionlen );
 
-        name = (PasString*) ((char*) &type->_union.unionlen + offset);
+        assign( name, (PasString*) ((char*) &type->_union.unionlen + offset) );
         return true;
     }
 
@@ -458,10 +458,10 @@ namespace MagoST
         return true;
     }
 
-    bool EnumTypeSymbol::GetName( PasString*& name )
+    bool EnumTypeSymbol::GetName( SymString& name )
     {
         CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
-        name = &type->_enum.p_name;
+        assign( name, &type->_enum.p_name );
         return true;
     }
 
@@ -691,10 +691,12 @@ namespace MagoST
         return true;
     }
 
-    bool OEMTypeSymbol::GetTypes( TypeIndex*& indexes )
+    bool OEMTypeSymbol::GetTypes( std::vector<TypeIndex>& indexes )
     {
         CodeViewType*   type = (CodeViewType*) mData.Type.Handle.Type;
-        indexes = (TypeIndex*) (&type->oem.count + 1);
+        indexes.resize( type->oem.count );
+        for( int i = 0; i < type->oem.count; i++ )
+            indexes[i] = ((CV_typ_t*) (&type->oem.count + 1))[i];
         return true;
     }
 
@@ -746,14 +748,22 @@ namespace MagoST
         return true;
     }
 
-    bool TypeListTypeSymbol::GetTypes( TypeIndex*& indexes )
+    bool TypeListTypeSymbol::GetTypes( std::vector<TypeIndex>& indexes )
     {
         CodeViewRefType*  reftype = (CodeViewRefType*) mData.Type.Handle.Type;
 
         if ( mData.Type.Handle.Tag == LF_ARGLIST )
-            indexes = reftype->arglist.args;
+        {
+            indexes.resize( reftype->arglist.count );
+            for( int i = 0; i < reftype->arglist.count; i++ )
+                indexes[i] = reftype->arglist.args[i];
+        }
         else if ( mData.Type.Handle.Tag == LF_DERIVED )
-            indexes = reftype->derived.drvdcls;
+        {
+            indexes.resize( reftype->derived.count );
+            for( int i = 0; i < reftype->derived.count; i++ )
+                indexes[i] = reftype->derived.drvdcls[i];
+        }
         else
             return false;
 
@@ -813,13 +823,13 @@ namespace MagoST
         return SymTagData;
     }
 
-    bool EnumMemberTypeSymbol::GetName( PasString*& name )
+    bool EnumMemberTypeSymbol::GetName( SymString& name )
     {
         CodeViewFieldType*  field = (CodeViewFieldType*) mData.Type.Handle.Type;
 
         uint32_t            offset = GetNumLeafSize( &field->enumerate.value );
 
-        name = (PasString*) ((char*) &field->enumerate.value + offset);
+        assign( name, (PasString*) ((char*) &field->enumerate.value + offset) );
         return true;
     }
 
@@ -872,13 +882,13 @@ namespace MagoST
         return true;
     }
 
-    bool DataMemberTypeSymbol::GetName( PasString*& name )
+    bool DataMemberTypeSymbol::GetName( SymString& name )
     {
         CodeViewFieldType*  field = (CodeViewFieldType*) mData.Type.Handle.Type;
 
         uint32_t            offset = GetNumLeafSize( &field->member.offset );
 
-        name = (PasString*) ((char*) &field->member.offset + offset);
+        assign( name, (PasString*) ((char*) &field->member.offset + offset) );
         return true;
     }
 
@@ -931,10 +941,10 @@ namespace MagoST
         return true;
     }
 
-    bool StaticMemberTypeSymbol::GetName( PasString*& name )
+    bool StaticMemberTypeSymbol::GetName( SymString& name )
     {
         CodeViewFieldType*  field = (CodeViewFieldType*) mData.Type.Handle.Type;
-        name = &field->stmember.p_name;
+        assign( name, &field->stmember.p_name );
         return true;
     }
 
@@ -973,10 +983,10 @@ namespace MagoST
         return SymTagMethodOverloads;
     }
 
-    bool MethodOverloadsTypeSymbol::GetName( PasString*& name )
+    bool MethodOverloadsTypeSymbol::GetName( SymString& name )
     {
         CodeViewFieldType*  field = (CodeViewFieldType*) mData.Type.Handle.Type;
-        name = &field->method.p_name;
+        assign( name, &field->method.p_name );
         return true;
     }
 
@@ -1054,18 +1064,18 @@ namespace MagoST
         return true;
     }
 
-    bool MethodTypeSymbol::GetName( PasString*& name )
+    bool MethodTypeSymbol::GetName( SymString& name )
     {
         CodeViewFieldType*  field = (CodeViewFieldType*) mData.Type.Handle.Type;
 
         CV_fldattr_t*   attr = (CV_fldattr_t*) &field->onemethod.attr;
         if ( (attr->mprop == CV_MTintro) || (attr->mprop == CV_MTpureintro) )
         {
-            name = &field->onemethod_virt.p_name;
+            assign( name, &field->onemethod_virt.p_name );
         }
         else
         {
-            name = &field->onemethod.p_name;
+            assign( name, &field->onemethod.p_name );
         }
         return true;
     }
@@ -1167,10 +1177,10 @@ namespace MagoST
         return true;
     }
 
-    bool NestedTypeSymbol::GetName( PasString*& name )
+    bool NestedTypeSymbol::GetName( SymString& name )
     {
         CodeViewFieldType*  field = (CodeViewFieldType*) mData.Type.Handle.Type;
-        name = &field->nesttype.p_name;
+        assign( name, &field->nesttype.p_name );
         return true;
     }
 
@@ -1220,10 +1230,10 @@ namespace MagoST
         return true;
     }
 
-    bool FriendFunctionTypeSymbol::GetName( PasString*& name )
+    bool FriendFunctionTypeSymbol::GetName( SymString& name )
     {
         CodeViewFieldType*  field = (CodeViewFieldType*) mData.Type.Handle.Type;
-        name = &field->friendfcn.p_name;
+        assign( name, &field->friendfcn.p_name );
         return true;
     }
 }

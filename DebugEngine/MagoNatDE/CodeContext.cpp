@@ -322,7 +322,7 @@ namespace Mago
         MagoST::SymInfoData         infoData = { 0 };
         MagoST::ISymbolInfo*        symInfo = NULL;
         RefPtr<MagoST::ISession>    session;
-        PasString*                  pstrName = NULL;
+        SymString                   pstrName;
         CComBSTR                    bstrName;
 
         hr = FindFunction();
@@ -339,7 +339,7 @@ namespace Mago
         if ( !symInfo->GetName( pstrName ) )
             return NULL;
 
-        hr = Utf8To16( pstrName->GetName(), pstrName->GetLength(), bstrName.m_str );
+        hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), bstrName.m_str );
         if ( FAILED( hr ) )
             return NULL;
 

@@ -24,7 +24,7 @@ namespace MagoST
     public:
         virtual SymTag GetSymTag() = 0;
         virtual bool GetType( TypeIndex& index ) = 0;
-        virtual bool GetName( PasString*& name ) = 0;
+        virtual bool GetName( SymString& name ) = 0;
 
         virtual bool GetAddressOffset( uint32_t& offset ) = 0;
         virtual bool GetAddressSegment( uint16_t& segment ) = 0;
@@ -67,7 +67,7 @@ namespace MagoST
 
         virtual bool GetOemId( uint32_t& oemId ) = 0;
         virtual bool GetOemSymbolId( uint32_t& oemSymId ) = 0;
-        virtual bool GetTypes( TypeIndex*& indexes ) = 0;
+        virtual bool GetTypes( std::vector<TypeIndex>& indexes ) = 0;
 
         virtual bool GetAttribute( uint16_t& attr ) = 0;
         virtual bool GetVBaseOffset( uint32_t& offset ) = 0;

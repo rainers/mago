@@ -26,7 +26,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -41,7 +41,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -56,7 +56,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -72,7 +72,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -88,7 +88,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -114,7 +114,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetAddressOffset( uint32_t& offset );
@@ -134,7 +134,7 @@ namespace MagoST
         ThunkSymbol( const SymHandleIn& handle );
 
         virtual SymTag GetSymTag();
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetAddressOffset( uint32_t& offset );
@@ -151,7 +151,7 @@ namespace MagoST
         BlockSymbol( const SymHandleIn& handle );
 
         virtual SymTag GetSymTag();
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetAddressOffset( uint32_t& offset );
@@ -166,7 +166,7 @@ namespace MagoST
         LabelSymbol( const SymHandleIn& handle );
 
         virtual SymTag GetSymTag();
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetAddressOffset( uint32_t& offset );
@@ -184,7 +184,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -213,7 +213,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
     };
 
 

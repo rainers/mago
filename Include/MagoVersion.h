@@ -12,7 +12,7 @@
 #define MAGO_VERSION_MINOR      5
 
 #ifndef MAGO_VERSION_BUILD
-#define MAGO_VERSION_BUILD      0
+#define MAGO_VERSION_BUILD      3
 #endif
 
 #define MAGO_VERSION_REVISION   0

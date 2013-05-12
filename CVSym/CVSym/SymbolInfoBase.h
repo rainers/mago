@@ -34,7 +34,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& locType );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -77,7 +77,7 @@ namespace MagoST
 
         virtual bool GetOemId( uint32_t& oemId );
         virtual bool GetOemSymbolId( uint32_t& oemSymId );
-        virtual bool GetTypes( TypeIndex*& indexes );
+        virtual bool GetTypes( std::vector<TypeIndex>& indexes );
 
         virtual bool GetAttribute( uint16_t& attr );
         virtual bool GetVBaseOffset( uint32_t& offset );

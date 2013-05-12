@@ -174,7 +174,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = Utf8To16( fileInfo.Name, fileInfo.NameLength, filename.m_str );
+        hr = Utf8To16( fileInfo.Name.ptr, fileInfo.Name.length, filename.m_str );
         if ( FAILED( hr ) )
             return hr;
 

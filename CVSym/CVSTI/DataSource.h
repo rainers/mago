@@ -23,7 +23,7 @@ namespace MagoST
         std::auto_ptr<IDebugContainer>  mDebugContainer;
         BYTE*                           mDebugView;
         DWORD                           mDebugSize;
-        MagoST::DebugStore              mStore;
+        MagoST::IDebugStore*            mStore;
 
         RefPtr<IAddressMap>             mAddrMap;
 
@@ -43,7 +43,7 @@ namespace MagoST
 
         virtual HRESULT OpenSession( ISession*& session );
 
-        DebugStore* GetDebugStore();
+        IDebugStore* GetDebugStore();
         RefPtr<IAddressMap> GetAddressMap();
     };
 }

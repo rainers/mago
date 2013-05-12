@@ -13,7 +13,6 @@ struct OMFDirHeader;
 union CodeViewSymbol;
 union CodeViewType;
 union CodeViewFieldType;
-struct PasString;
 struct OMFSourceModule;
 struct OMFSourceFile;
 
@@ -24,8 +23,54 @@ namespace MagoST
     struct SymHandleIn;
     class ISymbolInfo;
 
+    class IDebugStore
+    {
+    public:
+        virtual ~IDebugStore() {}
 
-    class DebugStore
+        // symbols
+
+        virtual HRESULT SetSymbolScope( SymbolHeapId heapId, SymbolScope& scope ) = 0;
+        virtual HRESULT SetCompilandSymbolScope( DWORD compilandIndex, SymbolScope& scope ) = 0;
+        virtual HRESULT SetChildSymbolScope( SymHandle handle, SymbolScope& scope ) = 0;
+
+        virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle ) = 0;
+
+        virtual HRESULT FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data ) = 0;
+        virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle ) = 0;
+        virtual HRESULT GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle ) = 0;
+
+        virtual HRESULT FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle ) = 0;
+
+        virtual HRESULT GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo ) = 0;
+
+        // types
+
+        virtual HRESULT SetGlobalTypeScope( TypeScope& scope ) = 0;
+        virtual HRESULT SetChildTypeScope( TypeHandle handle, TypeScope& scope ) = 0;
+
+        virtual bool NextType( TypeScope& scope, TypeHandle& handle ) = 0;
+
+        virtual bool GetTypeFromTypeIndex( TypeIndex typeIndex, TypeHandle& handle ) = 0;
+
+        virtual HRESULT GetTypeInfo( TypeHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo ) = 0;
+
+        // source files
+
+        virtual HRESULT GetCompilandCount( uint32_t& count ) = 0;
+        virtual HRESULT GetCompilandInfo( uint16_t index, CompilandInfo& info ) = 0;
+        virtual HRESULT GetCompilandSegmentInfo( uint16_t index, uint16_t count, SegmentInfo* infos ) = 0;
+        virtual HRESULT GetFileInfo( uint16_t compilandIndex, uint16_t fileIndex, FileInfo& info ) = 0;
+        virtual HRESULT GetFileSegmentInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t count, SegmentInfo* infos ) = 0;
+        virtual HRESULT GetLineInfo( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, uint16_t count, LineInfo* infos) = 0;
+
+        virtual bool    GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo ) = 0;
+
+        virtual bool    FindCompilandFileSegment( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& segInfo ) = 0;
+        virtual bool    FindCompilandFileSegment( uint16_t line, uint16_t compIndex, uint16_t fileIndex, FileSegmentInfo& segInfo ) = 0;
+    };
+
+    class DebugStore : public IDebugStore
     {
         typedef bool (DebugStore::*NextTypeFunc)( TypeScope& scope, TypeHandle& handle );
 
@@ -83,46 +128,46 @@ namespace MagoST
 
         // symbols
 
-        HRESULT SetSymbolScope( SymbolHeapId heapId, SymbolScope& scope );
-        HRESULT SetCompilandSymbolScope( DWORD compilandIndex, SymbolScope& scope );
-        HRESULT SetChildSymbolScope( SymHandle handle, SymbolScope& scope );
+        virtual HRESULT SetSymbolScope( SymbolHeapId heapId, SymbolScope& scope );
+        virtual HRESULT SetCompilandSymbolScope( DWORD compilandIndex, SymbolScope& scope );
+        virtual HRESULT SetChildSymbolScope( SymHandle handle, SymbolScope& scope );
 
-        bool NextSymbol( SymbolScope& scope, SymHandle& handle );
+        virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle );
 
-        HRESULT FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data );
-        HRESULT FindNextSymbol( EnumNamedSymbolsData& handle );
-        HRESULT GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle );
+        virtual HRESULT FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data );
+        virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle );
+        virtual HRESULT GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle );
 
-        HRESULT FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle );
+        virtual HRESULT FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle );
 
-        HRESULT GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo );
+        virtual HRESULT GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo );
 
         bool IsTLSData( SymHandleIn& internalHandle );
 
         // types
 
-        HRESULT SetGlobalTypeScope( TypeScope& scope );
-        HRESULT SetChildTypeScope( TypeHandle handle, TypeScope& scope );
+        virtual HRESULT SetGlobalTypeScope( TypeScope& scope );
+        virtual HRESULT SetChildTypeScope( TypeHandle handle, TypeScope& scope );
 
-        bool NextType( TypeScope& scope, TypeHandle& handle );
+        virtual bool NextType( TypeScope& scope, TypeHandle& handle );
 
-        bool GetTypeFromTypeIndex( WORD typeIndex, TypeHandle& handle );
+        virtual bool GetTypeFromTypeIndex( TypeIndex typeIndex, TypeHandle& handle );
 
-        HRESULT GetTypeInfo( TypeHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo );
+        virtual HRESULT GetTypeInfo( TypeHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo );
 
         // source files
 
-        HRESULT GetCompilandCount( uint32_t& count );
-        HRESULT GetCompilandInfo( uint16_t index, CompilandInfo& info );
-        HRESULT GetCompilandSegmentInfo( uint16_t index, uint16_t count, SegmentInfo* infos );
-        HRESULT GetFileInfo( uint16_t compilandIndex, uint16_t fileIndex, FileInfo& info );
-        HRESULT GetFileSegmentInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t count, SegmentInfo* infos );
-        HRESULT GetLineInfo( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, uint16_t count, LineInfo* infos);
+        virtual HRESULT GetCompilandCount( uint32_t& count );
+        virtual HRESULT GetCompilandInfo( uint16_t index, CompilandInfo& info );
+        virtual HRESULT GetCompilandSegmentInfo( uint16_t index, uint16_t count, SegmentInfo* infos );
+        virtual HRESULT GetFileInfo( uint16_t compilandIndex, uint16_t fileIndex, FileInfo& info );
+        virtual HRESULT GetFileSegmentInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t count, SegmentInfo* infos );
+        virtual HRESULT GetLineInfo( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, uint16_t count, LineInfo* infos);
 
-        bool    GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo );
+        virtual bool    GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo );
 
-        bool    FindCompilandFileSegment( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& segInfo );
-        bool    FindCompilandFileSegment( uint16_t line, uint16_t compIndex, uint16_t fileIndex, FileSegmentInfo& segInfo );
+        virtual bool    FindCompilandFileSegment( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& segInfo );
+        virtual bool    FindCompilandFileSegment( uint16_t line, uint16_t compIndex, uint16_t fileIndex, FileSegmentInfo& segInfo );
 
         // for debugging
         HRESULT GetSymbolBytePtr( SymHandle handle, BYTE* bytes, DWORD& size );
@@ -163,7 +208,7 @@ namespace MagoST
 
         CodeViewType* GetTypeFromTypeIndex( uint16_t typeIndex );
         bool ValidateField( TypeScopeIn* scopeIn );
-        bool SetFListContinuationScope( TypeIndex continuationIndex, TypeScopeIn* scopeIn );
+        bool SetFListContinuationScope( WORD continuationIndex, TypeScopeIn* scopeIn );
         bool ValidateSymbol( SymHandleIn* internalHandle, DWORD symSize );
         bool ValidateNamedSymbol( 
             DWORD offset, 

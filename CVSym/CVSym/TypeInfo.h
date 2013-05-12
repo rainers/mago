@@ -66,7 +66,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLength( uint32_t& length );
         virtual bool GetIndexType( TypeIndex& index );
@@ -79,7 +79,7 @@ namespace MagoST
         StructOrClassTypeSymbol( const TypeHandleIn& handle );
 
         virtual SymTag GetSymTag();
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLength( uint32_t& length );
 
@@ -115,7 +115,7 @@ namespace MagoST
         UnionTypeSymbol( const TypeHandleIn& handle );
 
         virtual SymTag GetSymTag();
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetUdtKind( UdtKind& udtKind );
         virtual bool GetLength( uint32_t& length );
@@ -133,7 +133,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLength( uint32_t& length );
 
@@ -198,7 +198,7 @@ namespace MagoST
         virtual bool GetOemId( uint32_t& oemId );
         virtual bool GetOemSymbolId( uint32_t& oemSymId );
         virtual bool GetCount( uint32_t& count );
-        virtual bool GetTypes( TypeIndex*& indexes );
+        virtual bool GetTypes( std::vector<TypeIndex>& indexes );
     };
 
 
@@ -218,7 +218,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetCount( uint32_t& count );
-        virtual bool GetTypes( TypeIndex*& indexes );
+        virtual bool GetTypes( std::vector<TypeIndex>& indexes );
     };
 
 
@@ -242,7 +242,7 @@ namespace MagoST
         EnumMemberTypeSymbol( const TypeHandleIn& handle );
 
         virtual SymTag GetSymTag();
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& loc );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -259,7 +259,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& loc );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -276,7 +276,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetLocation( LocationType& loc );
         virtual bool GetDataKind( DataKind& dataKind );
@@ -291,7 +291,7 @@ namespace MagoST
         MethodOverloadsTypeSymbol( const TypeHandleIn& handle );
 
         virtual SymTag GetSymTag();
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetCount( uint32_t& count );
     };
@@ -304,7 +304,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
 
         virtual bool GetAttribute( uint16_t& attr );
         virtual bool GetVBaseOffset( uint32_t& offset );
@@ -369,7 +369,7 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
     };
 
 
@@ -390,6 +390,6 @@ namespace MagoST
 
         virtual SymTag GetSymTag();
         virtual bool GetType( TypeIndex& index );
-        virtual bool GetName( PasString*& name );
+        virtual bool GetName( SymString& name );
     };
 }
