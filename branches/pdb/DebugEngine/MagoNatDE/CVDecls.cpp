@@ -65,12 +65,12 @@ namespace Mago
         if ( mName == NULL )
         {
             HRESULT     hr = S_OK;
-            PasString*  pstrName = NULL;
+            SymString   pstrName;
 
             if ( !mSymInfo->GetName( pstrName ) )
                 return NULL;
 
-            hr = Utf8To16( pstrName->GetName(), pstrName->GetLength(), mName.m_str );
+            hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), mName.m_str );
             if ( FAILED( hr ) )
                 return NULL;
         }
@@ -487,13 +487,13 @@ namespace Mago
         _ASSERT( context != NULL );
 
         FindBaseClassParams*    params = (FindBaseClassParams*) context;
-        PasString*              className = NULL;
+        SymString               className;
 
         if ( !classInfo->GetName( className ) )
             return true;
 
-        if ( (className->GetLength() != params->NameLen) 
-            || (strncmp( className->GetName(), params->Name, params->NameLen ) != 0) )
+        if ( (className.GetLength() != params->NameLen) 
+            || (strncmp( className.GetName(), params->Name, params->NameLen ) != 0) )
             return true;
 
         if ( !memberInfo->GetOffset( params->OutOffset ) )

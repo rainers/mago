@@ -7,42 +7,26 @@
 
 #pragma once
 
-
-// a Pascal String that is length prefixed and unterminated
-// common storage format for strings in CodeView
-
-struct PasString
+struct SymString
 {
-    size_t GetLength() const 
-    { 
-        const unsigned char* p = data;
-        return ReadLength( p );
-    }
+    size_t length : 24;
+    size_t alloced : 1;
+    const char* ptr;
 
-    const char* GetName() const 
-    { 
-        const unsigned char* p = data;
-        ReadLength( p );
-        return (const char*) p;
-    }
+    size_t GetLength() const { return length; }
+    const char* GetName() const { return ptr; }
 
-    static size_t ReadLength( const unsigned char*& p )
+    SymString() : length( 0 ), ptr( NULL ), alloced( false ) {}
+    ~SymString() { if ( alloced ) delete [] ptr; }
+
+    void set( size_t len, const char* p, bool alloc )
     {
-        // this uses a non-standard extension to CodeView that allows for long names
-        // normally names are at most 255 chars, and length prefix is 1 byte
-
-        size_t len = *p++;
-        if ( len == 0xff && *p == 0 )
-        {
-            len = p[1] | (p[2] << 8);
-            p += 3;
-        }
-        return len;
+        if ( alloced ) delete [] ptr;
+        length = len;
+        ptr = p;
+        alloced = alloc;
     }
-
-    unsigned char data[1];
 };
-
 
 namespace MagoST
 {
@@ -108,7 +92,7 @@ namespace MagoST
     };
 
 
-    typedef WORD TypeIndex;
+    typedef DWORD TypeIndex;
 
     struct Complex32
     {
@@ -176,7 +160,7 @@ namespace MagoST
     {
         WORD            SegmentCount;
         WORD            FileCount;
-        const PasString* Name;
+        SymString       Name;
     };
 
     struct SegmentInfo
@@ -190,8 +174,7 @@ namespace MagoST
     struct FileInfo
     {
         WORD            SegmentCount;
-        WORD            NameLength;
-        const char*     Name;
+        SymString       Name;
     };
 
     struct LineInfo

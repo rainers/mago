@@ -666,11 +666,11 @@ HRESULT ProgramValueEnv::MakeDeclarationFromFunctionSymbol(
 {
     HRESULT         hr = S_OK;
     TypeIndex       typeIndex = 0;
-    PasString*      pstrName1 = NULL;
+    SymString       pstrName1;
     TypeHandle      handle = { 0 };
     SymInfoData     typeInfoData = { 0 };
     ISymbolInfo*    typeInfo = NULL;
-    PasString*      pstrName2 = NULL;
+    SymString       pstrName2;
     RefPtr<Type>    refType;
 
     return E_NOTIMPL;
@@ -685,11 +685,11 @@ HRESULT ProgramValueEnv::MakeDeclarationFromTypedefSymbol(
 {
     HRESULT         hr = S_OK;
     TypeIndex       typeIndex = 0;
-    PasString*      pstrName1 = NULL;
+    SymString       pstrName1;
     TypeHandle      handle = { 0 };
     SymInfoData     typeInfoData = { 0 };
     ISymbolInfo*    typeInfo = NULL;
-    PasString*      pstrName2 = NULL;
+    SymString       pstrName2;
     RefPtr<Type>    refType;
 
     if ( !symInfo->GetType( typeIndex ) )
@@ -710,9 +710,9 @@ HRESULT ProgramValueEnv::MakeDeclarationFromTypedefSymbol(
 
     refType = GetTypeFromTypeSymbol( session, typeIndex, typeEnv );
 
-    if ( (pstrName2 != NULL)
-        && (pstrName1->GetLength() == pstrName2->GetLength()) 
-        && (strncmp( pstrName1->GetName(), pstrName2->GetName(), pstrName1->GetLength() ) == 0) )
+	if ( (pstrName2.GetName() != NULL)
+        && (pstrName1.GetLength() == pstrName2.GetLength()) 
+        && (strncmp( pstrName1.GetName(), pstrName2.GetName(), pstrName1.GetLength() ) == 0) )
     {
         // the typedef has the same name as the type, 
         // so let's use the referenced type directly, as if there's no typedef
@@ -1060,7 +1060,7 @@ RefPtr<Type> ProgramValueEnv::GetFunctionTypeFromTypeSymbol(
     TypeHandle      paramListTH = { 0 };
     SymInfoData     paramListInfoData = { 0 };
     ISymbolInfo*    paramListInfo = NULL;
-    TypeIndex*      paramTIs = NULL;
+    std::vector<TypeIndex> paramTIs;
 
     if ( !symInfo->GetType( retTI ) )
         throw L"Couldn't get return type.";
@@ -1179,7 +1179,7 @@ RefPtr<Type> ProgramValueEnv::GetCustomTypeFromTypeSymbol(
         {
             RefPtr<Type>        types[2];
             RefPtr<Type>        type;
-            TypeIndex*          typeIndexes = NULL;
+            std::vector<TypeIndex> typeIndexes;
 
             if ( count != 2 )
                 throw L"Can't get type.";

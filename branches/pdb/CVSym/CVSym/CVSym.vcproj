@@ -180,6 +180,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\PDBDebugStore.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\SymbolInfo.cpp"
 				>
 			</File>

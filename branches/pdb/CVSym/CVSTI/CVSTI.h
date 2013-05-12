@@ -9,8 +9,12 @@
 
 
 #include "CVSTIPublic.h"
+
+#include "../CVSym/CVSymPublic.h"
+#include "../CVSym/ISymbolInfo.h"
+
 #include "IDataSource.h"
 #include "ISession.h"
 #include "ILoadCallback.h"
 
-#include "..\CVSym\CVSym.h"
+//#include "..\CVSym\CVSym.h"
