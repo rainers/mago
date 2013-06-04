@@ -8,7 +8,6 @@
 #pragma once
 
 
-#include <boost/scoped_array.hpp>
 #include "CVSymPublic.h"
 #include "DebugStore.h"
 #include "ISymbolInfo.h"

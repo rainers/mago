@@ -246,9 +246,9 @@ namespace Mago
                         continue;
 
                     if ( exactMatch )
-                        matches = ExactFileNameMatch( fileName, fileNameLen, fileInfo.Name, fileInfo.NameLength );
+                        matches = ExactFileNameMatch( fileName, fileNameLen, fileInfo.Name.ptr, fileInfo.Name.length );
                     else
-                        matches = PartialFileNameMatch( fileName, fileNameLen, fileInfo.Name, fileInfo.NameLength );
+                        matches = PartialFileNameMatch( fileName, fileNameLen, fileInfo.Name.ptr, fileInfo.Name.length );
 
                     if ( !matches )
                         continue;

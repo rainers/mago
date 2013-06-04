@@ -55,7 +55,7 @@ const wchar_t* DiaDecl::GetName()
 {
     if ( mName == NULL )
     {
-        PasString*  pstrName = NULL;
+        SymString   pstrName;
         int         nChars = 0;
         BSTR        bstrName = NULL;
         CComBSTR    ccomBstrName;
@@ -63,7 +63,7 @@ const wchar_t* DiaDecl::GetName()
         if ( !mSymInfo->GetName( pstrName ) )
             return NULL;
 
-        nChars = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pstrName->GetName(), pstrName->GetLength(), NULL, 0 );
+        nChars = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pstrName.GetName(), pstrName.GetLength(), NULL, 0 );
         if ( nChars == 0 )
             return NULL;
 
@@ -73,7 +73,7 @@ const wchar_t* DiaDecl::GetName()
 
         ccomBstrName.Attach( bstrName );
 
-        nChars = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pstrName->GetName(), pstrName->GetLength(), ccomBstrName.m_str, nChars + 1 );
+        nChars = MultiByteToWideChar( CP_UTF8, MB_ERR_INVALID_CHARS, pstrName.GetName(), pstrName.GetLength(), ccomBstrName.m_str, nChars + 1 );
         if ( nChars == 0 )
             return NULL;
         ccomBstrName.m_str[nChars] = L'\0';

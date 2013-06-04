@@ -9,7 +9,7 @@
 
 
 #define MAGO_VERSION_MAJOR      0
-#define MAGO_VERSION_MINOR      7
+#define MAGO_VERSION_MINOR      8
 
 #ifndef MAGO_VERSION_BUILD
 #define MAGO_VERSION_BUILD      0

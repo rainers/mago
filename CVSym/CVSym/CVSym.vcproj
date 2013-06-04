@@ -180,6 +180,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\PDBDebugStore.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\SymbolInfo.cpp"
 				>
 			</File>
@@ -251,6 +255,10 @@
 			</File>
 			<File
 				RelativePath=".\OMFHashTable.h"
+				>
+			</File>
+			<File
+				RelativePath=".\PDBDebugStore.h"
 				>
 			</File>
 			<File

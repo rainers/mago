@@ -44,9 +44,9 @@ namespace MagoST
         return true;
     }
 
-    bool RegSymbol::GetName( PasString*& name )
+    bool RegSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->reg.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->reg.p_name );
         return true;
     }
 
@@ -90,12 +90,12 @@ namespace MagoST
         return true;
     }
 
-    bool ConstSymbol::GetName( PasString*& name )
+    bool ConstSymbol::GetName( SymString& name )
     {
         // value is variable size and it comes before name, so work it out
         uint32_t    offset = GetNumLeafSize( &mData.Symbol.Handle.Sym->constant.value );
 
-        name = (PasString*) ((char*) &mData.Symbol.Handle.Sym->constant.value + offset);
+        assign( name, (PasString*) ((char*) &mData.Symbol.Handle.Sym->constant.value + offset));
         return true;
     }
 
@@ -140,14 +140,14 @@ namespace MagoST
         return true;
     }
 
-    bool ManyRegsSymbol::GetName( PasString*& name )
+    bool ManyRegsSymbol::GetName( SymString& name )
     {
         const CodeViewSymbol*   sym = mData.Symbol.Handle.Sym;
         uint32_t    offset = sizeof sym->manyreg.count;
 
         offset += sym->manyreg.count;
 
-        name = (PasString*) ( (char*) &sym->manyreg.count + offset );
+        assign( name, (PasString*) ( (char*) &sym->manyreg.count + offset ) );
         return true;
     }
 
@@ -197,9 +197,9 @@ namespace MagoST
         return true;
     }
 
-    bool BPRelSymbol::GetName( PasString*& name )
+    bool BPRelSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->bprel.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->bprel.p_name );
         return true;
     }
 
@@ -250,9 +250,9 @@ namespace MagoST
         return true;
     }
 
-    bool DataSymbol::GetName( PasString*& name )
+    bool DataSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->data.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->data.p_name );
         return true;
     }
 
@@ -330,9 +330,9 @@ namespace MagoST
         return true;
     }
 
-    bool ProcSymbol::GetName( PasString*& name )
+    bool ProcSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->proc.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->proc.p_name );
         return true;
     }
 
@@ -403,9 +403,9 @@ namespace MagoST
         return SymTagThunk;
     }
 
-    bool ThunkSymbol::GetName( PasString*& name )
+    bool ThunkSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->thunk.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->thunk.p_name );
         return true;
     }
 
@@ -455,9 +455,9 @@ namespace MagoST
         return SymTagBlock;
     }
 
-    bool BlockSymbol::GetName( PasString*& name )
+    bool BlockSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->block.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->block.p_name );
         return true;
     }
 
@@ -501,9 +501,9 @@ namespace MagoST
         return SymTagLabel;
     }
 
-    bool LabelSymbol::GetName( PasString*& name )
+    bool LabelSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->label.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->label.p_name );
         return true;
     }
 
@@ -562,9 +562,9 @@ namespace MagoST
         return true;
     }
 
-    bool RegRelSymbol::GetName( PasString*& name )
+    bool RegRelSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->regrel.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->regrel.p_name );
         return true;
     }
 
@@ -642,9 +642,9 @@ namespace MagoST
         return true;
     }
 
-    bool UdtSymbol::GetName( PasString*& name )
+    bool UdtSymbol::GetName( SymString& name )
     {
-        name = &mData.Symbol.Handle.Sym->udt.p_name;
+        assign( name, &mData.Symbol.Handle.Sym->udt.p_name );
         return true;
     }
 

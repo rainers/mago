@@ -188,7 +188,7 @@ namespace Mago
         {
             MagoST::SymInfoData     infoData = { 0 };
             MagoST::ISymbolInfo*    symInfo = NULL;
-            PasString*              pstrName = NULL;
+            SymString               pstrName;
             CComBSTR                bstrName;
 
             hr = session->GetSymbolInfo( childSH, infoData, symInfo );
@@ -198,7 +198,7 @@ namespace Mago
             if ( !symInfo->GetName( pstrName ) )
                 continue;
 
-            hr = Utf8To16( pstrName->GetName(), pstrName->GetLength(), bstrName.m_str );
+            hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), bstrName.m_str );
             if ( FAILED( hr ) )
                 continue;
 

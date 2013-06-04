@@ -260,7 +260,7 @@ bool     QuickGetAddrSegment( CodeViewSymbol* sym, uint16_t& segment )
 }
 
 
-bool     QuickGetName( CodeViewSymbol* sym, PasString*& name )
+bool     QuickGetName( CodeViewSymbol* sym, SymString& name )
 {
     _ASSERT( sym != NULL );
     DWORD   offset = 0;
@@ -268,30 +268,30 @@ bool     QuickGetName( CodeViewSymbol* sym, PasString*& name )
     switch ( sym->Generic.id )
     {
     case S_REGISTER:
-        name = &sym->reg.p_name;
+        assign( name, &sym->reg.p_name );
         break;
 
     case S_CONSTANT:
         offset = GetNumLeafSize( &sym->constant.value );
-        name = (PasString*) ((BYTE*) &sym->constant.value + offset);
+        assign( name, (PasString*) ((BYTE*) &sym->constant.value + offset) );
         break;
 
     case S_UDT:
-        name = &sym->udt.p_name;
+        assign( name, &sym->udt.p_name );
         break;
 
     case S_OBJNAME:
-        name = &sym->objname.p_name;
+        assign( name, &sym->objname.p_name );
         break;
 
     //case S_COBOLUDT:
 
     case S_MANYREG:
-        name = (PasString*) &sym->manyreg.reg[ sym->manyreg.count ];
+        assign( name, (PasString*) &sym->manyreg.reg[ sym->manyreg.count ] );
         break;
 
     case S_BPREL32:
-        name = &sym->bprel.p_name;
+        assign( name, &sym->bprel.p_name );
         break;
 
     case S_LDATA32:
@@ -299,28 +299,28 @@ bool     QuickGetName( CodeViewSymbol* sym, PasString*& name )
     case S_PUB32:
     case S_LTHREAD32:
     case S_GTHREAD32:
-        name = &sym->data.p_name;
+        assign( name, &sym->data.p_name );
         break;
 
     case S_LPROC32:
     case S_GPROC32:
-        name = &sym->proc.p_name;
+        assign( name, &sym->proc.p_name );
         break;
 
     case S_THUNK32:
-        name = &sym->thunk.p_name;
+        assign( name, &sym->thunk.p_name );
         break;
 
     case S_BLOCK32:
-        name = &sym->block.p_name;
+        assign( name, &sym->block.p_name );
         break;
 
     case S_LABEL32:
-        name = &sym->label.p_name;
+        assign( name, &sym->label.p_name );
         break;
 
     case S_REGREL32:
-        name = &sym->regrel.p_name;
+        assign( name, &sym->regrel.p_name );
         break;
 
     default:

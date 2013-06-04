@@ -109,7 +109,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return NULL;
 
-        hr = Utf8To16( info.Name, info.NameLength, filename.m_str );
+        hr = Utf8To16( info.Name.ptr, info.Name.length, filename.m_str );
         if ( FAILED( hr ) )
             return NULL;
 

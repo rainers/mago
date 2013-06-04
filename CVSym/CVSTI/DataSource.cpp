@@ -11,6 +11,7 @@
 #include "IAddressMap.h"
 #include "ImageDebugContainer.h"
 #include "Session.h"
+#include "../CVSym/PDBDebugStore.h"
 
 using namespace std;
 
@@ -20,7 +21,8 @@ namespace MagoST
     DataSource::DataSource()
         :   mRefCount( 0 ),
             mDebugView( NULL ),
-            mDebugSize( 0 )
+            mDebugSize( 0 ),
+            mStore( NULL )
     {
     }
 
@@ -31,6 +33,7 @@ namespace MagoST
             _ASSERT( mDebugContainer.get() != NULL );
             mDebugContainer->UnlockDebugSection( mDebugView );
         }
+        delete mStore;
     }
 
     void DataSource::AddRef()
@@ -81,13 +84,28 @@ namespace MagoST
 
     HRESULT DataSource::InitDebugInfo()
     {
-        if( mAddrMap )
+        HRESULT hr;
+
+        delete mStore;
+        if( mDebugView && memcmp( mDebugView, "RSDS", 4 ) == 0 )
         {
-            mStore.SetTLSSegment( mAddrMap->FindSection( ".tls" ) );
-            mStore.SetTextSegment( mAddrMap->FindSection( "_TEXT" ) );
+            PDBDebugStore* pdbStore = new PDBDebugStore;
+            hr = pdbStore->InitDebugInfo( mDebugView, mDebugSize );
+            mStore = pdbStore;
+        }
+        else
+        {
+            DebugStore* store = new DebugStore;
+            if( mAddrMap )
+            {
+                store->SetTLSSegment( mAddrMap->FindSection( ".tls" ) );
+                store->SetTextSegment( mAddrMap->FindSection( "_TEXT" ) );
+            }
+            hr = store->InitDebugInfo( mDebugView, mDebugSize );
+            mStore = store;
         }
 
-        return mStore.InitDebugInfo( mDebugView, mDebugSize );
+        return hr;
     }
 
     HRESULT DataSource::OpenSession( ISession*& session )
@@ -102,9 +120,9 @@ namespace MagoST
         return S_OK;
     }
 
-    DebugStore* DataSource::GetDebugStore()
+    IDebugStore* DataSource::GetDebugStore()
     {
-        return &mStore;
+        return mStore;
     }
 
     RefPtr<IAddressMap> DataSource::GetAddressMap()
