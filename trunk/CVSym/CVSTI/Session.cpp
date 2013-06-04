@@ -123,7 +123,7 @@ namespace MagoST
         for ( ; mStore->NextSymbol( scope, childHandle ); )
         {
             ISymbolInfo*    symInfo = NULL;
-            PasString*      pstrName = NULL;
+            SymString       pstrName;
 
             hr = mStore->GetSymbolInfo( childHandle, infoData, symInfo );
             if ( hr != S_OK )
@@ -132,7 +132,7 @@ namespace MagoST
             if ( !symInfo->GetName( pstrName ) )
                 continue;
 
-            if ( (nameLen == pstrName->GetLength()) && (memcmp( nameChars, pstrName->GetName(), nameLen ) == 0) )
+            if ( (nameLen == pstrName.GetLength()) && (memcmp( nameChars, pstrName.GetName(), nameLen ) == 0) )
             {
                 handle = childHandle;
                 return S_OK;
@@ -249,7 +249,7 @@ namespace MagoST
         return mStore->GetSymbolInfo( handle, privateData, symInfo );
     }
 
-    bool Session::GetTypeFromTypeIndex( WORD typeIndex, TypeHandle& handle )
+    bool Session::GetTypeFromTypeIndex( TypeIndex typeIndex, TypeHandle& handle )
     {
         return mStore->GetTypeFromTypeIndex( typeIndex, handle );
     }
@@ -287,7 +287,7 @@ namespace MagoST
         for ( ; mStore->NextType( scope, childHandle ); )
         {
             ISymbolInfo*    symInfo = NULL;
-            PasString*      pstrName = NULL;
+            SymString       pstrName;
 
             hr = mStore->GetTypeInfo( childHandle, infoData, symInfo );
             if ( hr != S_OK )
@@ -296,7 +296,7 @@ namespace MagoST
             if ( !symInfo->GetName( pstrName ) )
                 continue;
 
-            if ( (nameLen == pstrName->GetLength()) && (memcmp( nameChars, pstrName->GetName(), nameLen ) == 0) )
+            if ( (nameLen == pstrName.GetLength()) && (memcmp( nameChars, pstrName.GetName(), nameLen ) == 0) )
             {
                 handle = childHandle;
                 return S_OK;

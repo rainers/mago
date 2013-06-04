@@ -35,7 +35,7 @@ namespace MagoST
         return false;
     }
 
-    bool SymbolInfo::GetName( PasString*& name )
+    bool SymbolInfo::GetName( SymString& name )
     {
         UNREFERENCED_PARAMETER( name );
         return false;
@@ -228,7 +228,7 @@ namespace MagoST
         return false;
     }
 
-    bool SymbolInfo::GetTypes( TypeIndex*& indexes )
+    bool SymbolInfo::GetTypes( std::vector<TypeIndex>& indexes )
     {
         UNREFERENCED_PARAMETER( indexes );
         return false;

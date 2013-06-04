@@ -1232,11 +1232,11 @@ namespace Mago
             hr = session->GetSymbolInfo( mFuncSH, infoData, symInfo );
             if ( SUCCEEDED( hr ) && symInfo )
             {
-                PasString*      pstrName = NULL;
+                SymString       pstrName;
                 if ( symInfo->GetName( pstrName ) )
                 {
                     std::string sym( name, nameLen );
-                    std::string scopeName( pstrName->GetName(), pstrName->GetLength() );
+                    std::string scopeName( pstrName.GetName(), pstrName.GetLength() );
                     while ( scopeName.length() > 0 )
                     {
                         std::string symName = scopeName + "." + sym;
@@ -1466,11 +1466,11 @@ namespace Mago
     {
         HRESULT                 hr = S_OK;
         MagoST::TypeIndex       typeIndex = 0;
-        PasString*              pstrName1 = NULL;
+        SymString               pstrName1;
         MagoST::TypeHandle      handle = { 0 };
         MagoST::SymInfoData     typeInfoData = { 0 };
         MagoST::ISymbolInfo*    typeInfo = NULL;
-        PasString*              pstrName2 = NULL;
+        SymString               pstrName2;
         RefPtr<MagoEE::Type>    refType;
         RefPtr<MagoST::ISession>    session;
 
@@ -1497,9 +1497,9 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        if ( (pstrName2 != NULL)
-            && (pstrName1->GetLength() == pstrName2->GetLength()) 
-            && (strncmp( pstrName1->GetName(), pstrName2->GetName(), pstrName1->GetLength() ) == 0) )
+        if ( (pstrName2.GetName() != NULL)
+            && (pstrName1.GetLength() == pstrName2.GetLength()) 
+            && (strncmp( pstrName1.GetName(), pstrName2.GetName(), pstrName1.GetLength() ) == 0) )
         {
             // the typedef has the same name as the type, 
             // so let's use the referenced type directly, as if there's no typedef
@@ -1757,7 +1757,7 @@ namespace Mago
         MagoST::TypeHandle      paramListTH = { 0 };
         MagoST::SymInfoData     paramListInfoData = { 0 };
         MagoST::ISymbolInfo*    paramListInfo = NULL;
-        MagoST::TypeIndex*      paramTIs = NULL;
+        std::vector<MagoST::TypeIndex> paramTIs;
         RefPtr<MagoST::ISession>    session;
 
         if ( !mModule->GetSymbolSession( session ) )
@@ -1886,8 +1886,8 @@ namespace Mago
         case DMD_OEM_AARRAY:
         case DMD_OEM_DELEGATE:
             {
-                RefPtr<MagoEE::Type>    types[2];
-                MagoST::TypeIndex*      typeIndexes = NULL;
+                RefPtr<MagoEE::Type>           types[2];
+                std::vector<MagoST::TypeIndex> typeIndexes;
 
                 if ( count != 2 )
                     return E_FAIL;

@@ -444,13 +444,13 @@ namespace MagoST
             heapDir = internalHandle.HeapDir;
         }
 
-        PasString*      pstrName = NULL;
+        SymString       pstrName;
 
         if ( !QuickGetName( sym, pstrName ) )
             return false;
-        if ( nameLen != pstrName->GetLength() )
+        if ( nameLen != pstrName.GetLength() )
             return false;
-        if ( memcmp( nameChars, pstrName->GetName(), nameLen ) != 0 )
+        if ( memcmp( nameChars, pstrName.GetName(), nameLen ) != 0 )
             return false;
 
         newSymbol = sym;
@@ -723,27 +723,27 @@ namespace MagoST
         return GetCVPtr<CodeViewType>( typeBase + offsetTable[index], 4 );
     }
 
-    bool DebugStore::GetTypeFromTypeIndex( WORD typeIndex, TypeHandle& handle )
+    bool DebugStore::GetTypeFromTypeIndex( TypeIndex typeIndex, TypeHandle& handle )
     {
         TypeHandleIn*   internalHandle = (TypeHandleIn*) &handle;
 
-        if ( typeIndex == 0 )
+        if ( typeIndex == 0 || typeIndex > 0xffff)
             return false;
 
         if ( typeIndex < 0x1000 )
         {
-            internalHandle->Index = typeIndex;
+            internalHandle->Index = (WORD) typeIndex;
             internalHandle->Type = NULL;
             internalHandle->Tag = 0;
             return true;
         }
 
-        CodeViewType*   type = GetTypeFromTypeIndex( typeIndex );
+        CodeViewType*   type = GetTypeFromTypeIndex( (WORD) typeIndex );
 
         if ( type == NULL )
             return false;
 
-        internalHandle->Index = typeIndex;
+        internalHandle->Index = (WORD) typeIndex;
         internalHandle->Type = (BYTE*) type;
         internalHandle->Tag = type->Generic.id;
 
@@ -842,7 +842,7 @@ namespace MagoST
         return true;
     }
 
-    bool DebugStore::SetFListContinuationScope( TypeIndex continuationIndex, TypeScopeIn* scopeIn )
+    bool DebugStore::SetFListContinuationScope( WORD continuationIndex, TypeScopeIn* scopeIn )
     {
         CodeViewType*   contList = GetTypeFromTypeIndex( continuationIndex );
 
@@ -951,7 +951,7 @@ namespace MagoST
         while ( internalHandle->Tag == LF_MODIFIER )
         {
             CodeViewType*   type = (CodeViewType*) internalHandle->Type;
-            TypeIndex       newIndex = type->modifier.type;
+            WORD            newIndex = type->modifier.type;
 
             mod |= type->modifier.attr;
 
@@ -1043,7 +1043,7 @@ namespace MagoST
             return E_FAIL;
 
         segDescTable = (OMFSegDesc*) (mod + 1);
-        info.Name = (PasString*) (segDescTable + mod->cSeg);
+        assign( info.Name, (PasString*) (segDescTable + mod->cSeg) );
 
         if ( mCompilandDetails[zIndex].SourceEntry != NULL )
             srcMod = GetCVPtr<OMFSourceModule>( mCompilandDetails[zIndex].SourceEntry->lfo );
@@ -1139,8 +1139,7 @@ namespace MagoST
 
         // the spec says the name length field is 2 bytes long, but in practice I see that it's 1
         info.SegmentCount = file->cSeg;
-        info.NameLength = *(BYTE*) backOfFile;
-        info.Name = (char*) (backOfFile + 1);
+        info.Name.set(*(BYTE*) backOfFile, (char*) (backOfFile + 1), false);
 
         return S_OK;
     }

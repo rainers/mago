@@ -23,7 +23,7 @@ namespace MagoST
 
         uint64_t            mLoadAddr;
         RefPtr<DataSource>  mDataSource;
-        DebugStore*         mStore;         // valid while we hold onto data source
+        IDebugStore*        mStore;         // valid while we hold onto data source
         RefPtr<IAddressMap> mAddrMap;
 
     public:
@@ -79,7 +79,7 @@ namespace MagoST
 
         virtual bool NextType( TypeScope& scope, TypeHandle& handle );
 
-        virtual bool GetTypeFromTypeIndex( WORD typeIndex, TypeHandle& handle );
+        virtual bool GetTypeFromTypeIndex( TypeIndex typeIndex, TypeHandle& handle );
 
         virtual HRESULT FindChildType( 
             TypeHandle parentHandle, 

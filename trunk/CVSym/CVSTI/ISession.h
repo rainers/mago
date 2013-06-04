@@ -92,7 +92,7 @@ namespace MagoST
 
         virtual bool NextType( TypeScope& scope, TypeHandle& handle ) = 0;
 
-        virtual bool GetTypeFromTypeIndex( WORD typeIndex, TypeHandle& handle ) = 0;
+        virtual bool GetTypeFromTypeIndex( TypeIndex typeIndex, TypeHandle& handle ) = 0;
 
         virtual HRESULT FindChildType( 
             TypeHandle parentHandle, 
