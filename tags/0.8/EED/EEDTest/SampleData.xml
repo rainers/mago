@@ -1,0 +1,204 @@
+<?xml version="1.0" standalone="no"?>
+<!--
+   Copyright (c) 2010 Aldo J. Nunez
+
+   Licensed under the Apache License, Version 2.0.
+   See the LICENSE text file for details.
+-->
+
+<namespace name="Top">
+	<struct name="T">
+		<field name="f" type="short"/>
+		<field name="g" type="ubyte"/>
+		<variable name="staticH" type="long" value="-1"/>
+	</struct>
+
+	<struct name="S">
+		<field name="a" type="int"/>
+		<field name="b" type="char"/>
+		<field name="t" type="int">
+			<field.type><typePointer pointedType="T"/></field.type>
+		</field>
+	</struct>
+
+	<variable name="gammaS" type="S">
+		<variable.value>
+			<StructValue>
+				<FieldValue name="a" value="1048576"/>
+				<FieldValue name="b" value="'Z'"/>
+				<FieldValue name="t" >
+					<FieldValue.Value>
+						<AddressOf ref="deltaT"/>
+					</FieldValue.Value>
+				</FieldValue>
+			</StructValue>
+		</variable.value>
+	</variable>
+	<variable name="deltaT" type="T">
+		<variable.value>
+			<StructValue>
+				<FieldValue name="f" value="16384"/>
+				<FieldValue name="g" value="97"/>
+			</StructValue>
+		</variable.value>
+	</variable>
+	<variable name="alphaInt" type="int" value="51"/>
+	<constant name="betaConstUInt" type="uint" value="321098765"/>
+	<variable name="epsilonArray">
+		<varialbe.type>
+			<typeSArray elementType="int" length="3"/>
+		</varialbe.type>
+		<variable.value>
+			<arrayValue>
+				<intvalue value="1"/>
+				<intvalue value="2"/>
+				<intvalue value="3"/>
+			</arrayValue>
+		</variable.value>
+	</variable>
+	<variable name="hIntPtr">
+		<variable.type>
+			<typePointer pointedType="int"/>
+		</variable.type>
+		<variable.value>
+			<AddressOf ref="alphaInt"/>
+		</variable.value>
+	</variable>
+	<variable name="iotaDArray">
+		<variable.type>
+			<typeDArray elementType="int"/>
+		</variable.type>
+		<variable.value>
+			<sliceValue start="1" end="3">
+				<sliceValue.ptr>
+					<AddressOf ref="epsilonArray"/>
+				</sliceValue.ptr>
+			</sliceValue>
+		</variable.value>
+	</variable>
+	<!-- 0x1.4964p+8 -->
+	<variable name="jDouble" type="double" value="0x1.496400b2a443p+8"/> 
+	<variable name="kappaUShortPtr">
+		<variable.type>
+			<typePointer pointedType="ushort"/>
+		</variable.type>
+		<variable.value>
+			<AddressOf ref="jDouble"/>
+		</variable.value>
+	</variable>
+
+	<variable name="lambda_1_b" type="bool" value="1"/>
+	<variable name="muChar" type="char" value="'A'"/>
+
+	<namespace name="nN1">
+		<variable name="alphaFloat" type="float" value="0x1.p+7"/>
+		<constant name="betaConstReal" type="real" value="0x1.p+7"/>
+		<namespace name="cN1_1">
+			<variable name="alphaReal" type="real" value="0x1.p+7"/>
+			<constant name="betaConstFloat" type="float" value="0x1.p+7"/>
+		</namespace>
+	</namespace>
+
+	<variable name="omega_1_g" type="byte" value="0x1c"/>
+	<variable name="omega_1_g_H" type="byte" value="0x9c"/>
+	<variable name="omega_1_h" type="ubyte" value="0x1c"/>
+	<variable name="omega_1_h_H" type="ubyte" value="0x9c"/>
+
+	<variable name="omega_2_s" type="short" value="0x7cce"/>
+	<variable name="omega_2_s_H" type="short" value="0xfcce"/>
+	<variable name="omega_2_t" type="ushort" value="0x7cce"/>
+	<variable name="omega_2_t_H" type="ushort" value="0xfcce"/>
+
+	<variable name="omega_4_i" type="int" value="0x299d51d1"/>
+	<variable name="omega_4_i_H" type="int" value="0xa99d51d1"/>
+	<variable name="omega_4_k" type="uint" value="0x299d51d1"/>
+	<variable name="omega_4_k_H" type="uint" value="0xa99d51d1"/>
+
+	<variable name="omega_8_l" type="long" value="0x18982d445b6bc177"/>
+	<variable name="omega_8_l_H" type="long" value="0x98982d445b6bc177"/>
+	<variable name="omega_8_m" type="ulong" value="0x18982d445b6bc177"/>
+	<variable name="omega_8_m_H" type="ulong" value="0x98982d445b6bc177"/>
+
+	<variable name="omega_1_a" type="char" value="0x1c"/>
+	<variable name="omega_1_a_H" type="char" value="0x9c"/>
+	<variable name="omega_2_u" type="wchar" value="0x7cce"/>
+	<variable name="omega_2_u_H" type="wchar" value="0xfcce"/>
+	<variable name="omega_4_w" type="dchar" value="0x60307"/>
+	<variable name="omega_4_w_H" type="dchar" value="0xa99d51d6"/>
+
+	<!-- These point to garbage on purpose; do not pointer them -->
+	<variable name="omega_4_Pi" value="0x00402010">
+		<variable.type>
+			<typePointer pointedType="int"/>
+		</variable.type>
+	</variable>
+	<variable name="omega_4_Pi_H" value="0x80402010">
+		<variable.type>
+			<typePointer pointedType="int"/>
+		</variable.type>
+	</variable>
+
+	<variable name="piNullDArray">
+		<variable.type>
+			<typeDArray elementType="int"/>
+		</variable.type>
+		<variable.value>
+			<null/>
+		</variable.value>
+	</variable>
+
+	<variable name="piEpsilonDArray">
+		<variable.type>
+			<typeDArray elementType="int"/>
+		</variable.type>
+		<variable.value>
+			<sliceValue start="0" end="3">
+				<sliceValue.ptr>
+					<AddressOf ref="epsilonArray"/>
+				</sliceValue.ptr>
+			</sliceValue>
+		</variable.value>
+	</variable>
+
+	<variable name="qA_04_o" type="ifloat" value="0.0i"/>
+	<variable name="qA_08_p" type="idouble" value="0.0i"/>
+	<variable name="qA_10_j" type="ireal" value="0.0i"/>
+	<variable name="qC_08_q" type="cfloat">
+		<variable.value>
+			<complexvalue real="0" imaginary="0i"/>
+		</variable.value>
+	</variable>
+	<variable name="qC_16_r" type="cdouble">
+		<variable.value>
+			<complexvalue real="0" imaginary="0i"/>
+		</variable.value>
+	</variable>
+	<variable name="qC_20_c" type="creal">
+		<variable.value>
+			<complexvalue real="0" imaginary="0i"/>
+		</variable.value>
+	</variable>
+
+	<variable name="qD_pStaticH">
+		<variable.type>
+			<typePointer pointedType="long"/>
+		</variable.type>
+		<!-- TODO: get address of staticH -->
+		<variable.value>
+			<null/>
+		</variable.value>
+	</variable>
+
+	<variable name="qE_pvoid">
+		<variable.type>
+			<typePointer pointedType="void"/>
+		</variable.type>
+		<variable.value>
+			<AddressOf ref="alphaInt"/>
+		</variable.value>
+	</variable>
+
+	<variable name="qF_one" type="uint" value="1"/>
+	<constant name="qF_two" type="int" value="2"/>
+
+</namespace>
