@@ -1,0 +1,35 @@
+/*
+   Copyright (c) 2010 Aldo J. Nunez
+
+   Licensed under the Apache License, Version 2.0.
+   See the LICENSE text file for details.
+*/
+
+// MagoNatDE.idl : IDL source for MagoNatDE
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (MagoNatDE.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+import "msdbg.idl";
+
+
+[
+	uuid(E348A53A-470A-4A70-9B55-1E02F352790D),
+	version(1.0),
+	helpstring("MagoNatDE 1.0 Type Library")
+]
+library MagoNatDELib
+{
+	importlib("stdole2.tlb");
+	[
+		uuid(97348AC0-2B6B-4B99-A245-4C7E2C09D403),
+		helpstring("MagoNativeEngine Class")
+	]
+	coclass MagoNativeEngine
+	{
+		[default] interface IDebugEngine2;
+	};
+};
