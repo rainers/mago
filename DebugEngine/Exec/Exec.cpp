@@ -397,7 +397,7 @@ HRESULT Exec::DispatchEvent()
                             proc, 
                             mLastEvent.dwThreadId,
                             (mLastEvent.u.Exception.dwFirstChance > 0),
-                            &mLastEvent.u.Exception.ExceptionRecord ) )
+                            &mLastEvent.u.Exception.ExceptionRecord ) == RunMode_Run )
                             hr = S_OK;
                     }
                 }

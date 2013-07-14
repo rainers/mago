@@ -35,7 +35,7 @@ public:
         uint8_t* buffer ) = 0;
     virtual void    SignalStepComplete() = 0;
 
-    virtual bool    CanStepperStopAtFunction( MachineAddress address ) = 0;
+    virtual RunMode CanStepperStopAtFunction( MachineAddress address ) = 0;
 };
 
 
@@ -139,7 +139,7 @@ protected:
         SIZE_T& lengthWritten, 
         uint8_t* buffer );
     virtual void    SignalStepComplete();
-    virtual bool    CanStepperStopAtFunction( MachineAddress address );
+    virtual RunMode CanStepperStopAtFunction( MachineAddress address );
 
 private:
     HRESULT SetBreakpointInternal( MachineAddress address, BPCookie cookie, BPPriority priority );
