@@ -992,7 +992,7 @@ HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embe
             emptyList.end(), 
             emptyList.size() );
 
-        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, address, &en ) )
+        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, address, &en ) == RunMode_Run )
             result = MacRes_HandledContinue;
         else
             result = MacRes_HandledStopped;
@@ -1004,7 +1004,7 @@ HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embe
             bp->GetHighPriCookies().end(), 
             bp->GetHighPriCookies().size() );
 
-        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, bp->GetAddress(), &en ) )
+        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, bp->GetAddress(), &en ) == RunMode_Run)
             result = MacRes_HandledContinue;
         else
             result = MacRes_HandledStopped;
@@ -1380,8 +1380,7 @@ void MachineX86Base::SignalStepComplete()
     mCallback->OnStepComplete( mProcess, mStoppedThreadId );
 }
 
-bool MachineX86Base::CanStepperStopAtFunction( MachineAddress address )
+RunMode MachineX86Base::CanStepperStopAtFunction( MachineAddress address )
 {
-    // find out if we're in source code or assembly mode
-    return mCallback->CanStepInFunction( mProcess, (Address) address );
+    return mCallback->OnCallProbe( mProcess, mStoppedThreadId, (Address) address );
 }

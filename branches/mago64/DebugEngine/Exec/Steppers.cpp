@@ -719,7 +719,9 @@ HRESULT     InstructionStepperProbeCall::OnSingleStep( MachineAddress address, M
             }
         }
 
-        if ( mMachine->CanStepperStopAtFunction( address ) )
+        RunMode runMode = mMachine->CanStepperStopAtFunction( address );
+
+        if ( runMode == RunMode_Break )
         {
             mIsComplete = true;
             result = MacRes_HandledStopped;
@@ -729,9 +731,15 @@ HRESULT     InstructionStepperProbeCall::OnSingleStep( MachineAddress address, M
 
             return mMachine->RemoveStepperBreakpoint( mAfterCallAddr, mCookie );
         }
+        else if ( runMode == RunMode_Run )
+        {
+            // go on to the breakpoint we set after the original call instruction
+            result = MacRes_HandledContinue;
+            return S_OK;
+        }
 
-        // go on to the breakpoint we set after the original call instruction
-        result = MacRes_HandledContinue;
+        // Wait run-mode
+        result = MacRes_HandledStopped;
         return S_OK;
     }
     else if ( mResumeStepper.get() != NULL )

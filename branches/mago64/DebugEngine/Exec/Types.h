@@ -17,3 +17,10 @@ struct AddressRange
     Address     Begin;
     Address     End;
 };
+
+enum RunMode
+{
+    RunMode_Run,
+    RunMode_Break,
+    RunMode_Wait,
+};

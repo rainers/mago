@@ -138,16 +138,16 @@ public:
 #endif
     }
 
-    virtual bool OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    virtual RunMode OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  %p %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
         else
             printf( "  %08I64x %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
-        return false;
+        return RunMode_Break;
     }
 
-    virtual bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
+    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  breakpoint at %p\n", address );
@@ -170,7 +170,7 @@ public:
         //mExec->RemoveBreakpoint( process, baseAddr + 0x00011395, (void*) 129 );
         //mExec->SetBreakpoint( process, baseAddr + 0x00011395, (void*) 129 );
 
-        return false;
+        return RunMode_Break;
     }
 
     virtual void OnStepComplete( IProcess* process, uint32_t threadId )
@@ -187,9 +187,9 @@ public:
         printf( "  *** ERROR: %08x while %d\n", hrErr, event );
     }
 
-    virtual bool CanStepInFunction( IProcess* process, Address address )
+    virtual RunMode OnCallProbe( IProcess* process, uint32_t threadId, Address address )
     {
-        return false;
+        return RunMode_Run;
     }
 };
 

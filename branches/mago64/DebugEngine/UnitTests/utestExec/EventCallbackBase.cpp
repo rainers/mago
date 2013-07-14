@@ -261,7 +261,7 @@ void EventCallbackBase::OnLoadComplete( IProcess* process, DWORD threadId )
     }
 }
 
-bool EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+RunMode EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
 {
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
@@ -272,10 +272,10 @@ bool EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool fir
         node->Exception = *exceptRec;
         TrackEvent( node );
     }
-    return false;
+    return RunMode_Break;
 }
 
-bool EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
 {
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
@@ -291,7 +291,7 @@ bool EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Addr
         
         TrackEvent( node );
     }
-    return false;
+    return RunMode_Break;
 }
 
 void EventCallbackBase::OnStepComplete( IProcess* process, uint32_t threadId )
@@ -329,9 +329,9 @@ void EventCallbackBase::OnError( IProcess* process, HRESULT hrErr, EventCode eve
     }
 }
 
-bool EventCallbackBase::CanStepInFunction( IProcess* process, Address address )
+RunMode EventCallbackBase::OnCallProbe( IProcess* process, uint32_t threadId, Address address )
 {
-    return mCanStepInFuncRetVal;
+    return mCanStepInFuncRetVal ? RunMode_Break : RunMode_Run;
 }
 
 void EventCallbackBase::PrintCallstacksX86( IProcess* process )

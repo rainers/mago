@@ -369,7 +369,7 @@ namespace Mago
         }
     }
 
-    bool EventCallback::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    RunMode EventCallback::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
         const DWORD DefaultState = EXCEPTION_STOP_SECOND_CHANCE;
 
@@ -381,16 +381,16 @@ namespace Mago
         RefPtr<Thread>              thread;
 
         if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return false;
+            return RunMode_Break;
 
         if ( !prog->FindThread( threadId, thread ) )
-            return false;
+            return RunMode_Break;
 
         prog->NotifyException( firstChance, exceptRec );
 
         hr = MakeCComObject( event );
         if ( FAILED( hr ) )
-            return false;
+            return RunMode_Break;
 
         event->Init( prog.Get(), firstChance, exceptRec, prog->CanPassExceptionToDebuggee() );
 
@@ -422,7 +422,7 @@ namespace Mago
              ( !firstChance && ( state & EXCEPTION_STOP_SECOND_CHANCE ) ) )
         {
             hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
-            return false;
+            return RunMode_Break;
         }
         else
         {
@@ -431,22 +431,22 @@ namespace Mago
 
             hr = MakeCComObject( msgEvent );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             hr = event->GetExceptionDescription( &desc );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             desc.Append( L"\n" );
 
             msgEvent->Init( MT_REASON_EXCEPTION, desc );
 
             hr = SendEvent( msgEvent.Get(), prog.Get(), thread.Get() );
-            return true; // wants to continue
+            return RunMode_Run;
         }
     }
 
-    bool EventCallback::OnBreakpointInternal( Program* prog, Thread* thread, Address address, Enumerator< BPCookie >* iter )
+    RunMode EventCallback::OnBreakpointInternal( Program* prog, Thread* thread, Address address, Enumerator< BPCookie >* iter )
     {
         HRESULT     hr = S_OK;
         int         stoppingBPs = 0;
@@ -468,12 +468,12 @@ namespace Mago
 
             hr = MakeCComObject( event );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             InterfaceArray<IDebugBoundBreakpoint2>  array( stoppingBPs );
 
             if ( array.Get() == NULL )
-                return true;
+                return RunMode_Run;
 
             int i = 0;
             while ( iter->MoveNext() )
@@ -491,15 +491,15 @@ namespace Mago
 
             hr = MakeEnumWithCount<EnumDebugBoundBreakpoints>( array, &enumBPs );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             event->Init( enumBPs );
 
             hr = SendEvent( event, prog, thread );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
-            return false;
+            return RunMode_Break;
         }
         else if ( iter->GetCount() == 0 )
         {
@@ -507,15 +507,15 @@ namespace Mago
 
             hr = MakeCComObject( event );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             event->Init( prog );
 
             hr = SendEvent( event, prog, thread );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
-            return false;
+            return RunMode_Break;
         }
         else if ( (mEntryPoint != 0) && (address == mEntryPoint) )
         {
@@ -523,33 +523,33 @@ namespace Mago
 
             hr = MakeCComObject( entryPointEvent );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             hr = SendEvent( entryPointEvent, prog, thread );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
-            return false;
+            return RunMode_Break;
         }
 
-        return true;
+        return RunMode_Run;
     }
 
-    bool EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+    RunMode EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
     {
         OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
 
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
-        bool        stopped = false;
+        RunMode                     runMode = RunMode_Break;
 
         if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return true;
+            return RunMode_Run;
 
         if ( !prog->FindThread( threadId, thread ) )
-            return true;
+            return RunMode_Run;
 
-        stopped = !OnBreakpointInternal( prog, thread, address, iter );
+        runMode = OnBreakpointInternal( prog, thread, address, iter );
 
         // If we stopped because of a regular BP before reaching the entry point, 
         // then we shouldn't stop at the entry point
@@ -557,14 +557,14 @@ namespace Mago
         // Test if we're at the entrypoint, in addition to whether we stopped, because 
         // we could have decided to keep going even though we're at the entry point
 
-        if ( (mEntryPoint != 0) && (stopped || (address == mEntryPoint)) )
+        if ( (mEntryPoint != 0) && ((runMode == RunMode_Break) || (address == mEntryPoint)) )
         {
             prog->RemoveInternalBreakpoint( mEntryPoint, EntryPointCookie );
 
             mEntryPoint = 0;
         }
 
-        return !stopped;
+        return runMode;
     }
 
     void EventCallback::OnStepComplete( IProcess* process, uint32_t threadId )
@@ -597,34 +597,34 @@ namespace Mago
     {
     }
 
-    bool EventCallback::CanStepInFunction( IProcess* process, Address address )
+    RunMode EventCallback::OnCallProbe( IProcess* process, uint32_t threadId, Address address )
     {
-        OutputDebugStringA( "EventCallback::CanStepInFunction\n" );
+        OutputDebugStringA( "EventCallback::OnCallProbe\n" );
 
         RefPtr<Program>             prog;
         RefPtr<Module>              mod;
         RefPtr<MagoST::ISession>    session;
 
         if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return false;
+            return RunMode_Run;
 
         if ( !prog->FindModuleContainingAddress( address, mod ) )
-            return false;
+            return RunMode_Run;
 
         if ( !mod->GetSymbolSession( session ) )
-            return false;
+            return RunMode_Run;
 
         uint16_t    sec = 0;
         uint32_t    offset = 0;
         sec = session->GetSecOffsetFromVA( address, offset );
         if ( sec == 0 )
-            return false;
+            return RunMode_Run;
 
         MagoST::LineNumber  line = { 0 };
 
         if ( !session->FindLine( sec, offset, line ) )
-            return false;
+            return RunMode_Run;
 
-        return true;
+        return RunMode_Break;
     }
 }
