@@ -13,8 +13,7 @@
 #include "EnumFrameInfo.h"
 #include "DebuggerProxy.h"
 #include "RegisterSet.h"
-
-#include <dbghelp.h>
+#include "ArchData.h"
 
 
 namespace Mago
@@ -281,28 +280,40 @@ namespace Mago
     {
         OutputDebugStringA( "Thread::BuildCallstack\n" );
 
-        HRESULT         hr = S_OK;
-        STACKFRAME64    stackFrame64 = { 0 };
-        CONTEXT         newContext = context;
-        int             frameIndex = 0;
+        HRESULT             hr = S_OK;
+        int                 frameIndex = 0;
+        RefPtr<ArchData>    archData;
+        StackWalker*        pWalker = NULL;
+        std::unique_ptr<StackWalker> walker;
 
-        stackFrame64.AddrPC.Mode = AddrModeFlat;
-        stackFrame64.AddrPC.Offset = context.Eip;
-        stackFrame64.AddrStack.Mode = AddrModeFlat;
-        stackFrame64.AddrStack.Offset = context.Esp;
-        stackFrame64.AddrFrame.Mode = AddrModeFlat;
-        stackFrame64.AddrFrame.Offset = context.Ebp;
+        hr = mDebugger->GetSystemInfo( mProg->GetCoreProcess(), archData.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = archData->BeginWalkStack( 
+            &context,
+            sizeof CONTEXT,
+            this,
+            ReadProcessMemory64,
+            FunctionTableAccess64,
+            GetModuleBase64,
+            pWalker );
+        if ( FAILED( hr ) )
+            return hr;
+
+        walker.reset( pWalker );
 
         callstack.clear();
 
-        while ( WalkStack( stackFrame64, &newContext ) )
+        while ( walker->WalkStack() )
         {
             RefPtr<Module>      mod;
             RefPtr<StackFrame>  stackFrame;
             RefPtr<IRegisterSet> regSet;
             UINT64              addr = 0;
+            const void*         context = walker->GetThreadContext();
 
-            addr = stackFrame64.AddrPC.Offset;
+            addr = archData->GetPC( context );
 
             // if we haven't gotten the first return address, then do so now
             if ( frameIndex == 1 )
@@ -315,15 +326,12 @@ namespace Mago
                 return hr;
 
             if ( frameIndex == 0 )
-                regSet = new RegisterSet( context, mCoreThread );
+                hr = archData->BuildRegisterSet( context, mCoreThread, regSet.Ref() );
             else
-                regSet = new TinyRegisterSet( 
-                    (Address) stackFrame64.AddrPC.Offset,
-                    (Address) stackFrame64.AddrStack.Offset,
-                    (Address) stackFrame64.AddrFrame.Offset );
+                hr = archData->BuildTinyRegisterSet( context, mCoreThread, regSet.Ref() );
 
-            if ( regSet == NULL )
-                return E_OUTOFMEMORY;
+            if ( FAILED( hr ) )
+                return hr;
 
             stackFrame->Init( (Address) addr, regSet, this, mod.Get() );
 
@@ -335,20 +343,6 @@ namespace Mago
         // TODO: what if we couldn't get any frames?
 
         return S_OK;
-    }
-
-    bool Thread::WalkStack( STACKFRAME64& stackFrame, void* context )
-    {
-        return StackWalk64( 
-            IMAGE_FILE_MACHINE_I386,
-            this,
-            NULL,
-            &stackFrame,
-            context,
-            ReadProcessMemory64,
-            FunctionTableAccess64,
-            GetModuleBase64,
-            NULL ) ? true : false;
     }
 
     BOOL Thread::ReadProcessMemory64(

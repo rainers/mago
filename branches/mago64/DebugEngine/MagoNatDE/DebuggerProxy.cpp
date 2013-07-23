@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "DebuggerProxy.h"
 #include "CommandFunctor.h"
+#include "ArchDataX86.h"
 
 
 // these values can be tweaked, as long as we're responsive and don't spin
@@ -58,9 +59,14 @@ namespace Mago
         if ( (mMachine != NULL) || (mCallback != NULL ) )
             return E_ALREADY_INIT;
 
+        HRESULT     hr = S_OK;
         HandlePtr   hReadyEvent;
         HandlePtr   hCommandEvent;
         HandlePtr   hResultEvent;
+
+        hr = CacheSystemInfo();
+        if ( FAILED( hr ) )
+            return hr;
 
         hReadyEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
         if ( hReadyEvent.IsEmpty() )
@@ -160,6 +166,28 @@ namespace Mago
         mExec.Shutdown();
     }
 
+    HRESULT DebuggerProxy::CacheSystemInfo()
+    {
+        // TODO: this should come from somewhere else that can reuse the ArchData for other proxies
+        mArch = new ArchDataX86();
+        if ( mArch.Get() == NULL )
+            return E_OUTOFMEMORY;
+
+        return S_OK;
+    }
+
+    HRESULT DebuggerProxy::GetSystemInfo( IProcess* process, ArchData*& sysInfo )
+    {
+        if ( process == NULL )
+            return E_INVALIDARG;
+        if ( mArch.Get() == NULL )
+            return E_NOT_FOUND;
+
+        sysInfo = mArch.Get();
+        sysInfo->AddRef();
+
+        return S_OK;
+    }
 
     HRESULT DebuggerProxy::InvokeCommand( CommandFunctor& cmd )
     {
