@@ -89,8 +89,6 @@ namespace Mago
         HRESULT StepInstruction( ::IProcess* coreProc, STEPKIND sk, bool handleException );
         HRESULT StepOut( ::IProcess* coreProc, bool handleException );
 
-        bool WalkStack( STACKFRAME64& stackFrame, void* context );
-
         static BOOL CALLBACK ReadProcessMemory64(
           HANDLE hProcess,
           DWORD64 lpBaseAddress,

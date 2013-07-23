@@ -10,21 +10,23 @@
 namespace Mago
 {
     struct CommandFunctor;
+    class ArchData;
 
 
     class DebuggerProxy
     {
-        Exec            mExec;
-        HANDLE          mhThread;
-        DWORD           mWorkerTid;
-        IMachine*       mMachine;
-        IEventCallback* mCallback;
-        HANDLE          mhReadyEvent;
-        HANDLE          mhCommandEvent;
-        HANDLE          mhResultEvent;
-        CommandFunctor* mCurCommand;
-        volatile bool   mShutdown;
-        Guard           mCommandGuard;
+        Exec                mExec;
+        HANDLE              mhThread;
+        DWORD               mWorkerTid;
+        IMachine*           mMachine;
+        IEventCallback*     mCallback;
+        HANDLE              mhReadyEvent;
+        HANDLE              mhCommandEvent;
+        HANDLE              mhResultEvent;
+        CommandFunctor*     mCurCommand;
+        volatile bool       mShutdown;
+        Guard               mCommandGuard;
+        RefPtr<ArchData>    mArch;
 
     public:
         DebuggerProxy();
@@ -33,6 +35,8 @@ namespace Mago
         HRESULT Init( IMachine* machine, IEventCallback* callback );
         HRESULT Start();
         void    Shutdown();
+
+        HRESULT GetSystemInfo( IProcess* process, ArchData*& sysInfo );
 
         HRESULT InvokeCommand( CommandFunctor& cmd );
 
@@ -73,6 +77,8 @@ namespace Mago
         HRESULT AsyncBreak( IProcess* process );
 
     private:
+        HRESULT CacheSystemInfo();
+
         static DWORD CALLBACK   DebugPollProc( void* param );
 
         HRESULT PollLoop();
