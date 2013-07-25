@@ -10,6 +10,7 @@
 namespace Mago
 {
     class IRegisterSet;
+    struct RegGroup;
 
     // Callbacks used by stack walkers to get data they need.
     // They're meant to work as with the DbgHelp StackWalk64 routine.
@@ -72,5 +73,7 @@ namespace Mago
             const void* threadContext,
             ::Thread* coreThread, 
             IRegisterSet*& regSet ) = 0;
+
+        virtual void GetRegisterGroups( const RegGroup*& groups, uint32_t& count ) = 0;
     };
 }

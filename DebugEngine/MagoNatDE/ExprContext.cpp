@@ -1200,6 +1200,11 @@ namespace Mago
         return S_OK;
     }
 
+    Thread* ExprContext::GetThread()
+    {
+        return mThread.Get();
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////// 
 

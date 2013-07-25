@@ -9,6 +9,7 @@
 #include "ArchDataX86.h"
 #include "WinStackWalker.h"
 #include "RegisterSet.h"
+#include "EnumX86Reg.h"
 
 
 namespace Mago
@@ -110,5 +111,10 @@ namespace Mago
         regSet->AddRef();
 
         return S_OK;
+    }
+
+    void ArchDataX86::GetRegisterGroups( const RegGroup*& groups, uint32_t& count )
+    {
+        return GetX86RegisterGroups( groups, count );
     }
 }
