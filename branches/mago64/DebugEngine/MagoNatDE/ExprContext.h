@@ -144,6 +144,8 @@ namespace Mago
             Address pc,
             IRegisterSet* regSet );
 
+        Thread* GetThread();
+
     private:
         HRESULT FindLocalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& localSH );
         HRESULT FindGlobalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& globalSH );

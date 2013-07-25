@@ -35,5 +35,7 @@ namespace Mago
             const void* threadContext,
             ::Thread* coreThread, 
             IRegisterSet*& regSet );
+
+        virtual void GetRegisterGroups( const RegGroup*& groups, uint32_t& count );
     };
 }

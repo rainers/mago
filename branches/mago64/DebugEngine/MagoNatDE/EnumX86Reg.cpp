@@ -164,20 +164,9 @@ namespace Mago
     };
 
 
-    HRESULT EnumX86Registers( 
-        IRegisterSet* regSet, 
-        DEBUGPROP_INFO_FLAGS fields,
-        DWORD radix,
-        IEnumDebugPropertyInfo2** enumerator )
+    void GetX86RegisterGroups( const RegGroup*& groups, uint32_t& count )
     {
-        OutputDebugStringA( "EnumX86Registers\n" );
-
-        return EnumRegisters( 
-            gX86RegGroups,
-            _countof( gX86RegGroups ),
-            regSet,
-            fields,
-            radix,
-            enumerator );
+        groups = gX86RegGroups;
+        count = _countof( gX86RegGroups );
     }
 }
