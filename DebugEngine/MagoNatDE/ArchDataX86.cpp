@@ -81,7 +81,7 @@ namespace Mago
             return E_INVALIDARG;
 
         auto context = (const CONTEXT_X86*) threadContext;
-        regSet = new RegisterSet( *context, coreThread );
+        regSet = new RegisterSet( *context );
         if ( regSet == NULL )
             return E_OUTOFMEMORY;
 

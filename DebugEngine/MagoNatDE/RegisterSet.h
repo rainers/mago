@@ -228,9 +228,9 @@ namespace Mago
         //  Returns S_FALSE if register is unavailable. 
         //      value will be zero with the right type.
         virtual HRESULT GetValue( uint32_t regId, RegisterValue& value ) = 0;
-
         virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value ) = 0;
         virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly ) = 0;
+        virtual bool GetThreadContext( const void*& context, uint32_t& contextSize ) = 0;
     };
 
 
@@ -239,12 +239,9 @@ namespace Mago
         long    mRefCount;
         CONTEXT mContext;
 
-        RefPtr<::Thread>    mCoreThread;
-
     public:
         RegisterSet( 
-            const CONTEXT& context, 
-            ::Thread* coreThread );
+            const CONTEXT& context );
 
         virtual void AddRef();
         virtual void Release();
@@ -252,6 +249,7 @@ namespace Mago
         virtual HRESULT GetValue( uint32_t regId, RegisterValue& value );
         virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value );
         virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly );
+        virtual bool GetThreadContext( const void*& context, uint32_t& contextSize );
     };
 
 
@@ -274,6 +272,7 @@ namespace Mago
         virtual HRESULT GetValue( uint32_t regId, RegisterValue& value );
         virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value );
         virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly );
+        virtual bool GetThreadContext( const void*& context, uint32_t& contextSize );
     };
 
 

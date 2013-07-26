@@ -298,6 +298,7 @@ namespace Mago
             groups,
             groupCount,
             regSet,
+            thread,
             dwFields,
             dwRadix,
             ppEnum );

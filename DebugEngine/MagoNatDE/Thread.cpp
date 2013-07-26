@@ -418,7 +418,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        regSet = new RegisterSet( context, mCoreThread );
+        regSet = new RegisterSet( context );
         if ( regSet == NULL )
             return E_OUTOFMEMORY;
 
