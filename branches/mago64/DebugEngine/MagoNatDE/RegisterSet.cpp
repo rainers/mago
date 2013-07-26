@@ -302,14 +302,11 @@ namespace Mago
     //------------------------------------------------------------------------
 
     RegisterSet::RegisterSet( 
-        const CONTEXT& context, 
-        ::Thread* coreThread )
+        const CONTEXT& context )
         :   mRefCount( 0 ),
-            mContext( context ),
-            mCoreThread( coreThread )
+            mContext( context )
     {
         _ASSERT( (context.ContextFlags & CONTEXT_FULL) == CONTEXT_FULL );
-        _ASSERT( coreThread != NULL );
     }
 
     void RegisterSet::AddRef()
@@ -366,11 +363,6 @@ namespace Mago
 
     HRESULT RegisterSet::SetValue( uint32_t regId, const RegisterValue& value )
     {
-        BOOL        bRet = FALSE;
-        BYTE        backup[ sizeof( RegisterValue ) ] = { 0 };
-        uint32_t    backupOffset = 0;
-        uint32_t    backupSize = 0;
-
         if ( regId >= _countof( gRegDesc ) )
             return E_INVALIDARG;
 
@@ -398,10 +390,6 @@ namespace Mago
 
             newN = (oldN & ~shiftedMask) | ((newN << regDesc.SubregOffset) & shiftedMask);
 
-            backupOffset = parentRegDesc.ContextOffset;
-            backupSize = parentRegDesc.ContextSize;
-
-            memcpy( backup, (BYTE*) &mContext + backupOffset, backupSize );
             WriteInteger( newN, mContext, parentRegDesc.ContextOffset, parentRegDesc.ContextSize );
         }
         else
@@ -409,18 +397,7 @@ namespace Mago
             _ASSERT( (regDesc.ContextOffset + regDesc.ContextSize) <= sizeof mContext );
             BYTE*   bytes = (BYTE*) &mContext;
 
-            backupOffset = regDesc.ContextOffset;
-            backupSize = regDesc.ContextSize;
-
-            memcpy( backup, bytes + regDesc.ContextOffset, regDesc.ContextSize );
             memcpy( bytes + regDesc.ContextOffset, &value.Value, regDesc.ContextSize );
-        }
-
-        bRet = SetThreadContext( mCoreThread->GetHandle(), &mContext );
-        if ( !bRet )
-        {
-            memcpy( (BYTE*) &mContext + backupOffset, backup, backupSize );
-            return GetLastHr();
         }
 
         return S_OK;
@@ -433,6 +410,13 @@ namespace Mago
 
         readOnly = false;
         return S_OK;
+    }
+
+    bool RegisterSet::GetThreadContext( const void*& context, uint32_t& contextSize )
+    {
+        context = &mContext;
+        contextSize = sizeof mContext;
+        return true;
     }
 
 
@@ -525,5 +509,10 @@ namespace Mago
 
         readOnly = true;
         return S_OK;
+    }
+
+    bool TinyRegisterSet::GetThreadContext( const void*& context, uint32_t& contextSize )
+    {
+        return false;
     }
 }

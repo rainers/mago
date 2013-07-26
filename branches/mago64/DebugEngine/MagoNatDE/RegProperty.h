@@ -12,6 +12,7 @@ namespace Mago
 {
     class IRegisterSet;
     struct RegGroup;
+    class Thread;
 
 
     struct Reg
@@ -37,6 +38,7 @@ namespace Mago
         const RegGroup* groups,
         uint32_t groupCount,
         IRegisterSet* regSet, 
+        Thread* thread,
         DEBUGPROP_INFO_FLAGS fields,
         DWORD radix,
         IEnumDebugPropertyInfo2** enumerator );
@@ -49,6 +51,7 @@ namespace Mago
         CString                 mName;
         const RegGroup*         mGroup;
         RefPtr<IRegisterSet>    mRegSet;
+        RefPtr<Thread>          mThread;
 
     public:
         RegGroupProperty();
@@ -114,7 +117,7 @@ namespace Mago
             VARIANT* pExtendedInfo );
 
     public:
-        HRESULT Init( const RegGroup* group, IRegisterSet* regSet );
+        HRESULT Init( const RegGroup* group, IRegisterSet* regSet, Thread* thread );
     };
 
 
@@ -124,6 +127,7 @@ namespace Mago
     {
         const Reg*              mReg;
         RefPtr<IRegisterSet>    mRegSet;
+        RefPtr<Thread>          mThread;
 
     public:
         RegisterProperty();
@@ -189,7 +193,7 @@ namespace Mago
             VARIANT* pExtendedInfo );
 
     public:
-        HRESULT Init( const Reg* reg, IRegisterSet* regSet );
+        HRESULT Init( const Reg* reg, IRegisterSet* regSet, Thread* thread );
 
     private:
         BSTR GetValueStr( bool& valid );

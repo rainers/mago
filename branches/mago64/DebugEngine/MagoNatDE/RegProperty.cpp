@@ -11,6 +11,7 @@
 #include "EnumPropertyInfo.h"
 #include "FormatNum.h"
 #include <Real.h>
+#include "Thread.h"
 
 
 namespace Mago
@@ -19,6 +20,7 @@ namespace Mago
         const RegGroup* groups,
         uint32_t groupCount,
         IRegisterSet* regSet, 
+        Thread* thread,
         DEBUGPROP_INFO_FLAGS fields,
         DWORD radix,
         IEnumDebugPropertyInfo2** enumerator )
@@ -37,7 +39,7 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = groupProp->Init( &groups[i], regSet );
+            hr = groupProp->Init( &groups[i], regSet, thread );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -160,7 +162,7 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = regProp->Init( &mGroup->Regs[i], mRegSet );
+            hr = regProp->Init( &mGroup->Regs[i], mRegSet, mThread );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -221,10 +223,11 @@ namespace Mago
         return E_NOTIMPL;
     }
 
-    HRESULT RegGroupProperty::Init( const RegGroup* group, IRegisterSet* regSet )
+    HRESULT RegGroupProperty::Init( const RegGroup* group, IRegisterSet* regSet, Thread* thread )
     {
         _ASSERT( group != NULL );
         _ASSERT( regSet != NULL );
+        _ASSERT( thread != NULL );
 
         mGroup = group;
 
@@ -232,6 +235,7 @@ namespace Mago
             return E_FAIL;
 
         mRegSet = regSet;
+        mThread = thread;
 
         return S_OK;
     }
@@ -323,6 +327,11 @@ namespace Mago
         RegisterValue   regVal = { 0 };
         uint64_t        limit = 0;
         size_t          strValLen = wcslen( pszValue );
+        bool            isReadOnly = false;
+
+        hr = mRegSet->IsReadOnly( mReg->FullReg, isReadOnly );
+        if ( FAILED( hr ) || isReadOnly )
+            return E_SETVALUE_VALUE_IS_READONLY;
 
         regVal.Type = regType;
 
@@ -427,6 +436,16 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
+        ::Thread* coreThread = mThread->GetCoreThread();
+        const void* context = NULL;
+        uint32_t contextSize = 0;
+
+        if ( !mRegSet->GetThreadContext( context, contextSize ) )
+            return E_SETVALUE_VALUE_IS_READONLY;
+
+        if ( !SetThreadContext( coreThread->GetHandle(), (const CONTEXT*) context ) )
+            return E_SETVALUE_VALUE_CANNOT_BE_SET;
+
         return S_OK;
     }
 
@@ -494,13 +513,15 @@ namespace Mago
         return E_NOTIMPL;
     }
 
-    HRESULT RegisterProperty::Init( const Reg* reg, IRegisterSet* regSet )
+    HRESULT RegisterProperty::Init( const Reg* reg, IRegisterSet* regSet, Thread* thread )
     {
         _ASSERT( reg != NULL );
         _ASSERT( regSet != NULL );
+        _ASSERT( thread != NULL );
 
         mReg = reg;
         mRegSet = regSet;
+        mThread = thread;
 
         return S_OK;
     }
