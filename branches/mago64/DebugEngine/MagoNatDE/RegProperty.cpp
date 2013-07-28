@@ -323,7 +323,7 @@ namespace Mago
         DWORD dwTimeout )
     {
         HRESULT         hr = S_OK;
-        RegisterType    regType = GetRegisterType( mReg->FullReg );
+        RegisterType    regType = mRegSet->GetRegisterType( mReg->FullReg );
         RegisterValue   regVal = { 0 };
         uint64_t        limit = 0;
         size_t          strValLen = wcslen( pszValue );

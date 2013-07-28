@@ -15,6 +15,7 @@
 #include "RegisterSet.h"
 #include "winternl2.h"
 #include <MagoCVConst.h>
+#include "ArchDataX86.h"
 
 #include <algorithm>
 
@@ -2211,6 +2212,7 @@ namespace Mago
     };
 
     C_ASSERT( _countof( gRegMapX86 ) == 252 );
+    C_ASSERT( RegX86_Max <= 256 );
 
 
     HRESULT ExprContext::GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value )

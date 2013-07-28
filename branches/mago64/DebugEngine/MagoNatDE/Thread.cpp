@@ -408,7 +408,8 @@ namespace Mago
         const Address       addr = context.Eip;
         RefPtr<Module>      mod;
         RefPtr<StackFrame>  stackFrame;
-        RefPtr<RegisterSet> regSet;
+        RefPtr<IRegisterSet> regSet;
+        RefPtr<ArchData>    archData;
 
         callstack.clear();
 
@@ -418,9 +419,13 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        regSet = new RegisterSet( context );
-        if ( regSet == NULL )
-            return E_OUTOFMEMORY;
+        hr = mDebugger->GetSystemInfo( mProg->GetCoreProcess(), archData.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = archData->BuildRegisterSet( &context, mCoreThread, regSet.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
 
         stackFrame->Init( addr, regSet, this, mod.Get() );
 
