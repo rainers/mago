@@ -75,5 +75,9 @@ namespace Mago
             IRegisterSet*& regSet ) = 0;
 
         virtual void GetRegisterGroups( const RegGroup*& groups, uint32_t& count ) = 0;
+
+        // Maps a debug info register ID to an ID specific to this ArchData.
+        // Returns the mapped register ID, and -1 if no mapping is found.
+        virtual int GetArchRegId( int debugRegId ) = 0;
     };
 }
