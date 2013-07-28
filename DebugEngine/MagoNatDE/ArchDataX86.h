@@ -37,6 +37,7 @@ namespace Mago
             IRegisterSet*& regSet );
 
         virtual void GetRegisterGroups( const RegGroup*& groups, uint32_t& count );
+        virtual int GetArchRegId( int debugRegId );
     };
 
 
