@@ -35,7 +35,8 @@ namespace
 }
 
 
-    ArchDataX86::ArchDataX86()
+    ArchDataX86::ArchDataX86( ProcFeaturesX86 procFeatures )
+        :   mProcFeatures( procFeatures )
     {
     }
 
@@ -131,9 +132,42 @@ namespace
         return S_OK;
     }
 
-    void ArchDataX86::GetRegisterGroups( const RegGroup*& groups, uint32_t& count )
+    uint32_t ArchDataX86::GetRegisterGroupCount()
     {
-        return GetX86RegisterGroups( groups, count );
+        const RegGroupInternal* groups = NULL;
+        uint32_t count = 0;
+
+        GetX86RegisterGroups( groups, count );
+        return count;
+    }
+
+    bool ArchDataX86::GetRegisterGroup( uint32_t index, RegGroup& group )
+    {
+        const RegGroupInternal* groups = NULL;
+        uint32_t count = 0;
+
+        GetX86RegisterGroups( groups, count );
+
+        if ( index >= count )
+            return false;
+
+        uint32_t neededFeature = groups[index].NeededFeature;
+
+        if ( neededFeature == 0
+             || (mProcFeatures & neededFeature) == neededFeature )
+        {
+            group.RegCount = groups[index].RegCount;
+            group.Regs = groups[index].Regs;
+        }
+        else
+        {
+            group.RegCount = 0;
+            group.Regs = NULL;
+        }
+
+        group.StrId = groups[index].StrId;
+
+        return true;
     }
 
     int ArchDataX86::GetArchRegId( int debugRegId )

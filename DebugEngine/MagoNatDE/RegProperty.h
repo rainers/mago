@@ -11,32 +11,14 @@
 namespace Mago
 {
     class IRegisterSet;
+    struct Reg;
     struct RegGroup;
     class Thread;
-
-
-    struct Reg
-    {
-        const wchar_t*  Name;
-        uint8_t         FullReg;
-        uint8_t         Length;
-        uint8_t         Shift;
-        uint32_t        Mask;
-    };
-
-
-    struct RegGroup
-    {
-        uint32_t    StrId;
-        const Reg*  Regs;
-        uint32_t    RegCount;
-        uint32_t    NeededFeature;
-    };
+    class ArchData;
 
 
     HRESULT EnumRegisters(
-        const RegGroup* groups,
-        uint32_t groupCount,
+        ArchData* archData,
         IRegisterSet* regSet, 
         Thread* thread,
         DEBUGPROP_INFO_FLAGS fields,
@@ -49,7 +31,8 @@ namespace Mago
         public IDebugProperty2
     {
         CString                 mName;
-        const RegGroup*         mGroup;
+        const Reg*              mRegs;
+        uint32_t                mRegCount;
         RefPtr<IRegisterSet>    mRegSet;
         RefPtr<Thread>          mThread;
 

@@ -12,10 +12,15 @@
 
 namespace Mago
 {
+    enum ProcFeaturesX86;
+
+
     class ArchDataX86 : public ArchData
     {
+        ProcFeaturesX86 mProcFeatures;
+
     public:
-        ArchDataX86();
+        ArchDataX86( ProcFeaturesX86 procFeatures );
 
         virtual HRESULT BeginWalkStack( 
             const void* threadContext, 
@@ -36,10 +41,21 @@ namespace Mago
             ::Thread* coreThread, 
             IRegisterSet*& regSet );
 
-        virtual void GetRegisterGroups( const RegGroup*& groups, uint32_t& count );
+        virtual uint32_t GetRegisterGroupCount();
+        virtual bool GetRegisterGroup( uint32_t index, RegGroup& group );
         virtual int GetArchRegId( int debugRegId );
     };
 
+
+    enum ProcFeaturesX86
+    {
+        PF_X86_MMX          = 1,
+        PF_X86_3DNow        = 2,
+        PF_X86_SSE          = 4,
+        PF_X86_SSE2         = 8,
+        PF_X86_SSE3         = 0x10,
+        PF_X86_AVX          = 0x20,
+    };
 
     enum RegX86
     {

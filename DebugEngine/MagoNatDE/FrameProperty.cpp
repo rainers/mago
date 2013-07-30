@@ -289,14 +289,8 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        const RegGroup* groups = NULL;
-        uint32_t groupCount = 0;
-
-        archData->GetRegisterGroups( groups, groupCount );
-
         return EnumRegisters(
-            groups,
-            groupCount,
+            archData,
             regSet,
             thread,
             dwFields,

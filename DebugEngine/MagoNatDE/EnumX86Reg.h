@@ -10,8 +10,8 @@
 
 namespace Mago
 {
-    struct RegGroup;
+    struct RegGroupInternal;
 
 
-    void GetX86RegisterGroups( const RegGroup*& groups, uint32_t& count );
+    void GetX86RegisterGroups( const RegGroupInternal*& groups, uint32_t& count );
 }
