@@ -12,19 +12,21 @@
 #include "FormatNum.h"
 #include <Real.h>
 #include "Thread.h"
+#include "ArchData.h"
 
 
 namespace Mago
 {
     HRESULT EnumRegisters(
-        const RegGroup* groups,
-        uint32_t groupCount,
+        ArchData* archData,
         IRegisterSet* regSet, 
         Thread* thread,
         DEBUGPROP_INFO_FLAGS fields,
         DWORD radix,
         IEnumDebugPropertyInfo2** enumerator )
     {
+        uint32_t groupCount = archData->GetRegisterGroupCount();
+
         HRESULT             hr = S_OK;
         PropertyInfoArray   array( groupCount );
 
@@ -33,13 +35,16 @@ namespace Mago
 
         for ( uint32_t i = 0; i < groupCount; i++ )
         {
+            RegGroup                    regGroup;
             RefPtr<RegGroupProperty>    groupProp;
 
             hr = MakeCComObject( groupProp );
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = groupProp->Init( &groups[i], regSet, thread );
+            archData->GetRegisterGroup( i, regGroup );
+
+            hr = groupProp->Init( &regGroup, regSet, thread );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -63,7 +68,8 @@ namespace Mago
     //------------------------------------------------------------------------
 
     RegGroupProperty::RegGroupProperty()
-        :   mGroup( NULL )
+        :   mRegs( NULL ),
+            mRegCount( 0 )
     {
     }
 
@@ -144,17 +150,12 @@ namespace Mago
         IEnumDebugPropertyInfo2** ppEnum )
     {
         HRESULT             hr = S_OK;
-        PropertyInfoArray   array( mGroup->RegCount );
+        PropertyInfoArray   array( mRegCount );
 
         if ( array.Get() == NULL )
             return E_OUTOFMEMORY;
 
-        // TODO: as usual, Exec should check for the feature instead of here
-        if ( (mGroup->NeededFeature != 0) 
-            && !IsProcessorFeaturePresent( mGroup->NeededFeature ) )
-            return E_FAIL;
-
-        for ( uint32_t i = 0; i < mGroup->RegCount; i++ )
+        for ( uint32_t i = 0; i < mRegCount; i++ )
         {
             RefPtr<RegisterProperty>    regProp;
 
@@ -162,7 +163,7 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = regProp->Init( &mGroup->Regs[i], mRegSet, mThread );
+            hr = regProp->Init( &mRegs[i], mRegSet, mThread );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -229,9 +230,10 @@ namespace Mago
         _ASSERT( regSet != NULL );
         _ASSERT( thread != NULL );
 
-        mGroup = group;
+        mRegs = group->Regs;
+        mRegCount = group->RegCount;
 
-        if ( !GetString( mGroup->StrId, mName ) )
+        if ( !GetString( group->StrId, mName ) )
             return E_FAIL;
 
         mRegSet = regSet;

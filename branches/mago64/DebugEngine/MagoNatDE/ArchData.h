@@ -10,7 +10,31 @@
 namespace Mago
 {
     class IRegisterSet;
-    struct RegGroup;
+
+    struct Reg
+    {
+        const wchar_t*  Name;
+        uint8_t         FullReg;
+        uint8_t         Length;
+        uint8_t         Shift;
+        uint32_t        Mask;
+    };
+
+    struct RegGroup
+    {
+        uint32_t    StrId;
+        const Reg*  Regs;
+        uint32_t    RegCount;
+    };
+
+    struct RegGroupInternal
+    {
+        uint32_t    StrId;
+        const Reg*  Regs;
+        uint32_t    RegCount;
+        uint32_t    NeededFeature;
+    };
+
 
     // Callbacks used by stack walkers to get data they need.
     // They're meant to work as with the DbgHelp StackWalk64 routine.
@@ -74,7 +98,8 @@ namespace Mago
             ::Thread* coreThread, 
             IRegisterSet*& regSet ) = 0;
 
-        virtual void GetRegisterGroups( const RegGroup*& groups, uint32_t& count ) = 0;
+        virtual uint32_t GetRegisterGroupCount() = 0;
+        virtual bool GetRegisterGroup( uint32_t index, RegGroup& group ) = 0;
 
         // Maps a debug info register ID to an ID specific to this ArchData.
         // Returns the mapped register ID, and -1 if no mapping is found.
