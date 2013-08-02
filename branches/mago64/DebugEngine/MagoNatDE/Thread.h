@@ -8,15 +8,12 @@
 #pragma once
 
 
-struct _tagSTACKFRAME64;
-typedef struct _tagSTACKFRAME64 STACKFRAME64;
-
-        
 namespace Mago
 {
     class Program;
     class DebuggerProxy;
     class StackFrame;
+    class IRegisterSet;
 
 
     class ATL_NO_VTABLE Thread : 
@@ -77,8 +74,8 @@ namespace Mago
         HRESULT Step( ::IProcess* coreProc, STEPKIND sk, STEPUNIT step, bool handleException );
 
     private:
-        HRESULT BuildCallstack( const CONTEXT& context, Callstack& callstack );
-        HRESULT BuildTopFrameCallstack( const CONTEXT& context, Callstack& callstack );
+        HRESULT BuildCallstack( IRegisterSet* topRegSet, Callstack& callstack );
+        HRESULT AddCallstackFrame( IRegisterSet* regSet, Callstack& callstack );
         HRESULT MakeEnumFrameInfoFromCallstack( 
             const Callstack& callstack,
             FRAMEINFO_FLAGS dwFieldSpec, 

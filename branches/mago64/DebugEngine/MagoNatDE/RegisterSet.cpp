@@ -86,14 +86,17 @@ namespace Mago
 
     RegisterSet::RegisterSet( 
         const RegisterDesc* regDesc,
-        uint32_t regCount )
+        uint16_t regCount,
+        uint16_t pcId )
         :   mRefCount( 0 ),
             mRegDesc( regDesc ),
             mRegCount( regCount ),
-            mContextSize( 0 )
+            mContextSize( 0 ),
+            mPCId( pcId )
     {
         _ASSERT( regDesc != NULL );
         _ASSERT( regCount > 0 );
+        _ASSERT( pcId < regCount );
     }
 
     HRESULT RegisterSet::Init( 
@@ -109,7 +112,7 @@ namespace Mago
         if ( mContextBuf.get() == NULL )
             return E_OUTOFMEMORY;
 
-        mContextSize = contextSize;
+        mContextSize = (uint16_t) contextSize;
         memcpy( mContextBuf.get(), context, contextSize );
         return S_OK;
     }
@@ -233,6 +236,13 @@ namespace Mago
         return (RegisterType) mRegDesc[regId].Type;
     }
 
+    uint64_t RegisterSet::GetPC()
+    {
+        RegisterValue regVal = { 0 };
+        GetValue( mPCId, regVal );
+        return regVal.GetInt();
+    }
+
 
     //------------------------------------------------------------------------
     //  TinyRegisterSet
@@ -315,6 +325,11 @@ namespace Mago
 
         readOnly = true;
         return S_OK;
+    }
+
+    uint64_t TinyRegisterSet::GetPC()
+    {
+        return mPC;
     }
 
     bool TinyRegisterSet::GetThreadContext( const void*& context, uint32_t& contextSize )

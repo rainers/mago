@@ -9,6 +9,7 @@
 #include "DebuggerProxy.h"
 #include "CommandFunctor.h"
 #include "ArchDataX86.h"
+#include "RegisterSet.h"
 
 
 // these values can be tweaked, as long as we're responsive and don't spin
@@ -497,6 +498,49 @@ namespace Mago
             return hr;
 
         return params.OutHResult;
+    }
+
+    HRESULT DebuggerProxy::GetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet*& regSet )
+    {
+        _ASSERT( process != NULL );
+        _ASSERT( thread != NULL );
+        if ( process == NULL || thread == NULL )
+            return E_INVALIDARG;
+
+        HRESULT hr = S_OK;
+        CONTEXT context;
+
+        context.ContextFlags = CONTEXT_FULL 
+            | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
+
+        if ( !::GetThreadContext( thread->GetHandle(), &context ) )
+            return GetLastHr();
+
+        hr = mArch->BuildRegisterSet( &context, thread, regSet );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
+    HRESULT DebuggerProxy::SetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet* regSet )
+    {
+        _ASSERT( process != NULL );
+        _ASSERT( thread != NULL );
+        _ASSERT( regSet != NULL );
+        if ( process == NULL || thread == NULL || regSet == NULL )
+            return E_INVALIDARG;
+
+        const void* context = NULL;
+        uint32_t contextSize = 0;
+
+        if ( !regSet->GetThreadContext( context, contextSize ) )
+            return E_FAIL;
+
+        if ( !::SetThreadContext( thread->GetHandle(), (const CONTEXT*) context ) )
+            return GetLastHr();
+
+        return S_OK;
     }
 
 

@@ -13,6 +13,7 @@
 #include <Real.h>
 #include "Thread.h"
 #include "ArchData.h"
+#include "DebuggerProxy.h"
 
 
 namespace Mago
@@ -439,13 +440,10 @@ namespace Mago
             return hr;
 
         ::Thread* coreThread = mThread->GetCoreThread();
-        const void* context = NULL;
-        uint32_t contextSize = 0;
+        IProcess* coreProcess = mThread->GetCoreProcess();
+        DebuggerProxy* debugger = mThread->GetDebuggerProxy();
 
-        if ( !mRegSet->GetThreadContext( context, contextSize ) )
-            return E_SETVALUE_VALUE_IS_READONLY;
-
-        if ( !SetThreadContext( coreThread->GetHandle(), (const CONTEXT*) context ) )
+        if ( !debugger->SetThreadContext( coreProcess, coreThread, mRegSet ) )
             return E_SETVALUE_VALUE_CANNOT_BE_SET;
 
         return S_OK;

@@ -41,22 +41,25 @@ namespace
     }
 
     HRESULT ArchDataX86::BeginWalkStack( 
-        const void* threadContext, 
-        uint32_t threadContextSize,
+        IRegisterSet* topRegSet, 
         void* processContext,
         ReadProcessMemory64Proc readMemProc,
         FunctionTableAccess64Proc funcTabProc,
         GetModuleBase64Proc getModBaseProc,
         StackWalker*& stackWalker )
     {
-        HRESULT hr = S_OK;
-
-        if ( threadContext == NULL )
-            return E_INVALIDARG;
-        if ( threadContextSize != sizeof( CONTEXT_X86 ) )
+        if ( topRegSet == NULL )
             return E_INVALIDARG;
 
-        auto context = (const CONTEXT_X86*) threadContext;
+        HRESULT     hr = S_OK;
+        const void* contextPtr = NULL;
+        uint32_t    contextSize = 0;
+
+        if ( !topRegSet->GetThreadContext( contextPtr, contextSize ) )
+            return E_FAIL;
+        _ASSERT( contextSize == sizeof( CONTEXT_X86 ) );
+
+        auto context = (const CONTEXT_X86*) contextPtr;
         std::unique_ptr<WindowsStackWalker> walker( new WindowsStackWalker(
             IMAGE_FILE_MACHINE_I386,
             context->Eip,
@@ -67,18 +70,12 @@ namespace
             funcTabProc,
             getModBaseProc ) );
 
-        hr = walker->Init( threadContext, sizeof( CONTEXT_X86 ) );
+        hr = walker->Init( context, sizeof( CONTEXT_X86 ) );
         if ( FAILED( hr ) )
             return hr;
 
         stackWalker = walker.release();
         return S_OK;
-    }
-
-    Address ArchDataX86::GetPC( const void* threadContext )
-    {
-        auto context = (const CONTEXT_X86*) threadContext;
-        return context->Eip;
     }
 
     HRESULT ArchDataX86::BuildRegisterSet( 
@@ -91,7 +88,7 @@ namespace
         if ( coreThread == NULL )
             return E_INVALIDARG;
 
-        RefPtr<RegisterSet> regs = new RegisterSet( gRegDesc, RegCount );
+        RefPtr<RegisterSet> regs = new RegisterSet( gRegDesc, RegCount, RegX86_EIP );
         if ( regs == NULL )
             return E_OUTOFMEMORY;
 
