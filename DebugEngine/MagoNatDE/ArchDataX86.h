@@ -23,15 +23,13 @@ namespace Mago
         ArchDataX86( ProcFeaturesX86 procFeatures );
 
         virtual HRESULT BeginWalkStack( 
-            const void* threadContext, 
-            uint32_t threadContextSize,
+            IRegisterSet* topRegSet, 
             void* processContext,
             ReadProcessMemory64Proc readMemProc,
             FunctionTableAccess64Proc funcTabProc,
             GetModuleBase64Proc getModBaseProc,
             StackWalker*& stackWalker );
 
-        virtual Address GetPC( const void* threadContext );
         virtual HRESULT BuildRegisterSet( 
             const void* threadContext,
             ::Thread* coreThread, 

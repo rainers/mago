@@ -11,6 +11,7 @@ namespace Mago
 {
     struct CommandFunctor;
     class ArchData;
+    class IRegisterSet;
 
 
     class DebuggerProxy
@@ -75,6 +76,9 @@ namespace Mago
         HRESULT Execute( IProcess* process, bool handleException );
 
         HRESULT AsyncBreak( IProcess* process );
+
+        HRESULT GetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet*& regSet );
+        HRESULT SetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet* regSet );
 
     private:
         HRESULT CacheSystemInfo();

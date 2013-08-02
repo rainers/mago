@@ -80,15 +80,13 @@ namespace Mago
         void Release();
 
         virtual HRESULT BeginWalkStack( 
-            const void* threadContext, 
-            uint32_t threadContextSize,
+            IRegisterSet* topRegSet,
             void* processContext,
             ReadProcessMemory64Proc readMemProc,
             FunctionTableAccess64Proc funcTabProc,
             GetModuleBase64Proc getModBaseProc,
             StackWalker*& stackWalker ) = 0;
 
-        virtual Address GetPC( const void* threadContext ) = 0;
         virtual HRESULT BuildRegisterSet( 
             const void* threadContext,
             ::Thread* coreThread, 
