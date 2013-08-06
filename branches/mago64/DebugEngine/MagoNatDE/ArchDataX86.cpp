@@ -57,7 +57,10 @@ namespace
 
         if ( !topRegSet->GetThreadContext( contextPtr, contextSize ) )
             return E_FAIL;
-        _ASSERT( contextSize == sizeof( CONTEXT_X86 ) );
+
+        _ASSERT( contextSize >= sizeof( CONTEXT_X86 ) );
+        if ( contextSize < sizeof( CONTEXT_X86 ) )
+            return E_INVALIDARG;
 
         auto context = (const CONTEXT_X86*) contextPtr;
         std::unique_ptr<WindowsStackWalker> walker( new WindowsStackWalker(
@@ -70,7 +73,7 @@ namespace
             funcTabProc,
             getModBaseProc ) );
 
-        hr = walker->Init( context, sizeof( CONTEXT_X86 ) );
+        hr = walker->Init( context, contextSize );
         if ( FAILED( hr ) )
             return hr;
 
@@ -80,12 +83,13 @@ namespace
 
     HRESULT ArchDataX86::BuildRegisterSet( 
         const void* threadContext,
-        ::Thread* coreThread, 
+        uint32_t threadContextSize,
         IRegisterSet*& regSet )
     {
+        _ASSERT( threadContextSize >= sizeof( CONTEXT_X86 ) );
         if ( threadContext == NULL )
             return E_INVALIDARG;
-        if ( coreThread == NULL )
+        if ( threadContextSize < sizeof( CONTEXT_X86 ) )
             return E_INVALIDARG;
 
         RefPtr<RegisterSet> regs = new RegisterSet( gRegDesc, RegCount, RegX86_EIP );
@@ -103,12 +107,13 @@ namespace
 
     HRESULT ArchDataX86::BuildTinyRegisterSet( 
         const void* threadContext,
-        ::Thread* coreThread, 
+        uint32_t threadContextSize,
         IRegisterSet*& regSet )
     {
+        _ASSERT( threadContextSize >= sizeof( CONTEXT_X86 ) );
         if ( threadContext == NULL )
             return E_INVALIDARG;
-        if ( coreThread == NULL )
+        if ( threadContextSize < sizeof( CONTEXT_X86 ) )
             return E_INVALIDARG;
 
         auto context = (const CONTEXT_X86*) threadContext;

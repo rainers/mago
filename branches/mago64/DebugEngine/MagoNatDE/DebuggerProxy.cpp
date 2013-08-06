@@ -508,7 +508,7 @@ namespace Mago
             return E_INVALIDARG;
 
         HRESULT hr = S_OK;
-        CONTEXT context;
+        CONTEXT context = { 0 };
 
         context.ContextFlags = CONTEXT_FULL 
             | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
@@ -516,7 +516,7 @@ namespace Mago
         if ( !::GetThreadContext( thread->GetHandle(), &context ) )
             return GetLastHr();
 
-        hr = mArch->BuildRegisterSet( &context, thread, regSet );
+        hr = mArch->BuildRegisterSet( &context, sizeof context, regSet );
         if ( FAILED( hr ) )
             return hr;
 

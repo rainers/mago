@@ -64,7 +64,7 @@ namespace Mago
         //         false at the end of the callstack
         virtual bool WalkStack() = 0;
 
-        virtual const void* GetThreadContext() = 0;
+        virtual void GetThreadContext( const void*& context, uint32_t& contextSize ) = 0;
     };
 
 
@@ -89,11 +89,11 @@ namespace Mago
 
         virtual HRESULT BuildRegisterSet( 
             const void* threadContext,
-            ::Thread* coreThread, 
+            uint32_t threadContextSize,
             IRegisterSet*& regSet ) = 0;
         virtual HRESULT BuildTinyRegisterSet( 
             const void* threadContext,
-            ::Thread* coreThread, 
+            uint32_t threadContextSize,
             IRegisterSet*& regSet ) = 0;
 
         virtual uint32_t GetRegisterGroupCount() = 0;

@@ -21,7 +21,8 @@ namespace Mago
         ReadProcessMemory64Proc readMemProc,
         FunctionTableAccess64Proc funcTabProc,
         GetModuleBase64Proc getModBaseProc )
-        : mMachineType( machineType )
+        :   mMachineType( machineType ),
+            mThreadContextSize( 0 )
     {
         mProcessContext = processContext;
         mReadMemProc = readMemProc;
@@ -47,6 +48,8 @@ namespace Mago
         if ( mThreadContext.get() == NULL )
             return E_OUTOFMEMORY;
 
+        mThreadContextSize = threadContextSize;
+
         memcpy( mThreadContext.get(), threadContext, threadContextSize );
         return S_OK;
     }
@@ -68,8 +71,9 @@ namespace Mago
             NULL ) ? true : false;
     }
 
-    const void* WindowsStackWalker::GetThreadContext()
+    void WindowsStackWalker::GetThreadContext( const void*& context, uint32_t& contextSize )
     {
-        return mThreadContext.get();
+        context = mThreadContext.get();
+        contextSize = mThreadContextSize;
     }
 }
