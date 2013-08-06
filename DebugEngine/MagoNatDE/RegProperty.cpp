@@ -443,7 +443,8 @@ namespace Mago
         IProcess* coreProcess = mThread->GetCoreProcess();
         DebuggerProxy* debugger = mThread->GetDebuggerProxy();
 
-        if ( !debugger->SetThreadContext( coreProcess, coreThread, mRegSet ) )
+        hr = debugger->SetThreadContext( coreProcess, coreThread, mRegSet );
+        if ( FAILED( hr ) )
             return E_SETVALUE_VALUE_CANNOT_BE_SET;
 
         return S_OK;

@@ -32,11 +32,11 @@ namespace Mago
 
         virtual HRESULT BuildRegisterSet( 
             const void* threadContext,
-            ::Thread* coreThread, 
+            uint32_t threadContextSize,
             IRegisterSet*& regSet );
         virtual HRESULT BuildTinyRegisterSet( 
             const void* threadContext,
-            ::Thread* coreThread, 
+            uint32_t threadContextSize,
             IRegisterSet*& regSet );
 
         virtual uint32_t GetRegisterGroupCount();

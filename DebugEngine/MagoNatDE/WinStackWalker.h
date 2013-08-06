@@ -22,6 +22,7 @@ namespace Mago
         FunctionTableAccess64Proc   mFuncTabProc;
         GetModuleBase64Proc         mGetModBaseProc;
         std::unique_ptr<BYTE[]>     mThreadContext;
+        uint32_t                    mThreadContextSize;
 
     public:
         // Works like the DbgHelp StackWalk64 routine. 
@@ -38,6 +39,6 @@ namespace Mago
 
         virtual bool WalkStack();
 
-        virtual const void* GetThreadContext();
+        virtual void GetThreadContext( const void*& context, uint32_t& contextSize );
     };
 }

@@ -306,12 +306,15 @@ namespace Mago
         {
             RefPtr<IRegisterSet> regSet;
             UINT64              addr = 0;
-            const void*         context = walker->GetThreadContext();
+            const void*         context = NULL;
+            uint32_t            contextSize = 0;
+
+            walker->GetThreadContext( context, contextSize );
 
             if ( frameIndex == 0 )
-                hr = archData->BuildRegisterSet( context, mCoreThread, regSet.Ref() );
+                hr = archData->BuildRegisterSet( context, contextSize, regSet.Ref() );
             else
-                hr = archData->BuildTinyRegisterSet( context, mCoreThread, regSet.Ref() );
+                hr = archData->BuildTinyRegisterSet( context, contextSize, regSet.Ref() );
 
             if ( FAILED( hr ) )
                 return hr;
