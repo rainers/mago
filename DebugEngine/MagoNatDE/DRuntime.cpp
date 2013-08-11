@@ -571,25 +571,23 @@ namespace Mago
         const DynamicArray<MemberInfo> (*xgetMembers)(DynamicArray<char*>);
     };
 
-    HRESULT DRuntime::GetClassName( MachineAddress addr, BSTR* pbstrClassName )
+    HRESULT DRuntime::GetClassName( Address addr, BSTR* pbstrClassName )
     {
-        IProcess* process = mCoreProc;
-
-        _ASSERT( process != NULL );
         _ASSERT( pbstrClassName != NULL );
-        _ASSERT( process->GetMachine() != NULL );
 
-        IMachine* machine = process->GetMachine();
-        MachineAddress vtbl, classinfo;
+        Address vtbl, classinfo;
         SIZE_T read, unread;
-        HRESULT hr = machine->ReadMemory( addr, sizeof( vtbl ), read, unread, (uint8_t*) &vtbl );
+        HRESULT hr = mDebugger->ReadMemory( 
+            mCoreProc, addr, sizeof( vtbl ), read, unread, (uint8_t*) &vtbl );
         if ( SUCCEEDED( hr ) )
         {
-            hr = machine->ReadMemory( vtbl, sizeof( classinfo ), read, unread, (uint8_t*) &classinfo );
+            hr = mDebugger->ReadMemory( 
+                mCoreProc, vtbl, sizeof( classinfo ), read, unread, (uint8_t*) &classinfo );
             if ( SUCCEEDED( hr ) )
             {
                 DynamicArray<char> className;
-                hr = machine->ReadMemory( classinfo + offsetof( TypeInfo_Class, name ), sizeof( className ), read, unread, (uint8_t*) &className );
+                hr = mDebugger->ReadMemory( 
+                    mCoreProc, classinfo + offsetof( TypeInfo_Class, name ), sizeof( className ), read, unread, (uint8_t*) &className );
                 if ( SUCCEEDED( hr ) )
                 {
                     if ( className.length < 4096 )
@@ -597,7 +595,8 @@ namespace Mago
                         char* buf = new char[className.length];
                         if ( buf == NULL )
                             return E_OUTOFMEMORY;
-                        hr = machine->ReadMemory( (MachineAddress) className.ptr, className.length, read, unread, (uint8_t*) buf );
+                        hr = mDebugger->ReadMemory( 
+                            mCoreProc, (Address) className.ptr, className.length, read, unread, (uint8_t*) buf );
                         if ( SUCCEEDED( hr ) )
                         {
                             // read at most className.length
@@ -628,20 +627,16 @@ namespace Mago
         // ...
     };
 
-    HRESULT DRuntime::GetExceptionInfo( MachineAddress addr, BSTR* pbstrInfo )
+    HRESULT DRuntime::GetExceptionInfo( Address addr, BSTR* pbstrInfo )
     {
-        IProcess* process = mCoreProc;
-
-        _ASSERT( process != NULL );
         _ASSERT( pbstrInfo != NULL );
-        _ASSERT( process->GetMachine() != NULL );
 
-        IMachine* machine = process->GetMachine();
         Throwable throwable;
         SIZE_T read, unread;
         HRESULT hr = S_OK;
     
-        hr = machine->ReadMemory( addr, sizeof( throwable ), read, unread, (uint8_t*) &throwable );
+        hr = mDebugger->ReadMemory( 
+            mCoreProc, addr, sizeof( throwable ), read, unread, (uint8_t*) &throwable );
         if ( FAILED( hr ) )
             return hr;
         if ( read < sizeof( throwable ) )
@@ -661,7 +656,7 @@ namespace Mago
             char* p = buf;
             if ( throwable.msg.length > 0 )
             {
-                hr = machine->ReadMemory( (MachineAddress) throwable.msg.ptr, throwable.msg.length, 
+                hr = mDebugger->ReadMemory( mCoreProc, (Address) throwable.msg.ptr, throwable.msg.length, 
                                             read, unread, (uint8_t*) p );
                 if ( SUCCEEDED( hr ) )
                 {
@@ -674,7 +669,7 @@ namespace Mago
                 *p++ = 'a';
                 *p++ = 't';
                 *p++ = ' ';
-                hr = machine->ReadMemory( (MachineAddress) throwable.file.ptr, throwable.file.length, 
+                hr = mDebugger->ReadMemory( mCoreProc, (Address) throwable.file.ptr, throwable.file.length, 
                                             read, unread, (uint8_t*) p );
                 if ( SUCCEEDED( hr ) )
                 {
