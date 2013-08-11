@@ -32,9 +32,9 @@ namespace Mago
             const MagoEE::DataObject& key, 
             MagoEE::Address& valueAddr );
 
-        HRESULT GetClassName( MachineAddress addr, BSTR* pbstrClassName );
+        HRESULT GetClassName( Address addr, BSTR* pbstrClassName );
 
-        HRESULT GetExceptionInfo( MachineAddress addr, BSTR* pbstrInfo );
+        HRESULT GetExceptionInfo( Address addr, BSTR* pbstrInfo );
 
     private:
         HRESULT GetStructHash( 
