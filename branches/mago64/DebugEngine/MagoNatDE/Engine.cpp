@@ -14,6 +14,7 @@
 #include "PendingBreakpoint.h"
 #include "ComEnumWithCount.h"
 #include "BpResolutionLocation.h"
+#include "DRuntime.h"
 
 using namespace std;
 
@@ -184,6 +185,16 @@ namespace Mago
         prog->SetPortSettings( rgpPrograms[0] );
         prog->SetCallback( pCallback );
         prog->SetDebuggerProxy( &mDebugger );
+
+        // this was already set during launch
+        IProcess* coreProc = prog->GetCoreProcess();
+        _ASSERT( coreProc != NULL );
+
+        std::unique_ptr<DRuntime> druntime( new DRuntime( &mDebugger, coreProc ) );
+        if ( druntime.get() == NULL )
+            return E_OUTOFMEMORY;
+
+        prog->SetDRuntime( druntime );
 
         CComPtr<IDebugEngine2>      engine;
         CComPtr<IDebugProgram2>     prog2;

@@ -164,6 +164,11 @@ namespace Mago
         mCoreThread = thread;
     }
 
+    Program*    Thread::GetProgram()
+    {
+        return mProg;
+    }
+
     void Thread::SetProgram( Program* prog, DebuggerProxy* pollThread )
     {
         mProg = prog;
