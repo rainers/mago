@@ -14,6 +14,7 @@ namespace Mago
     class Thread;
     class Module;
     class Engine;
+    class DRuntime;
 
 
     class ATL_NO_VTABLE Program : 
@@ -39,6 +40,7 @@ namespace Mago
         Guard                           mModGuard;
         DWORD                           mNextModLoadIndex;  // protected by mod guard
         RefPtr<Module>                  mProgMod;
+        std::unique_ptr<DRuntime>       mDRuntime;
 
     public:
         Program();
@@ -99,6 +101,8 @@ namespace Mago
         void        SetCallback( IDebugEventCallback2* callback );
         void        SetPortSettings( IDebugProgram2* portProgram );
         void        SetDebuggerProxy( DebuggerProxy* debugger );
+        DRuntime*   GetDRuntime();
+        void        SetDRuntime( std::unique_ptr<DRuntime>& druntime );
 
         bool        GetAttached();
         void        SetAttached();

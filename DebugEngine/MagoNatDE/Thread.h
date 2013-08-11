@@ -67,6 +67,7 @@ namespace Mago
     public:
         ::Thread*   GetCoreThread();
         void        SetCoreThread( ::Thread* thread );
+        Program*    GetProgram();
         void        SetProgram( Program* prog, DebuggerProxy* pollThread );
         IProcess*   GetCoreProcess();
         DebuggerProxy* GetDebuggerProxy();

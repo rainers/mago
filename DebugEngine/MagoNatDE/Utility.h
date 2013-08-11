@@ -146,6 +146,7 @@ uint64_t ReadInt( const void* srcBuf, uint32_t bufOffset, size_t size, bool isSi
 Real10 ReadFloat( const void* srcBuf, uint32_t bufOffset, MagoEE::Type* type );
 HRESULT WriteInt( uint8_t* buffer, uint32_t bufSize, MagoEE::Type* type, uint64_t val );
 HRESULT WriteFloat( uint8_t* buffer, uint32_t bufSize, MagoEE::Type* type, const Real10& val );
+HRESULT FromRawValue( const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value );
 
 typedef bool (*EqualsFunc)( const void* leftBuf, const void* rightBuf );
 
@@ -159,9 +160,6 @@ EqualsFunc GetFloatingEqualsFunc( MagoEE::Type* type );
 
 bool EqualFloat( size_t typeSize, const Real10& left, const Real10& right );
 bool EqualValue( MagoEE::Type* type, const MagoEE::DataValue& left, const MagoEE::DataValue& right );
-
-HRESULT GetClassName( IProcess* process, MachineAddress addr, BSTR* pbstrClassName );
-HRESULT GetExceptionInfo( IProcess* process, MachineAddress addr, BSTR* pbstrInfo );
 
 uint32_t HashOf( const void* buffer, uint32_t length );
 

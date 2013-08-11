@@ -18,6 +18,7 @@
 #include "MemoryBytes.h"
 #include "CodeContext.h"
 #include "DisassemblyStream.h"
+#include "DRuntime.h"
 
 
 typedef CComEnumWithCount< 
@@ -483,6 +484,17 @@ namespace Mago
     void Program::SetDebuggerProxy( DebuggerProxy* debugger )
     {
         mDebugger = debugger;
+    }
+
+    DRuntime* Program::GetDRuntime()
+    {
+        return mDRuntime.get();
+    }
+
+    void Program::SetDRuntime( std::unique_ptr<DRuntime>& druntime )
+    {
+        mDRuntime.reset( NULL );
+        mDRuntime.swap( druntime );
     }
 
     bool Program::GetAttached()

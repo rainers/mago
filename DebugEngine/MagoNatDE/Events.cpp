@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "Events.h"
 #include "Program.h"
+#include "DRuntime.h"
 
 
 static const DWORD  DExceptionCode = 0xE0440001;
@@ -360,8 +361,10 @@ namespace Mago
             mSearchKey = Name;
             if ( IProcess* process = prog->GetCoreProcess() )
             {
-                GetClassName( process, record->ExceptionInformation[0], &mExceptionName );
-                GetExceptionInfo( process, record->ExceptionInformation[0], &mExceptionInfo );
+                DRuntime* druntime = prog->GetDRuntime();
+
+                druntime->GetClassName( record->ExceptionInformation[0], &mExceptionName );
+                druntime->GetExceptionInfo( record->ExceptionInformation[0], &mExceptionInfo );
             }
 
             if ( mExceptionName == NULL )
