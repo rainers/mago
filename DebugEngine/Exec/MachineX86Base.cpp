@@ -273,6 +273,10 @@ HRESULT MachineX86Base::WriteMemory(
     SIZE_T& lengthWritten, 
     uint8_t* buffer )
 {
+    _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
+
     return WriteStepperMemory( address, length, lengthWritten, buffer );
 }
 
@@ -1109,6 +1113,8 @@ Error:
 HRESULT MachineX86Base::CancelStep()
 {
     _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
 
@@ -1144,6 +1150,8 @@ HRESULT MachineX86Base::SetStepOut( Address targetAddress )
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
     _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
     BPCookie                        cookie = mCurThread->GetStepperCookie();
@@ -1183,6 +1191,8 @@ HRESULT MachineX86Base::SetStepInstruction( bool stepIn, bool sourceMode )
         return E_UNEXPECTED;
     _ASSERT( mStoppedThreadId != 0 );
     _ASSERT( mCurThread != NULL );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
     IStepperMachine*                stepMac = static_cast<IStepperMachine*>( this );
@@ -1222,6 +1232,8 @@ HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
     _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
     BPCookie                        cookie = mCurThread->GetStepperCookie();
@@ -1263,6 +1275,8 @@ HRESULT MachineX86Base::GetThreadContext( uint32_t threadId, void* context, uint
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
     _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     if ( context == NULL )
         return E_INVALIDARG;
@@ -1277,6 +1291,8 @@ HRESULT MachineX86Base::SetThreadContext( uint32_t threadId, const void* context
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
     _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     if ( context == NULL )
         return E_INVALIDARG;
