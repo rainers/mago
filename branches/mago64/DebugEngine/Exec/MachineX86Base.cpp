@@ -161,7 +161,8 @@ MachineX86Base::MachineX86Base()
     mIsolatedThread( false ),
     mExceptAddr( 0 ),
     mCallback( NULL ),
-    mSuspendCount( 0 )
+    mSuspendCount( 0 ),
+    mPendCBAddr( 0 )
 {
 }
 
@@ -243,6 +244,16 @@ void    MachineX86Base::SetCallback( IEventCallback* callback )
 
     if ( mCallback != NULL )
         mCallback->AddRef();
+}
+
+void MachineX86Base::GetPendingCallbackBP( MachineAddress& address, int& count, BPCookie*& cookies )
+{
+    address = mPendCBAddr;
+    count = mPendCBCookies.size();
+    if ( count > 0 )
+        cookies = &mPendCBCookies.front();
+    else
+        cookies = NULL;
 }
 
 
@@ -927,7 +938,8 @@ HRESULT MachineX86Base::DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRe
         if ( FAILED( hr ) )
             return hr;
 
-        CheckStepperEnded();
+        if ( CheckStepperEnded() )
+            result = MacRes_PendingCallbackStep;
     }
 
     if ( (result == MacRes_NotHandled) && (mCurThread->GetResumeStepper() != NULL) )
@@ -945,8 +957,7 @@ HRESULT MachineX86Base::DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRe
 
     if ( result == MacRes_NotHandled )
     {
-        mCallback->OnStepComplete( mProcess, mStoppedThreadId );
-        result = MacRes_HandledStopped;
+        result = MacRes_PendingCallbackStep;
     }
 
     return hr;
@@ -971,8 +982,9 @@ HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embe
         if ( (result == MacRes_NotHandled) || rewindPC )
             Rewind();
 
-        CheckStepperEnded();
         // if stepper ended, then it handled the exception and stopped
+        if ( CheckStepperEnded() )
+            result = MacRes_PendingCallbackStep;
     }
     else if ( mCurThread->GetResumeStepper() != NULL )
     {
@@ -986,28 +998,19 @@ HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embe
 
     if ( (result == MacRes_NotHandled) && embedded )
     {
-        CookieList emptyList;
-        ListForwardIterEnum< BPCookie >    en( 
-            emptyList.begin(), 
-            emptyList.end(), 
-            emptyList.size() );
-
-        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, address, &en ) == RunMode_Run )
-            result = MacRes_HandledContinue;
-        else
-            result = MacRes_HandledStopped;
+        result = MacRes_PendingCallbackBP;
+        mPendCBAddr = address;
+        mPendCBCookies.clear();
     }
     else if ( (result == MacRes_NotHandled) && (bp != NULL) && (bp->GetHighPriCookies().size() > 0) )
     {
-        ListForwardIterEnum< BPCookie >    en( 
+        result = MacRes_PendingCallbackBP;
+        mPendCBAddr = address;
+        mPendCBCookies.resize( bp->GetHighPriCookies().size() );
+        std::copy( 
             bp->GetHighPriCookies().begin(), 
             bp->GetHighPriCookies().end(), 
-            bp->GetHighPriCookies().size() );
-
-        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, bp->GetAddress(), &en ) == RunMode_Run)
-            result = MacRes_HandledContinue;
-        else
-            result = MacRes_HandledStopped;
+            mPendCBCookies.begin() );
     }
 
     return hr;
@@ -1122,16 +1125,16 @@ HRESULT MachineX86Base::CancelStep()
     return S_OK;
 }
 
-void MachineX86Base::CheckStepperEnded( bool signalStepComplete )
+bool MachineX86Base::CheckStepperEnded()
 {
     if ( (mCurThread->GetStepper() != NULL) && mCurThread->GetStepper()->IsComplete() )
     {
-        if ( signalStepComplete )
-            SignalStepComplete();
-
         delete mCurThread->GetStepper();
         mCurThread->SetStepper( NULL );
+        return true;
     }
+
+    return false;
 }
 
 HRESULT MachineX86Base::SetStepOut( Address targetAddress )
@@ -1373,11 +1376,6 @@ HRESULT MachineX86Base::WriteStepperMemory(
     }
 
     return S_OK;
-}
-
-void MachineX86Base::SignalStepComplete()
-{
-    mCallback->OnStepComplete( mProcess, mStoppedThreadId );
 }
 
 RunMode MachineX86Base::CanStepperStopAtFunction( MachineAddress address )

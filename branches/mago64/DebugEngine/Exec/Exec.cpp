@@ -13,6 +13,7 @@
 #include "PathResolver.h"
 #include "EventCallback.h"
 #include "Machine.h"
+#include "Iter.h"
 #include <Psapi.h>
 
 using namespace std;
@@ -387,6 +388,26 @@ HRESULT Exec::DispatchEvent()
                 hr = machine->OnException( mLastEvent.dwThreadId, &mLastEvent.u.Exception, result );
                 if ( FAILED( hr ) )
                     goto Error;
+
+                if ( result == MacRes_PendingCallbackBP )
+                {
+                    MachineAddress  addr = 0;
+                    int             count = 0;
+                    BPCookie*       cookies = NULL;
+
+                    machine->GetPendingCallbackBP( addr, count, cookies );
+                    IterEnum<BPCookie, BPCookie*> en( cookies, cookies + count, count );
+
+                    if ( mCallback->OnBreakpoint( proc, mLastEvent.dwThreadId, addr, &en) == RunMode_Run)
+                        result = MacRes_HandledContinue;
+                    else
+                        result = MacRes_HandledStopped;
+                }
+                else if ( result == MacRes_PendingCallbackStep )
+                {
+                    mCallback->OnStepComplete( proc, mLastEvent.dwThreadId );
+                    result = MacRes_HandledStopped;
+                }
 
                 if ( result == MacRes_NotHandled )
                 {
