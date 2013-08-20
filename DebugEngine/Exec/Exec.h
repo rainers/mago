@@ -101,7 +101,8 @@ public:
 
     HRESULT AsyncBreak( IProcess* process );
 
-    // TODO: thread context
+    HRESULT GetThreadContext( IProcess* process, uint32_t threadId, void* context, uint32_t size );
+    HRESULT SetThreadContext( IProcess* process, uint32_t threadId, const void* context, uint32_t size );
 
 private:
     HRESULT     HandleOutputString( Process* proc );

@@ -513,8 +513,9 @@ namespace Mago
         context.ContextFlags = CONTEXT_FULL 
             | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
 
-        if ( !::GetThreadContext( thread->GetHandle(), &context ) )
-            return GetLastHr();
+        hr = mExec.GetThreadContext( process, thread->GetId(), &context, sizeof context );
+        if ( FAILED( hr ) )
+            return hr;
 
         hr = mArch->BuildRegisterSet( &context, sizeof context, regSet );
         if ( FAILED( hr ) )
@@ -531,14 +532,16 @@ namespace Mago
         if ( process == NULL || thread == NULL || regSet == NULL )
             return E_INVALIDARG;
 
-        const void* context = NULL;
-        uint32_t contextSize = 0;
+        HRESULT         hr = S_OK;
+        const void*     contextBuf = NULL;
+        uint32_t        contextSize = 0;
 
-        if ( !regSet->GetThreadContext( context, contextSize ) )
+        if ( !regSet->GetThreadContext( contextBuf, contextSize ) )
             return E_FAIL;
 
-        if ( !::SetThreadContext( thread->GetHandle(), (const CONTEXT*) context ) )
-            return GetLastHr();
+        hr = mExec.SetThreadContext( process, thread->GetId(), contextBuf, contextSize );
+        if ( FAILED( hr ) )
+            return hr;
 
         return S_OK;
     }

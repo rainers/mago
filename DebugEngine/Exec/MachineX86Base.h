@@ -109,6 +109,9 @@ public:
     virtual HRESULT SetStepRange( bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount );
     virtual HRESULT CancelStep();
 
+    virtual HRESULT GetThreadContext( uint32_t threadId, void* context, uint32_t size );
+    virtual HRESULT SetThreadContext( uint32_t threadId, const void* context, uint32_t size );
+
     virtual void    OnStopped( uint32_t threadId );
     virtual void    OnCreateThread( Thread* thread );
     virtual void    OnExitThread( uint32_t threadId );
@@ -123,6 +126,9 @@ protected:
 
     virtual HRESULT SuspendThread( Thread* thread ) = 0;
     virtual HRESULT ResumeThread( Thread* thread ) = 0;
+
+    virtual HRESULT GetThreadContextInternal( uint32_t threadId, void* context, uint32_t size ) = 0;
+    virtual HRESULT SetThreadContextInternal( uint32_t threadId, const void* context, uint32_t size ) = 0;
 
     bool    Stopped();
 
