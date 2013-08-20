@@ -19,4 +19,7 @@ protected:
 
     virtual HRESULT SuspendThread( Thread* thread );
     virtual HRESULT ResumeThread( Thread* thread );
+
+    virtual HRESULT GetThreadContextInternal( uint32_t threadId, void* context, uint32_t size );
+    virtual HRESULT SetThreadContextInternal( uint32_t threadId, const void* context, uint32_t size );
 };

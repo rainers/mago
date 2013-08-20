@@ -1016,6 +1016,42 @@ HRESULT Exec::AsyncBreak( IProcess* process )
     return S_OK;
 }
 
+HRESULT Exec::GetThreadContext( IProcess* process, uint32_t threadId, void* context, uint32_t size )
+{
+    _ASSERT( process != NULL );
+    if ( process == NULL )
+        return E_INVALIDARG;
+    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
+    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
+        return E_UNEXPECTED;
+
+    HRESULT     hr = S_OK;
+    IMachine*   machine = process->GetMachine();
+
+    _ASSERT( machine != NULL );
+    hr = machine->GetThreadContext( threadId, context, size );
+
+    return hr;
+}
+
+HRESULT Exec::SetThreadContext( IProcess* process, uint32_t threadId, const void* context, uint32_t size)
+{
+    _ASSERT( process != NULL );
+    if ( process == NULL )
+        return E_INVALIDARG;
+    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
+    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
+        return E_UNEXPECTED;
+
+    HRESULT     hr = S_OK;
+    IMachine*   machine = process->GetMachine();
+
+    _ASSERT( machine != NULL );
+    hr = machine->SetThreadContext( threadId, context, size );
+
+    return hr;
+}
+
 
 HRESULT Exec::CreateModule( Process* proc, const DEBUG_EVENT& event, RefPtr<Module>& mod )
 {

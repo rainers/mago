@@ -74,6 +74,9 @@ public:
     virtual HRESULT SetStepRange( bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount ) = 0;
     virtual HRESULT CancelStep() = 0;
 
+    virtual HRESULT GetThreadContext( uint32_t threadId, void* context, uint32_t size ) = 0;
+    virtual HRESULT SetThreadContext( uint32_t threadId, const void* context, uint32_t size ) = 0;
+
     virtual void    OnStopped( uint32_t threadId ) = 0;
     virtual void    OnCreateThread( Thread* thread ) = 0;
     virtual void    OnExitThread( uint32_t threadId ) = 0;

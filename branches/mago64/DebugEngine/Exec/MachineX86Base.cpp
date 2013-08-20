@@ -1256,6 +1256,34 @@ Error:
     return hr;
 }
 
+HRESULT MachineX86Base::GetThreadContext( uint32_t threadId, void* context, uint32_t size )
+{
+    _ASSERT( mhProcess != NULL );
+    _ASSERT( mProcessId != 0 );
+    if ( (mhProcess == NULL) || (mProcessId == 0) )
+        return E_UNEXPECTED;
+    _ASSERT( mStoppedThreadId != 0 );
+
+    if ( context == NULL )
+        return E_INVALIDARG;
+
+    return GetThreadContextInternal( threadId, context, size );
+}
+
+HRESULT MachineX86Base::SetThreadContext( uint32_t threadId, const void* context, uint32_t size )
+{
+    _ASSERT( mhProcess != NULL );
+    _ASSERT( mProcessId != 0 );
+    if ( (mhProcess == NULL) || (mProcessId == 0) )
+        return E_UNEXPECTED;
+    _ASSERT( mStoppedThreadId != 0 );
+
+    if ( context == NULL )
+        return E_INVALIDARG;
+
+    return SetThreadContextInternal( threadId, context, size );
+}
+
 
 ThreadX86Base* MachineX86Base::GetStoppedThread()
 {

@@ -50,9 +50,9 @@ HRESULT MachineX86::ChangeCurrentPC( uint32_t threadId, int32_t byteOffset )
 #endif
 
 #ifdef _WIN64
-    bRet = Wow64GetThreadContext( hThread, &context );
+    bRet = ::Wow64GetThreadContext( hThread, &context );
 #else
-    bRet = GetThreadContext( hThread, &context );
+    bRet = ::GetThreadContext( hThread, &context );
 #endif
     if ( !bRet )
     {
@@ -63,9 +63,9 @@ HRESULT MachineX86::ChangeCurrentPC( uint32_t threadId, int32_t byteOffset )
     context.Eip += byteOffset;
 
 #ifdef _WIN64
-    bRet = Wow64SetThreadContext( hThread, &context );
+    bRet = ::Wow64SetThreadContext( hThread, &context );
 #else
-    bRet = SetThreadContext( hThread, &context );
+    bRet = ::SetThreadContext( hThread, &context );
 #endif
     if ( !bRet )
     {
@@ -106,9 +106,9 @@ HRESULT MachineX86::SetSingleStep( uint32_t threadId, bool enable )
 #endif
 
 #ifdef _WIN64
-    bRet = Wow64GetThreadContext( hThread, &context );
+    bRet = ::Wow64GetThreadContext( hThread, &context );
 #else
-    bRet = GetThreadContext( hThread, &context );
+    bRet = ::GetThreadContext( hThread, &context );
 #endif
     if ( !bRet )
     {
@@ -122,9 +122,9 @@ HRESULT MachineX86::SetSingleStep( uint32_t threadId, bool enable )
         context.EFlags &= ~TRACE_FLAG;
 
 #ifdef _WIN64
-    bRet = Wow64SetThreadContext( hThread, &context );
+    bRet = ::Wow64SetThreadContext( hThread, &context );
 #else
-    bRet = SetThreadContext( hThread, &context );
+    bRet = ::SetThreadContext( hThread, &context );
 #endif
     if ( !bRet )
     {
@@ -163,9 +163,9 @@ HRESULT MachineX86::GetCurrentPC( uint32_t threadId, MachineAddress& address )
 #endif
 
 #ifdef _WIN64
-    bRet = Wow64GetThreadContext( hThread, &context );
+    bRet = ::Wow64GetThreadContext( hThread, &context );
 #else
-    bRet = GetThreadContext( hThread, &context );
+    bRet = ::GetThreadContext( hThread, &context );
 #endif
     if ( !bRet )
     {
@@ -177,9 +177,9 @@ HRESULT MachineX86::GetCurrentPC( uint32_t threadId, MachineAddress& address )
 
     // TODO: why are we setting the thread context?
 #ifdef _WIN64
-    bRet = Wow64SetThreadContext( hThread, &context );
+    bRet = ::Wow64SetThreadContext( hThread, &context );
 #else
-    bRet = SetThreadContext( hThread, &context );
+    bRet = ::SetThreadContext( hThread, &context );
 #endif
     if ( !bRet )
     {
@@ -235,4 +235,58 @@ HRESULT MachineX86::ResumeThread( Thread* thread )
     }
 
     return S_OK;
+}
+
+HRESULT MachineX86::GetThreadContextInternal( uint32_t threadId, void* context, uint32_t size )
+{
+    if ( size < sizeof( CONTEXT ) )
+        return E_INVALIDARG;
+
+    HRESULT hr = S_OK;
+    HANDLE  hThread = OpenThread( THREAD_ALL_ACCESS, FALSE, threadId );
+
+    if ( hThread == NULL )
+    {
+        hr = GetLastHr();
+        goto Error;
+    }
+
+    if ( !::GetThreadContext( hThread, (CONTEXT*) context ) )
+    {
+        hr = GetLastHr();
+        goto Error;
+    }
+
+Error:
+    if ( hThread != NULL )
+        CloseHandle( hThread );
+
+    return hr;
+}
+
+HRESULT MachineX86::SetThreadContextInternal( uint32_t threadId, const void* context, uint32_t size )
+{
+    if ( size < sizeof( CONTEXT ) )
+        return E_INVALIDARG;
+
+    HRESULT hr = S_OK;
+    HANDLE  hThread = OpenThread( THREAD_ALL_ACCESS, FALSE, threadId );
+
+    if ( hThread == NULL )
+    {
+        hr = GetLastHr();
+        goto Error;
+    }
+
+    if ( !::SetThreadContext( hThread, (const CONTEXT*) context ) )
+    {
+        hr = GetLastHr();
+        goto Error;
+    }
+
+Error:
+    if ( hThread != NULL )
+        CloseHandle( hThread );
+
+    return hr;
 }
