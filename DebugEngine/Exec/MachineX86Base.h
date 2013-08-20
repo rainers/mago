@@ -33,7 +33,6 @@ public:
         SIZE_T& lengthRead, 
         SIZE_T& lengthUnreadable, 
         uint8_t* buffer ) = 0;
-    virtual void    SignalStepComplete() = 0;
 
     virtual RunMode CanStepperStopAtFunction( MachineAddress address ) = 0;
 };
@@ -42,6 +41,7 @@ public:
 class MachineX86Base : public IMachine, public IStepperMachine
 {
     typedef std::map< uint32_t, ThreadX86Base* >    ThreadMap;
+    typedef std::vector< BPCookie >                 CookieVec;
 
     enum BPPriority
     {
@@ -72,6 +72,9 @@ class MachineX86Base : public IMachine, public IStepperMachine
     IEventCallback* mCallback;
     int32_t         mSuspendCount;
 
+    MachineAddress  mPendCBAddr;
+    CookieVec       mPendCBCookies;
+
 public:
     MachineX86Base();
     ~MachineX86Base();
@@ -83,6 +86,7 @@ public:
 
     virtual void    SetProcess( HANDLE hProcess, uint32_t id, IProcess* process );
     virtual void    SetCallback( IEventCallback* callback );
+    virtual void    GetPendingCallbackBP( MachineAddress& address, int& count, BPCookie*& cookies );
 
     virtual HRESULT ReadMemory( 
         MachineAddress address, 
@@ -138,7 +142,6 @@ protected:
         SIZE_T length, 
         SIZE_T& lengthWritten, 
         uint8_t* buffer );
-    virtual void    SignalStepComplete();
     virtual RunMode CanStepperStopAtFunction( MachineAddress address );
 
 private:
@@ -169,5 +172,5 @@ private:
 
     ThreadX86Base* FindThread( uint32_t threadId );
 
-    void    CheckStepperEnded( bool signalStepComplete = true );
+    bool    CheckStepperEnded();
 };

@@ -22,6 +22,8 @@ enum MachineResult
     MacRes_NotHandled,
     MacRes_HandledContinue,
     MacRes_HandledStopped,
+    MacRes_PendingCallbackBP,
+    MacRes_PendingCallbackStep,
 };
 
 inline MachineResult GetMoreImportant( MachineResult a, MachineResult b )
@@ -49,6 +51,7 @@ public:
 
     virtual void    SetProcess( HANDLE hProcess, uint32_t id, IProcess* process ) = 0;
     virtual void    SetCallback( IEventCallback* callback ) = 0;
+    virtual void    GetPendingCallbackBP( MachineAddress& address, int& count, BPCookie*& cookies ) = 0;
 
     virtual HRESULT ReadMemory( 
         MachineAddress address,
