@@ -163,8 +163,6 @@ namespace Mago
             mCallback->Release();
             mCallback = NULL;
         }
-
-        mExec.Shutdown();
     }
 
     HRESULT DebuggerProxy::CacheSystemInfo()
@@ -602,6 +600,8 @@ namespace Mago
             if ( FAILED( hr ) )
                 break;
         }
+
+        mExec.Shutdown();
 
         OutputDebugStringA( "Poll loop shutting down.\n" );
         return hr;

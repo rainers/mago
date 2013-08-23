@@ -49,14 +49,17 @@ Exec::Exec()
     mPathBuf( NULL ),
     mPathBufLen( 0 ),
     mProcMap( NULL ),
-    mResolver( NULL )
+    mResolver( NULL ),
+    mIsDispatching( false ),
+    mIsShutdown( false )
 {
     memset( &mLastEvent, 0, sizeof mLastEvent );
 }
 
 Exec::~Exec()
 {
-    Shutdown();
+    if ( mTid == 0 || mTid == GetCurrentThreadId() )
+        Shutdown();
 
     delete [] mPathBuf;
     delete mProcMap;
@@ -107,41 +110,32 @@ HRESULT Exec::Init( IMachine* machine, IEventCallback* callback )
     return S_OK;
 }
 
-void Exec::Shutdown()
+HRESULT Exec::Shutdown()
 {
+    _ASSERT( mTid == 0 || mTid == GetCurrentThreadId() );
+    if ( mTid != 0 && mTid != GetCurrentThreadId() )
+        return E_WRONG_THREAD;
+    if ( mIsDispatching )
+        return E_WRONG_STATE;
+    if ( mIsShutdown )
+        return S_OK;
+
+    mIsShutdown = true;
+
     if ( mProcMap != NULL )
     {
-        _ASSERT( (mProcMap->size() == 0) || (mTid == 0) || (mTid == GetCurrentThreadId()) );
-
-        // finish up any graceful exits
-        while ( mLastEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT )
-        {
-            Process*    proc = FindProcess( mLastEvent.dwProcessId );
-            if ( proc != NULL )
-                proc->SetTerminating();
-
-            ContinueDebugEvent( mLastEvent.dwProcessId, mLastEvent.dwThreadId, DBG_CONTINUE );
-            CleanupLastDebugEvent();
-            WaitForDebugEvent( &mLastEvent, 0 );
-        }
-
         for ( ProcessMap::iterator it = mProcMap->begin();
             it != mProcMap->end();
             it++ )
         {
             Process*    proc = it->second.Get();
 
-            if ( !proc->IsTerminating() )
-            {
-                // we still have process running, 
-                // so treat it as if we're shutting down our own app
-                TerminateProcess( proc->GetHandle(), AbnormalTerminateCode );
-                // TODO: since we're terminating the process, we might not need this
-                ResumeSuspendedProcess( proc );
+            // we still have process running, 
+            // so treat it as if we're shutting down our own app
+            TerminateProcess( proc->GetHandle(), AbnormalTerminateCode );
 
-                // we're still debugging, so stop, so the debuggee can really close
-                DebugActiveProcessStop( proc->GetId() );
-            }
+            // we're still debugging, so stop, so the debuggee can really close
+            DebugActiveProcessStop( proc->GetId() );
         }
 
         mProcMap->clear();
@@ -160,6 +154,8 @@ void Exec::Shutdown()
         mCallback->Release();
         mCallback = NULL;
     }
+
+    return S_OK;
 }
 
 
@@ -168,6 +164,8 @@ HRESULT Exec::WaitForDebug( uint32_t millisTimeout )
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
         return E_WRONG_THREAD;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
     // if we haven't continued since the last wait, we'll just return E_TIMEOUT
 
     HRESULT hr = S_OK;
@@ -192,6 +190,8 @@ HRESULT Exec::ContinueDebug( bool handleException )
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
     BOOL    bRet = FALSE;
@@ -243,6 +243,8 @@ HRESULT Exec::DispatchEvent()
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     Process*    proc = NULL;
@@ -266,6 +268,8 @@ HRESULT Exec::DispatchEvent()
     {
         machine->OnStopped( mLastEvent.dwThreadId );
     }
+
+    mIsDispatching = true;
 
     switch ( mLastEvent.dwDebugEventCode )
     {
@@ -450,6 +454,8 @@ Error:
             mCallback->OnError( proc, hr, code );
     }
 
+    mIsDispatching = false;
+
     return hr;
 }
 
@@ -550,6 +556,8 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     _ASSERT( launchInfo != NULL );
     if ( launchInfo == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT             hr = S_OK;
     wchar_t*            cmdLine = NULL;
@@ -655,6 +663,8 @@ HRESULT Exec::Attach( uint32_t id, IProcess*& process )
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
         return E_WRONG_THREAD;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT         hr = S_OK;
     BOOL            bRet = FALSE;
@@ -713,6 +723,8 @@ HRESULT Exec::ResumeProcess( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     ResumeSuspendedProcess( process );
 
@@ -736,6 +748,8 @@ HRESULT Exec::TerminateNewProcess( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     process->SetTerminating();
 
@@ -757,6 +771,8 @@ HRESULT Exec::Terminate( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
     BOOL    bRet = FALSE;
@@ -789,6 +805,8 @@ HRESULT Exec::Detach( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
 
@@ -828,6 +846,8 @@ HRESULT Exec::ReadMemory(
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -855,6 +875,8 @@ HRESULT Exec::WriteMemory(
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -875,6 +897,8 @@ HRESULT Exec::SetBreakpoint( IProcess* process, Address address, BPCookie cookie
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -894,6 +918,8 @@ HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address, BPCookie coo
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -916,6 +942,8 @@ HRESULT Exec::StepOut( IProcess* process, Address address )
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -940,6 +968,8 @@ HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode )
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -964,6 +994,8 @@ HRESULT Exec::StepRange( IProcess* process, bool stepIn, bool sourceMode, Addres
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -988,6 +1020,8 @@ HRESULT Exec::CancelStep( IProcess* process )
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -1006,6 +1040,8 @@ HRESULT Exec::AsyncBreak( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     BOOL    bRet = FALSE;
 
@@ -1024,6 +1060,8 @@ HRESULT Exec::GetThreadContext( IProcess* process, uint32_t threadId, void* cont
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
@@ -1042,6 +1080,8 @@ HRESULT Exec::SetThreadContext( IProcess* process, uint32_t threadId, const void
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
     IMachine*   machine = process->GetMachine();
