@@ -51,6 +51,9 @@ class Exec
     ProcessMap*     mProcMap;
     PathResolver*   mResolver;
 
+    bool            mIsDispatching;
+    bool            mIsShutdown;
+
 public:
     Exec();
     ~Exec();
@@ -58,7 +61,7 @@ public:
     // TODO: how to handle more than one process? And if they're different machines (x86, x64)?
     //      should we restrict this to one process?
     HRESULT Init( IMachine* machine, IEventCallback* callback );
-    void    Shutdown();
+    HRESULT Shutdown();
 
     // returns S_OK, E_TIMEOUT
     HRESULT WaitForDebug( uint32_t millisTimeout );
