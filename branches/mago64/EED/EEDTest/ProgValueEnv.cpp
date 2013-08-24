@@ -74,7 +74,6 @@ ProgramValueEnv::ProgramValueEnv( const wchar_t* progPath, uint32_t stopRva, Mag
     mStopRva( stopRva ),
     mTypeEnv( typeEnv ),
     mExec( NULL ),
-    mMachine( NULL ),
     mProc( NULL ),
     mThreadId( 0 ),
     mSymSession( NULL ),
@@ -97,8 +96,6 @@ ProgramValueEnv::~ProgramValueEnv()
         mSymSession->Release();
     if ( mProc != NULL )
         mProc->Release();
-    if ( mMachine != NULL )
-        mMachine->Release();
     if ( mExec != NULL )
         delete mExec;
 }
@@ -106,23 +103,18 @@ ProgramValueEnv::~ProgramValueEnv()
 HRESULT ProgramValueEnv::StartProgram()
 {
     HRESULT hr = S_OK;
-    RefPtr<IMachine>        mac;
     RefPtr<EventCallback>   callback;
     RefPtr<IProcess>        proc;
     LaunchInfo              launchInfo = { 0 };
     const BPCookie          Cookie = 1;
     RefPtr<IModule>         procMod;
 
-    hr = MakeMachineX86( mac.Ref() );
-    if ( FAILED( hr ) )
-        return hr;
-
     auto_ptr<Exec>  exec( new Exec() );
 
     callback = new EventCallback();
     callback->SetExec( exec.get() );
 
-    hr = exec->Init( mac, callback );
+    hr = exec->Init( callback );
     if ( FAILED( hr ) )
         return hr;
 

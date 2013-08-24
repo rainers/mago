@@ -10,6 +10,9 @@
 #include "IProcess.h"
 
 
+class IMachine;
+
+
 class Process : public IProcess
 {
     typedef std::list< RefPtr<Thread> > ThreadList;
@@ -47,9 +50,6 @@ public:
     HANDLE          GetLaunchedSuspendedThread();
     void            SetLaunchedSuspendedThread( HANDLE hThread );
 
-    IMachine*       GetMachine();
-    void            SetMachine( IMachine* machine );
-
     bool            IsStopped();
     bool            IsDeleted();
     bool            IsTerminating();
@@ -65,8 +65,13 @@ public:
     virtual bool    FindThread( uint32_t id, Thread*& thread );
     virtual HRESULT EnumThreads( Enumerator< Thread* >*& en );
 
+    // internal
+
     virtual void    AddThread( Thread* thread );
     virtual void    DeleteThread( uint32_t threadId );
+
+    IMachine*       GetMachine();
+    void            SetMachine( IMachine* machine );
 
 private:
     Thread*         FindThread( uint32_t id );

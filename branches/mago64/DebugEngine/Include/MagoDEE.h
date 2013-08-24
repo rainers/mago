@@ -13,8 +13,6 @@
 #include "..\Exec\Exec.h"
 #include "..\Exec\Error.h"
 #include "..\Exec\EventCallback.h"
-#include "..\Exec\Machine.h"
-#include "..\Exec\MakeMachineX86.h"
 #include "..\Exec\IProcess.h"
 #include "..\Exec\IModule.h"
 #include "..\Exec\Thread.h"

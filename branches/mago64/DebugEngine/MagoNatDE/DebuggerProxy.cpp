@@ -22,7 +22,6 @@ namespace Mago
     DebuggerProxy::DebuggerProxy()
         :   mhThread( NULL ),
             mWorkerTid( 0 ),
-            mMachine( NULL ),
             mCallback( NULL ),
             mhReadyEvent( NULL ),
             mhCommandEvent( NULL ),
@@ -51,13 +50,12 @@ namespace Mago
             CloseHandle( mhResultEvent );
     }
 
-    HRESULT DebuggerProxy::Init( IMachine* machine, IEventCallback* callback )
+    HRESULT DebuggerProxy::Init( IEventCallback* callback )
     {
-        _ASSERT( machine != NULL );
         _ASSERT( callback != NULL );
-        if ( (machine == NULL) || (callback == NULL ) )
+        if ( (callback == NULL ) )
             return E_INVALIDARG;
-        if ( (mMachine != NULL) || (mCallback != NULL ) )
+        if ( (mCallback != NULL ) )
             return E_ALREADY_INIT;
 
         HRESULT     hr = S_OK;
@@ -85,9 +83,6 @@ namespace Mago
         mhCommandEvent = hCommandEvent.Detach();
         mhResultEvent = hResultEvent.Detach();
 
-        mMachine = machine;
-        mMachine->AddRef();
-
         mCallback = callback;
         mCallback->AddRef();
 
@@ -96,9 +91,8 @@ namespace Mago
 
     HRESULT DebuggerProxy::Start()
     {
-        _ASSERT( mMachine != NULL );
         _ASSERT( mCallback != NULL );
-        if ( (mMachine == NULL) || (mCallback == NULL ) )
+        if ( (mCallback == NULL ) )
             return E_UNEXPECTED;
         if ( mhThread != NULL )
             return E_UNEXPECTED;
@@ -150,12 +144,6 @@ namespace Mago
         {
             // there are no infinite waits on the poll thread, so it'll detect shutdown signal
             WaitForSingleObject( mhThread, INFINITE );
-        }
-
-        if ( mMachine != NULL )
-        {
-            mMachine->Release();
-            mMachine = NULL;
         }
 
         if ( mCallback != NULL )
@@ -566,7 +554,7 @@ namespace Mago
     {
         HRESULT hr = S_OK;
 
-        hr = mExec.Init( mMachine, mCallback );
+        hr = mExec.Init( mCallback );
         if ( FAILED( hr ) )
             return hr;
 

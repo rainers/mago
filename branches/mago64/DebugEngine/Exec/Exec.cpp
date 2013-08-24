@@ -13,6 +13,7 @@
 #include "PathResolver.h"
 #include "EventCallback.h"
 #include "Machine.h"
+#include "MakeMachine.h"
 #include "Iter.h"
 #include <Psapi.h>
 
@@ -22,6 +23,7 @@ using namespace std;
 class ProcessMap : public std::map< uint32_t, RefPtr< Process > >
 {
 };
+
 
 // indexed by Win32 Debug API Event Code (for ex: EXCEPTION_DEBUG_EVENT)
 const IEventCallback::EventCode     gEventMap[] = 
@@ -44,7 +46,6 @@ const uint32_t  AbnormalTerminateCode = _UI32_MAX;
 
 Exec::Exec()
 :   mTid( 0 ),
-    mMachine( NULL ),
     mCallback( NULL ),
     mPathBuf( NULL ),
     mPathBufLen( 0 ),
@@ -67,13 +68,11 @@ Exec::~Exec()
 }
 
 
-HRESULT Exec::Init( IMachine* machine, IEventCallback* callback )
+HRESULT Exec::Init( IEventCallback* callback )
 {
     // already initialized?
     if ( mTid != 0 )
         return E_ALREADY_INIT;
-    if ( machine == NULL )
-        return E_INVALIDARG;
     if ( callback == NULL )
         return E_INVALIDARG;
 
@@ -96,10 +95,8 @@ HRESULT Exec::Init( IMachine* machine, IEventCallback* callback )
         return E_OUTOFMEMORY;
     mPathBufLen = MAX_PATH;
 
-    machine->AddRef();
     callback->AddRef();
 
-    mMachine = machine;
     mCallback = callback;
     mProcMap = map.release();
     mResolver = resolver.release();
@@ -142,12 +139,6 @@ HRESULT Exec::Shutdown()
     }
 
     CleanupLastDebugEvent();
-
-    if ( mMachine != NULL )
-    {
-        mMachine->Release();
-        mMachine = NULL;
-    }
 
     if ( mCallback != NULL )
     {
@@ -289,13 +280,7 @@ HRESULT Exec::DispatchEvent()
             proc->AddThread( thread.Get() );
             proc->SetEntryPoint( (Address) mLastEvent.u.CreateProcessInfo.lpStartAddress );
 
-            // TODO: here we can customize the machine (ask for the right one based on module)
-            mMachine->SetProcess( proc->GetHandle(), proc->GetId(), proc );
-            mMachine->SetCallback( mCallback );
-            proc->SetMachine( mMachine );
-
-            mMachine->OnStopped( mLastEvent.dwThreadId );
-            mMachine->OnCreateThread( thread.Get() );
+            machine->OnCreateThread( thread.Get() );
 
             if ( mCallback != NULL )
             {
@@ -547,7 +532,6 @@ void Exec::CleanupLastDebugEvent()
     memset( &mLastEvent, 0, sizeof mLastEvent );
 }
 
-
 HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
@@ -568,6 +552,8 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     DWORD               flags = DEBUG_ONLY_THIS_PROCESS | CREATE_UNICODE_ENVIRONMENT | CREATE_DEFAULT_ERROR_MODE;
     HandlePtr           hProcPtr;
     HandlePtr           hThreadPtr;
+    ImageInfo           imageInfo = { 0 };
+    RefPtr<IMachine>    machine;
 
     startupInfo.dwFlags = STARTF_USESHOWWINDOW;
     startupInfo.wShowWindow = SW_SHOW;
@@ -592,6 +578,14 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
         hr = E_UNEXPECTED;
         goto Error;
     }
+
+    hr = GetImageInfo( mPathBuf, imageInfo );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = MakeMachine( imageInfo.MachineType, machine.Ref() );
+    if ( FAILED( hr ) )
+        goto Error;
 
     cmdLine = _wcsdup( launchInfo->CommandLine );
     if ( cmdLine == NULL )
@@ -632,6 +626,10 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
         hProcPtr.Detach();
 
         mProcMap->insert( ProcessMap::value_type( procInfo.dwProcessId, proc ) );
+
+        machine->SetProcess( proc->GetHandle(), proc->GetId(), proc.Get() );
+        machine->SetCallback( mCallback );
+        proc->SetMachine( machine.Get() );
 
         process = proc.Detach();
     }
@@ -850,7 +848,7 @@ HRESULT Exec::ReadMemory(
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->ReadMemory( (MachineAddress) address, length, lengthRead, lengthUnreadable, buffer );
@@ -879,7 +877,7 @@ HRESULT Exec::WriteMemory(
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->WriteMemory( (MachineAddress) address, length, lengthWritten, buffer );
@@ -901,7 +899,7 @@ HRESULT Exec::SetBreakpoint( IProcess* process, Address address, BPCookie cookie
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->SetBreakpoint( (MachineAddress) address, cookie );
@@ -922,7 +920,7 @@ HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address, BPCookie coo
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->RemoveBreakpoint( (MachineAddress) address, cookie );
@@ -946,7 +944,7 @@ HRESULT Exec::StepOut( IProcess* process, Address address )
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->SetStepOut( address );
@@ -972,7 +970,7 @@ HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode )
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->SetStepInstruction( stepIn, sourceMode );
@@ -998,7 +996,7 @@ HRESULT Exec::StepRange( IProcess* process, bool stepIn, bool sourceMode, Addres
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->SetStepRange( stepIn, sourceMode, ranges, rangeCount );
@@ -1024,7 +1022,7 @@ HRESULT Exec::CancelStep( IProcess* process )
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->CancelStep();
@@ -1064,7 +1062,7 @@ HRESULT Exec::GetThreadContext( IProcess* process, uint32_t threadId, void* cont
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->GetThreadContext( threadId, context, size );
@@ -1084,7 +1082,7 @@ HRESULT Exec::SetThreadContext( IProcess* process, uint32_t threadId, const void
         return E_WRONG_STATE;
 
     HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    IMachine*   machine = ((Process*) process)->GetMachine();
 
     _ASSERT( machine != NULL );
     hr = machine->SetThreadContext( threadId, context, size );

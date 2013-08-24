@@ -345,6 +345,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\MakeMachine.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Module.cpp"
 				>
 			</File>
@@ -431,7 +435,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\MakeMachineX86.h"
+				RelativePath=".\MakeMachine.h"
 				>
 			</File>
 			<File

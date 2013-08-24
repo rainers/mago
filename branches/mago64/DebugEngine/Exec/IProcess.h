@@ -14,7 +14,6 @@ enum CreateMethod
     Create_Attach,
 };
 
-class IMachine;
 class Thread;
 template <class T>
 class Enumerator;
@@ -36,8 +35,6 @@ public:
     virtual HANDLE          GetLaunchedSuspendedThread() = 0;
     virtual void            SetLaunchedSuspendedThread( HANDLE hThread ) = 0;
     
-    virtual IMachine*       GetMachine() = 0;
-
     virtual bool            IsStopped() = 0;
     virtual bool            IsDeleted() = 0;
     virtual bool            IsTerminating() = 0;

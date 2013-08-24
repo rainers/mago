@@ -44,6 +44,50 @@ HRESULT GetImageInfoFromPEHeader( HANDLE hProcess, void* dllBase, uint16_t& mach
 }
 
 
+HRESULT GetImageInfo( const wchar_t* path, ImageInfo& info )
+{
+    FileHandlePtr   hFile;
+
+    hFile = CreateFile(
+        path,
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL );
+    if ( hFile.IsEmpty() )
+        return GetLastHr();
+
+    BOOL                bRet = FALSE;
+    DWORD               bytesRead = 0;
+    IMAGE_DOS_HEADER    dosHeader;
+
+    bRet = ReadFile( hFile.Get(), &dosHeader, sizeof dosHeader, &bytesRead, NULL );
+    if ( !bRet )
+        return GetLastHr();
+
+    if ( dosHeader.e_magic != IMAGE_DOS_SIGNATURE || dosHeader.e_lfanew < 0 )
+        return HRESULT_FROM_WIN32( ERROR_BAD_FORMAT );
+
+    DWORD filePtr = SetFilePointer( hFile.Get(), dosHeader.e_lfanew, NULL, FILE_BEGIN );
+    if ( filePtr == INVALID_SET_FILE_POINTER )
+        return HRESULT_FROM_WIN32( ERROR_BAD_FORMAT );
+
+    DWORD signature = 0;
+
+    bRet = ReadFile( hFile.Get(), &signature, sizeof signature, &bytesRead, NULL );
+    if ( !bRet )
+        return GetLastHr();
+
+    bRet = ReadFile( hFile.Get(), &info.MachineType, sizeof info.MachineType, &bytesRead, NULL );
+    if ( !bRet )
+        return GetLastHr();
+
+    return S_OK;
+}
+
+
 HRESULT ReadMemory( 
    HANDLE hProcess, 
    UINT_PTR address, 

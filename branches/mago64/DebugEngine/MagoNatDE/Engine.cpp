@@ -43,17 +43,12 @@ namespace Mago
     HRESULT Engine::FinalConstruct()
     {
         HRESULT                 hr = S_OK;
-        RefPtr<IMachine>        machine;
         RefPtr<IEventCallback>  callback( new EventCallback( this ) );
 
         if ( callback.Get() == NULL )
             return E_OUTOFMEMORY;
 
-        hr = MakeMachineX86( machine.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = mDebugger.Init( machine.Get(), callback.Get() );
+        hr = mDebugger.Init( callback.Get() );
         if ( FAILED( hr ) )
             return hr;
 

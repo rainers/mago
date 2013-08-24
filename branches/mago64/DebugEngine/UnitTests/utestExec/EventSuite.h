@@ -15,7 +15,6 @@ class EventSuite : public Test::Suite
 {
     Exec*               mExec;
     EventCallbackBase*  mCallback;
-    IMachine*           mMachine;
 
 public:
     EventSuite();
