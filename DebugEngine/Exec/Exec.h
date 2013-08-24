@@ -23,7 +23,6 @@ struct LaunchInfo
 
 
 class IEventCallback;
-class IMachine;
 class ProcessMap;
 class IProcess;
 class Process;
@@ -40,7 +39,6 @@ class Exec
     // keep track of starting thread ID
     uint32_t        mTid;
 
-    IMachine*       mMachine;
     IEventCallback* mCallback;
 
     DEBUG_EVENT     mLastEvent;
@@ -58,9 +56,7 @@ public:
     Exec();
     ~Exec();
 
-    // TODO: how to handle more than one process? And if they're different machines (x86, x64)?
-    //      should we restrict this to one process?
-    HRESULT Init( IMachine* machine, IEventCallback* callback );
+    HRESULT Init( IEventCallback* callback );
     HRESULT Shutdown();
 
     // returns S_OK, E_TIMEOUT

@@ -40,10 +40,6 @@ void StartStopSuite::setup()
     mExec = new Exec();
     mCallback = new EventCallbackBase();
 
-    HRESULT hr = MakeMachineX86( mMachine );
-    if ( FAILED( hr ) )
-        throw "MakeMachineX86 failed.";
-
     mCallback->AddRef();
 }
 
@@ -60,21 +56,12 @@ void StartStopSuite::tear_down()
         mCallback->Release();
         mCallback = NULL;
     }
-
-    if ( mMachine != NULL )
-    {
-        mMachine->Release();
-        mMachine = NULL;
-    }
 }
 
 void StartStopSuite::TestInit()
 {
-    TEST_ASSERT( FAILED( mExec->Init( NULL, NULL ) ) );
-    TEST_ASSERT( FAILED( mExec->Init( mMachine, NULL ) ) );
-    TEST_ASSERT( FAILED( mExec->Init( NULL, mCallback ) ) );
-
-    TEST_ASSERT( SUCCEEDED( mExec->Init( mMachine, mCallback ) ) );
+    TEST_ASSERT( FAILED( mExec->Init( NULL ) ) );
+    TEST_ASSERT( SUCCEEDED( mExec->Init( mCallback ) ) );
 }
 
 void StartStopSuite::TestLaunchDestroyExecStopped()
@@ -84,7 +71,7 @@ void StartStopSuite::TestLaunchDestroyExecStopped()
     {
         Exec    exec;
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
         LaunchInfo  info = { 0 };
         wchar_t     cmdLine[ MAX_PATH ] = L"";
@@ -134,7 +121,7 @@ void StartStopSuite::TestLaunchDestroyExecRunning()
     {
         Exec    exec;
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
         LaunchInfo  info = { 0 };
         wchar_t     cmdLine[ MAX_PATH ] = L"";
@@ -181,7 +168,7 @@ void StartStopSuite::TestBeginToEnd()
 {
     Exec    exec;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo  info = { 0 };
     wchar_t     cmdLine[ MAX_PATH ] = L"";
@@ -223,7 +210,7 @@ void StartStopSuite::TestTerminateStopped()
 {
     Exec    exec;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo  info = { 0 };
     wchar_t     cmdLine[ MAX_PATH ] = L"";
@@ -273,7 +260,7 @@ void StartStopSuite::TestTerminateRunning()
 {
     Exec    exec;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo  info = { 0 };
     wchar_t     cmdLine[ MAX_PATH ] = L"";
@@ -397,7 +384,7 @@ void StartStopSuite::TryOptions( bool newConsole )
 {
     Exec    exec;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo          info = { 0 };
     wchar_t             cmdLine[ MAX_PATH ] = L"";

@@ -8,4 +8,7 @@
 #pragma once
 
 
-HRESULT MakeMachineX86( IMachine*& machine );
+class IMachine;
+
+
+HRESULT MakeMachine( WORD machineType, IMachine*& machine );

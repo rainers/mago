@@ -14,7 +14,6 @@ class StartStopSuite : public Test::Suite
 {
     Exec*               mExec;
     EventCallbackBase*  mCallback;
-    IMachine*           mMachine;
 
 public:
     StartStopSuite();

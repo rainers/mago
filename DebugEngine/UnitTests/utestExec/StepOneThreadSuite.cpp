@@ -56,10 +56,6 @@ void StepOneThreadSuite::setup()
     mExec = new Exec();
     mCallback = new EventCallbackBase();
 
-    HRESULT hr = MakeMachineX86( mMachine );
-    if ( FAILED( hr ) )
-        throw "MakeMachineX86 failed.";
-
     mCallback->AddRef();
 }
 
@@ -75,12 +71,6 @@ void StepOneThreadSuite::tear_down()
     {
         mCallback->Release();
         mCallback = NULL;
-    }
-
-    if ( mMachine != NULL )
-    {
-        mMachine->Release();
-        mMachine = NULL;
     }
 }
 
@@ -197,7 +187,7 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
 {
     Exec    exec;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo  info = { 0 };
     wchar_t     cmdLine[ MAX_PATH ] = L"";

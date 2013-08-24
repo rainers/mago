@@ -8,7 +8,14 @@
 #pragma once
 
 
+struct ImageInfo
+{
+    WORD    MachineType;
+};
+
+
 HRESULT GetImageInfoFromPEHeader( HANDLE hProcess, void* dllBase, uint16_t& machine, uint32_t& size, Address& prefBase );
+HRESULT GetImageInfo( const wchar_t* path, ImageInfo& info );
 
 HRESULT ReadMemory( 
     HANDLE hProcess, 

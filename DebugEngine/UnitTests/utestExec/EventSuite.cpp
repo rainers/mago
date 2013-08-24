@@ -43,10 +43,6 @@ void EventSuite::setup()
     mExec = new Exec();
     mCallback = new EventCallbackBase();
 
-    HRESULT hr = MakeMachineX86( mMachine );
-    if ( FAILED( hr ) )
-        throw "MakeMachineX86 failed.";
-
     mCallback->AddRef();
 }
 
@@ -62,12 +58,6 @@ void EventSuite::tear_down()
     {
         mCallback->Release();
         mCallback = NULL;
-    }
-
-    if ( mMachine != NULL )
-    {
-        mMachine->Release();
-        mMachine = NULL;
     }
 }
 
@@ -94,7 +84,7 @@ void EventSuite::RunDebuggee( RefPtr<IProcess>& process )
 {
     Exec    exec;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo      info = { 0 };
     wchar_t         cmdLine[ MAX_PATH ] = L"";
@@ -190,7 +180,6 @@ void EventSuite::AssertModuleLoads( IProcess* process )
         TEST_ASSERT( GetFileAttributes( modNode->Module->GetExePath() ) != INVALID_FILE_ATTRIBUTES );
 
         // TODO: test size?
-        // TODO: test machine?
 
         size_t          exePathLen = wcslen( modNode->Module->GetExePath() );
         const wchar_t*  lastWack = wcsrchr( modNode->Module->GetExePath(), L'\\' );
@@ -323,7 +312,7 @@ void EventSuite::TryHandlingException( bool firstTimeHandled, bool expectedChanc
     Exec    exec;
     State   state = State_Init;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo      info = { 0 };
     wchar_t         cmdLine[ MAX_PATH ] = L"";
@@ -427,7 +416,7 @@ void EventSuite::TestExceptionNotHandledFirstChanceCaught()
     Exec    exec;
     State   state = State_Init;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo      info = { 0 };
     wchar_t         cmdLine[ MAX_PATH ] = L"";
@@ -522,7 +511,7 @@ void EventSuite::TestExceptionNotHandledAllChances()
     Exec    exec;
     State   state = State_Init;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo      info = { 0 };
     wchar_t         cmdLine[ MAX_PATH ] = L"";

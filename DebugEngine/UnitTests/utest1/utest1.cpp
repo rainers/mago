@@ -12,8 +12,6 @@
 #include "..\..\Exec\Types.h"
 #include "..\..\Exec\Exec.h"
 #include "..\..\Exec\EventCallback.h"
-#include "..\..\Exec\Machine.h"
-#include "..\..\Exec\MakeMachineX86.h"
 #include "..\..\Exec\IProcess.h"
 #include "..\..\Exec\IModule.h"
 #include "..\..\Exec\Enumerator.h"
@@ -212,7 +210,6 @@ int _tmain( int argc, _TCHAR* argv[] )
     PROCESS_INFORMATION procInfo = { 0 };
     DEBUG_EVENT         event = { 0 };
     _EventCallback   callback;
-    IMachine*       machine = NULL;
     Exec        exec;
     HRESULT     hr = S_OK;
     LaunchInfo  info = { 0 };
@@ -226,11 +223,7 @@ int _tmain( int argc, _TCHAR* argv[] )
 
     callback.SetExec( &exec );
 
-    hr = MakeMachineX86( machine );
-    if ( FAILED( hr ) )
-        goto Error;
-
-    hr = exec.Init( machine, &callback );
+    hr = exec.Init( &callback );
     if ( FAILED( hr ) )
         goto Error;
     
@@ -360,9 +353,6 @@ Error:
 
     if ( proc != NULL )
         proc->Release();
-
-    if ( machine != NULL )
-        machine->Release();
 
     return 0;
 }

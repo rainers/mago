@@ -19,7 +19,6 @@ namespace Mago
         Exec                mExec;
         HANDLE              mhThread;
         DWORD               mWorkerTid;
-        IMachine*           mMachine;
         IEventCallback*     mCallback;
         HANDLE              mhReadyEvent;
         HANDLE              mhCommandEvent;
@@ -33,7 +32,7 @@ namespace Mago
         DebuggerProxy();
         ~DebuggerProxy();
 
-        HRESULT Init( IMachine* machine, IEventCallback* callback );
+        HRESULT Init( IEventCallback* callback );
         HRESULT Start();
         void    Shutdown();
 
