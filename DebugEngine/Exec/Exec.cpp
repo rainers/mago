@@ -554,6 +554,7 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     HandlePtr           hThreadPtr;
     ImageInfo           imageInfo = { 0 };
     RefPtr<IMachine>    machine;
+    RefPtr<Process>     proc;
 
     startupInfo.dwFlags = STARTF_USESHOWWINDOW;
     startupInfo.wShowWindow = SW_SHOW;
@@ -614,28 +615,26 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     hThreadPtr.Attach( procInfo.hThread );
     hProcPtr.Attach( procInfo.hProcess );
 
+    proc = new Process( Create_Launch, procInfo.hProcess, procInfo.dwProcessId, mPathBuf );
+
+    if ( proc.Get() == NULL )
     {
-        RefPtr<Process> proc = new Process( Create_Launch, procInfo.hProcess, procInfo.dwProcessId, mPathBuf );
-
-        if ( proc.Get() == NULL )
-        {
-            hr = E_OUTOFMEMORY;
-            goto Error;
-        }
-
-        hProcPtr.Detach();
-
-        mProcMap->insert( ProcessMap::value_type( procInfo.dwProcessId, proc ) );
-
-        machine->SetProcess( proc->GetHandle(), proc->GetId(), proc.Get() );
-        machine->SetCallback( mCallback );
-        proc->SetMachine( machine.Get() );
-
-        process = proc.Detach();
+        hr = E_OUTOFMEMORY;
+        goto Error;
     }
 
+    hProcPtr.Detach();
+
+    mProcMap->insert( ProcessMap::value_type( procInfo.dwProcessId, proc ) );
+
+    machine->SetProcess( proc->GetHandle(), proc->GetId(), proc.Get() );
+    machine->SetCallback( mCallback );
+    proc->SetMachine( machine.Get() );
+
     if ( launchInfo->Suspend )
-        process->SetLaunchedSuspendedThread( hThreadPtr.Detach() );
+        proc->SetLaunchedSuspendedThread( hThreadPtr.Detach() );
+
+    process = proc.Detach();
 
 Error:
     if ( FAILED( hr ) )
@@ -731,10 +730,11 @@ HRESULT Exec::ResumeProcess( IProcess* process )
 
 void Exec::ResumeSuspendedProcess( IProcess* process )
 {
-    if ( process->GetLaunchedSuspendedThread() != NULL )
+    Process* proc = (Process*) process;
+    if ( proc->GetLaunchedSuspendedThread() != NULL )
     {
-        ResumeThread( process->GetLaunchedSuspendedThread() );
-        process->SetLaunchedSuspendedThread( NULL );
+        ResumeThread( proc->GetLaunchedSuspendedThread() );
+        proc->SetLaunchedSuspendedThread( NULL );
     }
 }
 
@@ -749,7 +749,9 @@ HRESULT Exec::TerminateNewProcess( IProcess* process )
     if ( mIsShutdown )
         return E_WRONG_STATE;
 
-    process->SetTerminating();
+    Process* proc = (Process*) process;
+
+    proc->SetTerminating();
 
     TerminateProcess( process->GetHandle(), NormalTerminateCode );
     DebugActiveProcessStop( process->GetId() );
@@ -772,10 +774,11 @@ HRESULT Exec::Terminate( IProcess* process )
     if ( mIsShutdown )
         return E_WRONG_STATE;
 
-    HRESULT hr = S_OK;
-    BOOL    bRet = FALSE;
+    HRESULT     hr = S_OK;
+    BOOL        bRet = FALSE;
+    Process*    proc = (Process*) process;
 
-    process->SetTerminating();
+    proc->SetTerminating();
 
     bRet = TerminateProcess( process->GetHandle(), NormalTerminateCode );
     _ASSERT( bRet );

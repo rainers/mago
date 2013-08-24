@@ -47,17 +47,11 @@ public:
     const wchar_t*  GetExePath();
     Address         GetEntryPoint();
     void            SetEntryPoint( Address entryPoint );
-    HANDLE          GetLaunchedSuspendedThread();
-    void            SetLaunchedSuspendedThread( HANDLE hThread );
 
     bool            IsStopped();
     bool            IsDeleted();
     bool            IsTerminating();
     bool            ReachedLoaderBp();
-    void            SetStopped( bool value );
-    void            SetDeleted();
-    void            SetTerminating();
-    void            SetReachedLoaderBp();
 
     // threads
 
@@ -67,11 +61,18 @@ public:
 
     // internal
 
-    virtual void    AddThread( Thread* thread );
-    virtual void    DeleteThread( uint32_t threadId );
+    void            AddThread( Thread* thread );
+    void            DeleteThread( uint32_t threadId );
 
     IMachine*       GetMachine();
     void            SetMachine( IMachine* machine );
+
+    HANDLE          GetLaunchedSuspendedThread();
+    void            SetLaunchedSuspendedThread( HANDLE hThread );
+    void            SetStopped( bool value );
+    void            SetDeleted();
+    void            SetTerminating();
+    void            SetReachedLoaderBp();
 
 private:
     Thread*         FindThread( uint32_t id );
