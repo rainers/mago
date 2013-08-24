@@ -32,16 +32,11 @@ public:
     virtual uint32_t        GetId() = 0;
     virtual const wchar_t*  GetExePath() = 0;
     virtual Address         GetEntryPoint() = 0;
-    virtual HANDLE          GetLaunchedSuspendedThread() = 0;
-    virtual void            SetLaunchedSuspendedThread( HANDLE hThread ) = 0;
     
     virtual bool            IsStopped() = 0;
     virtual bool            IsDeleted() = 0;
     virtual bool            IsTerminating() = 0;
     virtual bool            ReachedLoaderBp() = 0;
-    virtual void            SetDeleted() = 0;
-    virtual void            SetTerminating() = 0;
-    virtual void            SetReachedLoaderBp() = 0;
 
     // threads
 
