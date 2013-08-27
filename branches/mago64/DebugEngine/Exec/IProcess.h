@@ -40,7 +40,6 @@ public:
 
     // threads
 
-    virtual size_t          GetThreadCount() = 0;
     virtual bool            FindThread( uint32_t id, Thread*& thread ) = 0;
     virtual HRESULT         EnumThreads( Enumerator< Thread* >*& en ) = 0;
 };

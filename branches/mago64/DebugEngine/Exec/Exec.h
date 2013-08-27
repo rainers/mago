@@ -104,7 +104,8 @@ public:
     HRESULT SetThreadContext( IProcess* process, uint32_t threadId, const void* context, uint32_t size );
 
 private:
-    HRESULT     HandleOutputString( Process* proc );
+    HRESULT     DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent );
+    HRESULT     HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent );
 
     void        CleanupLastDebugEvent();
     void        ResumeSuspendedProcess( IProcess* process );

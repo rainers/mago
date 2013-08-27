@@ -10,6 +10,7 @@
 #include "EventCallback.h"
 #include "Iter.h"
 #include "IProcess.h"
+#include "Process.h"
 #include "Thread.h"
 #include "Stepper.h"
 #include "ThreadX86.h"
@@ -847,7 +848,7 @@ bool    MachineX86Base::ShouldIsolateBPRestoringThread( uint32_t threadId, Break
     _ASSERT( bp != NULL );
 
     // no other threads, no conflict with them
-    if ( mProcess->GetThreadCount() == 1 )
+    if ( ((Process*) mProcess)->GetThreadCount() == 1 )
         return false;
 
     // more than one thread can lead to conflict, make sure this is an atomic step

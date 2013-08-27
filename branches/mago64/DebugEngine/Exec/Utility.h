@@ -11,10 +11,13 @@
 struct ImageInfo
 {
     WORD    MachineType;
+    DWORD   Size;
+    Address PrefImageBase;
 };
 
 
-HRESULT GetImageInfoFromPEHeader( HANDLE hProcess, void* dllBase, uint16_t& machine, uint32_t& size, Address& prefBase );
+HRESULT GetProcessImageInfo( HANDLE hProcess, ImageInfo& imageInfo );
+HRESULT GetLoadedImageInfo( HANDLE hProcess, void* dllBase, ImageInfo& imageInfo );
 HRESULT GetImageInfo( const wchar_t* path, ImageInfo& info );
 
 HRESULT ReadMemory( 
