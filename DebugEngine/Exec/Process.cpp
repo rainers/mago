@@ -29,10 +29,13 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     _ASSERT( hProcess != NULL );
     _ASSERT( id != 0 );
     _ASSERT( (way == Create_Attach) || (way == Create_Launch) );
+    InitializeCriticalSection( &mLock );
 }
 
 Process::~Process()
 {
+    DeleteCriticalSection( &mLock );
+
     if ( mMachine != NULL )
     {
         mMachine->OnDestroyProcess();
@@ -120,6 +123,7 @@ void Process::SetMachine( IMachine* machine )
 {
     if ( mMachine != NULL )
     {
+        mMachine->OnDestroyProcess();
         mMachine->Release();
     }
 
@@ -180,12 +184,17 @@ size_t  Process::GetThreadCount()
 
 HRESULT Process::EnumThreads( Enumerator< Thread* >*& enumerator )
 {
-    ListForwardRefIterEnum< Thread* >*  en = 
-        new ListForwardRefIterEnum< Thread* >( mThreads.begin(), mThreads.end(), mThreads.size() );
+    ProcessGuard guard( this );
 
-    enumerator = en;
+    RefReleasePtr< ArrayRefEnum<Thread*> > en = new ArrayRefEnum<Thread*>();
+
     if ( en == NULL )
         return E_OUTOFMEMORY;
+
+    if ( !en->Init( mThreads.begin(), mThreads.end(), mThreads.size() ) )
+        return E_OUTOFMEMORY;
+
+    enumerator = en.Detach();
 
     return S_OK;
 }
@@ -226,6 +235,8 @@ Thread* Process::FindThread( uint32_t id )
 
 bool    Process::FindThread( uint32_t id, Thread*& thread )
 {
+    ProcessGuard guard( this );
+
     Thread* t = FindThread( id );
 
     if ( t == NULL )
@@ -235,4 +246,14 @@ bool    Process::FindThread( uint32_t id, Thread*& thread )
     thread->AddRef();
 
     return true;
+}
+
+void    Process::Lock()
+{
+    EnterCriticalSection( &mLock );
+}
+
+void    Process::Unlock()
+{
+    LeaveCriticalSection( &mLock );
 }

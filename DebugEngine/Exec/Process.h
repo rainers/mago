@@ -34,6 +34,8 @@ class Process : public IProcess
 
     ThreadList      mThreads;
 
+    CRITICAL_SECTION    mLock;
+
 public:
     Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t* exePath );
     ~Process();
@@ -55,12 +57,12 @@ public:
 
     // threads
 
-    virtual size_t  GetThreadCount();
     virtual bool    FindThread( uint32_t id, Thread*& thread );
     virtual HRESULT EnumThreads( Enumerator< Thread* >*& en );
 
     // internal
 
+    size_t          GetThreadCount();
     void            AddThread( Thread* thread );
     void            DeleteThread( uint32_t threadId );
 
@@ -74,6 +76,32 @@ public:
     void            SetTerminating();
     void            SetReachedLoaderBp();
 
+    void            Lock();
+    void            Unlock();
+
 private:
     Thread*         FindThread( uint32_t id );
+};
+
+
+class ProcessGuard
+{
+    Process*    mProcess;
+
+public:
+    explicit ProcessGuard( Process* process )
+        :   mProcess( process )
+    {
+        _ASSERT( process != NULL );
+        mProcess->Lock();
+    }
+
+    ~ProcessGuard()
+    {
+        mProcess->Unlock();
+    }
+
+private:
+    ProcessGuard( const ProcessGuard& );
+    ProcessGuard& operator=( const ProcessGuard& );
 };
