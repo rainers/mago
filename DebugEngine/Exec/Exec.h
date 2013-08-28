@@ -32,6 +32,51 @@ class PathResolver;
 template <class T>
 class RefPtr;
 
+/*
+Mode    Disp.   Thread  Method
+        Allowed
+------------------------------------
+any     yes     any     ReadMemory
+break   yes     any     WriteMemory
+any     yes     any     SetBreakpoint
+any     yes     any     RemoveBreakpoint
+break   no*     Debug   StepOut
+break   no*     Debug   StepInstruction
+break   no*     Debug   StepRange
+break   no*     Debug   CancelStep
+run     yes     any     AsyncBreak
+break   yes     any     GetThreadContext
+break   yes     any     SetThreadContext
+
+N/A     no      Debug   Init
+N/A     no      Debug   Shutdown
+N/A     no      Debug   WaitForDebug
+N/A     no      Debug   DispatchEvent
+break   no*     Debug   ContinueDebug
+N/A     yes     Debug   Launch
+N/A     yes     Debug   Attach
+any     yes     Debug   Terminate
+any     yes     Debug   Detach
+any     yes     Debug   ResumeProcess
+any     yes     Debug   TerminateNewProcess
+
+Some actions are only possible while a debuggee is in break or run mode. 
+Calling a method when the debuggee is in the wrong mode returns E_WRONG_STATE.
+
+Methods that process debugging events cannot be called in the middle of an 
+event callback. Doing so returns E_WRONG_STATE.
+
+Some actions have an affinity to the thread where Exec was initialized. These 
+have to do with debugging events, and controlling the run state of a process. 
+Calling these methods outside the Debug Thread returns E_WRONG_THREAD.
+
+If a method takes a process object, but the process is ending or has already 
+ended, then the method fails with E_PROCESS_ENDED.
+
+Init fails with E_ALREADY_INIT, if called after a successful call to Init.
+
+All methods fail with E_WRONG_STATE, if called after Shutdown.
+*/
 
 class Exec
 {
@@ -56,25 +101,68 @@ public:
     Exec();
     ~Exec();
 
+    // Initializes the core debugger. Associates it with an event callback 
+    // which will handle all debugging events. The core debugger is bound to 
+    // the current thread (the Debug Thread), so that subsequent calls to 
+    // event handling methods and some control methods must be made from that 
+    // thread.
+    //
     HRESULT Init( IEventCallback* callback );
+
+    // Stops debugging all processes, and frees resources. 
+    //
     HRESULT Shutdown();
 
-    // returns S_OK, E_TIMEOUT
+    // Waits for a debugging event to happen.
+    //
+    // Returns: S_OK, if an event was captured.
+    //          E_TIMEOUT, if the timeout elapsed.
+    //          See the table above for other errors.
+    //
     HRESULT WaitForDebug( uint32_t millisTimeout );
-    // returns S_OK: continue; S_FALSE: don't continue
+
+    // Handle a debugging event. The process object is marked stopped, and the 
+    // appropriate event callback method will be called.
+    //
+    // Returns: S_OK, if ContinueDebug should be called after this call.
+    //          S_FALSE to stay in break mode.
+    //          See the table above for other errors.
+    //
     HRESULT DispatchEvent();
+
+    // Runs a process that reported a debugging event. Marks the process 
+    // object as running.
+    //
     HRESULT ContinueDebug( bool handleException );
 
+    // Starts a process. The process object that's returned is used to control 
+    // the process.
+    //
     HRESULT Launch( LaunchInfo* launchInfo, IProcess*& process );
+
+    // Brings a running process under the control of the debugger. The process 
+    // object that's returned is used to control the process.
+    //
     HRESULT Attach( uint32_t id, IProcess*& process );
 
+    // Terminates a process. All pending events are drained. No event callback 
+    // is called, but a subsequent event will fire OnExitProcess.
+    //
     HRESULT Terminate( IProcess* process );
+
+    // Stops debugging a process. No event callbacks are called.
+    //
     HRESULT Detach( IProcess* process );
 
+    // Resumes a process, if it was started suspended.
+    //
     HRESULT ResumeProcess( IProcess* process );
+
     HRESULT TerminateNewProcess( IProcess* process );
 
-    // not tied to the exec debugger thread
+    // Reads a block of memory from a process's address space. The memory is 
+    // read straight from the debuggee and not cached.
+    //
     HRESULT ReadMemory( 
         IProcess* process, 
         Address address,
@@ -83,6 +171,9 @@ public:
         SIZE_T& lengthUnreadable, 
         uint8_t* buffer );
 
+    // Writes a block of memory to a process's address space. The memory is 
+    // written straight to the debuggee and not cached.
+    //
     HRESULT WriteMemory(
         IProcess* process,
         Address address,
@@ -90,16 +181,29 @@ public:
         SIZE_T& lengthWritten, 
         uint8_t* buffer );
 
+    // Adds or removes a breakpoint. If the process is running when this 
+    // method is called, then all threads will be suspended first.
+    //
     HRESULT SetBreakpoint( IProcess* process, Address address, BPCookie cookie );
     HRESULT RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie );
 
+    // Sets up or cancels stepping for the current thread. Only one stepping 
+    // action is allowed in a thread at a time.
+    //
     HRESULT StepOut( IProcess* process, Address address );
     HRESULT StepInstruction( IProcess* process, bool stepIn, bool sourceMode );
     HRESULT StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount );
     HRESULT CancelStep( IProcess* process );
 
+    // Causes a running process to enter break mode. A subsequent event will 
+    // fire the OnBreakpoint callback.
+    //
     HRESULT AsyncBreak( IProcess* process );
 
+    // Gets or sets the register context of a thread.
+    // See the WinNT.h header file for processor-specific definitions of 
+    // the context records to pass to this method.
+    //
     HRESULT GetThreadContext( IProcess* process, uint32_t threadId, void* context, uint32_t size );
     HRESULT SetThreadContext( IProcess* process, uint32_t threadId, const void* context, uint32_t size );
 

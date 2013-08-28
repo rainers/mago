@@ -25,6 +25,7 @@ class Process : public IProcess
     uint32_t        mId;
     std::wstring    mExePath;
     Address         mEntryPoint;
+    uint16_t        mMachineType;
     IMachine*       mMachine;
 
     bool            mReachedLoaderBp;
@@ -48,7 +49,7 @@ public:
     uint32_t        GetId();
     const wchar_t*  GetExePath();
     Address         GetEntryPoint();
-    void            SetEntryPoint( Address entryPoint );
+    uint16_t        GetMachineType();
 
     bool            IsStopped();
     bool            IsDeleted();
@@ -69,6 +70,8 @@ public:
     IMachine*       GetMachine();
     void            SetMachine( IMachine* machine );
 
+    void            SetEntryPoint( Address entryPoint );
+    void            SetMachineType( uint16_t machineType );
     HANDLE          GetLaunchedSuspendedThread();
     void            SetLaunchedSuspendedThread( HANDLE hThread );
     void            SetStopped( bool value );
