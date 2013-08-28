@@ -20,6 +20,7 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     mId( id ),
     mExePath( exePath ),
     mEntryPoint( 0 ),
+    mMachineType( 0 ),
     mMachine( NULL ),
     mReachedLoaderBp( false ),
     mTerminating( false ),
@@ -98,6 +99,16 @@ Address Process::GetEntryPoint()
 void Process::SetEntryPoint( Address entryPoint )
 {
     mEntryPoint = entryPoint;
+}
+
+uint16_t Process::GetMachineType()
+{
+    return mMachineType;
+}
+
+void Process::SetMachineType( uint16_t machineType )
+{
+    mMachineType = machineType;
 }
 
 HANDLE Process::GetLaunchedSuspendedThread()

@@ -675,6 +675,8 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     machine->SetCallback( mCallback );
     proc->SetMachine( machine.Get() );
 
+    proc->SetMachineType( imageInfo.MachineType );
+
     if ( launchInfo->Suspend )
         proc->SetLaunchedSuspendedThread( hThreadPtr.Detach() );
 
@@ -753,6 +755,8 @@ HRESULT Exec::Attach( uint32_t id, IProcess*& process )
     machine->SetProcess( proc->GetHandle(), proc->GetId(), proc.Get() );
     machine->SetCallback( mCallback );
     proc->SetMachine( machine.Get() );
+
+    proc->SetMachineType( imageInfo.MachineType );
 
     process = proc.Detach();
 
@@ -1026,7 +1030,7 @@ HRESULT Exec::StepOut( IProcess* process, Address address )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
-    if ( mIsShutdown )
+    if ( mIsShutdown || mIsDispatching )
         return E_WRONG_STATE;
 
     HRESULT         hr = S_OK;
@@ -1058,7 +1062,7 @@ HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
-    if ( mIsShutdown )
+    if ( mIsShutdown || mIsDispatching )
         return E_WRONG_STATE;
 
     HRESULT         hr = S_OK;
@@ -1090,7 +1094,7 @@ HRESULT Exec::StepRange( IProcess* process, bool stepIn, bool sourceMode, Addres
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
-    if ( mIsShutdown )
+    if ( mIsShutdown || mIsDispatching )
         return E_WRONG_STATE;
 
     HRESULT         hr = S_OK;
@@ -1122,7 +1126,7 @@ HRESULT Exec::CancelStep( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
-    if ( mIsShutdown )
+    if ( mIsShutdown || mIsDispatching )
         return E_WRONG_STATE;
 
     HRESULT         hr = S_OK;
