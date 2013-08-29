@@ -95,11 +95,11 @@ namespace Mago
         }
     };
 
-    struct ResumeProcessParams : public ExecCommandFunctor
+    struct ResumeLaunchedProcessParams : public ExecCommandFunctor
     {
         IProcess*       Process;
 
-        ResumeProcessParams( Exec& exec )
+        ResumeLaunchedProcessParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL )
         {
@@ -107,7 +107,7 @@ namespace Mago
 
         virtual void    Run()
         {
-            OutHResult = Core.ResumeProcess( Process );
+            OutHResult = Core.ResumeLaunchedProcess( Process );
         }
     };
 

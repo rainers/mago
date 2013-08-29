@@ -46,7 +46,7 @@ namespace Mago
         HRESULT Terminate( IProcess* process );
         HRESULT Detach( IProcess* process );
 
-        HRESULT ResumeProcess( IProcess* process );
+        HRESULT ResumeLaunchedProcess( IProcess* process );
         HRESULT TerminateNewProcess( IProcess* process );
 
         HRESULT ReadMemory( 

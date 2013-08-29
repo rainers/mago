@@ -175,18 +175,6 @@ HRESULT MachineX86::GetCurrentPC( uint32_t threadId, MachineAddress& address )
 
     address = context.Eip;
 
-    // TODO: why are we setting the thread context?
-#ifdef _WIN64
-    bRet = ::Wow64SetThreadContext( hThread, &context );
-#else
-    bRet = ::SetThreadContext( hThread, &context );
-#endif
-    if ( !bRet )
-    {
-        hr = GetLastHr();
-        goto Error;
-    }
-
 Error:
     if ( hThread != NULL )
         CloseHandle( hThread );

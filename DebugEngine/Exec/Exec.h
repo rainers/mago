@@ -57,7 +57,7 @@ N/A     yes     Debug   Launch
 N/A     yes     Debug   Attach
 any     yes     Debug   Terminate
 any     yes     Debug   Detach
-any     yes     Debug   ResumeProcess
+any     yes     Debug   ResumeLaunchedProcess
 any     yes     Debug   TerminateNewProcess
 
 Some actions are only possible while a debuggee is in break or run mode. 
@@ -156,7 +156,7 @@ public:
 
     // Resumes a process, if it was started suspended.
     //
-    HRESULT ResumeProcess( IProcess* process );
+    HRESULT ResumeLaunchedProcess( IProcess* process );
 
     HRESULT TerminateNewProcess( IProcess* process );
 
@@ -209,6 +209,7 @@ public:
 
 private:
     HRESULT     DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent );
+    HRESULT     HandleException( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent );
 
     void        CleanupLastDebugEvent();

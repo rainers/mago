@@ -229,7 +229,7 @@ namespace Mago
 
         if ( dwReason == ATTACH_REASON_LAUNCH )
         {
-            hr = mDebugger.ResumeProcess( prog->GetCoreProcess() );
+            hr = mDebugger.ResumeLaunchedProcess( prog->GetCoreProcess() );
             if ( FAILED( hr ) )
                 return hr;
         }
