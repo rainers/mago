@@ -292,10 +292,10 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::ResumeProcess( IProcess* process )
+    HRESULT DebuggerProxy::ResumeLaunchedProcess( IProcess* process )
     {
         HRESULT             hr = S_OK;
-        ResumeProcessParams params( mExec );
+        ResumeLaunchedProcessParams params( mExec );
 
         params.Process = process;
 

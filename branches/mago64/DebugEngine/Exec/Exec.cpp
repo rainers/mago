@@ -405,62 +405,7 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
 
     case EXCEPTION_DEBUG_EVENT:
         {
-            // it doesn't matter if we launched or attached
-            if ( !proc->ReachedLoaderBp() )
-            {
-                proc->SetReachedLoaderBp();
-
-                if ( mCallback != NULL )
-                    mCallback->OnLoadComplete( proc, debugEvent.dwThreadId );
-
-                hr = S_FALSE;
-            }
-            else
-            {
-                MachineResult    result = MacRes_NotHandled;
-                    
-                hr = machine->OnException( debugEvent.dwThreadId, &debugEvent.u.Exception, result );
-                if ( FAILED( hr ) )
-                    goto Error;
-
-                if ( result == MacRes_PendingCallbackBP )
-                {
-                    MachineAddress  addr = 0;
-                    int             count = 0;
-                    BPCookie*       cookies = NULL;
-
-                    machine->GetPendingCallbackBP( addr, count, cookies );
-                    IterEnum<BPCookie, BPCookie*> en( cookies, cookies + count, count );
-
-                    if ( mCallback->OnBreakpoint( proc, debugEvent.dwThreadId, addr, &en) == RunMode_Run)
-                        result = MacRes_HandledContinue;
-                    else
-                        result = MacRes_HandledStopped;
-                }
-                else if ( result == MacRes_PendingCallbackStep )
-                {
-                    mCallback->OnStepComplete( proc, debugEvent.dwThreadId );
-                    result = MacRes_HandledStopped;
-                }
-
-                if ( result == MacRes_NotHandled )
-                {
-                    hr = S_FALSE;
-                    if ( mCallback != NULL )
-                    {
-                        if ( mCallback->OnException( 
-                            proc, 
-                            debugEvent.dwThreadId,
-                            (debugEvent.u.Exception.dwFirstChance > 0),
-                            &debugEvent.u.Exception.ExceptionRecord ) == RunMode_Run )
-                            hr = S_OK;
-                    }
-                }
-                else if ( result == MacRes_HandledStopped )
-                {
-                    hr = S_FALSE;
-                }
-            }
+            hr = HandleException( proc, debugEvent );
         }
         break;
 
@@ -486,6 +431,72 @@ Error:
 
     mIsDispatching = false;
 
+    return hr;
+}
+
+HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    HRESULT hr = S_OK;
+    IMachine* machine = proc->GetMachine();
+
+    // it doesn't matter if we launched or attached
+    if ( !proc->ReachedLoaderBp() )
+    {
+        proc->SetReachedLoaderBp();
+
+        if ( mCallback != NULL )
+            mCallback->OnLoadComplete( proc, debugEvent.dwThreadId );
+
+        hr = S_FALSE;
+    }
+    else
+    {
+        MachineResult    result = MacRes_NotHandled;
+                    
+        hr = machine->OnException( debugEvent.dwThreadId, &debugEvent.u.Exception, result );
+        if ( FAILED( hr ) )
+            goto Error;
+
+        if ( result == MacRes_PendingCallbackBP )
+        {
+            MachineAddress  addr = 0;
+            int             count = 0;
+            BPCookie*       cookies = NULL;
+
+            machine->GetPendingCallbackBP( addr, count, cookies );
+            IterEnum<BPCookie, BPCookie*> en( cookies, cookies + count, count );
+
+            if ( mCallback->OnBreakpoint( proc, debugEvent.dwThreadId, addr, &en) == RunMode_Run)
+                result = MacRes_HandledContinue;
+            else
+                result = MacRes_HandledStopped;
+        }
+        else if ( result == MacRes_PendingCallbackStep )
+        {
+            mCallback->OnStepComplete( proc, debugEvent.dwThreadId );
+            result = MacRes_HandledStopped;
+        }
+
+        if ( result == MacRes_NotHandled )
+        {
+            hr = S_FALSE;
+            if ( mCallback != NULL )
+            {
+                if ( mCallback->OnException( 
+                    proc, 
+                    debugEvent.dwThreadId,
+                    (debugEvent.u.Exception.dwFirstChance > 0),
+                    &debugEvent.u.Exception.ExceptionRecord ) == RunMode_Run )
+                    hr = S_OK;
+            }
+        }
+        else if ( result == MacRes_HandledStopped )
+        {
+            hr = S_FALSE;
+        }
+    }
+
+Error:
     return hr;
 }
 
@@ -769,7 +780,7 @@ Error:
     return hr;
 }
 
-HRESULT Exec::ResumeProcess( IProcess* process )
+HRESULT Exec::ResumeLaunchedProcess( IProcess* process )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
