@@ -139,27 +139,30 @@ HRESULT ProgramValueEnv::StartProgram()
         if ( FAILED( hr ) )
             return hr;
 
-        if ( !loaded && callback->GetLoadCompleted() )
+        if ( proc->IsStopped() )
         {
-            loaded = true;
+            if ( !loaded && callback->GetLoadCompleted() )
+            {
+                loaded = true;
 
-            procMod = callback->GetProcessModule();
-            Address         va = procMod->GetImageBase() + mStopRva;
+                procMod = callback->GetProcessModule();
+                Address         va = procMod->GetImageBase() + mStopRva;
 
-            hr = exec->SetBreakpoint( proc, va, Cookie );
+                hr = exec->SetBreakpoint( proc, va, Cookie );
+                if ( FAILED( hr ) )
+                    return hr;
+            }
+
+            if ( callback->TakeBPHit( cookie ) && (cookie == Cookie) )
+            {
+                mThreadId = callback->GetLastThreadId();
+                break;
+            }
+
+            hr = exec->Continue( proc, false );
             if ( FAILED( hr ) )
                 return hr;
         }
-
-        if ( callback->TakeBPHit( cookie ) && (cookie == Cookie) )
-        {
-            mThreadId = callback->GetLastThreadId();
-            break;
-        }
-
-        hr = exec->ContinueDebug( false );
-        if ( FAILED( hr ) )
-            return hr;
     }
 
     // the process is now where we want it, so load its symbols

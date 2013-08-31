@@ -167,6 +167,9 @@ HRESULT Exec::WaitForDebug( uint32_t millisTimeout )
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
         return E_WRONG_THREAD;
+    _ASSERT( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT );
+    if ( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT )
+        return E_UNEXPECTED;
     if ( mIsShutdown || mIsDispatching )
         return E_WRONG_STATE;
     // if we haven't continued since the last wait, we'll just return E_TIMEOUT
@@ -185,75 +188,73 @@ Error:
     return hr;
 }
 
-HRESULT Exec::ContinueDebug( bool handleException )
+HRESULT Exec::ContinueInternal( Process* proc, bool handleException )
 {
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
-    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
-    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
-        return E_UNEXPECTED;
-    if ( mIsShutdown || mIsDispatching )
-        return E_WRONG_STATE;
+    _ASSERT( proc != NULL );
+    _ASSERT( proc->IsStopped() );
 
     HRESULT hr = S_OK;
     BOOL    bRet = FALSE;
-    DWORD   status = handleException ? DBG_CONTINUE : DBG_EXCEPTION_NOT_HANDLED;
+    DWORD   status = DBG_CONTINUE;
+    ShortDebugEvent lastEvent = proc->GetLastEvent();
 
     // always treat the SS exception as a step complete
     // always treat the BP exception as a user BP, instead of an exception
 
-    if ( mLastEvent.dwDebugEventCode == EXCEPTION_DEBUG_EVENT 
-        && ((mLastEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT)
-        || (mLastEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_SINGLE_STEP)) )
-        status = DBG_CONTINUE;
+    if ( (lastEvent.EventCode == EXCEPTION_DEBUG_EVENT) 
+        && (lastEvent.ExceptionCode != EXCEPTION_BREAKPOINT)
+        && (lastEvent.ExceptionCode != EXCEPTION_SINGLE_STEP) )
+        status = handleException ? DBG_CONTINUE : DBG_EXCEPTION_NOT_HANDLED;
 
-    Process*    proc = FindProcess( mLastEvent.dwProcessId );
-    if ( proc == NULL )
+    if ( !proc->IsDeleted() && !proc->IsTerminating() )
     {
-        // when you call ContinueDebug after the exit event has been dispatched, 
-        // then the process object was already erased from the table
-        bRet = ::ContinueDebugEvent( mLastEvent.dwProcessId, mLastEvent.dwThreadId, status );
-        _ASSERT( bRet );
-        if ( !bRet )
-        {
-            hr = GetLastHr();
+        IMachine*   machine = proc->GetMachine();
+        _ASSERT( machine != NULL );
+
+        hr = machine->OnContinue();
+        if ( FAILED( hr ) )
             goto Error;
-        }
-    }
-    else
-    {
-        ProcessGuard guard( proc );
-
-        if ( !proc->IsDeleted() && !proc->IsTerminating() )
-        {
-            IMachine*   machine = proc->GetMachine();
-            _ASSERT( machine != NULL );
-
-            hr = machine->OnContinue();
-            if ( FAILED( hr ) )
-                goto Error;
-        }
-
-        bRet = ::ContinueDebugEvent( mLastEvent.dwProcessId, mLastEvent.dwThreadId, status );
-        _ASSERT( bRet );
-        if ( !bRet )
-        {
-            hr = GetLastHr();
-            goto Error;
-        }
-
-        if ( !proc->IsDeleted() && !proc->IsTerminating() )
-            proc->SetStopped( false );
     }
 
-    CleanupLastDebugEvent();
+    bRet = ::ContinueDebugEvent( proc->GetId(), lastEvent.ThreadId, status );
+    _ASSERT( bRet );
+    if ( !bRet )
+    {
+        hr = GetLastHr();
+        goto Error;
+    }
+
+    proc->SetStopped( false );
+    proc->ClearLastEvent();
 
 Error:
     return hr;
 }
 
-    // returns S_OK: continue; S_FALSE: don't continue
+HRESULT Exec::Continue( IProcess* process, bool handleException )
+{
+    _ASSERT( mTid == GetCurrentThreadId() );
+    if ( mTid != GetCurrentThreadId() )
+        return E_WRONG_THREAD;
+    _ASSERT( process != NULL );
+    if ( process == NULL )
+        return E_INVALIDARG;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
+
+    HRESULT     hr = S_OK;
+    Process*    proc = (Process*) process;
+
+    ProcessGuard guard( proc );
+
+    if ( !process->IsStopped() )
+        return E_WRONG_STATE;
+
+    hr = ContinueInternal( proc, handleException );
+
+    return hr;
+}
+
 HRESULT Exec::DispatchEvent()
 {
     _ASSERT( mTid == GetCurrentThreadId() );
@@ -265,8 +266,8 @@ HRESULT Exec::DispatchEvent()
     if ( mIsShutdown || mIsDispatching )
         return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    Process*    proc = NULL;
+    HRESULT         hr = S_OK;
+    RefPtr<Process> proc;
 
     Log::LogDebugEvent( mLastEvent );
 
@@ -278,12 +279,45 @@ HRESULT Exec::DispatchEvent()
         goto Error;
     }
 
-    hr = DispatchProcessEvent( proc, mLastEvent );
+    {
+        ProcessGuard guard( proc );
+
+        // hand off the event
+        proc->SetLastEvent( mLastEvent );
+        proc->SetStopped( true );
+
+        hr = DispatchAndContinue( proc, mLastEvent );
+    }
+
+Error:
+    // if there was an error, leave the debuggee in break mode
+    CleanupLastDebugEvent();
+    return hr;
+}
+
+HRESULT Exec::DispatchAndContinue( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    HRESULT hr = S_OK;
+
+    hr = DispatchProcessEvent( proc, debugEvent );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    if ( hr == S_OK )
+    {
+        hr = ContinueInternal( proc, false );
+    }
+    else
+    {
+        // leave the debuggee in break mode
+        hr = S_OK;
+    }
 
 Error:
     return hr;
 }
 
+    // returns S_OK: continue; S_FALSE: don't continue
 HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent )
 {
     _ASSERT( proc != NULL );
@@ -293,8 +327,6 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
     // even if EXIT_PROCESS event would have destroyed it
     RefPtr<Process> procRef = proc;
     IMachine*       machine = proc->GetMachine();
-
-    ProcessGuard guard( proc );
 
     // we shouldn't handle any stopping events after Terminate
     if ( proc->IsDeleted()
@@ -306,7 +338,6 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
     }
     _ASSERT( machine != NULL );
 
-    proc->SetStopped( true );
     machine->OnStopped( debugEvent.dwThreadId );
     mIsDispatching = true;
 
@@ -876,7 +907,7 @@ HRESULT Exec::Terminate( IProcess* process )
 
     if ( process->IsStopped() )
     {
-        ContinueDebug( true );
+        ContinueInternal( proc, true );
     }
 
     // in case Terminate is called right after Launch (suspended)

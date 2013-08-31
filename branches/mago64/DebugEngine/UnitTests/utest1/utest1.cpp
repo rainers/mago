@@ -279,39 +279,41 @@ int _tmain( int argc, _TCHAR* argv[] )
             goto Error;
 
 #if 1
-        if ( (hr == S_FALSE) && callback.GetHitBp() )
+        if ( proc->IsStopped() )
         {
-            stepCount++;
-
-            //11728
-            IModule*    mod = NULL;
-            UINT_PTR    baseAddr = 0;
-
-            callback.GetModule( mod );
-            baseAddr = (UINT_PTR) mod->GetImageBase();
-            mod->Release();
-
-            //hr = exec.StepOut( proc, (void*) (baseAddr + 0x00011728) );
-            //hr = exec.StepInstruction( proc, true );
-
-            if ( stepCount > 1 )
-                hr = exec.StepInstruction( proc, true, false );
-            else
+            if ( callback.GetHitBp() )
             {
-                //113A5
-                AddressRange    range = { baseAddr + 0x0001137A, baseAddr + 0x000113A5 };
-                hr = exec.StepRange( proc, false, false, &range, 1 );
+                stepCount++;
+
+                //11728
+                IModule*    mod = NULL;
+                UINT_PTR    baseAddr = 0;
+
+                callback.GetModule( mod );
+                baseAddr = (UINT_PTR) mod->GetImageBase();
+                mod->Release();
+
+                //hr = exec.StepOut( proc, (void*) (baseAddr + 0x00011728) );
+                //hr = exec.StepInstruction( proc, true );
+
+                if ( stepCount > 1 )
+                    hr = exec.StepInstruction( proc, true, false );
+                else
+                {
+                    //113A5
+                    AddressRange    range = { baseAddr + 0x0001137A, baseAddr + 0x000113A5 };
+                    hr = exec.StepRange( proc, false, false, &range, 1 );
+                }
+
+                if ( FAILED( hr ) )
+                    goto Error;
             }
 
+            hr = exec.Continue( proc, true );
             if ( FAILED( hr ) )
                 goto Error;
         }
 #endif
-        {
-            hr = exec.ContinueDebug( true );
-            if ( FAILED( hr ) )
-                goto Error;
-        }
 
 #if 1
         if ( i == 0 )

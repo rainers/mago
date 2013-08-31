@@ -12,6 +12,13 @@
 
 class IMachine;
 
+struct ShortDebugEvent
+{
+    uint32_t    EventCode;
+    uint32_t    ThreadId;
+    uint32_t    ExceptionCode;
+};
+
 
 class Process : public IProcess
 {
@@ -32,6 +39,7 @@ class Process : public IProcess
     bool            mTerminating;
     bool            mDeleted;
     bool            mStopped;
+    ShortDebugEvent mLastEvent;
 
     ThreadList      mThreads;
 
@@ -78,6 +86,9 @@ public:
     void            SetDeleted();
     void            SetTerminating();
     void            SetReachedLoaderBp();
+    ShortDebugEvent GetLastEvent();
+    void            SetLastEvent( const DEBUG_EVENT& debugEvent );
+    void            ClearLastEvent();
 
     void            Lock();
     void            Unlock();

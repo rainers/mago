@@ -233,7 +233,7 @@ namespace Mago
             OutHResult = Core.StepOut( Process, TargetAddress );
 
             if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.ContinueDebug( HandleException );
+                OutHResult = Core.Continue( Process, HandleException );
         }
     };
 
@@ -258,7 +258,7 @@ namespace Mago
             OutHResult = Core.StepInstruction( Process, StepIn, SourceMode );
 
             if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.ContinueDebug( HandleException );
+                OutHResult = Core.Continue( Process, HandleException );
         }
     };
 
@@ -287,7 +287,7 @@ namespace Mago
             OutHResult = Core.StepRange( Process, StepIn, SourceMode, Ranges, RangeCount );
 
             if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.ContinueDebug( HandleException );
+                OutHResult = Core.Continue( Process, HandleException );
         }
     };
 
@@ -305,7 +305,7 @@ namespace Mago
 
         virtual void    Run()
         {
-            OutHResult = Core.ContinueDebug( HandleException );
+            OutHResult = Core.Continue( Process, HandleException );
         }
     };
 
@@ -326,7 +326,7 @@ namespace Mago
             OutHResult = Core.CancelStep( Process );
 
             if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.ContinueDebug( HandleException );
+                OutHResult = Core.Continue( Process, HandleException );
         }
     };
 
