@@ -358,6 +358,7 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
 
             proc->AddThread( thread.Get() );
             proc->SetEntryPoint( (Address) debugEvent.u.CreateProcessInfo.lpStartAddress );
+            proc->SetStarted();
 
             machine->OnCreateThread( thread.Get() );
 
@@ -405,7 +406,7 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
             proc->SetDeleted();
             proc->SetMachine( NULL );
 
-            if ( mCallback != NULL )
+            if ( proc->IsStarted() && mCallback != NULL )
                 mCallback->OnProcessExit( proc, debugEvent.u.ExitProcess.dwExitCode );
 
             mProcMap->erase( debugEvent.dwProcessId );
@@ -845,37 +846,6 @@ void Exec::ResumeSuspendedProcess( IProcess* process )
     }
 }
 
-// TODO: get rid of this
-HRESULT Exec::TerminateNewProcess( IProcess* process )
-{
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
-    _ASSERT( process != NULL );
-    if ( process == NULL )
-        return E_INVALIDARG;
-    if ( mIsShutdown )
-        return E_WRONG_STATE;
-
-    Process* proc = (Process*) process;
-
-    // lock the process, in case someone uses it when they shouldn't
-    ProcessGuard guard( proc );
-
-    if ( proc->IsDeleted() || proc->IsTerminating() )
-        return E_PROCESS_ENDED;
-
-    TerminateProcess( process->GetHandle(), NormalTerminateCode );
-    DebugActiveProcessStop( process->GetId() );
-
-    proc->SetDeleted();
-    proc->SetMachine( NULL );
-
-    mProcMap->erase( process->GetId() );
-
-    return S_OK;
-}
-
 HRESULT Exec::Terminate( IProcess* process )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
@@ -905,13 +875,25 @@ HRESULT Exec::Terminate( IProcess* process )
         hr = GetLastHr();
     }
 
-    if ( process->IsStopped() )
+    if ( proc->IsStarted() )
     {
-        ContinueInternal( proc, true );
+        if ( process->IsStopped() )
+        {
+            ContinueInternal( proc, true );
+        }
+    }
+    else
+    {
+        bRet = DebugActiveProcessStop( proc->GetId() );
+
+        proc->SetDeleted();
+        proc->SetMachine( NULL );
+
+        mProcMap->erase( process->GetId() );
     }
 
-    // in case Terminate is called right after Launch (suspended)
-    ResumeSuspendedProcess( process );
+    // the process will end even if all threads are suspended
+    // we only have to detach or keep pumping its events
 
     return hr;
 }

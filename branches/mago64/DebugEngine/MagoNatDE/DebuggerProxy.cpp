@@ -306,20 +306,6 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::TerminateNewProcess( IProcess* process )
-    {
-        HRESULT                     hr = S_OK;
-        TerminateNewProcessParams   params( mExec );
-
-        params.Process = process;
-
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
-    }
-
     HRESULT DebuggerProxy::ReadMemory( 
         IProcess* process, 
         Address address,

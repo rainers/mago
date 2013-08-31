@@ -405,7 +405,7 @@ Error:
         {
             if ( proc.Get() != NULL )
             {
-                mDebugger.TerminateNewProcess( proc.Get() );
+                mDebugger.Terminate( proc.Get() );
             }
         }
 
@@ -478,7 +478,7 @@ Error:
         {
             if ( prog.Get() != NULL )
             {
-                mDebugger.TerminateNewProcess( prog->GetCoreProcess() );
+                mDebugger.Terminate( prog->GetCoreProcess() );
                 DeleteProgram( prog.Get() );
             }
         }
