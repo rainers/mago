@@ -95,14 +95,17 @@ void StartStopSuite::TestLaunchDestroyExecStopped()
             TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
             TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-            if ( !sawLoadCompleted && mCallback->GetLoadCompleted() )
+            if ( proc->IsStopped() )
             {
-                sawLoadCompleted = true;
-                break;
-            }
-            else
-            {
-                TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+                if ( !sawLoadCompleted && mCallback->GetLoadCompleted() )
+                {
+                    sawLoadCompleted = true;
+                    break;
+                }
+                else
+                {
+                    TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, true ) ) );
+                }
             }
         }
 
@@ -125,16 +128,15 @@ void StartStopSuite::TestLaunchDestroyExecRunning()
 
         LaunchInfo  info = { 0 };
         wchar_t     cmdLine[ MAX_PATH ] = L"";
-        IProcess*   proc = NULL;
+        RefPtr<IProcess>   proc;
 
         swprintf_s( cmdLine, L"\"%s\"", SleepingDebuggee );
 
         info.CommandLine = cmdLine;
         info.Exe = SimplestDebuggee;
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, proc ) ) );
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, proc.Ref() ) ) );
         pid = proc->GetId();
-        proc->Release();
 
         bool        sawLoadCompleted = false;
 
@@ -148,12 +150,15 @@ void StartStopSuite::TestLaunchDestroyExecRunning()
             TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
             TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-            if ( !sawLoadCompleted && mCallback->GetLoadCompleted() )
+            if ( proc->IsStopped() )
             {
-                sawLoadCompleted = true;
-            }
+                if ( !sawLoadCompleted && mCallback->GetLoadCompleted() )
+                {
+                    sawLoadCompleted = true;
+                }
 
-            TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, true ) ) );
+            }
         }
 
         TEST_ASSERT( !mCallback->GetProcessExited() );
@@ -172,18 +177,16 @@ void StartStopSuite::TestBeginToEnd()
 
     LaunchInfo  info = { 0 };
     wchar_t     cmdLine[ MAX_PATH ] = L"";
-    IProcess*   proc = NULL;
+    RefPtr<IProcess>   proc;
 
     swprintf_s( cmdLine, L"\"%s\"", SimplestDebuggee );
 
     info.CommandLine = cmdLine;
     info.Exe = SimplestDebuggee;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, proc ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, proc.Ref() ) ) );
 
     uint32_t    pid = proc->GetId();
-
-    proc->Release();
 
     for ( int i = 0; !mCallback->GetProcessExited(); i++ )
     {
@@ -196,7 +199,8 @@ void StartStopSuite::TestBeginToEnd()
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+        if ( proc->IsStopped() )
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, true ) ) );
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );
@@ -237,15 +241,18 @@ void StartStopSuite::TestTerminateStopped()
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-        if ( !sawLoadCompleted && mCallback->GetLoadCompleted() )
+        if ( proc->IsStopped() )
         {
-            sawLoadCompleted = true;
+            if ( !sawLoadCompleted && mCallback->GetLoadCompleted() )
+            {
+                sawLoadCompleted = true;
 
-            TEST_ASSERT_RETURN( SUCCEEDED( exec.Terminate( proc.Get() ) ) );
-        }
-        else
-        {
-            TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.Terminate( proc.Get() ) ) );
+            }
+            else
+            {
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, true ) ) );
+            }
         }
     }
 
@@ -286,7 +293,8 @@ void StartStopSuite::TestTerminateRunning()
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+        if ( proc->IsStopped() )
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, true ) ) );
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );
@@ -294,8 +302,8 @@ void StartStopSuite::TestTerminateRunning()
 
     TEST_ASSERT_RETURN( SUCCEEDED( exec.Terminate( proc.Get() ) ) );
     TEST_ASSERT_RETURN( SUCCEEDED( exec.WaitForDebug( DefaultTimeoutMillis ) ) );
+    // this should dispatch EXIT_PROCESS
     TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
     TEST_ASSERT( mCallback->GetProcessExited() );
     TEST_ASSERT( mCallback->GetProcessExitCode() == 0 );
 
@@ -466,14 +474,17 @@ void StartStopSuite::TryOptions( bool newConsole )
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-        if ( !sawLoadComplete && mCallback->GetLoadCompleted() )
+        if ( proc->IsStopped() )
         {
-            sawLoadComplete = true;
-            // now that the app is loaded, its window should be visible if it has one
-            AssertConsoleWindow( newConsole, proc->GetId() );
-        }
+            if ( !sawLoadComplete && mCallback->GetLoadCompleted() )
+            {
+                sawLoadComplete = true;
+                // now that the app is loaded, its window should be visible if it has one
+                AssertConsoleWindow( newConsole, proc->GetId() );
+            }
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, true ) ) );
+        }
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );

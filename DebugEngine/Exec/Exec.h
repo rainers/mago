@@ -52,7 +52,7 @@ N/A     no      Debug   Init
 N/A     no      Debug   Shutdown
 N/A     no      Debug   WaitForDebug
 N/A     no      Debug   DispatchEvent
-break   no*     Debug   ContinueDebug
+break   no*     Debug   Continue
 N/A     yes     Debug   Launch
 N/A     yes     Debug   Attach
 any     yes     Debug   Terminate
@@ -133,7 +133,7 @@ public:
     // Runs a process that reported a debugging event. Marks the process 
     // object as running.
     //
-    HRESULT ContinueDebug( bool handleException );
+    HRESULT Continue( IProcess* process, bool handleException );
 
     // Starts a process. The process object that's returned is used to control 
     // the process.
@@ -208,9 +208,12 @@ public:
     HRESULT SetThreadContext( IProcess* process, uint32_t threadId, const void* context, uint32_t size );
 
 private:
+    HRESULT     DispatchAndContinue( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     HandleException( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent );
+
+    HRESULT     ContinueInternal( Process* proc, bool handleException );
 
     void        CleanupLastDebugEvent();
     void        ResumeSuspendedProcess( IProcess* process );

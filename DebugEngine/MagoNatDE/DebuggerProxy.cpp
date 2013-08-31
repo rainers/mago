@@ -576,10 +576,6 @@ namespace Mago
             else
             {
                 hr = mExec.DispatchEvent();
-                if ( hr == S_OK )
-                    // If there was an exception, then we generally want to pass it on.
-                    // Exec will handle any special cases, if needed.
-                    hr = mExec.ContinueDebug( false );
                 if ( FAILED( hr ) )
                     break;
             }

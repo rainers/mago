@@ -222,11 +222,8 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( hr = exec.DispatchEvent() ) );
 
-        if ( hr == S_OK )
-        {
-            TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+        if ( !process->IsStopped() )
             continue;
-        }
 
         if ( (mCallback->GetLastEvent()->Code != ExecEvent_ModuleLoad)
             && (mCallback->GetLastEvent()->Code != ExecEvent_ModuleUnload)
@@ -296,13 +293,13 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
             {
                 TEST_ASSERT_RETURN( SUCCEEDED( 
                     exec.StepInstruction( process.Get(), curStep->Action.StepIn, curStep->Action.SourceMode ) ) );
-                TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, true ) ) );
                 continued = true;
             }
         }
 
         if ( !continued )
-            TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, true ) ) );
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );

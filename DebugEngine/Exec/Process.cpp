@@ -31,6 +31,7 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     _ASSERT( id != 0 );
     _ASSERT( (way == Create_Attach) || (way == Create_Launch) );
     InitializeCriticalSection( &mLock );
+    memset( &mLastEvent, 0, sizeof mLastEvent );
 }
 
 Process::~Process()
@@ -257,6 +258,29 @@ bool    Process::FindThread( uint32_t id, Thread*& thread )
     thread->AddRef();
 
     return true;
+}
+
+ShortDebugEvent Process::GetLastEvent()
+{
+    ShortDebugEvent event;
+
+    event.EventCode = mLastEvent.EventCode;
+    event.ThreadId = mLastEvent.ThreadId;
+    event.ExceptionCode = mLastEvent.ExceptionCode;
+
+    return event;
+}
+
+void    Process::SetLastEvent( const DEBUG_EVENT& debugEvent )
+{
+    mLastEvent.EventCode        = debugEvent.dwDebugEventCode;
+    mLastEvent.ThreadId         = debugEvent.dwThreadId;
+    mLastEvent.ExceptionCode    = debugEvent.u.Exception.ExceptionRecord.ExceptionCode;
+}
+
+void    Process::ClearLastEvent()
+{
+    memset( &mLastEvent, 0, sizeof mLastEvent );
 }
 
 void    Process::Lock()
