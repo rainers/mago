@@ -78,7 +78,8 @@ void StepOneThreadSuite::StepInstructionInAssembly()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, false } },
@@ -106,7 +107,8 @@ void StepOneThreadSuite::StepInstructionInSourceHaveSource()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, true, true } },
         { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, true } },
@@ -134,7 +136,8 @@ void StepOneThreadSuite::StepInstructionInSourceNoSource()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, true } },
         { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, true, true } },
@@ -149,7 +152,8 @@ void StepOneThreadSuite::StepInstructionOver()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, false, false } },
@@ -171,7 +175,8 @@ void StepOneThreadSuite::StepInstructionOverInterruptedByBP()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, false, true, false, 0x101C } },
         { { ExecEvent_Breakpoint, 0x101C, 0 }, { Action_Go, true, true } },
