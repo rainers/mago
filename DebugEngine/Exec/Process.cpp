@@ -25,7 +25,8 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     mReachedLoaderBp( false ),
     mTerminating( false ),
     mDeleted( false ),
-    mStopped( false )
+    mStopped( false ),
+    mStarted( false )
 {
     _ASSERT( hProcess != NULL );
     _ASSERT( id != 0 );
@@ -186,6 +187,16 @@ bool Process::ReachedLoaderBp()
 void Process::SetReachedLoaderBp()
 {
     mReachedLoaderBp = true;
+}
+
+bool Process::IsStarted()
+{
+    return mStarted;
+}
+
+void Process::SetStarted()
+{
+    mStarted = true;
 }
 
 

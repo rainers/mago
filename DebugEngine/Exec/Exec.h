@@ -58,7 +58,6 @@ N/A     yes     Debug   Attach
 any     yes     Debug   Terminate
 any     yes     Debug   Detach
 any     yes     Debug   ResumeLaunchedProcess
-any     yes     Debug   TerminateNewProcess
 
 Some actions are only possible while a debuggee is in break or run mode. 
 Calling a method when the debuggee is in the wrong mode returns E_WRONG_STATE.
@@ -145,8 +144,11 @@ public:
     //
     HRESULT Attach( uint32_t id, IProcess*& process );
 
-    // Terminates a process. All pending events are drained. No event callback 
-    // is called, but a subsequent event will fire OnExitProcess.
+    // Ends a process. If the OnCreateProcess callback has not fired, then the 
+    // debuggee is immediately ended and detached. Otherwise, the caller must 
+    // keep pumping events until OnExitProcess is fired. Any other events 
+    // before it are discarded and will not fire a callback. Also, if the 
+    // debuggee is in break mode, then this method runs it.
     //
     HRESULT Terminate( IProcess* process );
 
@@ -157,8 +159,6 @@ public:
     // Resumes a process, if it was started suspended.
     //
     HRESULT ResumeLaunchedProcess( IProcess* process );
-
-    HRESULT TerminateNewProcess( IProcess* process );
 
     // Reads a block of memory from a process's address space. The memory is 
     // read straight from the debuggee and not cached.

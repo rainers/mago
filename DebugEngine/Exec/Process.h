@@ -32,13 +32,14 @@ class Process : public IProcess
     uint32_t        mId;
     std::wstring    mExePath;
     Address         mEntryPoint;
-    uint16_t        mMachineType;
     IMachine*       mMachine;
+    uint16_t        mMachineType;
 
     bool            mReachedLoaderBp;
     bool            mTerminating;
     bool            mDeleted;
     bool            mStopped;
+    bool            mStarted;
     ShortDebugEvent mLastEvent;
 
     ThreadList      mThreads;
@@ -86,6 +87,8 @@ public:
     void            SetDeleted();
     void            SetTerminating();
     void            SetReachedLoaderBp();
+    bool            IsStarted();
+    void            SetStarted();
     ShortDebugEvent GetLastEvent();
     void            SetLastEvent( const DEBUG_EVENT& debugEvent );
     void            ClearLastEvent();

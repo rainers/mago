@@ -111,22 +111,6 @@ namespace Mago
         }
     };
 
-    struct TerminateNewProcessParams : public ExecCommandFunctor
-    {
-        IProcess*       Process;
-
-        TerminateNewProcessParams( Exec& exec )
-            :   ExecCommandFunctor( exec ),
-                Process( NULL )
-        {
-        }
-
-        virtual void    Run()
-        {
-            OutHResult = Core.TerminateNewProcess( Process );
-        }
-    };
-
     struct ReadMemoryParams : public ExecCommandFunctor
     {
         IProcess*       Process;
