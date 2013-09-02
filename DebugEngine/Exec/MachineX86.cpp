@@ -278,3 +278,12 @@ Error:
 
     return hr;
 }
+
+ThreadControlProc MachineX86::GetWinSuspendThreadProc()
+{
+#ifdef _WIN64
+    return ::Wow64SuspendThread;
+#else
+    return ::SuspendThread;
+#endif
+}

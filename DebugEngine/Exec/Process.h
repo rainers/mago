@@ -22,8 +22,11 @@ struct ShortDebugEvent
 
 class Process : public IProcess
 {
+public:
     typedef std::list< RefPtr<Thread> > ThreadList;
+    typedef ThreadList::const_iterator ThreadIterator;
 
+private:
     LONG            mRefCount;
 
     CreateMethod    mCreateWay;
@@ -40,6 +43,7 @@ class Process : public IProcess
     bool            mDeleted;
     bool            mStopped;
     bool            mStarted;
+    int32_t         mSuspendCount;
     ShortDebugEvent mLastEvent;
 
     ThreadList      mThreads;
@@ -75,6 +79,11 @@ public:
     size_t          GetThreadCount();
     void            AddThread( Thread* thread );
     void            DeleteThread( uint32_t threadId );
+
+    ThreadIterator  ThreadsBegin();
+    ThreadIterator  ThreadsEnd();
+    int32_t         GetSuspendCount();
+    void            SetSuspendCount( int32_t count );
 
     IMachine*       GetMachine();
     void            SetMachine( IMachine* machine );
