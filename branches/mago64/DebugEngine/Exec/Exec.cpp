@@ -373,20 +373,7 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
 
     case CREATE_THREAD_DEBUG_EVENT:
         {
-            RefPtr<Thread>  thread;
-
-            hr = CreateThread( proc, debugEvent, thread );
-            if ( FAILED( hr ) )
-                goto Error;
-
-            proc->AddThread( thread.Get() );
-
-            machine->OnCreateThread( thread.Get() );
-
-            if ( mCallback != NULL )
-            {
-                mCallback->OnThreadStart( proc, thread.Get() );
-            }
+            hr = HandleCreateThread( proc, debugEvent );
         }
         break;
 
@@ -463,6 +450,46 @@ Error:
 
     mIsDispatching = false;
 
+    return hr;
+}
+
+HRESULT Exec::HandleCreateThread( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    HRESULT         hr = S_OK;
+    IMachine*       machine = proc->GetMachine();
+    RefPtr<Thread>  thread;
+
+    hr = CreateThread( proc, debugEvent, thread );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    proc->AddThread( thread.Get() );
+
+    machine->OnCreateThread( thread.Get() );
+
+    if ( proc->GetSuspendCount() > 0 )
+    {
+        // if all threads are meant to be suspended, then include this one
+        ThreadControlProc controlProc = machine->GetWinSuspendThreadProc();
+        HANDLE hThread = debugEvent.u.CreateThread.hThread;
+
+        for ( int i = 0; i < proc->GetSuspendCount(); i++ )
+        {
+            DWORD suspendCount = controlProc( hThread );
+            if ( suspendCount == (DWORD) -1 )
+            {
+                hr = GetLastHr();
+                goto Error;
+            }
+        }
+    }
+
+    if ( mCallback != NULL )
+    {
+        mCallback->OnThreadStart( proc, thread.Get() );
+    }
+
+Error:
     return hr;
 }
 
@@ -1014,9 +1041,25 @@ HRESULT Exec::SetBreakpoint( IProcess* process, Address address, BPCookie cookie
 
     IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
+    bool        suspend = !proc->IsStopped() && !machine->IsBreakpointActive( address );
+
+    if ( suspend )
+    {
+        hr = SuspendProcess( proc, machine->GetWinSuspendThreadProc() );
+        if ( FAILED( hr ) )
+            goto Error;
+    }
 
     hr = machine->SetBreakpoint( (MachineAddress) address, cookie );
 
+    if ( suspend )
+    {
+        HRESULT hrResume = ResumeProcess( proc, machine->GetWinSuspendThreadProc() );
+        if ( SUCCEEDED( hr ) )
+            hr = hrResume;
+    }
+
+Error:
     return hr;
 }
 
@@ -1039,9 +1082,25 @@ HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address, BPCookie coo
 
     IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
+    bool        suspend = !proc->IsStopped() && !machine->IsBreakpointActive( address );
+
+    if ( suspend )
+    {
+        hr = SuspendProcess( proc, machine->GetWinSuspendThreadProc() );
+        if ( FAILED( hr ) )
+            goto Error;
+    }
 
     hr = machine->RemoveBreakpoint( (MachineAddress) address, cookie );
 
+    if ( suspend )
+    {
+        HRESULT hrResume = ResumeProcess( proc, machine->GetWinSuspendThreadProc() );
+        if ( SUCCEEDED( hr ) )
+            hr = hrResume;
+    }
+
+Error:
     return hr;
 }
 

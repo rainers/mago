@@ -7,6 +7,8 @@
 
 #include "Common.h"
 #include "Utility.h"
+#include "Process.h"
+#include "Thread.h"
 #include <Psapi.h>
 
 
@@ -206,6 +208,118 @@ HRESULT ReadMemory(
     _ASSERT( lengthRead <= length );
     _ASSERT( lengthUnreadable <= length );
     _ASSERT( (lengthRead + lengthUnreadable) <= length );
+
+    return hr;
+}
+
+HRESULT ControlThread( HANDLE hThread, ThreadControlProc controlProc )
+{
+    _ASSERT( hThread != NULL );
+    _ASSERT( controlProc != NULL );
+
+    DWORD   suspendCount = controlProc( hThread );
+
+    if ( suspendCount == (DWORD) -1 )
+    {
+        HRESULT hr = GetLastHr();
+
+        // if the thread can't be accessed, then it's probably on the way out
+        // and there's nothing we should do about it
+        if ( hr == E_ACCESSDENIED )
+            return S_OK;
+
+        return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT SuspendProcess( Process* process, ThreadControlProc suspendProc )
+{
+    _ASSERT( process != NULL );
+    _ASSERT( suspendProc != NULL );
+
+    // already suspended?
+    uint32_t count = process->GetSuspendCount();
+    _ASSERT( count >= 0 && count < limit_max( count ) );
+    if ( count > 0 )
+    {
+        process->SetSuspendCount( count + 1 );
+        return S_OK;
+    }
+
+    HRESULT hr = S_OK;
+    int     goodCount = 0;
+
+    typedef Process::ThreadIterator It;
+
+    for ( It it = process->ThreadsBegin(); it != process->ThreadsEnd(); it++, goodCount++ )
+    {
+        hr = ControlThread( it->Get()->GetHandle(), suspendProc );
+        if ( FAILED( hr ) )
+            goto Error;
+    }
+
+    process->SetSuspendCount( count + 1 );
+
+Error:
+    if ( FAILED( hr ) )
+    {
+        int i = 0;
+
+        for ( It it = process->ThreadsBegin(); it != process->ThreadsEnd(); it++, i++ )
+        {
+            if ( i == goodCount )
+                break;
+
+            ControlThread( it->Get()->GetHandle(), ::ResumeThread );
+        }
+    }
+
+    return hr;
+}
+
+HRESULT ResumeProcess( Process* process, ThreadControlProc suspendProc )
+{
+    _ASSERT( process != NULL );
+    _ASSERT( suspendProc != NULL );
+
+    // still suspended?
+    uint32_t count = process->GetSuspendCount();
+    _ASSERT( count > 0 );
+    if ( count > 1 )
+    {
+        process->SetSuspendCount( count - 1 );
+        return S_OK;
+    }
+
+    HRESULT hr = S_OK;
+    int     goodCount = 0;
+
+    typedef Process::ThreadIterator It;
+
+    for ( It it = process->ThreadsBegin(); it != process->ThreadsEnd(); it++, goodCount++ )
+    {
+        hr = ControlThread( it->Get()->GetHandle(), ::ResumeThread );
+        if ( FAILED( hr ) )
+            goto Error;
+    }
+
+    process->SetSuspendCount( count - 1 );
+
+Error:
+    if ( FAILED( hr ) )
+    {
+        int i = 0;
+
+        for ( It it = process->ThreadsBegin(); it != process->ThreadsEnd(); it++, i++ )
+        {
+            if ( i == goodCount )
+                break;
+
+            ControlThread( it->Get()->GetHandle(), suspendProc );
+        }
+    }
 
     return hr;
 }

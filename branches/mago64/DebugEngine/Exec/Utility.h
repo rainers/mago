@@ -28,6 +28,18 @@ HRESULT ReadMemory(
     SIZE_T& lengthUnreadable, 
     uint8_t* buffer );
 
+typedef DWORD (__stdcall *ThreadControlProc)( HANDLE hThread );
+class Process;
+
+// there's no Wow64ResumeThread
+HRESULT ControlThread( HANDLE hThread, ThreadControlProc controlProc );
+HRESULT SuspendProcess( 
+    Process* process,
+    ThreadControlProc suspendProc );
+HRESULT ResumeProcess(     
+    Process* process,
+    ThreadControlProc suspendProc );
+
 
 inline HRESULT GetLastHr()
 {

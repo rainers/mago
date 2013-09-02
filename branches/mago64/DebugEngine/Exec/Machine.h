@@ -68,6 +68,7 @@ public:
 
     virtual HRESULT SetBreakpoint( MachineAddress address, BPCookie cookie ) = 0;
     virtual HRESULT RemoveBreakpoint( MachineAddress address, BPCookie cookie ) = 0;
+    virtual HRESULT IsBreakpointActive( MachineAddress address ) = 0;
 
     virtual HRESULT SetStepOut( Address targetAddress ) = 0;
     virtual HRESULT SetStepInstruction( bool stepIn, bool sourceMode ) = 0;
@@ -76,6 +77,8 @@ public:
 
     virtual HRESULT GetThreadContext( uint32_t threadId, void* context, uint32_t size ) = 0;
     virtual HRESULT SetThreadContext( uint32_t threadId, const void* context, uint32_t size ) = 0;
+
+    virtual ThreadControlProc GetWinSuspendThreadProc() = 0;
 
     virtual void    OnStopped( uint32_t threadId ) = 0;
     virtual void    OnCreateThread( Thread* thread ) = 0;

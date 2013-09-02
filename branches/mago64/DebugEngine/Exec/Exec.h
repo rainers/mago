@@ -210,6 +210,7 @@ public:
 private:
     HRESULT     DispatchAndContinue( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent );
+    HRESULT     HandleCreateThread( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     HandleException( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent );
 

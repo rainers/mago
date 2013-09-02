@@ -22,6 +22,8 @@ protected:
 
     virtual HRESULT GetThreadContextInternal( uint32_t threadId, void* context, uint32_t size );
     virtual HRESULT SetThreadContextInternal( uint32_t threadId, const void* context, uint32_t size );
+
+    virtual ThreadControlProc GetWinSuspendThreadProc();
 };
 
 

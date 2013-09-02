@@ -70,7 +70,6 @@ class MachineX86Base : public IMachine, public IStepperMachine
     // for SS, after stepped instruction; for BP, the BP instruction
     MachineAddress  mExceptAddr;
     IEventCallback* mCallback;
-    int32_t         mSuspendCount;
 
     MachineAddress  mPendCBAddr;
     CookieVec       mPendCBCookies;
@@ -103,6 +102,7 @@ public:
 
     virtual HRESULT SetBreakpoint( MachineAddress address, BPCookie cookie );
     virtual HRESULT RemoveBreakpoint( MachineAddress address, BPCookie cookie );
+    virtual HRESULT IsBreakpointActive( MachineAddress address );
 
     virtual HRESULT SetStepOut( Address targetAddress );
     virtual HRESULT SetStepInstruction( bool stepIn, bool sourceMode );
@@ -151,6 +151,7 @@ protected:
     virtual RunMode CanStepperStopAtFunction( MachineAddress address );
 
 private:
+    HRESULT OnContinueInternal();
     HRESULT SetBreakpointInternal( MachineAddress address, BPCookie cookie, BPPriority priority );
     HRESULT RemoveBreakpointInternal( MachineAddress address, BPCookie cookie, BPPriority priority );
 
@@ -162,9 +163,6 @@ private:
 
     HRESULT PatchBreakpoint( Breakpoint* bp );
     HRESULT UnpatchBreakpoint( Breakpoint* bp );
-
-    HRESULT SuspendProcess( Enumerator< Thread* >*  threads );
-    HRESULT ResumeProcess( Enumerator< Thread* >*  threads );
 
     HRESULT Rewind();
     HRESULT SkipBPOnResume();

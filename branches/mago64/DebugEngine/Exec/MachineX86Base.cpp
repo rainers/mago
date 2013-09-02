@@ -162,7 +162,6 @@ MachineX86Base::MachineX86Base()
     mIsolatedThread( false ),
     mExceptAddr( 0 ),
     mCallback( NULL ),
-    mSuspendCount( 0 ),
     mPendCBAddr( 0 )
 {
 }
@@ -301,12 +300,25 @@ HRESULT MachineX86Base::RemoveBreakpoint( MachineAddress address, BPCookie cooki
     return RemoveBreakpointInternal( address, cookie, BPPri_High );
 }
 
+HRESULT MachineX86Base::IsBreakpointActive( MachineAddress address )
+{
+    BPAddressTable::iterator    it = mAddrTable->find( address );
+    bool                        isActive = false;
+
+    if ( it != mAddrTable->end() )
+    {
+        Breakpoint* bp = it->second;
+        isActive = bp->IsActive();
+    }
+
+    return isActive;
+}
+
 HRESULT MachineX86Base::SetBreakpointInternal( MachineAddress address, BPCookie cookie, BPPriority priority )
 {
     HRESULT                     hr = S_OK;
     BPAddressTable::iterator    it = mAddrTable->find( address );
     Breakpoint*                 bp = NULL;
-    Enumerator< Thread* >*      threads = NULL;
     bool                        wasActive = false;
 
     if ( it == mAddrTable->end() )
@@ -338,41 +350,13 @@ HRESULT MachineX86Base::SetBreakpointInternal( MachineAddress address, BPCookie 
     // need to patch when going from not active to active
     if ( !wasActive )
     {
-        if ( !Stopped() )
-        {
-            hr = mProcess->EnumThreads( threads );
-            if ( FAILED( hr ) )
-                goto Error;
-
-            hr = SuspendProcess( threads );
-            if ( FAILED( hr ) )
-                goto Error;
-        }
-        
         hr = PatchBreakpoint( bp );
         // if we suspended, we have to resume, so jump out on error after the resume
-
-        HRESULT hrResume = S_OK;
-
-        if ( !Stopped() )
-        {
-            hrResume = ResumeProcess( threads );
-        }
-
         if ( FAILED( hr ) )
             goto Error;
-
-        if ( FAILED( hrResume ) )
-        {
-            hr = hrResume;
-            goto Error;
-        }
     }
 
 Error:
-    if ( threads != NULL )
-        threads->Release();
-
     return hr;
 }
 
@@ -380,7 +364,6 @@ HRESULT MachineX86Base::RemoveBreakpointInternal( MachineAddress address, BPCook
 {
     HRESULT hr = S_OK;
     BPAddressTable::iterator    it = mAddrTable->find( address );
-    Enumerator< Thread* >*  threads = NULL;
 
     if ( it == mAddrTable->end() )
         return S_OK;
@@ -405,16 +388,6 @@ HRESULT MachineX86Base::RemoveBreakpointInternal( MachineAddress address, BPCook
         return S_OK;
 
     // need to unpatch when going from active to not active
-    if ( !Stopped() )
-    {
-        hr = mProcess->EnumThreads( threads );
-        if ( FAILED( hr ) )
-            goto Error;
-
-        hr = SuspendProcess( threads );
-        if ( FAILED( hr ) )
-            goto Error;
-    }
 
     hr = UnpatchBreakpoint( bp );
     // if we suspended, we have to resume, so jump out on error after the resume
@@ -429,26 +402,10 @@ HRESULT MachineX86Base::RemoveBreakpointInternal( MachineAddress address, BPCook
         mRestoreBPAddress = 0;
     }
 
-    HRESULT hrResume = S_OK;
-
-    if ( !Stopped() )
-    {
-        hrResume = ResumeProcess( threads );
-    }
-
     if ( FAILED( hr ) )
         goto Error;
 
-    if ( FAILED( hrResume ) )
-    {
-        hr = hrResume;
-        goto Error;
-    }
-
 Error:
-    if ( threads != NULL )
-        threads->Release();
-
     return hr;
 }
 
@@ -677,10 +634,28 @@ HRESULT MachineX86Base::RestoreBPEnvironment()
 
 HRESULT MachineX86Base::OnContinue()
 {
-    _ASSERT( mhProcess != NULL );
-    _ASSERT( mProcessId != 0 );
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
+
+    HRESULT hr = S_OK;
+
+    hr = OnContinueInternal();
+    if ( FAILED( hr ) )
+        goto Error;
+
+    mStopped = false;
+    mStoppedThreadId = 0;
+    mExceptAddr = 0;
+    mCurThread = NULL;
+
+Error:
+    return hr;
+}
+
+HRESULT MachineX86Base::OnContinueInternal()
+{
+    _ASSERT( mhProcess != NULL );
+    _ASSERT( mProcessId != 0 );
     _ASSERT( mStoppedThreadId != 0 );
 
     HRESULT         hr = S_OK;
@@ -752,11 +727,6 @@ HRESULT MachineX86Base::OnContinue()
     hr = SetupRestoreBPEnvironment( bp, pc );
     if ( FAILED( hr ) )
         return hr;
-
-    mStopped = false;
-    mStoppedThreadId = 0;
-    mExceptAddr = 0;
-    mCurThread = NULL;
 
     return S_OK;
 }
@@ -1016,95 +986,6 @@ HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embe
             bp->GetHighPriCookies().begin(), 
             bp->GetHighPriCookies().end(), 
             mPendCBCookies.begin() );
-    }
-
-    return hr;
-}
-
-
-HRESULT MachineX86Base::SuspendProcess( Enumerator< Thread* >* threads )
-{
-    _ASSERT( threads != NULL );
-    _ASSERT( (mSuspendCount >= 0) && (mSuspendCount < limit_max( mSuspendCount )) );
-
-    // already suspended?
-    if ( mSuspendCount > 0 )
-    {
-        mSuspendCount++;
-        return S_OK;
-    }
-
-    HRESULT hr = S_OK;
-    int     goodCount = 0;
-
-    threads->Reset();
-
-    for ( ; threads->MoveNext(); goodCount++ )
-    {
-        hr = SuspendThread( threads->GetCurrent() );
-        if ( FAILED( hr ) )
-            goto Error;
-    }
-
-    mSuspendCount++;
-
-Error:
-    if ( FAILED( hr ) )
-    {
-        threads->Reset();
-
-        for ( int i = 0; i < goodCount; i++ )
-        {
-            bool    bRet = threads->MoveNext();
-            _ASSERT( bRet );
-            (void) bRet;    // no one else refers to this
-
-            ResumeThread( threads->GetCurrent() );
-        }
-    }
-
-    return hr;
-}
-
-HRESULT MachineX86Base::ResumeProcess( Enumerator< Thread* >* threads )
-{
-    _ASSERT( threads != NULL );
-    _ASSERT( mSuspendCount > 0 );
-
-    // still suspended?
-    if ( mSuspendCount > 1 )
-    {
-        mSuspendCount--;
-        return S_OK;
-    }
-
-    HRESULT hr = S_OK;
-    int     goodCount = 0;
-
-    threads->Reset();
-
-    for ( ; threads->MoveNext(); goodCount++ )
-    {
-        hr = ResumeThread( threads->GetCurrent() );
-        if ( FAILED( hr ) )
-            goto Error;
-    }
-
-    mSuspendCount--;
-
-Error:
-    if ( FAILED( hr ) )
-    {
-        threads->Reset();
-
-        for ( int i = 0; i < goodCount; i++ )
-        {
-            bool    bRet = threads->MoveNext();
-            _ASSERT( bRet );
-            (void) bRet;    // no one else refers to this
-
-            SuspendThread( threads->GetCurrent() );
-        }
     }
 
     return hr;

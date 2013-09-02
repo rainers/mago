@@ -26,7 +26,8 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     mTerminating( false ),
     mDeleted( false ),
     mStopped( false ),
-    mStarted( false )
+    mStarted( false ),
+    mSuspendCount( 0 )
 {
     _ASSERT( hProcess != NULL );
     _ASSERT( id != 0 );
@@ -270,6 +271,27 @@ bool    Process::FindThread( uint32_t id, Thread*& thread )
 
     return true;
 }
+
+Process::ThreadIterator Process::ThreadsBegin()
+{
+    return mThreads.begin();
+}
+
+Process::ThreadIterator Process::ThreadsEnd()
+{
+    return mThreads.end();
+}
+
+int32_t Process::GetSuspendCount()
+{
+    return mSuspendCount;
+}
+
+void    Process::SetSuspendCount( int32_t count )
+{
+    mSuspendCount = count;
+}
+
 
 ShortDebugEvent Process::GetLastEvent()
 {
