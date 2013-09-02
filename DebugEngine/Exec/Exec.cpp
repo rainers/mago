@@ -162,7 +162,7 @@ HRESULT Exec::Shutdown()
 }
 
 
-HRESULT Exec::WaitForDebug( uint32_t millisTimeout )
+HRESULT Exec::WaitForEvent( uint32_t millisTimeout )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )

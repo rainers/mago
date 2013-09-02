@@ -131,7 +131,7 @@ HRESULT ProgramValueEnv::StartProgram()
     {
         BPCookie    cookie = 0;
 
-        hr = exec->WaitForDebug( INFINITE );
+        hr = exec->WaitForEvent( INFINITE );
         if ( FAILED( hr ) )
             return hr;
 

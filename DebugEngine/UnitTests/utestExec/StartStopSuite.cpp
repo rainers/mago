@@ -90,7 +90,7 @@ void StartStopSuite::TestLaunchDestroyExecStopped()
 
         for ( ; !mCallback->GetProcessExited(); )
         {
-            HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+            HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
             TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
             TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
@@ -142,7 +142,7 @@ void StartStopSuite::TestLaunchDestroyExecRunning()
 
         for ( ; !mCallback->GetProcessExited(); )
         {
-            HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+            HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
             if ( (hr == E_TIMEOUT) && sawLoadCompleted )
                 break;
@@ -190,7 +190,7 @@ void StartStopSuite::TestBeginToEnd()
 
     for ( int i = 0; !mCallback->GetProcessExited(); i++ )
     {
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -232,7 +232,7 @@ void StartStopSuite::TestTerminateStopped()
 
     for ( ; !mCallback->GetProcessExited(); )
     {
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -284,7 +284,7 @@ void StartStopSuite::TestTerminateRunning()
 
     for ( ; !mCallback->GetProcessExited(); )
     {
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // debuggee is in the middle of the sleep
         if ( hr == E_TIMEOUT )
@@ -301,7 +301,7 @@ void StartStopSuite::TestTerminateRunning()
     TEST_ASSERT( !mCallback->GetProcessExited() );
 
     TEST_ASSERT_RETURN( SUCCEEDED( exec.Terminate( proc.Get() ) ) );
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.WaitForDebug( DefaultTimeoutMillis ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.WaitForEvent( DefaultTimeoutMillis ) ) );
     // this should dispatch EXIT_PROCESS
     TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
     TEST_ASSERT( mCallback->GetProcessExited() );
@@ -465,7 +465,7 @@ void StartStopSuite::TryOptions( bool newConsole )
 
     for ( ; !mCallback->GetProcessExited(); )
     {
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // one reason for timeout is if debuggee writes more to std files than we expect
         if ( hr == E_TIMEOUT )

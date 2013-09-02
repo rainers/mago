@@ -548,7 +548,7 @@ namespace Mago
 
         while ( !mShutdown )
         {
-            hr = mExec.WaitForDebug( EventTimeoutMillis );
+            hr = mExec.WaitForEvent( EventTimeoutMillis );
             if ( FAILED( hr ) )
             {
                 if ( hr == E_HANDLE )

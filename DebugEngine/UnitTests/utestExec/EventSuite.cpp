@@ -106,7 +106,7 @@ void EventSuite::RunDebuggee( RefPtr<IProcess>& process )
 
     for ( int i = 0; !mCallback->GetProcessExited(); i++ )
     {
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -337,7 +337,7 @@ void EventSuite::TryHandlingException( bool firstTimeHandled, bool expectedChanc
     {
         bool    handled = true;
 
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -444,7 +444,7 @@ void EventSuite::TestExceptionNotHandledFirstChanceCaught()
     {
         bool    handled = true;
 
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -543,7 +543,7 @@ void EventSuite::TestExceptionNotHandledAllChances()
     {
         bool    handled = true;
 
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )

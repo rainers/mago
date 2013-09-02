@@ -270,7 +270,7 @@ int _tmain( int argc, _TCHAR* argv[] )
 
     for ( int i = 0; /* doesn't end */ ; i++ )
     {
-        hr = exec.WaitForDebug( 1000 );
+        hr = exec.WaitForEvent( 1000 );
         if ( FAILED( hr ) )
             goto Error;
 

@@ -218,7 +218,7 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
     for ( int i = 0; !mCallback->GetProcessExited(); i++ )
     {
         bool    continued = false;
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
