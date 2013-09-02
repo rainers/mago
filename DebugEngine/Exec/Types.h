@@ -9,7 +9,6 @@
 
 
 typedef uintptr_t   Address;
-typedef uintptr_t   MachineAddress;
 typedef uint64_t    BPCookie;
 
 struct AddressRange

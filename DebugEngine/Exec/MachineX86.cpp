@@ -139,7 +139,7 @@ Error:
     return hr;
 }
 
-HRESULT MachineX86::GetCurrentPC( uint32_t threadId, MachineAddress& address )
+HRESULT MachineX86::GetCurrentPC( uint32_t threadId, Address& address )
 {
     HRESULT hr = S_OK;
     BOOL    bRet = FALSE;

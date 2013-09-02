@@ -518,7 +518,7 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
 
         if ( result == MacRes_PendingCallbackBP )
         {
-            MachineAddress  addr = 0;
+            Address         addr = 0;
             int             count = 0;
             BPCookie*       cookies = NULL;
 
@@ -984,7 +984,7 @@ HRESULT Exec::ReadMemory(
     IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
 
-    hr = machine->ReadMemory( (MachineAddress) address, length, lengthRead, lengthUnreadable, buffer );
+    hr = machine->ReadMemory( (Address) address, length, lengthRead, lengthUnreadable, buffer );
 
     return hr;
 }
@@ -1016,7 +1016,7 @@ HRESULT Exec::WriteMemory(
     IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
 
-    hr = machine->WriteMemory( (MachineAddress) address, length, lengthWritten, buffer );
+    hr = machine->WriteMemory( (Address) address, length, lengthWritten, buffer );
 
     return hr;
 }
@@ -1050,7 +1050,7 @@ HRESULT Exec::SetBreakpoint( IProcess* process, Address address, BPCookie cookie
             goto Error;
     }
 
-    hr = machine->SetBreakpoint( (MachineAddress) address, cookie );
+    hr = machine->SetBreakpoint( (Address) address, cookie );
 
     if ( suspend )
     {
@@ -1091,7 +1091,7 @@ HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address, BPCookie coo
             goto Error;
     }
 
-    hr = machine->RemoveBreakpoint( (MachineAddress) address, cookie );
+    hr = machine->RemoveBreakpoint( (Address) address, cookie );
 
     if ( suspend )
     {
