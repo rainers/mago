@@ -50,7 +50,7 @@ break   yes     any     SetThreadContext
 
 N/A     no      Debug   Init
 N/A     no      Debug   Shutdown
-N/A     no      Debug   WaitForDebug
+N/A     no      Debug   WaitForEvent
 N/A     no      Debug   DispatchEvent
 break   no*     Debug   Continue
 N/A     yes     Debug   Launch
@@ -118,7 +118,7 @@ public:
     //          E_TIMEOUT, if the timeout elapsed.
     //          See the table above for other errors.
     //
-    HRESULT WaitForDebug( uint32_t millisTimeout );
+    HRESULT WaitForEvent( uint32_t millisTimeout );
 
     // Handle a debugging event. The process object is marked stopped, and the 
     // appropriate event callback method will be called.
