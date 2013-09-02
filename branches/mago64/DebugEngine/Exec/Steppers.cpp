@@ -16,7 +16,7 @@ using namespace std;
 
 HRESULT ReadInstruction( 
     IStepperMachine* machine, 
-    MachineAddress curAddress, 
+    Address curAddress, 
     CpuSizeMode cpu, 
     InstructionType& type, 
     int& size )
@@ -43,7 +43,7 @@ HRESULT ReadInstruction(
 
 HRESULT MakeResumeStepper( 
                           IStepperMachine* machine, 
-                          MachineAddress curAddress, 
+                          Address curAddress, 
                           BPCookie cookie, 
                           std::auto_ptr<IStepper>& stepper )
 {
@@ -76,7 +76,7 @@ HRESULT MakeResumeStepper(
 
 HRESULT MakeStepInStepper( 
                           IStepperMachine* machine, 
-                          MachineAddress curAddress, 
+                          Address curAddress, 
                           bool sourceMode, 
                           BPCookie cookie, 
                           bool handleEmbeddedBP, 
@@ -118,7 +118,7 @@ HRESULT MakeStepInStepper(
 
 HRESULT MakeStepOverStepper( 
                             IStepperMachine* machine, 
-                            MachineAddress curAddress, 
+                            Address curAddress, 
                             BPCookie cookie, 
                             bool handleEmbeddedBP, 
                             std::auto_ptr<IStepper>& stepper )
@@ -159,7 +159,7 @@ HRESULT MakeStepOverStepper(
 //  InstructionStepperSS
 //----------------------------------------------------------------------------
 
-InstructionStepperSS::InstructionStepperSS( IStepperMachine* machine, MachineAddress curAddress, BPCookie cookie )
+InstructionStepperSS::InstructionStepperSS( IStepperMachine* machine, Address curAddress, BPCookie cookie )
     :   mMachine( machine ),
         mCurAddr( curAddress ),
         mCookie( cookie ),
@@ -189,7 +189,7 @@ bool            InstructionStepperSS::CanSkipEmbeddedBP()
     return false;
 }
 
-HRESULT         InstructionStepperSS::RequestStepAway( MachineAddress pc )
+HRESULT         InstructionStepperSS::RequestStepAway( Address pc )
 {
     UNREFERENCED_PARAMETER( pc );
 
@@ -197,12 +197,12 @@ HRESULT         InstructionStepperSS::RequestStepAway( MachineAddress pc )
     return S_OK;
 }
 
-void            InstructionStepperSS::SetAddress( MachineAddress address )
+void            InstructionStepperSS::SetAddress( Address address )
 {
     mCurAddr = address;
 }
 
-HRESULT     InstructionStepperSS::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
+HRESULT     InstructionStepperSS::OnBreakpoint( Address address, MachineResult& result, bool& rewindPC )
 {
     UNREFERENCED_PARAMETER( address );
 
@@ -211,7 +211,7 @@ HRESULT     InstructionStepperSS::OnBreakpoint( MachineAddress address, MachineR
     return S_OK;
 }
 
-HRESULT     InstructionStepperSS::OnSingleStep( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperSS::OnSingleStep( Address address, MachineResult& result )
 {
     UNREFERENCED_PARAMETER( address );
 
@@ -227,7 +227,7 @@ HRESULT     InstructionStepperSS::OnSingleStep( MachineAddress address, MachineR
 
 InstructionStepperEmbeddedBP::InstructionStepperEmbeddedBP( 
     IStepperMachine* machine, 
-    MachineAddress curAddress, 
+    Address curAddress, 
     bool handleBP, 
     BPCookie cookie )
     :   mMachine( machine ),
@@ -260,19 +260,19 @@ bool            InstructionStepperEmbeddedBP::CanSkipEmbeddedBP()
     return false;
 }
 
-HRESULT         InstructionStepperEmbeddedBP::RequestStepAway( MachineAddress pc )
+HRESULT         InstructionStepperEmbeddedBP::RequestStepAway( Address pc )
 {
     UNREFERENCED_PARAMETER( pc );
     return S_OK;
 }
 
-void            InstructionStepperEmbeddedBP::SetAddress( MachineAddress address )
+void            InstructionStepperEmbeddedBP::SetAddress( Address address )
 {
     UNREFERENCED_PARAMETER( address );
 }
 
 HRESULT     InstructionStepperEmbeddedBP::OnBreakpoint( 
-    MachineAddress address, 
+    Address address, 
     MachineResult& result, 
     bool& rewindPC )
 {
@@ -297,7 +297,7 @@ HRESULT     InstructionStepperEmbeddedBP::OnBreakpoint(
     return S_OK;
 }
 
-HRESULT     InstructionStepperEmbeddedBP::OnSingleStep( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperEmbeddedBP::OnSingleStep( Address address, MachineResult& result )
 {
     UNREFERENCED_PARAMETER( address );
 
@@ -314,7 +314,7 @@ HRESULT     InstructionStepperEmbeddedBP::OnSingleStep( MachineAddress address, 
 InstructionStepperBP::InstructionStepperBP( 
     IStepperMachine* machine, 
     int instLen, 
-    MachineAddress curAddress, 
+    Address curAddress, 
     BPCookie cookie )
     :   mMachine( machine ),
         mCurAddr( curAddress ),
@@ -350,18 +350,18 @@ bool            InstructionStepperBP::CanSkipEmbeddedBP()
     return false;
 }
 
-HRESULT         InstructionStepperBP::RequestStepAway( MachineAddress pc )
+HRESULT         InstructionStepperBP::RequestStepAway( Address pc )
 {
     UNREFERENCED_PARAMETER( pc );
     return S_OK;
 }
 
-void            InstructionStepperBP::SetAddress( MachineAddress address )
+void            InstructionStepperBP::SetAddress( Address address )
 {
     mCurAddr = address;
 }
 
-HRESULT     InstructionStepperBP::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
+HRESULT     InstructionStepperBP::OnBreakpoint( Address address, MachineResult& result, bool& rewindPC )
 {
     result = MacRes_NotHandled;
     rewindPC = true;
@@ -376,7 +376,7 @@ HRESULT     InstructionStepperBP::OnBreakpoint( MachineAddress address, MachineR
     return S_OK;
 }
 
-HRESULT     InstructionStepperBP::OnSingleStep( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperBP::OnSingleStep( Address address, MachineResult& result )
 {
     UNREFERENCED_PARAMETER( address );
 
@@ -393,7 +393,7 @@ HRESULT     InstructionStepperBP::OnSingleStep( MachineAddress address, MachineR
 InstructionStepperBPCall::InstructionStepperBPCall( 
     IStepperMachine* machine, 
     int instLen, 
-    MachineAddress curAddress, 
+    Address curAddress, 
     BPCookie cookie )
     :   mMachine( machine ),
         mCurAddr( curAddress ),
@@ -446,7 +446,7 @@ bool            InstructionStepperBPCall::CanSkipEmbeddedBP()
     return true;
 }
 
-HRESULT         InstructionStepperBPCall::RequestStepAway( MachineAddress pc )
+HRESULT         InstructionStepperBPCall::RequestStepAway( Address pc )
 {
     HRESULT hr = S_OK;
 
@@ -473,12 +473,12 @@ HRESULT         InstructionStepperBPCall::RequestStepAway( MachineAddress pc )
     return S_OK;
 }
 
-void            InstructionStepperBPCall::SetAddress( MachineAddress address )
+void            InstructionStepperBPCall::SetAddress( Address address )
 {
     mCurAddr = address;
 }
 
-HRESULT     InstructionStepperBPCall::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
+HRESULT     InstructionStepperBPCall::OnBreakpoint( Address address, MachineResult& result, bool& rewindPC )
 {
     HRESULT hr = S_OK;
 
@@ -515,7 +515,7 @@ HRESULT     InstructionStepperBPCall::OnBreakpoint( MachineAddress address, Mach
     return S_OK;
 }
 
-HRESULT     InstructionStepperBPCall::OnSingleStep( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperBPCall::OnSingleStep( Address address, MachineResult& result )
 {
     HRESULT hr = S_OK;
 
@@ -559,7 +559,7 @@ HRESULT     InstructionStepperBPCall::OnSingleStep( MachineAddress address, Mach
 InstructionStepperProbeCall::InstructionStepperProbeCall( 
     IStepperMachine* machine, 
     int instLen, 
-    MachineAddress curAddress, 
+    Address curAddress, 
     BPCookie cookie )
     :   mMachine( machine ),
         mCurAddr( curAddress ),
@@ -619,7 +619,7 @@ bool            InstructionStepperProbeCall::CanSkipEmbeddedBP()
     return true;
 }
 
-HRESULT         InstructionStepperProbeCall::RequestStepAway( MachineAddress pc )
+HRESULT         InstructionStepperProbeCall::RequestStepAway( Address pc )
 {
     HRESULT hr = S_OK;
 
@@ -645,12 +645,12 @@ HRESULT         InstructionStepperProbeCall::RequestStepAway( MachineAddress pc 
     return S_OK;
 }
 
-void            InstructionStepperProbeCall::SetAddress( MachineAddress address )
+void            InstructionStepperProbeCall::SetAddress( Address address )
 {
     mCurAddr = address;
 }
 
-HRESULT     InstructionStepperProbeCall::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
+HRESULT     InstructionStepperProbeCall::OnBreakpoint( Address address, MachineResult& result, bool& rewindPC )
 {
     HRESULT hr = S_OK;
 
@@ -687,7 +687,7 @@ HRESULT     InstructionStepperProbeCall::OnBreakpoint( MachineAddress address, M
     return S_OK;
 }
 
-HRESULT     InstructionStepperProbeCall::OnSingleStep( MachineAddress address, MachineResult& result )
+HRESULT     InstructionStepperProbeCall::OnSingleStep( Address address, MachineResult& result )
 {
     HRESULT hr = S_OK;
 
@@ -770,7 +770,7 @@ RangeStepper::RangeStepper(
     IStepperMachine* machine, 
     bool stepIn, 
     bool sourceMode, 
-    MachineAddress curAddress, 
+    Address curAddress, 
     BPCookie cookie, 
     AddressRange* ranges, 
     int rangeCount )
@@ -813,7 +813,7 @@ HRESULT         RangeStepper::Start()
     return StartOneStep( mCurAddr );
 }
 
-HRESULT         RangeStepper::StartOneStep( MachineAddress pc )
+HRESULT         RangeStepper::StartOneStep( Address pc )
 {
     _ASSERT( mInstStepper == NULL );
 
@@ -873,7 +873,7 @@ bool            RangeStepper::CanSkipEmbeddedBP()
     return mInstStepper->CanSkipEmbeddedBP();
 }
 
-HRESULT         RangeStepper::RequestStepAway( MachineAddress pc )
+HRESULT         RangeStepper::RequestStepAway( Address pc )
 {
     if ( mInstStepper == NULL )
         return E_FAIL;
@@ -881,12 +881,12 @@ HRESULT         RangeStepper::RequestStepAway( MachineAddress pc )
     return mInstStepper->RequestStepAway( pc );
 }
 
-void            RangeStepper::SetAddress( MachineAddress address )
+void            RangeStepper::SetAddress( Address address )
 {
     mCurAddr = address;
 }
 
-HRESULT     RangeStepper::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
+HRESULT     RangeStepper::OnBreakpoint( Address address, MachineResult& result, bool& rewindPC )
 {
     HRESULT hr = S_OK;
 
@@ -905,7 +905,7 @@ HRESULT     RangeStepper::OnBreakpoint( MachineAddress address, MachineResult& r
     // After hitting a BP, the PC is one past the exception address.
     // The instruction stepper might want it there or at the exception address.
 
-    MachineAddress pc = address;
+    Address pc = address;
 
     if ( !rewindPC )
         pc++;
@@ -915,7 +915,7 @@ HRESULT     RangeStepper::OnBreakpoint( MachineAddress address, MachineResult& r
     return HandleComplete( pc, result );
 }
 
-HRESULT     RangeStepper::OnSingleStep( MachineAddress address, MachineResult& result )
+HRESULT     RangeStepper::OnSingleStep( Address address, MachineResult& result )
 {
     HRESULT hr = S_OK;
 
@@ -937,7 +937,7 @@ HRESULT     RangeStepper::OnSingleStep( MachineAddress address, MachineResult& r
     return HandleComplete( address, result );
 }
 
-bool            RangeStepper::IsAddressInRange( MachineAddress pc )
+bool            RangeStepper::IsAddressInRange( Address pc )
 {
     AddressRange*   range = NULL;
 
@@ -957,7 +957,7 @@ bool            RangeStepper::IsAddressInRange( MachineAddress pc )
     return false;
 }
 
-HRESULT RangeStepper::HandleComplete( MachineAddress pc, MachineResult& result )
+HRESULT RangeStepper::HandleComplete( Address pc, MachineResult& result )
 {
     delete mInstStepper;
     mInstStepper = NULL;
@@ -980,9 +980,9 @@ HRESULT RangeStepper::HandleComplete( MachineAddress pc, MachineResult& result )
 
 RunToStepper::RunToStepper( 
     IStepperMachine* machine,
-    MachineAddress curAddress,
+    Address curAddress,
     BPCookie cookie, 
-    MachineAddress targetAddress )
+    Address targetAddress )
     :   mMachine( machine ),
         mCurAddr( curAddress ),
         mCookie( cookie ),
@@ -1028,7 +1028,7 @@ bool            RunToStepper::CanSkipEmbeddedBP()
     return true;
 }
 
-HRESULT         RunToStepper::RequestStepAway( MachineAddress pc )
+HRESULT         RunToStepper::RequestStepAway( Address pc )
 {
     HRESULT hr = S_OK;
 
@@ -1048,12 +1048,12 @@ HRESULT         RunToStepper::RequestStepAway( MachineAddress pc )
     return S_OK;
 }
 
-void            RunToStepper::SetAddress( MachineAddress address )
+void            RunToStepper::SetAddress( Address address )
 {
     mCurAddr = address;
 }
 
-HRESULT     RunToStepper::OnBreakpoint( MachineAddress address, MachineResult& result, bool& rewindPC )
+HRESULT     RunToStepper::OnBreakpoint( Address address, MachineResult& result, bool& rewindPC )
 {
     HRESULT hr = S_OK;
 
@@ -1089,7 +1089,7 @@ HRESULT     RunToStepper::OnBreakpoint( MachineAddress address, MachineResult& r
     return S_OK;
 }
 
-HRESULT     RunToStepper::OnSingleStep( MachineAddress address, MachineResult& result )
+HRESULT     RunToStepper::OnSingleStep( Address address, MachineResult& result )
 {
     HRESULT hr = S_OK;
 
