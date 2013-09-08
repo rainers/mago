@@ -24,6 +24,8 @@ enum MachineResult
     MacRes_HandledStopped,
     MacRes_PendingCallbackBP,
     MacRes_PendingCallbackStep,
+    MacRes_PendingCallbackEmbeddedBP,
+    MacRes_PendingCallbackEmbeddedStep,
 };
 
 inline MachineResult GetMoreImportant( MachineResult a, MachineResult b )

@@ -12,6 +12,8 @@
 
 #if defined( _M_IX86 )
 #include "MachineX86.h"
+#elif defined( _M_X64 )
+#include "MachineX86.h"
 #endif
 
 
@@ -20,6 +22,11 @@ HRESULT MakeMachine( WORD machineType, IMachine*& machine )
     HRESULT hr = E_NOTIMPL;
 
 #if defined( _M_IX86 )
+    if ( machineType == IMAGE_FILE_MACHINE_I386 )
+    {
+        hr = MakeMachineX86( machine );
+    }
+#elif defined( _M_X64 )
     if ( machineType == IMAGE_FILE_MACHINE_I386 )
     {
         hr = MakeMachineX86( machine );
