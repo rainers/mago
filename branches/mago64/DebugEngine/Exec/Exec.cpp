@@ -516,7 +516,8 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
         if ( FAILED( hr ) )
             goto Error;
 
-        if ( result == MacRes_PendingCallbackBP )
+        if ( result == MacRes_PendingCallbackBP 
+            || result == MacRes_PendingCallbackEmbeddedBP )
         {
             Address         addr = 0;
             int             count = 0;
@@ -530,7 +531,8 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
             else
                 result = MacRes_HandledStopped;
         }
-        else if ( result == MacRes_PendingCallbackStep )
+        else if ( result == MacRes_PendingCallbackStep 
+            || result == MacRes_PendingCallbackEmbeddedStep )
         {
             mCallback->OnStepComplete( proc, debugEvent.dwThreadId );
             result = MacRes_HandledStopped;

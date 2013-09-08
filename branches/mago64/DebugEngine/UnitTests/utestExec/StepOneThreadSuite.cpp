@@ -245,7 +245,8 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
             if ( mCallback->GetLastThreadId() != 0 )
             {
                 TEST_ASSERT_RETURN( process->FindThread( mCallback->GetLastThreadId(), thread.Ref() ) );
-                TEST_ASSERT_RETURN( GetThreadContextX86( thread->GetHandle(), &context ) );
+                TEST_ASSERT_RETURN( exec.GetThreadContext( 
+                    process, thread->GetId(), &context, sizeof context ) == S_OK );
             }
 
             uintptr_t   baseAddr = 0;

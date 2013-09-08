@@ -120,9 +120,12 @@ public:
     virtual void    OnDestroyProcess();
 
 protected:
-    virtual HRESULT ChangeCurrentPC( uint32_t threadId, int32_t byteOffset ) = 0;
-    virtual HRESULT SetSingleStep( uint32_t threadId, bool enable ) = 0;
-    virtual HRESULT GetCurrentPC( uint32_t threadId, Address& address ) = 0;
+    virtual HRESULT CacheThreadContext() = 0;
+    virtual HRESULT FlushThreadContext() = 0;
+    // Only call after caching the thread context
+    virtual HRESULT ChangeCurrentPC( int32_t byteOffset ) = 0;
+    virtual HRESULT SetSingleStep( bool enable ) = 0;
+    virtual HRESULT GetCurrentPC( Address& address ) = 0;
 
     virtual HRESULT SuspendThread( Thread* thread ) = 0;
     virtual HRESULT ResumeThread( Thread* thread ) = 0;
