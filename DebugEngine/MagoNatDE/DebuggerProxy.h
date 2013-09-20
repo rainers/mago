@@ -10,29 +10,33 @@
 namespace Mago
 {
     struct CommandFunctor;
+    class ArchData;
+    class IRegisterSet;
 
 
     class DebuggerProxy
     {
-        Exec            mExec;
-        HANDLE          mhThread;
-        DWORD           mWorkerTid;
-        IMachine*       mMachine;
-        IEventCallback* mCallback;
-        HANDLE          mhReadyEvent;
-        HANDLE          mhCommandEvent;
-        HANDLE          mhResultEvent;
-        CommandFunctor* mCurCommand;
-        volatile bool   mShutdown;
-        Guard           mCommandGuard;
+        Exec                mExec;
+        HANDLE              mhThread;
+        DWORD               mWorkerTid;
+        IEventCallback*     mCallback;
+        HANDLE              mhReadyEvent;
+        HANDLE              mhCommandEvent;
+        HANDLE              mhResultEvent;
+        CommandFunctor*     mCurCommand;
+        volatile bool       mShutdown;
+        Guard               mCommandGuard;
+        RefPtr<ArchData>    mArch;
 
     public:
         DebuggerProxy();
         ~DebuggerProxy();
 
-        HRESULT Init( IMachine* machine, IEventCallback* callback );
+        HRESULT Init( IEventCallback* callback );
         HRESULT Start();
         void    Shutdown();
+
+        HRESULT GetSystemInfo( IProcess* process, ArchData*& sysInfo );
 
         HRESULT InvokeCommand( CommandFunctor& cmd );
 
@@ -42,8 +46,7 @@ namespace Mago
         HRESULT Terminate( IProcess* process );
         HRESULT Detach( IProcess* process );
 
-        HRESULT ResumeProcess( IProcess* process );
-        HRESULT TerminateNewProcess( IProcess* process );
+        HRESULT ResumeLaunchedProcess( IProcess* process );
 
         HRESULT ReadMemory( 
             IProcess* process, 
@@ -72,7 +75,12 @@ namespace Mago
 
         HRESULT AsyncBreak( IProcess* process );
 
+        HRESULT GetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet*& regSet );
+        HRESULT SetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet* regSet );
+
     private:
+        HRESULT CacheSystemInfo();
+
         static DWORD CALLBACK   DebugPollProc( void* param );
 
         HRESULT PollLoop();

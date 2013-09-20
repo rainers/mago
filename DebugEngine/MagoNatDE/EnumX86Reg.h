@@ -10,12 +10,8 @@
 
 namespace Mago
 {
-    class IRegisterSet;
+    struct RegGroupInternal;
 
 
-    HRESULT EnumX86Registers( 
-        IRegisterSet* regSet, 
-        DEBUGPROP_INFO_FLAGS fields,
-        DWORD radix,
-        IEnumDebugPropertyInfo2** enumerator );
+    void GetX86RegisterGroups( const RegGroupInternal*& groups, uint32_t& count );
 }

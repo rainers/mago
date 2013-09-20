@@ -14,11 +14,16 @@ enum CreateMethod
     Create_Attach,
 };
 
-class IMachine;
 class Thread;
 template <class T>
 class Enumerator;
 
+
+// Methods of the IProcess class are safe to call from any thread.
+// They are accurate when run from the debug thread, or when the process is stopped.
+
+// See the WinNT.h header file for processor-specific definitions of 
+// machine type. For x86, the machine type is IMAGE_FILE_MACHINE_I386.
 
 class IProcess
 {
@@ -33,22 +38,15 @@ public:
     virtual uint32_t        GetId() = 0;
     virtual const wchar_t*  GetExePath() = 0;
     virtual Address         GetEntryPoint() = 0;
-    virtual HANDLE          GetLaunchedSuspendedThread() = 0;
-    virtual void            SetLaunchedSuspendedThread( HANDLE hThread ) = 0;
-    
-    virtual IMachine*       GetMachine() = 0;
+    virtual uint16_t        GetMachineType() = 0;
 
     virtual bool            IsStopped() = 0;
     virtual bool            IsDeleted() = 0;
     virtual bool            IsTerminating() = 0;
     virtual bool            ReachedLoaderBp() = 0;
-    virtual void            SetDeleted() = 0;
-    virtual void            SetTerminating() = 0;
-    virtual void            SetReachedLoaderBp() = 0;
 
     // threads
 
-    virtual size_t          GetThreadCount() = 0;
     virtual bool            FindThread( uint32_t id, Thread*& thread ) = 0;
     virtual HRESULT         EnumThreads( Enumerator< Thread* >*& en ) = 0;
 };

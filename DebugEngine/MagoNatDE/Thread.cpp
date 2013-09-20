@@ -13,8 +13,7 @@
 #include "EnumFrameInfo.h"
 #include "DebuggerProxy.h"
 #include "RegisterSet.h"
-
-#include <dbghelp.h>
+#include "ArchData.h"
 
 
 namespace Mago
@@ -130,28 +129,22 @@ namespace Mago
         if ( nRadix == 0 )
             return E_INVALIDARG;
 
-        HRESULT     hr = S_OK;
-        CONTEXT     context = { 0 };
-        Callstack   callstack;
+        HRESULT                 hr = S_OK;
+        Callstack               callstack;
+        RefPtr<IRegisterSet>    topRegSet;
 
-        // TODO: we should get this another way
-        context.ContextFlags = CONTEXT_FULL 
-            | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
-        if ( !GetThreadContext( mCoreThread->GetHandle(), &context ) )
-            return GetLastHr();
+        hr = mDebugger->GetThreadContext( mProg->GetCoreProcess(), mCoreThread, topRegSet.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
 
-        mCurPC = context.Eip;
+        mCurPC = (Address) topRegSet->GetPC();
         // in case we can't get the return address of top frame, 
         // make sure our StepOut method knows that we don't know the caller's PC
         mCallerPC = 0;
 
-        hr = BuildCallstack( context, callstack );
+        hr = BuildCallstack( topRegSet, callstack );
         if ( FAILED( hr ) )
-        {
-            hr = BuildTopFrameCallstack( context, callstack );
-            if ( FAILED( hr ) )
-                return hr;
-        }
+            return hr;
 
         hr = MakeEnumFrameInfoFromCallstack( callstack, dwFieldSpec, nRadix, ppEnum );
 
@@ -169,6 +162,11 @@ namespace Mago
     void Thread::SetCoreThread( ::Thread* thread )
     {
         mCoreThread = thread;
+    }
+
+    Program*    Thread::GetProgram()
+    {
+        return mProg;
     }
 
     void Thread::SetProgram( Program* prog, DebuggerProxy* pollThread )
@@ -277,78 +275,69 @@ namespace Mago
 
     //------------------------------------------------------------------------
 
-    HRESULT Thread::BuildCallstack( const CONTEXT& context, Callstack& callstack )
+    HRESULT Thread::BuildCallstack( IRegisterSet* topRegSet, Callstack& callstack )
     {
         OutputDebugStringA( "Thread::BuildCallstack\n" );
 
-        HRESULT         hr = S_OK;
-        STACKFRAME64    stackFrame64 = { 0 };
-        CONTEXT         newContext = context;
-        int             frameIndex = 0;
+        HRESULT             hr = S_OK;
+        int                 frameIndex = 0;
+        RefPtr<ArchData>    archData;
+        StackWalker*        pWalker = NULL;
+        std::unique_ptr<StackWalker> walker;
 
-        stackFrame64.AddrPC.Mode = AddrModeFlat;
-        stackFrame64.AddrPC.Offset = context.Eip;
-        stackFrame64.AddrStack.Mode = AddrModeFlat;
-        stackFrame64.AddrStack.Offset = context.Esp;
-        stackFrame64.AddrFrame.Mode = AddrModeFlat;
-        stackFrame64.AddrFrame.Offset = context.Ebp;
+        hr = AddCallstackFrame( topRegSet, callstack );
+        if ( FAILED( hr ) )
+            return hr;
 
-        callstack.clear();
+        hr = mDebugger->GetSystemInfo( mProg->GetCoreProcess(), archData.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
 
-        while ( WalkStack( stackFrame64, &newContext ) )
+        hr = archData->BeginWalkStack( 
+            topRegSet,
+            this,
+            ReadProcessMemory64,
+            FunctionTableAccess64,
+            GetModuleBase64,
+            pWalker );
+        if ( FAILED( hr ) )
+            return hr;
+
+        walker.reset( pWalker );
+        // walk past the first frame, because we have it already
+        walker->WalkStack();
+
+        while ( walker->WalkStack() )
         {
-            RefPtr<Module>      mod;
-            RefPtr<StackFrame>  stackFrame;
             RefPtr<IRegisterSet> regSet;
             UINT64              addr = 0;
+            const void*         context = NULL;
+            uint32_t            contextSize = 0;
 
-            addr = stackFrame64.AddrPC.Offset;
+            walker->GetThreadContext( context, contextSize );
 
-            // if we haven't gotten the first return address, then do so now
-            if ( frameIndex == 1 )
-                mCallerPC = (Address) addr;
+            if ( frameIndex == 0 )
+                hr = archData->BuildRegisterSet( context, contextSize, regSet.Ref() );
+            else
+                hr = archData->BuildTinyRegisterSet( context, contextSize, regSet.Ref() );
 
-            mProg->FindModuleContainingAddress( (Address) addr, mod );
-
-            hr = MakeCComObject( stackFrame );
             if ( FAILED( hr ) )
                 return hr;
 
+            addr = regSet->GetPC();
+
+            // if we haven't gotten the first return address, then do so now
             if ( frameIndex == 0 )
-                regSet = new RegisterSet( context, mCoreThread );
-            else
-                regSet = new TinyRegisterSet( 
-                    (Address) stackFrame64.AddrPC.Offset,
-                    (Address) stackFrame64.AddrStack.Offset,
-                    (Address) stackFrame64.AddrFrame.Offset );
+                mCallerPC = (Address) addr;
 
-            if ( regSet == NULL )
-                return E_OUTOFMEMORY;
-
-            stackFrame->Init( (Address) addr, regSet, this, mod.Get() );
-
-            callstack.push_back( stackFrame );
+            hr = AddCallstackFrame( regSet, callstack );
+            if ( FAILED( hr ) )
+                return hr;
 
             frameIndex++;
         }
 
-        // TODO: what if we couldn't get any frames?
-
         return S_OK;
-    }
-
-    bool Thread::WalkStack( STACKFRAME64& stackFrame, void* context )
-    {
-        return StackWalk64( 
-            IMAGE_FILE_MACHINE_I386,
-            this,
-            NULL,
-            &stackFrame,
-            context,
-            ReadProcessMemory64,
-            FunctionTableAccess64,
-            GetModuleBase64,
-            NULL ) ? true : false;
     }
 
     BOOL Thread::ReadProcessMemory64(
@@ -408,25 +397,18 @@ namespace Mago
         return mod->GetAddress();
     }
 
-    HRESULT Thread::BuildTopFrameCallstack( const CONTEXT& context, Callstack& callstack )
+    HRESULT Thread::AddCallstackFrame( IRegisterSet* regSet, Callstack& callstack )
     {
         HRESULT             hr = S_OK;
-        const Address       addr = context.Eip;
+        const Address       addr = (Address) regSet->GetPC();
         RefPtr<Module>      mod;
         RefPtr<StackFrame>  stackFrame;
-        RefPtr<RegisterSet> regSet;
-
-        callstack.clear();
 
         mProg->FindModuleContainingAddress( addr, mod );
 
         hr = MakeCComObject( stackFrame );
         if ( FAILED( hr ) )
             return hr;
-
-        regSet = new RegisterSet( context, mCoreThread );
-        if ( regSet == NULL )
-            return E_OUTOFMEMORY;
 
         stackFrame->Init( addr, regSet, this, mod.Get() );
 

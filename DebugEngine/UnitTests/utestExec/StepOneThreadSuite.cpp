@@ -56,10 +56,6 @@ void StepOneThreadSuite::setup()
     mExec = new Exec();
     mCallback = new EventCallbackBase();
 
-    HRESULT hr = MakeMachineX86( mMachine );
-    if ( FAILED( hr ) )
-        throw "MakeMachineX86 failed.";
-
     mCallback->AddRef();
 }
 
@@ -76,19 +72,14 @@ void StepOneThreadSuite::tear_down()
         mCallback->Release();
         mCallback = NULL;
     }
-
-    if ( mMachine != NULL )
-    {
-        mMachine->Release();
-        mMachine = NULL;
-    }
 }
 
 void StepOneThreadSuite::StepInstructionInAssembly()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, false } },
@@ -116,7 +107,8 @@ void StepOneThreadSuite::StepInstructionInSourceHaveSource()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, true, true } },
         { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, true } },
@@ -144,7 +136,8 @@ void StepOneThreadSuite::StepInstructionInSourceNoSource()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, true } },
         { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, true, true } },
@@ -159,7 +152,8 @@ void StepOneThreadSuite::StepInstructionOver()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, false, false } },
@@ -181,7 +175,8 @@ void StepOneThreadSuite::StepInstructionOverInterruptedByBP()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Exception, 0x1069, EXCEPTION_BREAKPOINT_X86 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
         { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, false, true, false, 0x101C } },
         { { ExecEvent_Breakpoint, 0x101C, 0 }, { Action_Go, true, true } },
@@ -197,7 +192,7 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
 {
     Exec    exec;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo  info = { 0 };
     wchar_t     cmdLine[ MAX_PATH ] = L"";
@@ -223,7 +218,7 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
     for ( int i = 0; !mCallback->GetProcessExited(); i++ )
     {
         bool    continued = false;
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -232,11 +227,8 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( hr = exec.DispatchEvent() ) );
 
-        if ( hr == S_OK )
-        {
-            TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+        if ( !process->IsStopped() )
             continue;
-        }
 
         if ( (mCallback->GetLastEvent()->Code != ExecEvent_ModuleLoad)
             && (mCallback->GetLastEvent()->Code != ExecEvent_ModuleUnload)
@@ -253,7 +245,8 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
             if ( mCallback->GetLastThreadId() != 0 )
             {
                 TEST_ASSERT_RETURN( process->FindThread( mCallback->GetLastThreadId(), thread.Ref() ) );
-                TEST_ASSERT_RETURN( GetThreadContextX86( thread->GetHandle(), &context ) );
+                TEST_ASSERT_RETURN( exec.GetThreadContext( 
+                    process, thread->GetId(), &context, sizeof context ) == S_OK );
             }
 
             uintptr_t   baseAddr = 0;
@@ -306,13 +299,13 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
             {
                 TEST_ASSERT_RETURN( SUCCEEDED( 
                     exec.StepInstruction( process.Get(), curStep->Action.StepIn, curStep->Action.SourceMode ) ) );
-                TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, true ) ) );
                 continued = true;
             }
         }
 
         if ( !continued )
-            TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, true ) ) );
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );

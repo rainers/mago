@@ -12,8 +12,6 @@
 #include "..\..\Exec\Types.h"
 #include "..\..\Exec\Exec.h"
 #include "..\..\Exec\EventCallback.h"
-#include "..\..\Exec\Machine.h"
-#include "..\..\Exec\MakeMachineX86.h"
 #include "..\..\Exec\IProcess.h"
 #include "..\..\Exec\IModule.h"
 #include "..\..\Exec\Enumerator.h"
@@ -138,16 +136,16 @@ public:
 #endif
     }
 
-    virtual bool OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    virtual RunMode OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  %p %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
         else
             printf( "  %08I64x %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
-        return false;
+        return RunMode_Break;
     }
 
-    virtual bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
+    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  breakpoint at %p\n", address );
@@ -170,7 +168,7 @@ public:
         //mExec->RemoveBreakpoint( process, baseAddr + 0x00011395, (void*) 129 );
         //mExec->SetBreakpoint( process, baseAddr + 0x00011395, (void*) 129 );
 
-        return false;
+        return RunMode_Break;
     }
 
     virtual void OnStepComplete( IProcess* process, uint32_t threadId )
@@ -187,9 +185,9 @@ public:
         printf( "  *** ERROR: %08x while %d\n", hrErr, event );
     }
 
-    virtual bool CanStepInFunction( IProcess* process, Address address )
+    virtual RunMode OnCallProbe( IProcess* process, uint32_t threadId, Address address )
     {
-        return false;
+        return RunMode_Run;
     }
 };
 
@@ -212,7 +210,6 @@ int _tmain( int argc, _TCHAR* argv[] )
     PROCESS_INFORMATION procInfo = { 0 };
     DEBUG_EVENT         event = { 0 };
     _EventCallback   callback;
-    IMachine*       machine = NULL;
     Exec        exec;
     HRESULT     hr = S_OK;
     LaunchInfo  info = { 0 };
@@ -226,11 +223,7 @@ int _tmain( int argc, _TCHAR* argv[] )
 
     callback.SetExec( &exec );
 
-    hr = MakeMachineX86( machine );
-    if ( FAILED( hr ) )
-        goto Error;
-
-    hr = exec.Init( machine, &callback );
+    hr = exec.Init( &callback );
     if ( FAILED( hr ) )
         goto Error;
     
@@ -277,7 +270,7 @@ int _tmain( int argc, _TCHAR* argv[] )
 
     for ( int i = 0; /* doesn't end */ ; i++ )
     {
-        hr = exec.WaitForDebug( 1000 );
+        hr = exec.WaitForEvent( 1000 );
         if ( FAILED( hr ) )
             goto Error;
 
@@ -286,39 +279,41 @@ int _tmain( int argc, _TCHAR* argv[] )
             goto Error;
 
 #if 1
-        if ( (hr == S_FALSE) && callback.GetHitBp() )
+        if ( proc->IsStopped() )
         {
-            stepCount++;
-
-            //11728
-            IModule*    mod = NULL;
-            UINT_PTR    baseAddr = 0;
-
-            callback.GetModule( mod );
-            baseAddr = (UINT_PTR) mod->GetImageBase();
-            mod->Release();
-
-            //hr = exec.StepOut( proc, (void*) (baseAddr + 0x00011728) );
-            //hr = exec.StepInstruction( proc, true );
-
-            if ( stepCount > 1 )
-                hr = exec.StepInstruction( proc, true, false );
-            else
+            if ( callback.GetHitBp() )
             {
-                //113A5
-                AddressRange    range = { baseAddr + 0x0001137A, baseAddr + 0x000113A5 };
-                hr = exec.StepRange( proc, false, false, &range, 1 );
+                stepCount++;
+
+                //11728
+                IModule*    mod = NULL;
+                UINT_PTR    baseAddr = 0;
+
+                callback.GetModule( mod );
+                baseAddr = (UINT_PTR) mod->GetImageBase();
+                mod->Release();
+
+                //hr = exec.StepOut( proc, (void*) (baseAddr + 0x00011728) );
+                //hr = exec.StepInstruction( proc, true );
+
+                if ( stepCount > 1 )
+                    hr = exec.StepInstruction( proc, true, false );
+                else
+                {
+                    //113A5
+                    AddressRange    range = { baseAddr + 0x0001137A, baseAddr + 0x000113A5 };
+                    hr = exec.StepRange( proc, false, false, &range, 1 );
+                }
+
+                if ( FAILED( hr ) )
+                    goto Error;
             }
 
+            hr = exec.Continue( proc, true );
             if ( FAILED( hr ) )
                 goto Error;
         }
 #endif
-        {
-            hr = exec.ContinueDebug( true );
-            if ( FAILED( hr ) )
-                goto Error;
-        }
 
 #if 1
         if ( i == 0 )
@@ -360,9 +355,6 @@ Error:
 
     if ( proc != NULL )
         proc->Release();
-
-    if ( machine != NULL )
-        machine->Release();
 
     return 0;
 }

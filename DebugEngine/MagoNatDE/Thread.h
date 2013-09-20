@@ -8,15 +8,12 @@
 #pragma once
 
 
-struct _tagSTACKFRAME64;
-typedef struct _tagSTACKFRAME64 STACKFRAME64;
-
-        
 namespace Mago
 {
     class Program;
     class DebuggerProxy;
     class StackFrame;
+    class IRegisterSet;
 
 
     class ATL_NO_VTABLE Thread : 
@@ -70,6 +67,7 @@ namespace Mago
     public:
         ::Thread*   GetCoreThread();
         void        SetCoreThread( ::Thread* thread );
+        Program*    GetProgram();
         void        SetProgram( Program* prog, DebuggerProxy* pollThread );
         IProcess*   GetCoreProcess();
         DebuggerProxy* GetDebuggerProxy();
@@ -77,8 +75,8 @@ namespace Mago
         HRESULT Step( ::IProcess* coreProc, STEPKIND sk, STEPUNIT step, bool handleException );
 
     private:
-        HRESULT BuildCallstack( const CONTEXT& context, Callstack& callstack );
-        HRESULT BuildTopFrameCallstack( const CONTEXT& context, Callstack& callstack );
+        HRESULT BuildCallstack( IRegisterSet* topRegSet, Callstack& callstack );
+        HRESULT AddCallstackFrame( IRegisterSet* regSet, Callstack& callstack );
         HRESULT MakeEnumFrameInfoFromCallstack( 
             const Callstack& callstack,
             FRAMEINFO_FLAGS dwFieldSpec, 
@@ -88,8 +86,6 @@ namespace Mago
         HRESULT StepStatement( ::IProcess* coreProc, STEPKIND sk, bool handleException );
         HRESULT StepInstruction( ::IProcess* coreProc, STEPKIND sk, bool handleException );
         HRESULT StepOut( ::IProcess* coreProc, bool handleException );
-
-        bool WalkStack( STACKFRAME64& stackFrame, void* context );
 
         static BOOL CALLBACK ReadProcessMemory64(
           HANDLE hProcess,

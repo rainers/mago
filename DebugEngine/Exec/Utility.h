@@ -8,7 +8,17 @@
 #pragma once
 
 
-HRESULT GetImageInfoFromPEHeader( HANDLE hProcess, void* dllBase, uint16_t& machine, uint32_t& size, Address& prefBase );
+struct ImageInfo
+{
+    WORD    MachineType;
+    DWORD   Size;
+    Address PrefImageBase;
+};
+
+
+HRESULT GetProcessImageInfo( HANDLE hProcess, ImageInfo& imageInfo );
+HRESULT GetLoadedImageInfo( HANDLE hProcess, void* dllBase, ImageInfo& imageInfo );
+HRESULT GetImageInfo( const wchar_t* path, ImageInfo& info );
 
 HRESULT ReadMemory( 
     HANDLE hProcess, 
@@ -17,6 +27,18 @@ HRESULT ReadMemory(
     SIZE_T& lengthRead, 
     SIZE_T& lengthUnreadable, 
     uint8_t* buffer );
+
+typedef DWORD (__stdcall *ThreadControlProc)( HANDLE hThread );
+class Process;
+
+// there's no Wow64ResumeThread
+HRESULT ControlThread( HANDLE hThread, ThreadControlProc controlProc );
+HRESULT SuspendProcess( 
+    Process* process,
+    ThreadControlProc suspendProc );
+HRESULT ResumeProcess(     
+    Process* process,
+    ThreadControlProc suspendProc );
 
 
 inline HRESULT GetLastHr()

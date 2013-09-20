@@ -122,3 +122,80 @@ public:
     {
     }
 };
+
+
+template <class T>
+class ArrayRefEnum : public Enumerator<T>
+{
+    typedef typename std::remove_pointer<T>::type NoPtrType;
+    typedef RefPtr<NoPtrType> RefType;
+
+    RefType*    mArray;
+    int         mCount;
+    int         mIndex;
+
+public:
+    ArrayRefEnum()
+        :   mArray( NULL ),
+            mCount( 0 ),
+            mIndex( -1 )
+    {
+    }
+
+    template <class TIt>
+    bool Init( TIt begin, TIt end, int count )
+    {
+        mArray = new RefType[count];
+        if ( mArray == NULL )
+            return false;
+
+        mCount = count;
+        int i = 0;
+
+        for ( TIt it = begin; it != end; it++, i++ )
+        {
+            mArray[i] = *it;
+        }
+
+        return true;
+    }
+
+    virtual ~ArrayRefEnum()
+    {
+        delete mArray;
+    }
+
+    virtual void    Release()
+    {
+        delete this;
+    }
+
+    virtual int     GetCount()
+    {
+        return mCount;
+    }
+
+    virtual T       GetCurrent()
+    {
+        _ASSERT( mIndex >= 0 && mIndex < mCount );
+        return mArray[mIndex].Get();
+    }
+
+    virtual bool    MoveNext()
+    {
+        if ( mIndex >= mCount )
+            return false;
+
+        mIndex++;
+        return true;
+    }
+
+    virtual void    Reset()
+    {
+        mIndex = -1;
+    }
+
+private:
+    ArrayRefEnum( const ArrayRefEnum& );
+    ArrayRefEnum& operator=( const ArrayRefEnum& );
+};

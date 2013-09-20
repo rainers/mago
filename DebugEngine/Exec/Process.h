@@ -10,10 +10,23 @@
 #include "IProcess.h"
 
 
+class IMachine;
+
+struct ShortDebugEvent
+{
+    uint32_t    EventCode;
+    uint32_t    ThreadId;
+    uint32_t    ExceptionCode;
+};
+
+
 class Process : public IProcess
 {
+public:
     typedef std::list< RefPtr<Thread> > ThreadList;
+    typedef ThreadList::const_iterator ThreadIterator;
 
+private:
     LONG            mRefCount;
 
     CreateMethod    mCreateWay;
@@ -23,13 +36,19 @@ class Process : public IProcess
     std::wstring    mExePath;
     Address         mEntryPoint;
     IMachine*       mMachine;
+    uint16_t        mMachineType;
 
     bool            mReachedLoaderBp;
     bool            mTerminating;
     bool            mDeleted;
     bool            mStopped;
+    bool            mStarted;
+    int32_t         mSuspendCount;
+    ShortDebugEvent mLastEvent;
 
     ThreadList      mThreads;
+
+    CRITICAL_SECTION    mLock;
 
 public:
     Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t* exePath );
@@ -43,31 +62,72 @@ public:
     uint32_t        GetId();
     const wchar_t*  GetExePath();
     Address         GetEntryPoint();
-    void            SetEntryPoint( Address entryPoint );
-    HANDLE          GetLaunchedSuspendedThread();
-    void            SetLaunchedSuspendedThread( HANDLE hThread );
-
-    IMachine*       GetMachine();
-    void            SetMachine( IMachine* machine );
+    uint16_t        GetMachineType();
 
     bool            IsStopped();
     bool            IsDeleted();
     bool            IsTerminating();
     bool            ReachedLoaderBp();
+
+    // threads
+
+    virtual bool    FindThread( uint32_t id, Thread*& thread );
+    virtual HRESULT EnumThreads( Enumerator< Thread* >*& en );
+
+    // internal
+
+    size_t          GetThreadCount();
+    void            AddThread( Thread* thread );
+    void            DeleteThread( uint32_t threadId );
+
+    ThreadIterator  ThreadsBegin();
+    ThreadIterator  ThreadsEnd();
+    int32_t         GetSuspendCount();
+    void            SetSuspendCount( int32_t count );
+
+    IMachine*       GetMachine();
+    void            SetMachine( IMachine* machine );
+
+    void            SetEntryPoint( Address entryPoint );
+    void            SetMachineType( uint16_t machineType );
+    HANDLE          GetLaunchedSuspendedThread();
+    void            SetLaunchedSuspendedThread( HANDLE hThread );
     void            SetStopped( bool value );
     void            SetDeleted();
     void            SetTerminating();
     void            SetReachedLoaderBp();
+    bool            IsStarted();
+    void            SetStarted();
+    ShortDebugEvent GetLastEvent();
+    void            SetLastEvent( const DEBUG_EVENT& debugEvent );
+    void            ClearLastEvent();
 
-    // threads
-
-    virtual size_t  GetThreadCount();
-    virtual bool    FindThread( uint32_t id, Thread*& thread );
-    virtual HRESULT EnumThreads( Enumerator< Thread* >*& en );
-
-    virtual void    AddThread( Thread* thread );
-    virtual void    DeleteThread( uint32_t threadId );
+    void            Lock();
+    void            Unlock();
 
 private:
     Thread*         FindThread( uint32_t id );
+};
+
+
+class ProcessGuard
+{
+    Process*    mProcess;
+
+public:
+    explicit ProcessGuard( Process* process )
+        :   mProcess( process )
+    {
+        _ASSERT( process != NULL );
+        mProcess->Lock();
+    }
+
+    ~ProcessGuard()
+    {
+        mProcess->Unlock();
+    }
+
+private:
+    ProcessGuard( const ProcessGuard& );
+    ProcessGuard& operator=( const ProcessGuard& );
 };

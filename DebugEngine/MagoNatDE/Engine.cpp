@@ -14,6 +14,7 @@
 #include "PendingBreakpoint.h"
 #include "ComEnumWithCount.h"
 #include "BpResolutionLocation.h"
+#include "DRuntime.h"
 
 using namespace std;
 
@@ -42,17 +43,12 @@ namespace Mago
     HRESULT Engine::FinalConstruct()
     {
         HRESULT                 hr = S_OK;
-        RefPtr<IMachine>        machine;
         RefPtr<IEventCallback>  callback( new EventCallback( this ) );
 
         if ( callback.Get() == NULL )
             return E_OUTOFMEMORY;
 
-        hr = MakeMachineX86( machine.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = mDebugger.Init( machine.Get(), callback.Get() );
+        hr = mDebugger.Init( callback.Get() );
         if ( FAILED( hr ) )
             return hr;
 
@@ -185,6 +181,16 @@ namespace Mago
         prog->SetCallback( pCallback );
         prog->SetDebuggerProxy( &mDebugger );
 
+        // this was already set during launch
+        IProcess* coreProc = prog->GetCoreProcess();
+        _ASSERT( coreProc != NULL );
+
+        std::unique_ptr<DRuntime> druntime( new DRuntime( &mDebugger, coreProc ) );
+        if ( druntime.get() == NULL )
+            return E_OUTOFMEMORY;
+
+        prog->SetDRuntime( druntime );
+
         CComPtr<IDebugEngine2>      engine;
         CComPtr<IDebugProgram2>     prog2;
 
@@ -223,7 +229,7 @@ namespace Mago
 
         if ( dwReason == ATTACH_REASON_LAUNCH )
         {
-            hr = mDebugger.ResumeProcess( prog->GetCoreProcess() );
+            hr = mDebugger.ResumeLaunchedProcess( prog->GetCoreProcess() );
             if ( FAILED( hr ) )
                 return hr;
         }
@@ -399,7 +405,7 @@ Error:
         {
             if ( proc.Get() != NULL )
             {
-                mDebugger.TerminateNewProcess( proc.Get() );
+                mDebugger.Terminate( proc.Get() );
             }
         }
 
@@ -472,7 +478,7 @@ Error:
         {
             if ( prog.Get() != NULL )
             {
-                mDebugger.TerminateNewProcess( prog->GetCoreProcess() );
+                mDebugger.Terminate( prog->GetCoreProcess() );
                 DeleteProgram( prog.Get() );
             }
         }

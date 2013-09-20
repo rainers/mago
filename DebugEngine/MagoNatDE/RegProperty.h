@@ -11,32 +11,16 @@
 namespace Mago
 {
     class IRegisterSet;
+    struct Reg;
     struct RegGroup;
-
-
-    struct Reg
-    {
-        const wchar_t*  Name;
-        uint8_t         FullReg;
-        uint8_t         Length;
-        uint8_t         Shift;
-        uint32_t        Mask;
-    };
-
-
-    struct RegGroup
-    {
-        uint32_t    StrId;
-        const Reg*  Regs;
-        uint32_t    RegCount;
-        uint32_t    NeededFeature;
-    };
+    class Thread;
+    class ArchData;
 
 
     HRESULT EnumRegisters(
-        const RegGroup* groups,
-        uint32_t groupCount,
+        ArchData* archData,
         IRegisterSet* regSet, 
+        Thread* thread,
         DEBUGPROP_INFO_FLAGS fields,
         DWORD radix,
         IEnumDebugPropertyInfo2** enumerator );
@@ -47,8 +31,10 @@ namespace Mago
         public IDebugProperty2
     {
         CString                 mName;
-        const RegGroup*         mGroup;
+        const Reg*              mRegs;
+        uint32_t                mRegCount;
         RefPtr<IRegisterSet>    mRegSet;
+        RefPtr<Thread>          mThread;
 
     public:
         RegGroupProperty();
@@ -114,7 +100,7 @@ namespace Mago
             VARIANT* pExtendedInfo );
 
     public:
-        HRESULT Init( const RegGroup* group, IRegisterSet* regSet );
+        HRESULT Init( const RegGroup* group, IRegisterSet* regSet, Thread* thread );
     };
 
 
@@ -124,6 +110,7 @@ namespace Mago
     {
         const Reg*              mReg;
         RefPtr<IRegisterSet>    mRegSet;
+        RefPtr<Thread>          mThread;
 
     public:
         RegisterProperty();
@@ -189,7 +176,7 @@ namespace Mago
             VARIANT* pExtendedInfo );
 
     public:
-        HRESULT Init( const Reg* reg, IRegisterSet* regSet );
+        HRESULT Init( const Reg* reg, IRegisterSet* regSet, Thread* thread );
 
     private:
         BSTR GetValueStr( bool& valid );

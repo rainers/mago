@@ -59,12 +59,12 @@ public:
         return true;
     }
 
-    bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+    RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
     {
         mLastThreadId = threadId;
         mBPHit = true;
         mBPCookie = iter->GetCurrent();
-        return false;
+        return RunMode_Break;
     }
 };
 
@@ -74,7 +74,6 @@ ProgramValueEnv::ProgramValueEnv( const wchar_t* progPath, uint32_t stopRva, Mag
     mStopRva( stopRva ),
     mTypeEnv( typeEnv ),
     mExec( NULL ),
-    mMachine( NULL ),
     mProc( NULL ),
     mThreadId( 0 ),
     mSymSession( NULL ),
@@ -97,8 +96,6 @@ ProgramValueEnv::~ProgramValueEnv()
         mSymSession->Release();
     if ( mProc != NULL )
         mProc->Release();
-    if ( mMachine != NULL )
-        mMachine->Release();
     if ( mExec != NULL )
         delete mExec;
 }
@@ -106,23 +103,18 @@ ProgramValueEnv::~ProgramValueEnv()
 HRESULT ProgramValueEnv::StartProgram()
 {
     HRESULT hr = S_OK;
-    RefPtr<IMachine>        mac;
     RefPtr<EventCallback>   callback;
     RefPtr<IProcess>        proc;
     LaunchInfo              launchInfo = { 0 };
     const BPCookie          Cookie = 1;
     RefPtr<IModule>         procMod;
 
-    hr = MakeMachineX86( mac.Ref() );
-    if ( FAILED( hr ) )
-        return hr;
-
     auto_ptr<Exec>  exec( new Exec() );
 
     callback = new EventCallback();
     callback->SetExec( exec.get() );
 
-    hr = exec->Init( mac, callback );
+    hr = exec->Init( callback );
     if ( FAILED( hr ) )
         return hr;
 
@@ -139,7 +131,7 @@ HRESULT ProgramValueEnv::StartProgram()
     {
         BPCookie    cookie = 0;
 
-        hr = exec->WaitForDebug( INFINITE );
+        hr = exec->WaitForEvent( INFINITE );
         if ( FAILED( hr ) )
             return hr;
 
@@ -147,27 +139,30 @@ HRESULT ProgramValueEnv::StartProgram()
         if ( FAILED( hr ) )
             return hr;
 
-        if ( !loaded && callback->GetLoadCompleted() )
+        if ( proc->IsStopped() )
         {
-            loaded = true;
+            if ( !loaded && callback->GetLoadCompleted() )
+            {
+                loaded = true;
 
-            procMod = callback->GetProcessModule();
-            Address         va = procMod->GetImageBase() + mStopRva;
+                procMod = callback->GetProcessModule();
+                Address         va = procMod->GetImageBase() + mStopRva;
 
-            hr = exec->SetBreakpoint( proc, va, Cookie );
+                hr = exec->SetBreakpoint( proc, va, Cookie );
+                if ( FAILED( hr ) )
+                    return hr;
+            }
+
+            if ( callback->TakeBPHit( cookie ) && (cookie == Cookie) )
+            {
+                mThreadId = callback->GetLastThreadId();
+                break;
+            }
+
+            hr = exec->Continue( proc, false );
             if ( FAILED( hr ) )
                 return hr;
         }
-
-        if ( callback->TakeBPHit( cookie ) && (cookie == Cookie) )
-        {
-            mThreadId = callback->GetLastThreadId();
-            break;
-        }
-
-        hr = exec->ContinueDebug( false );
-        if ( FAILED( hr ) )
-            return hr;
     }
 
     // the process is now where we want it, so load its symbols

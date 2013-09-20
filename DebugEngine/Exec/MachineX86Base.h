@@ -25,23 +25,23 @@ class IStepperMachine
 public:
     virtual ThreadX86Base* GetStoppedThread() = 0;
     virtual HRESULT SetStepperSingleStep( bool enable ) = 0;
-    virtual HRESULT SetStepperBreakpoint( MachineAddress address, BPCookie cookie ) = 0;
-    virtual HRESULT RemoveStepperBreakpoint( MachineAddress address, BPCookie cookie ) = 0;
+    virtual HRESULT SetStepperBreakpoint( Address address, BPCookie cookie ) = 0;
+    virtual HRESULT RemoveStepperBreakpoint( Address address, BPCookie cookie ) = 0;
     virtual HRESULT ReadStepperMemory( 
-        MachineAddress address, 
+        Address address, 
         SIZE_T length, 
         SIZE_T& lengthRead, 
         SIZE_T& lengthUnreadable, 
         uint8_t* buffer ) = 0;
-    virtual void    SignalStepComplete() = 0;
 
-    virtual bool    CanStepperStopAtFunction( MachineAddress address ) = 0;
+    virtual RunMode CanStepperStopAtFunction( Address address ) = 0;
 };
 
 
 class MachineX86Base : public IMachine, public IStepperMachine
 {
     typedef std::map< uint32_t, ThreadX86Base* >    ThreadMap;
+    typedef std::vector< BPCookie >                 CookieVec;
 
     enum BPPriority
     {
@@ -56,7 +56,7 @@ class MachineX86Base : public IMachine, public IStepperMachine
     HANDLE          mhProcess;
     uint32_t        mProcessId;
     BPAddressTable* mAddrTable;
-    MachineAddress  mRestoreBPAddress;
+    Address         mRestoreBPAddress;
     bool            mStopped;
     uint32_t        mStoppedThreadId;
     bool            mStoppedOnException;
@@ -68,9 +68,11 @@ class MachineX86Base : public IMachine, public IStepperMachine
 
     // where most recent exception happened
     // for SS, after stepped instruction; for BP, the BP instruction
-    MachineAddress  mExceptAddr;
+    Address         mExceptAddr;
     IEventCallback* mCallback;
-    int32_t         mSuspendCount;
+
+    Address         mPendCBAddr;
+    CookieVec       mPendCBCookies;
 
 public:
     MachineX86Base();
@@ -83,27 +85,32 @@ public:
 
     virtual void    SetProcess( HANDLE hProcess, uint32_t id, IProcess* process );
     virtual void    SetCallback( IEventCallback* callback );
+    virtual void    GetPendingCallbackBP( Address& address, int& count, BPCookie*& cookies );
 
     virtual HRESULT ReadMemory( 
-        MachineAddress address, 
+        Address address, 
         SIZE_T length, 
         SIZE_T& lengthRead, 
         SIZE_T& lengthUnreadable, 
         uint8_t* buffer );
 
     virtual HRESULT WriteMemory( 
-        MachineAddress address, 
+        Address address, 
         SIZE_T length, 
         SIZE_T& lengthWritten, 
         uint8_t* buffer );
 
-    virtual HRESULT SetBreakpoint( MachineAddress address, BPCookie cookie );
-    virtual HRESULT RemoveBreakpoint( MachineAddress address, BPCookie cookie );
+    virtual HRESULT SetBreakpoint( Address address, BPCookie cookie );
+    virtual HRESULT RemoveBreakpoint( Address address, BPCookie cookie );
+    virtual HRESULT IsBreakpointActive( Address address );
 
     virtual HRESULT SetStepOut( Address targetAddress );
     virtual HRESULT SetStepInstruction( bool stepIn, bool sourceMode );
     virtual HRESULT SetStepRange( bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount );
     virtual HRESULT CancelStep();
+
+    virtual HRESULT GetThreadContext( uint32_t threadId, void* context, uint32_t size );
+    virtual HRESULT SetThreadContext( uint32_t threadId, const void* context, uint32_t size );
 
     virtual void    OnStopped( uint32_t threadId );
     virtual void    OnCreateThread( Thread* thread );
@@ -113,61 +120,64 @@ public:
     virtual void    OnDestroyProcess();
 
 protected:
-    virtual HRESULT ChangeCurrentPC( uint32_t threadId, int32_t byteOffset ) = 0;
-    virtual HRESULT SetSingleStep( uint32_t threadId, bool enable ) = 0;
-    virtual HRESULT GetCurrentPC( uint32_t threadId, MachineAddress& address ) = 0;
+    virtual HRESULT CacheThreadContext() = 0;
+    virtual HRESULT FlushThreadContext() = 0;
+    // Only call after caching the thread context
+    virtual HRESULT ChangeCurrentPC( int32_t byteOffset ) = 0;
+    virtual HRESULT SetSingleStep( bool enable ) = 0;
+    virtual HRESULT GetCurrentPC( Address& address ) = 0;
 
     virtual HRESULT SuspendThread( Thread* thread ) = 0;
     virtual HRESULT ResumeThread( Thread* thread ) = 0;
+
+    virtual HRESULT GetThreadContextInternal( uint32_t threadId, void* context, uint32_t size ) = 0;
+    virtual HRESULT SetThreadContextInternal( uint32_t threadId, const void* context, uint32_t size ) = 0;
 
     bool    Stopped();
 
     // IStepperMachine
     virtual ThreadX86Base* GetStoppedThread();
     virtual HRESULT SetStepperSingleStep( bool enable );
-    virtual HRESULT SetStepperBreakpoint( MachineAddress address, BPCookie cookie );
-    virtual HRESULT RemoveStepperBreakpoint( MachineAddress address, BPCookie cookie );
+    virtual HRESULT SetStepperBreakpoint( Address address, BPCookie cookie );
+    virtual HRESULT RemoveStepperBreakpoint( Address address, BPCookie cookie );
     virtual HRESULT ReadStepperMemory( 
-        MachineAddress address, 
+        Address address, 
         SIZE_T length, 
         SIZE_T& lengthRead, 
         SIZE_T& lengthUnreadable, 
         uint8_t* buffer );
     virtual HRESULT WriteStepperMemory( 
-        MachineAddress address, 
+        Address address, 
         SIZE_T length, 
         SIZE_T& lengthWritten, 
         uint8_t* buffer );
-    virtual void    SignalStepComplete();
-    virtual bool    CanStepperStopAtFunction( MachineAddress address );
+    virtual RunMode CanStepperStopAtFunction( Address address );
 
 private:
-    HRESULT SetBreakpointInternal( MachineAddress address, BPCookie cookie, BPPriority priority );
-    HRESULT RemoveBreakpointInternal( MachineAddress address, BPCookie cookie, BPPriority priority );
+    HRESULT OnContinueInternal();
+    HRESULT SetBreakpointInternal( Address address, BPCookie cookie, BPPriority priority );
+    HRESULT RemoveBreakpointInternal( Address address, BPCookie cookie, BPPriority priority );
 
     void LockBreakpoint( Breakpoint* bp );
     void UnlockBreakpoint( Breakpoint* bp );
 
     HRESULT DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRec, MachineResult& result );
-    HRESULT DispatchBreakpoint( MachineAddress address, bool embedded, Breakpoint* bp, MachineResult& result );
+    HRESULT DispatchBreakpoint( Address address, bool embedded, Breakpoint* bp, MachineResult& result );
 
     HRESULT PatchBreakpoint( Breakpoint* bp );
     HRESULT UnpatchBreakpoint( Breakpoint* bp );
 
-    HRESULT SuspendProcess( Enumerator< Thread* >*  threads );
-    HRESULT ResumeProcess( Enumerator< Thread* >*  threads );
-
     HRESULT Rewind();
     HRESULT SkipBPOnResume();
-    bool AtEmbeddedBP( MachineAddress pc );
+    bool AtEmbeddedBP( Address pc );
 
     HRESULT RestoreBPEnvironment();
-    HRESULT SetupRestoreBPEnvironment( Breakpoint* bp, MachineAddress pc );
+    HRESULT SetupRestoreBPEnvironment( Breakpoint* bp, Address pc );
     bool    ShouldIsolateBPRestoringThread( uint32_t threadId, Breakpoint* bp );
     HRESULT IsolateBPRestoringThread();
     HRESULT UnisolateBPRestoringThread();
 
     ThreadX86Base* FindThread( uint32_t threadId );
 
-    void    CheckStepperEnded( bool signalStepComplete = true );
+    bool    CheckStepperEnded();
 };

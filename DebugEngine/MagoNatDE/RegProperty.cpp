@@ -11,18 +11,23 @@
 #include "EnumPropertyInfo.h"
 #include "FormatNum.h"
 #include <Real.h>
+#include "Thread.h"
+#include "ArchData.h"
+#include "DebuggerProxy.h"
 
 
 namespace Mago
 {
     HRESULT EnumRegisters(
-        const RegGroup* groups,
-        uint32_t groupCount,
+        ArchData* archData,
         IRegisterSet* regSet, 
+        Thread* thread,
         DEBUGPROP_INFO_FLAGS fields,
         DWORD radix,
         IEnumDebugPropertyInfo2** enumerator )
     {
+        uint32_t groupCount = archData->GetRegisterGroupCount();
+
         HRESULT             hr = S_OK;
         PropertyInfoArray   array( groupCount );
 
@@ -31,13 +36,16 @@ namespace Mago
 
         for ( uint32_t i = 0; i < groupCount; i++ )
         {
+            RegGroup                    regGroup;
             RefPtr<RegGroupProperty>    groupProp;
 
             hr = MakeCComObject( groupProp );
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = groupProp->Init( &groups[i], regSet );
+            archData->GetRegisterGroup( i, regGroup );
+
+            hr = groupProp->Init( &regGroup, regSet, thread );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -61,7 +69,8 @@ namespace Mago
     //------------------------------------------------------------------------
 
     RegGroupProperty::RegGroupProperty()
-        :   mGroup( NULL )
+        :   mRegs( NULL ),
+            mRegCount( 0 )
     {
     }
 
@@ -142,17 +151,12 @@ namespace Mago
         IEnumDebugPropertyInfo2** ppEnum )
     {
         HRESULT             hr = S_OK;
-        PropertyInfoArray   array( mGroup->RegCount );
+        PropertyInfoArray   array( mRegCount );
 
         if ( array.Get() == NULL )
             return E_OUTOFMEMORY;
 
-        // TODO: as usual, Exec should check for the feature instead of here
-        if ( (mGroup->NeededFeature != 0) 
-            && !IsProcessorFeaturePresent( mGroup->NeededFeature ) )
-            return E_FAIL;
-
-        for ( uint32_t i = 0; i < mGroup->RegCount; i++ )
+        for ( uint32_t i = 0; i < mRegCount; i++ )
         {
             RefPtr<RegisterProperty>    regProp;
 
@@ -160,7 +164,7 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = regProp->Init( &mGroup->Regs[i], mRegSet );
+            hr = regProp->Init( &mRegs[i], mRegSet, mThread );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -221,17 +225,20 @@ namespace Mago
         return E_NOTIMPL;
     }
 
-    HRESULT RegGroupProperty::Init( const RegGroup* group, IRegisterSet* regSet )
+    HRESULT RegGroupProperty::Init( const RegGroup* group, IRegisterSet* regSet, Thread* thread )
     {
         _ASSERT( group != NULL );
         _ASSERT( regSet != NULL );
+        _ASSERT( thread != NULL );
 
-        mGroup = group;
+        mRegs = group->Regs;
+        mRegCount = group->RegCount;
 
-        if ( !GetString( mGroup->StrId, mName ) )
+        if ( !GetString( group->StrId, mName ) )
             return E_FAIL;
 
         mRegSet = regSet;
+        mThread = thread;
 
         return S_OK;
     }
@@ -319,10 +326,15 @@ namespace Mago
         DWORD dwTimeout )
     {
         HRESULT         hr = S_OK;
-        RegisterType    regType = GetRegisterType( mReg->FullReg );
+        RegisterType    regType = mRegSet->GetRegisterType( mReg->FullReg );
         RegisterValue   regVal = { 0 };
         uint64_t        limit = 0;
         size_t          strValLen = wcslen( pszValue );
+        bool            isReadOnly = false;
+
+        hr = mRegSet->IsReadOnly( mReg->FullReg, isReadOnly );
+        if ( FAILED( hr ) || isReadOnly )
+            return E_SETVALUE_VALUE_IS_READONLY;
 
         regVal.Type = regType;
 
@@ -427,6 +439,14 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
+        ::Thread* coreThread = mThread->GetCoreThread();
+        IProcess* coreProcess = mThread->GetCoreProcess();
+        DebuggerProxy* debugger = mThread->GetDebuggerProxy();
+
+        hr = debugger->SetThreadContext( coreProcess, coreThread, mRegSet );
+        if ( FAILED( hr ) )
+            return E_SETVALUE_VALUE_CANNOT_BE_SET;
+
         return S_OK;
     }
 
@@ -494,13 +514,15 @@ namespace Mago
         return E_NOTIMPL;
     }
 
-    HRESULT RegisterProperty::Init( const Reg* reg, IRegisterSet* regSet )
+    HRESULT RegisterProperty::Init( const Reg* reg, IRegisterSet* regSet, Thread* thread )
     {
         _ASSERT( reg != NULL );
         _ASSERT( regSet != NULL );
+        _ASSERT( thread != NULL );
 
         mReg = reg;
         mRegSet = regSet;
+        mThread = thread;
 
         return S_OK;
     }

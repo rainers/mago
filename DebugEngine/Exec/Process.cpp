@@ -20,19 +20,26 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     mId( id ),
     mExePath( exePath ),
     mEntryPoint( 0 ),
+    mMachineType( 0 ),
     mMachine( NULL ),
     mReachedLoaderBp( false ),
     mTerminating( false ),
     mDeleted( false ),
-    mStopped( false )
+    mStopped( false ),
+    mStarted( false ),
+    mSuspendCount( 0 )
 {
     _ASSERT( hProcess != NULL );
     _ASSERT( id != 0 );
     _ASSERT( (way == Create_Attach) || (way == Create_Launch) );
+    InitializeCriticalSection( &mLock );
+    memset( &mLastEvent, 0, sizeof mLastEvent );
 }
 
 Process::~Process()
 {
+    DeleteCriticalSection( &mLock );
+
     if ( mMachine != NULL )
     {
         mMachine->OnDestroyProcess();
@@ -97,6 +104,16 @@ void Process::SetEntryPoint( Address entryPoint )
     mEntryPoint = entryPoint;
 }
 
+uint16_t Process::GetMachineType()
+{
+    return mMachineType;
+}
+
+void Process::SetMachineType( uint16_t machineType )
+{
+    mMachineType = machineType;
+}
+
 HANDLE Process::GetLaunchedSuspendedThread()
 {
     return mhSuspendedThread;
@@ -120,6 +137,7 @@ void Process::SetMachine( IMachine* machine )
 {
     if ( mMachine != NULL )
     {
+        mMachine->OnDestroyProcess();
         mMachine->Release();
     }
 
@@ -172,6 +190,16 @@ void Process::SetReachedLoaderBp()
     mReachedLoaderBp = true;
 }
 
+bool Process::IsStarted()
+{
+    return mStarted;
+}
+
+void Process::SetStarted()
+{
+    mStarted = true;
+}
+
 
 size_t  Process::GetThreadCount()
 {
@@ -180,12 +208,17 @@ size_t  Process::GetThreadCount()
 
 HRESULT Process::EnumThreads( Enumerator< Thread* >*& enumerator )
 {
-    ListForwardRefIterEnum< Thread* >*  en = 
-        new ListForwardRefIterEnum< Thread* >( mThreads.begin(), mThreads.end(), mThreads.size() );
+    ProcessGuard guard( this );
 
-    enumerator = en;
+    RefReleasePtr< ArrayRefEnum<Thread*> > en = new ArrayRefEnum<Thread*>();
+
     if ( en == NULL )
         return E_OUTOFMEMORY;
+
+    if ( !en->Init( mThreads.begin(), mThreads.end(), mThreads.size() ) )
+        return E_OUTOFMEMORY;
+
+    enumerator = en.Detach();
 
     return S_OK;
 }
@@ -226,6 +259,8 @@ Thread* Process::FindThread( uint32_t id )
 
 bool    Process::FindThread( uint32_t id, Thread*& thread )
 {
+    ProcessGuard guard( this );
+
     Thread* t = FindThread( id );
 
     if ( t == NULL )
@@ -235,4 +270,58 @@ bool    Process::FindThread( uint32_t id, Thread*& thread )
     thread->AddRef();
 
     return true;
+}
+
+Process::ThreadIterator Process::ThreadsBegin()
+{
+    return mThreads.begin();
+}
+
+Process::ThreadIterator Process::ThreadsEnd()
+{
+    return mThreads.end();
+}
+
+int32_t Process::GetSuspendCount()
+{
+    return mSuspendCount;
+}
+
+void    Process::SetSuspendCount( int32_t count )
+{
+    mSuspendCount = count;
+}
+
+
+ShortDebugEvent Process::GetLastEvent()
+{
+    ShortDebugEvent event;
+
+    event.EventCode = mLastEvent.EventCode;
+    event.ThreadId = mLastEvent.ThreadId;
+    event.ExceptionCode = mLastEvent.ExceptionCode;
+
+    return event;
+}
+
+void    Process::SetLastEvent( const DEBUG_EVENT& debugEvent )
+{
+    mLastEvent.EventCode        = debugEvent.dwDebugEventCode;
+    mLastEvent.ThreadId         = debugEvent.dwThreadId;
+    mLastEvent.ExceptionCode    = debugEvent.u.Exception.ExceptionRecord.ExceptionCode;
+}
+
+void    Process::ClearLastEvent()
+{
+    memset( &mLastEvent, 0, sizeof mLastEvent );
+}
+
+void    Process::Lock()
+{
+    EnterCriticalSection( &mLock );
+}
+
+void    Process::Unlock()
+{
+    LeaveCriticalSection( &mLock );
 }

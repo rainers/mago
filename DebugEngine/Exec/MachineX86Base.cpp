@@ -10,6 +10,7 @@
 #include "EventCallback.h"
 #include "Iter.h"
 #include "IProcess.h"
+#include "Process.h"
 #include "Thread.h"
 #include "Stepper.h"
 #include "ThreadX86.h"
@@ -24,7 +25,7 @@ class CookieList : public std::list< BPCookie >
 {
 };
 
-class BPAddressTable : public std::map< MachineAddress, Breakpoint* >
+class BPAddressTable : public std::map< Address, Breakpoint* >
 {
 };
 
@@ -37,7 +38,7 @@ const uint32_t  STATUS_WX86_BREAKPOINT = 0x4000001F;
 class Breakpoint
 {
     LONG            mRefCount;
-    MachineAddress  mAddress;
+    Address         mAddress;
     CookieList      mHiCookies;
     CookieList      mLoCookies;
     uint8_t         mOrigInstByte;
@@ -71,12 +72,12 @@ public:
         }
     }
 
-    MachineAddress GetAddress()
+    Address GetAddress()
     {
         return mAddress;
     }
 
-    void SetAddress( MachineAddress address )
+    void SetAddress( Address address )
     {
         mAddress = address;
     }
@@ -161,7 +162,7 @@ MachineX86Base::MachineX86Base()
     mIsolatedThread( false ),
     mExceptAddr( 0 ),
     mCallback( NULL ),
-    mSuspendCount( 0 )
+    mPendCBAddr( 0 )
 {
 }
 
@@ -245,9 +246,19 @@ void    MachineX86Base::SetCallback( IEventCallback* callback )
         mCallback->AddRef();
 }
 
+void MachineX86Base::GetPendingCallbackBP( Address& address, int& count, BPCookie*& cookies )
+{
+    address = mPendCBAddr;
+    count = mPendCBCookies.size();
+    if ( count > 0 )
+        cookies = &mPendCBCookies.front();
+    else
+        cookies = NULL;
+}
+
 
 HRESULT MachineX86Base::ReadMemory( 
-    MachineAddress address, 
+    Address address, 
     SIZE_T length, 
     SIZE_T& lengthRead, 
     SIZE_T& lengthUnreadable, 
@@ -257,15 +268,19 @@ HRESULT MachineX86Base::ReadMemory(
 }
 
 HRESULT MachineX86Base::WriteMemory( 
-    MachineAddress address, 
+    Address address, 
     SIZE_T length, 
     SIZE_T& lengthWritten, 
     uint8_t* buffer )
 {
+    _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
+
     return WriteStepperMemory( address, length, lengthWritten, buffer );
 }
 
-HRESULT MachineX86Base::SetBreakpoint( MachineAddress address, BPCookie cookie )
+HRESULT MachineX86Base::SetBreakpoint( Address address, BPCookie cookie )
 {
     _ASSERT( mhProcess != NULL );
     _ASSERT( mProcessId != 0 );
@@ -275,7 +290,7 @@ HRESULT MachineX86Base::SetBreakpoint( MachineAddress address, BPCookie cookie )
     return SetBreakpointInternal( address, cookie, BPPri_High );
 }
 
-HRESULT MachineX86Base::RemoveBreakpoint( MachineAddress address, BPCookie cookie )
+HRESULT MachineX86Base::RemoveBreakpoint( Address address, BPCookie cookie )
 {
     _ASSERT( mhProcess != NULL );
     _ASSERT( mProcessId != 0 );
@@ -285,12 +300,25 @@ HRESULT MachineX86Base::RemoveBreakpoint( MachineAddress address, BPCookie cooki
     return RemoveBreakpointInternal( address, cookie, BPPri_High );
 }
 
-HRESULT MachineX86Base::SetBreakpointInternal( MachineAddress address, BPCookie cookie, BPPriority priority )
+HRESULT MachineX86Base::IsBreakpointActive( Address address )
+{
+    BPAddressTable::iterator    it = mAddrTable->find( address );
+    bool                        isActive = false;
+
+    if ( it != mAddrTable->end() )
+    {
+        Breakpoint* bp = it->second;
+        isActive = bp->IsActive();
+    }
+
+    return isActive;
+}
+
+HRESULT MachineX86Base::SetBreakpointInternal( Address address, BPCookie cookie, BPPriority priority )
 {
     HRESULT                     hr = S_OK;
     BPAddressTable::iterator    it = mAddrTable->find( address );
     Breakpoint*                 bp = NULL;
-    Enumerator< Thread* >*      threads = NULL;
     bool                        wasActive = false;
 
     if ( it == mAddrTable->end() )
@@ -322,49 +350,20 @@ HRESULT MachineX86Base::SetBreakpointInternal( MachineAddress address, BPCookie 
     // need to patch when going from not active to active
     if ( !wasActive )
     {
-        if ( !Stopped() )
-        {
-            hr = mProcess->EnumThreads( threads );
-            if ( FAILED( hr ) )
-                goto Error;
-
-            hr = SuspendProcess( threads );
-            if ( FAILED( hr ) )
-                goto Error;
-        }
-        
         hr = PatchBreakpoint( bp );
         // if we suspended, we have to resume, so jump out on error after the resume
-
-        HRESULT hrResume = S_OK;
-
-        if ( !Stopped() )
-        {
-            hrResume = ResumeProcess( threads );
-        }
-
         if ( FAILED( hr ) )
             goto Error;
-
-        if ( FAILED( hrResume ) )
-        {
-            hr = hrResume;
-            goto Error;
-        }
     }
 
 Error:
-    if ( threads != NULL )
-        threads->Release();
-
     return hr;
 }
 
-HRESULT MachineX86Base::RemoveBreakpointInternal( MachineAddress address, BPCookie cookie, BPPriority priority )
+HRESULT MachineX86Base::RemoveBreakpointInternal( Address address, BPCookie cookie, BPPriority priority )
 {
     HRESULT hr = S_OK;
     BPAddressTable::iterator    it = mAddrTable->find( address );
-    Enumerator< Thread* >*  threads = NULL;
 
     if ( it == mAddrTable->end() )
         return S_OK;
@@ -389,16 +388,6 @@ HRESULT MachineX86Base::RemoveBreakpointInternal( MachineAddress address, BPCook
         return S_OK;
 
     // need to unpatch when going from active to not active
-    if ( !Stopped() )
-    {
-        hr = mProcess->EnumThreads( threads );
-        if ( FAILED( hr ) )
-            goto Error;
-
-        hr = SuspendProcess( threads );
-        if ( FAILED( hr ) )
-            goto Error;
-    }
 
     hr = UnpatchBreakpoint( bp );
     // if we suspended, we have to resume, so jump out on error after the resume
@@ -413,26 +402,10 @@ HRESULT MachineX86Base::RemoveBreakpointInternal( MachineAddress address, BPCook
         mRestoreBPAddress = 0;
     }
 
-    HRESULT hrResume = S_OK;
-
-    if ( !Stopped() )
-    {
-        hrResume = ResumeProcess( threads );
-    }
-
     if ( FAILED( hr ) )
         goto Error;
 
-    if ( FAILED( hrResume ) )
-    {
-        hr = hrResume;
-        goto Error;
-    }
-
 Error:
-    if ( threads != NULL )
-        threads->Release();
-
     return hr;
 }
 
@@ -582,8 +555,12 @@ HRESULT MachineX86Base::OnException( uint32_t threadId, const EXCEPTION_DEBUG_IN
 
     HRESULT hr = S_OK;
 
+    hr = CacheThreadContext();
+    if ( FAILED( hr ) )
+        return hr;
+
     mStoppedOnException = true;
-    mExceptAddr = (MachineAddress) exceptRec->ExceptionRecord.ExceptionAddress;
+    mExceptAddr = (Address) exceptRec->ExceptionRecord.ExceptionAddress;
 
     if ( mCurThread->GetStepper() != NULL )
         mCurThread->GetStepper()->SetAddress( mExceptAddr );
@@ -661,14 +638,36 @@ HRESULT MachineX86Base::RestoreBPEnvironment()
 
 HRESULT MachineX86Base::OnContinue()
 {
-    _ASSERT( mhProcess != NULL );
-    _ASSERT( mProcessId != 0 );
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
+
+    HRESULT hr = S_OK;
+
+    hr = OnContinueInternal();
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = FlushThreadContext();
+    if ( FAILED( hr ) )
+        goto Error;
+
+    mStopped = false;
+    mStoppedThreadId = 0;
+    mExceptAddr = 0;
+    mCurThread = NULL;
+
+Error:
+    return hr;
+}
+
+HRESULT MachineX86Base::OnContinueInternal()
+{
+    _ASSERT( mhProcess != NULL );
+    _ASSERT( mProcessId != 0 );
     _ASSERT( mStoppedThreadId != 0 );
 
     HRESULT         hr = S_OK;
-    MachineAddress  pc = 0;
+    Address         pc = 0;
 
     if ( mCurThread == NULL )
         return S_OK;
@@ -689,7 +688,7 @@ HRESULT MachineX86Base::OnContinue()
     if ( !mStoppedOnException )
         return S_OK;
 
-    hr = GetCurrentPC( mStoppedThreadId, pc );
+    hr = GetCurrentPC( pc );
     if ( hr == E_ACCESSDENIED )
         // the thread already died, move along
         return S_OK;
@@ -737,15 +736,10 @@ HRESULT MachineX86Base::OnContinue()
     if ( FAILED( hr ) )
         return hr;
 
-    mStopped = false;
-    mStoppedThreadId = 0;
-    mExceptAddr = 0;
-    mCurThread = NULL;
-
     return S_OK;
 }
 
-bool MachineX86Base::AtEmbeddedBP( MachineAddress pc )
+bool MachineX86Base::AtEmbeddedBP( Address pc )
 {
     HRESULT hr = S_OK;
     BOOL    bRet = FALSE;
@@ -771,7 +765,7 @@ Error:
 
 HRESULT MachineX86Base::Rewind()
 {
-    return ChangeCurrentPC( mStoppedThreadId, -1 );
+    return ChangeCurrentPC( -1 );
 }
 
 HRESULT MachineX86Base::SkipBPOnResume()
@@ -779,10 +773,10 @@ HRESULT MachineX86Base::SkipBPOnResume()
     // when we came to break mode, we rewound the PC
     // move it back, because we don't want to run the BP instruction again
 
-    return ChangeCurrentPC( mStoppedThreadId, 1 );
+    return ChangeCurrentPC( 1 );
 }
 
-HRESULT MachineX86Base::SetupRestoreBPEnvironment( Breakpoint* bp, MachineAddress pc )
+HRESULT MachineX86Base::SetupRestoreBPEnvironment( Breakpoint* bp, Address pc )
 {
     HRESULT hr = S_OK;
 
@@ -797,9 +791,9 @@ HRESULT MachineX86Base::SetupRestoreBPEnvironment( Breakpoint* bp, MachineAddres
         _ASSERT( mCurThread->GetResumeStepper() == NULL );
         auto_ptr<IStepper>  stepper;
         BPCookie            cookie = mCurThread->GetResumeStepperCookie();
-        MachineAddress      pc = 0;
+        Address             pc = 0;
 
-        hr = GetCurrentPC( mStoppedThreadId, pc );
+        hr = GetCurrentPC( pc );
         if ( FAILED( hr ) )
             return hr;
 
@@ -832,7 +826,7 @@ bool    MachineX86Base::ShouldIsolateBPRestoringThread( uint32_t threadId, Break
     _ASSERT( bp != NULL );
 
     // no other threads, no conflict with them
-    if ( mProcess->GetThreadCount() == 1 )
+    if ( ((Process*) mProcess)->GetThreadCount() == 1 )
         return false;
 
     // more than one thread can lead to conflict, make sure this is an atomic step
@@ -927,7 +921,8 @@ HRESULT MachineX86Base::DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRe
         if ( FAILED( hr ) )
             return hr;
 
-        CheckStepperEnded();
+        if ( CheckStepperEnded() )
+            result = MacRes_PendingCallbackStep;
     }
 
     if ( (result == MacRes_NotHandled) && (mCurThread->GetResumeStepper() != NULL) )
@@ -945,14 +940,13 @@ HRESULT MachineX86Base::DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRe
 
     if ( result == MacRes_NotHandled )
     {
-        mCallback->OnStepComplete( mProcess, mStoppedThreadId );
-        result = MacRes_HandledStopped;
+        result = MacRes_PendingCallbackEmbeddedStep;
     }
 
     return hr;
 }
 
-HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embedded, Breakpoint* bp, MachineResult& result )
+HRESULT    MachineX86Base::DispatchBreakpoint( Address address, bool embedded, Breakpoint* bp, MachineResult& result )
 {
     _ASSERT( (bp == NULL) || ((bp->GetHighPriCookies().size() > 0) || (bp->GetLowPriCookies().size() > 0)) );
 
@@ -971,8 +965,9 @@ HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embe
         if ( (result == MacRes_NotHandled) || rewindPC )
             Rewind();
 
-        CheckStepperEnded();
         // if stepper ended, then it handled the exception and stopped
+        if ( CheckStepperEnded() )
+            result = MacRes_PendingCallbackStep;
     }
     else if ( mCurThread->GetResumeStepper() != NULL )
     {
@@ -986,117 +981,19 @@ HRESULT    MachineX86Base::DispatchBreakpoint( MachineAddress address, bool embe
 
     if ( (result == MacRes_NotHandled) && embedded )
     {
-        CookieList emptyList;
-        ListForwardIterEnum< BPCookie >    en( 
-            emptyList.begin(), 
-            emptyList.end(), 
-            emptyList.size() );
-
-        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, address, &en ) )
-            result = MacRes_HandledContinue;
-        else
-            result = MacRes_HandledStopped;
+        result = MacRes_PendingCallbackEmbeddedBP;
+        mPendCBAddr = address;
+        mPendCBCookies.clear();
     }
     else if ( (result == MacRes_NotHandled) && (bp != NULL) && (bp->GetHighPriCookies().size() > 0) )
     {
-        ListForwardIterEnum< BPCookie >    en( 
+        result = MacRes_PendingCallbackBP;
+        mPendCBAddr = address;
+        mPendCBCookies.resize( bp->GetHighPriCookies().size() );
+        std::copy( 
             bp->GetHighPriCookies().begin(), 
             bp->GetHighPriCookies().end(), 
-            bp->GetHighPriCookies().size() );
-
-        if ( mCallback->OnBreakpoint( mProcess, mStoppedThreadId, bp->GetAddress(), &en ) )
-            result = MacRes_HandledContinue;
-        else
-            result = MacRes_HandledStopped;
-    }
-
-    return hr;
-}
-
-
-HRESULT MachineX86Base::SuspendProcess( Enumerator< Thread* >* threads )
-{
-    _ASSERT( threads != NULL );
-    _ASSERT( (mSuspendCount >= 0) && (mSuspendCount < limit_max( mSuspendCount )) );
-
-    // already suspended?
-    if ( mSuspendCount > 0 )
-    {
-        mSuspendCount++;
-        return S_OK;
-    }
-
-    HRESULT hr = S_OK;
-    int     goodCount = 0;
-
-    threads->Reset();
-
-    for ( ; threads->MoveNext(); goodCount++ )
-    {
-        hr = SuspendThread( threads->GetCurrent() );
-        if ( FAILED( hr ) )
-            goto Error;
-    }
-
-    mSuspendCount++;
-
-Error:
-    if ( FAILED( hr ) )
-    {
-        threads->Reset();
-
-        for ( int i = 0; i < goodCount; i++ )
-        {
-            bool    bRet = threads->MoveNext();
-            _ASSERT( bRet );
-            (void) bRet;    // no one else refers to this
-
-            ResumeThread( threads->GetCurrent() );
-        }
-    }
-
-    return hr;
-}
-
-HRESULT MachineX86Base::ResumeProcess( Enumerator< Thread* >* threads )
-{
-    _ASSERT( threads != NULL );
-    _ASSERT( mSuspendCount > 0 );
-
-    // still suspended?
-    if ( mSuspendCount > 1 )
-    {
-        mSuspendCount--;
-        return S_OK;
-    }
-
-    HRESULT hr = S_OK;
-    int     goodCount = 0;
-
-    threads->Reset();
-
-    for ( ; threads->MoveNext(); goodCount++ )
-    {
-        hr = ResumeThread( threads->GetCurrent() );
-        if ( FAILED( hr ) )
-            goto Error;
-    }
-
-    mSuspendCount--;
-
-Error:
-    if ( FAILED( hr ) )
-    {
-        threads->Reset();
-
-        for ( int i = 0; i < goodCount; i++ )
-        {
-            bool    bRet = threads->MoveNext();
-            _ASSERT( bRet );
-            (void) bRet;    // no one else refers to this
-
-            SuspendThread( threads->GetCurrent() );
-        }
+            mPendCBCookies.begin() );
     }
 
     return hr;
@@ -1106,6 +1003,8 @@ Error:
 HRESULT MachineX86Base::CancelStep()
 {
     _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
 
@@ -1122,16 +1021,16 @@ HRESULT MachineX86Base::CancelStep()
     return S_OK;
 }
 
-void MachineX86Base::CheckStepperEnded( bool signalStepComplete )
+bool MachineX86Base::CheckStepperEnded()
 {
     if ( (mCurThread->GetStepper() != NULL) && mCurThread->GetStepper()->IsComplete() )
     {
-        if ( signalStepComplete )
-            SignalStepComplete();
-
         delete mCurThread->GetStepper();
         mCurThread->SetStepper( NULL );
+        return true;
     }
+
+    return false;
 }
 
 HRESULT MachineX86Base::SetStepOut( Address targetAddress )
@@ -1141,14 +1040,16 @@ HRESULT MachineX86Base::SetStepOut( Address targetAddress )
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
     _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
     BPCookie                        cookie = mCurThread->GetStepperCookie();
     IStepperMachine*                stepMac = static_cast<IStepperMachine*>( this );
     auto_ptr< RunToStepper >        stepper;
-    MachineAddress                  pc = 0;
+    Address                         pc = 0;
 
-    hr = GetCurrentPC( mStoppedThreadId, pc );
+    hr = GetCurrentPC( pc );
     if ( FAILED( hr ) )
         goto Error;
 
@@ -1180,14 +1081,16 @@ HRESULT MachineX86Base::SetStepInstruction( bool stepIn, bool sourceMode )
         return E_UNEXPECTED;
     _ASSERT( mStoppedThreadId != 0 );
     _ASSERT( mCurThread != NULL );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
     IStepperMachine*                stepMac = static_cast<IStepperMachine*>( this );
     auto_ptr< IStepper >            stepper;
     BPCookie                        cookie = mCurThread->GetStepperCookie();
-    MachineAddress                  pc = 0;
+    Address                         pc = 0;
 
-    hr = GetCurrentPC( mStoppedThreadId, pc );
+    hr = GetCurrentPC( pc );
     if ( FAILED( hr ) )
         goto Error;
 
@@ -1219,14 +1122,16 @@ HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
     _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
 
     HRESULT hr = S_OK;
     BPCookie                        cookie = mCurThread->GetStepperCookie();
     IStepperMachine*                stepMac = static_cast<IStepperMachine*>( this );
     auto_ptr< RangeStepper >        stepper;
-    MachineAddress                  pc = 0;
+    Address                         pc = 0;
 
-    hr = GetCurrentPC( mStoppedThreadId, pc );
+    hr = GetCurrentPC( pc );
     if ( FAILED( hr ) )
         goto Error;
 
@@ -1253,6 +1158,38 @@ Error:
     return hr;
 }
 
+HRESULT MachineX86Base::GetThreadContext( uint32_t threadId, void* context, uint32_t size )
+{
+    _ASSERT( mhProcess != NULL );
+    _ASSERT( mProcessId != 0 );
+    if ( (mhProcess == NULL) || (mProcessId == 0) )
+        return E_UNEXPECTED;
+    _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
+
+    if ( context == NULL )
+        return E_INVALIDARG;
+
+    return GetThreadContextInternal( threadId, context, size );
+}
+
+HRESULT MachineX86Base::SetThreadContext( uint32_t threadId, const void* context, uint32_t size )
+{
+    _ASSERT( mhProcess != NULL );
+    _ASSERT( mProcessId != 0 );
+    if ( (mhProcess == NULL) || (mProcessId == 0) )
+        return E_UNEXPECTED;
+    _ASSERT( mStoppedThreadId != 0 );
+    if ( mStoppedThreadId == 0 )
+        return E_WRONG_STATE;
+
+    if ( context == NULL )
+        return E_INVALIDARG;
+
+    return SetThreadContextInternal( threadId, context, size );
+}
+
 
 ThreadX86Base* MachineX86Base::GetStoppedThread()
 {
@@ -1262,21 +1199,21 @@ ThreadX86Base* MachineX86Base::GetStoppedThread()
 HRESULT MachineX86Base::SetStepperSingleStep( bool enable )
 {
     _ASSERT( mStoppedThreadId != 0 );
-    return SetSingleStep( mStoppedThreadId, enable );
+    return SetSingleStep( enable );
 }
 
-HRESULT MachineX86Base::SetStepperBreakpoint( MachineAddress address, BPCookie cookie )
+HRESULT MachineX86Base::SetStepperBreakpoint( Address address, BPCookie cookie )
 {
     return SetBreakpointInternal( address, cookie, BPPri_Low );
 }
 
-HRESULT MachineX86Base::RemoveStepperBreakpoint( MachineAddress address, BPCookie cookie )
+HRESULT MachineX86Base::RemoveStepperBreakpoint( Address address, BPCookie cookie )
 {
     return RemoveBreakpointInternal( address, cookie, BPPri_Low );
 }
 
 HRESULT MachineX86Base::ReadStepperMemory( 
-    MachineAddress address, 
+    Address address, 
     SIZE_T length, 
     SIZE_T& lengthRead, 
     SIZE_T& lengthUnreadable, 
@@ -1290,8 +1227,8 @@ HRESULT MachineX86Base::ReadStepperMemory(
 
     if ( lengthRead > 0 )
     {
-        MachineAddress  startAddr = address;
-        MachineAddress  endAddr = address + lengthRead - 1;
+        Address startAddr = address;
+        Address endAddr = address + lengthRead - 1;
 
         // unpatch all BPs from the memory area we're returning
 
@@ -1303,7 +1240,7 @@ HRESULT MachineX86Base::ReadStepperMemory(
 
             if ( bp->Patched() && (it->first >= startAddr) && (it->first <= endAddr) )
             {
-                MachineAddress  offset = it->first - startAddr;
+                Address offset = it->first - startAddr;
                 buffer[ offset ] = bp->GetOriginalInstructionByte();
             }
         }
@@ -1313,7 +1250,7 @@ HRESULT MachineX86Base::ReadStepperMemory(
 }
 
 HRESULT MachineX86Base::WriteStepperMemory( 
-    MachineAddress address, 
+    Address address, 
     SIZE_T length, 
     SIZE_T& lengthWritten, 
     uint8_t* buffer )
@@ -1331,8 +1268,8 @@ HRESULT MachineX86Base::WriteStepperMemory(
     if ( length == 0 )
         return S_OK;
 
-    MachineAddress  startAddr = address;
-    MachineAddress  endAddr = address + length - 1;
+    Address startAddr = address;
+    Address endAddr = address + length - 1;
 
     for ( BPAddressTable::iterator it = mAddrTable->begin();
         it != mAddrTable->end();
@@ -1342,7 +1279,7 @@ HRESULT MachineX86Base::WriteStepperMemory(
 
         if ( bp->Patched() && (it->first >= startAddr) && (it->first <= endAddr) )
         {
-            MachineAddress  offset = it->first - startAddr;
+            Address offset = it->first - startAddr;
 
             bp->SetTempInstructionByte( buffer[ offset ] );
             buffer[ offset ] = BreakpointInstruction;
@@ -1375,13 +1312,7 @@ HRESULT MachineX86Base::WriteStepperMemory(
     return S_OK;
 }
 
-void MachineX86Base::SignalStepComplete()
+RunMode MachineX86Base::CanStepperStopAtFunction( Address address )
 {
-    mCallback->OnStepComplete( mProcess, mStoppedThreadId );
-}
-
-bool MachineX86Base::CanStepperStopAtFunction( MachineAddress address )
-{
-    // find out if we're in source code or assembly mode
-    return mCallback->CanStepInFunction( mProcess, (Address) address );
+    return mCallback->OnCallProbe( mProcess, mStoppedThreadId, (Address) address );
 }

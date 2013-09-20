@@ -8,6 +8,8 @@
 #include "Common.h"
 #include "DebuggerProxy.h"
 #include "CommandFunctor.h"
+#include "ArchDataX86.h"
+#include "RegisterSet.h"
 
 
 // these values can be tweaked, as long as we're responsive and don't spin
@@ -20,7 +22,6 @@ namespace Mago
     DebuggerProxy::DebuggerProxy()
         :   mhThread( NULL ),
             mWorkerTid( 0 ),
-            mMachine( NULL ),
             mCallback( NULL ),
             mhReadyEvent( NULL ),
             mhCommandEvent( NULL ),
@@ -49,18 +50,22 @@ namespace Mago
             CloseHandle( mhResultEvent );
     }
 
-    HRESULT DebuggerProxy::Init( IMachine* machine, IEventCallback* callback )
+    HRESULT DebuggerProxy::Init( IEventCallback* callback )
     {
-        _ASSERT( machine != NULL );
         _ASSERT( callback != NULL );
-        if ( (machine == NULL) || (callback == NULL ) )
+        if ( (callback == NULL ) )
             return E_INVALIDARG;
-        if ( (mMachine != NULL) || (mCallback != NULL ) )
+        if ( (mCallback != NULL ) )
             return E_ALREADY_INIT;
 
+        HRESULT     hr = S_OK;
         HandlePtr   hReadyEvent;
         HandlePtr   hCommandEvent;
         HandlePtr   hResultEvent;
+
+        hr = CacheSystemInfo();
+        if ( FAILED( hr ) )
+            return hr;
 
         hReadyEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
         if ( hReadyEvent.IsEmpty() )
@@ -78,9 +83,6 @@ namespace Mago
         mhCommandEvent = hCommandEvent.Detach();
         mhResultEvent = hResultEvent.Detach();
 
-        mMachine = machine;
-        mMachine->AddRef();
-
         mCallback = callback;
         mCallback->AddRef();
 
@@ -89,9 +91,8 @@ namespace Mago
 
     HRESULT DebuggerProxy::Start()
     {
-        _ASSERT( mMachine != NULL );
         _ASSERT( mCallback != NULL );
-        if ( (mMachine == NULL) || (mCallback == NULL ) )
+        if ( (mCallback == NULL ) )
             return E_UNEXPECTED;
         if ( mhThread != NULL )
             return E_UNEXPECTED;
@@ -145,21 +146,54 @@ namespace Mago
             WaitForSingleObject( mhThread, INFINITE );
         }
 
-        if ( mMachine != NULL )
-        {
-            mMachine->Release();
-            mMachine = NULL;
-        }
-
         if ( mCallback != NULL )
         {
             mCallback->Release();
             mCallback = NULL;
         }
-
-        mExec.Shutdown();
     }
 
+    HRESULT DebuggerProxy::CacheSystemInfo()
+    {
+        int procFeatures = 0;
+
+        if ( IsProcessorFeaturePresent( PF_MMX_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_MMX;
+
+        if ( IsProcessorFeaturePresent( PF_3DNOW_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_3DNow;
+
+        if ( IsProcessorFeaturePresent( PF_XMMI_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_SSE;
+
+        if ( IsProcessorFeaturePresent( PF_XMMI64_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_SSE2;
+
+        if ( IsProcessorFeaturePresent( PF_SSE3_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_SSE3;
+
+        if ( IsProcessorFeaturePresent( PF_XSAVE_ENABLED ) )
+            procFeatures |= PF_X86_AVX;
+
+        mArch = new ArchDataX86( (ProcFeaturesX86) procFeatures );
+        if ( mArch.Get() == NULL )
+            return E_OUTOFMEMORY;
+
+        return S_OK;
+    }
+
+    HRESULT DebuggerProxy::GetSystemInfo( IProcess* process, ArchData*& sysInfo )
+    {
+        if ( process == NULL )
+            return E_INVALIDARG;
+        if ( mArch.Get() == NULL )
+            return E_NOT_FOUND;
+
+        sysInfo = mArch.Get();
+        sysInfo->AddRef();
+
+        return S_OK;
+    }
 
     HRESULT DebuggerProxy::InvokeCommand( CommandFunctor& cmd )
     {
@@ -258,24 +292,10 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::ResumeProcess( IProcess* process )
+    HRESULT DebuggerProxy::ResumeLaunchedProcess( IProcess* process )
     {
         HRESULT             hr = S_OK;
-        ResumeProcessParams params( mExec );
-
-        params.Process = process;
-
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
-    }
-
-    HRESULT DebuggerProxy::TerminateNewProcess( IProcess* process )
-    {
-        HRESULT                     hr = S_OK;
-        TerminateNewProcessParams   params( mExec );
+        ResumeLaunchedProcessParams params( mExec );
 
         params.Process = process;
 
@@ -452,6 +472,52 @@ namespace Mago
         return params.OutHResult;
     }
 
+    HRESULT DebuggerProxy::GetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet*& regSet )
+    {
+        _ASSERT( process != NULL );
+        _ASSERT( thread != NULL );
+        if ( process == NULL || thread == NULL )
+            return E_INVALIDARG;
+
+        HRESULT hr = S_OK;
+        CONTEXT context = { 0 };
+
+        context.ContextFlags = CONTEXT_FULL 
+            | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
+
+        hr = mExec.GetThreadContext( process, thread->GetId(), &context, sizeof context );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = mArch->BuildRegisterSet( &context, sizeof context, regSet );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
+    HRESULT DebuggerProxy::SetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet* regSet )
+    {
+        _ASSERT( process != NULL );
+        _ASSERT( thread != NULL );
+        _ASSERT( regSet != NULL );
+        if ( process == NULL || thread == NULL || regSet == NULL )
+            return E_INVALIDARG;
+
+        HRESULT         hr = S_OK;
+        const void*     contextBuf = NULL;
+        uint32_t        contextSize = 0;
+
+        if ( !regSet->GetThreadContext( contextBuf, contextSize ) )
+            return E_FAIL;
+
+        hr = mExec.SetThreadContext( process, thread->GetId(), contextBuf, contextSize );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
 
 //----------------------------------------------------------------------------
 //  Poll thread
@@ -474,7 +540,7 @@ namespace Mago
     {
         HRESULT hr = S_OK;
 
-        hr = mExec.Init( mMachine, mCallback );
+        hr = mExec.Init( mCallback );
         if ( FAILED( hr ) )
             return hr;
 
@@ -482,7 +548,7 @@ namespace Mago
 
         while ( !mShutdown )
         {
-            hr = mExec.WaitForDebug( EventTimeoutMillis );
+            hr = mExec.WaitForEvent( EventTimeoutMillis );
             if ( FAILED( hr ) )
             {
                 if ( hr == E_HANDLE )
@@ -496,10 +562,6 @@ namespace Mago
             else
             {
                 hr = mExec.DispatchEvent();
-                if ( hr == S_OK )
-                    // If there was an exception, then we generally want to pass it on.
-                    // Exec will handle any special cases, if needed.
-                    hr = mExec.ContinueDebug( false );
                 if ( FAILED( hr ) )
                     break;
             }
@@ -508,6 +570,8 @@ namespace Mago
             if ( FAILED( hr ) )
                 break;
         }
+
+        mExec.Shutdown();
 
         OutputDebugStringA( "Poll loop shutting down.\n" );
         return hr;
