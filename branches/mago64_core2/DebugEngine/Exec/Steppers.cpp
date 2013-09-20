@@ -772,35 +772,21 @@ RangeStepper::RangeStepper(
     bool sourceMode, 
     Address curAddress, 
     BPCookie cookie, 
-    AddressRange* ranges, 
-    int rangeCount )
+    AddressRange range )
 :   
     mMachine( machine ),
     mCurAddr( curAddress ),
     mCookie( cookie ),
     mStepIn( stepIn ),
     mSourceMode( sourceMode ),
-    mRangeCount( rangeCount ),
     mIsComplete( false ),
     mFirstInstruction( true ),
     mInstStepper( NULL )
 {
     _ASSERT( curAddress != 0 );
     _ASSERT( machine != NULL );
-    _ASSERT( ranges != NULL );
-    _ASSERT( rangeCount > 0 );
 
-    if ( rangeCount == 1 )
-    {
-        mRangeSingle = ranges[0];
-    }
-    else
-    {
-        for ( int i = 0; i < rangeCount; i++ )
-        {
-            mRangesMany.push_back( ranges[i] );
-        }
-    }
+    mRangeSingle = range;
 }
 
 RangeStepper::~RangeStepper()
@@ -941,18 +927,10 @@ bool            RangeStepper::IsAddressInRange( Address pc )
 {
     AddressRange*   range = NULL;
 
-    if ( mRangeCount == 1 )
-        range = &mRangeSingle;
-    else
-        range = &mRangesMany[0];
+    range = &mRangeSingle;
 
-    for ( int count = mRangeCount; count > 0; count-- )
-    {
-        if ( (pc >= range->Begin) && (pc <= range->End) )
-            return true;
-
-        range++;
-    }
+    if ( (pc >= range->Begin) && (pc <= range->End) )
+        return true;
 
     return false;
 }

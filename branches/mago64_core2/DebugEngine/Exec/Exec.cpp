@@ -1107,7 +1107,7 @@ Error:
 }
 
 
-HRESULT Exec::StepOut( IProcess* process, Address address )
+HRESULT Exec::StepOut( IProcess* process, Address address, bool handleException )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
@@ -1135,11 +1135,15 @@ HRESULT Exec::StepOut( IProcess* process, Address address )
     if ( FAILED( hr ) )
         goto Error;
 
+    hr = ContinueInternal( proc, handleException );
+    if ( FAILED( hr ) )
+        goto Error;
+
 Error:
     return hr;
 }
 
-HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode )
+HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
@@ -1167,11 +1171,16 @@ HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode )
     if ( FAILED( hr ) )
         goto Error;
 
+    hr = ContinueInternal( proc, handleException );
+    if ( FAILED( hr ) )
+        goto Error;
+
 Error:
     return hr;
 }
 
-HRESULT Exec::StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount )
+HRESULT Exec::StepRange( 
+    IProcess* process, bool stepIn, bool sourceMode, AddressRange range, bool handleException )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
@@ -1195,7 +1204,11 @@ HRESULT Exec::StepRange( IProcess* process, bool stepIn, bool sourceMode, Addres
     IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
 
-    hr = machine->SetStepRange( stepIn, sourceMode, ranges, rangeCount );
+    hr = machine->SetStepRange( stepIn, sourceMode, range );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = ContinueInternal( proc, handleException );
     if ( FAILED( hr ) )
         goto Error;
 

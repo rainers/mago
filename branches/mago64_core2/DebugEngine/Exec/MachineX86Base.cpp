@@ -1115,7 +1115,7 @@ Error:
     return hr;
 }
 
-HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount )
+HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange range )
 {
     _ASSERT( mhProcess != NULL );
     _ASSERT( mProcessId != 0 );
@@ -1141,8 +1141,7 @@ HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange
         sourceMode, 
         pc, 
         cookie, 
-        ranges, 
-        rangeCount ) );
+        range ) );
 
     hr = CancelStep();
     if ( FAILED( hr ) )

@@ -409,7 +409,7 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount, bool handleException )
+    HRESULT DebuggerProxy::StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange range, bool handleException )
     {
         HRESULT         hr = S_OK;
         StepRangeParams params( mExec );
@@ -417,8 +417,7 @@ namespace Mago
         params.Process = process;
         params.StepIn = stepIn;
         params.SourceMode = sourceMode;
-        params.Ranges = ranges;
-        params.RangeCount = rangeCount;
+        params.Range = range;
         params.HandleException = handleException;
 
         hr = InvokeCommand( params );
