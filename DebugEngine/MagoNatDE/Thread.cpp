@@ -213,7 +213,7 @@ namespace Mago
         bool    stepIn = (sk == STEP_INTO);
         RefPtr<Module>          mod;
         RefPtr<MagoST::ISession>    session;
-        AddressRange            addrRanges[1] = { 0 };
+        AddressRange            addrRange = { 0 };
         MagoST::LineNumber      line;
 
         if ( !mProg->FindModuleContainingAddress( mCurPC, mod ) )
@@ -237,10 +237,10 @@ namespace Mago
         addrBegin = session->GetVAFromSecOffset( sec, line.Offset );
         len = line.Length;
 
-        addrRanges[0].Begin = (Address) addrBegin;
-        addrRanges[0].End = (Address) (addrBegin + len - 1);
+        addrRange.Begin = (Address) addrBegin;
+        addrRange.End = (Address) (addrBegin + len - 1);
 
-        hr = mDebugger->StepRange( coreProc, stepIn, true, addrRanges, 1, handleException );
+        hr = mDebugger->StepRange( coreProc, stepIn, true, addrRange, handleException );
 
         return hr;
     }

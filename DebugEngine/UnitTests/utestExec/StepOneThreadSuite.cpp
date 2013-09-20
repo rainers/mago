@@ -298,8 +298,7 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
             if ( curStep->Action.Action == Action_StepInstruction )
             {
                 TEST_ASSERT_RETURN( SUCCEEDED( 
-                    exec.StepInstruction( process.Get(), curStep->Action.StepIn, curStep->Action.SourceMode ) ) );
-                TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, true ) ) );
+                    exec.StepInstruction( process.Get(), curStep->Action.StepIn, curStep->Action.SourceMode, true ) ) );
                 continued = true;
             }
         }

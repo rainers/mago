@@ -218,11 +218,9 @@ class RangeStepper : public IStepper
     bool                mStepIn;
     bool                mSourceMode;
     AddressRange        mRangeSingle;
-    int                 mRangeCount;
     bool                mIsComplete;
     bool                mFirstInstruction;
     IStepper*           mInstStepper;
-    std::vector<AddressRange>   mRangesMany;
 
 public:
     RangeStepper( 
@@ -231,8 +229,7 @@ public:
         bool sourceMode, 
         Address curAddress, 
         BPCookie cookie, 
-        AddressRange* ranges, 
-        int rangeCount );
+        AddressRange range );
     ~RangeStepper();
 
     virtual HRESULT         Start();

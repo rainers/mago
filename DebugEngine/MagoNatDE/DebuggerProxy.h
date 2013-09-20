@@ -68,7 +68,7 @@ namespace Mago
 
         HRESULT StepOut( IProcess* process, Address targetAddr, bool handleException );
         HRESULT StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException );
-        HRESULT StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount, bool handleException );
+        HRESULT StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange range, bool handleException );
 
         HRESULT Continue( IProcess* process, bool handleException );
         HRESULT Execute( IProcess* process, bool handleException );

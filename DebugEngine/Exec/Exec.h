@@ -188,11 +188,13 @@ public:
     HRESULT RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie );
 
     // Sets up or cancels stepping for the current thread. Only one stepping 
-    // action is allowed in a thread at a time.
+    // action is allowed in a thread at a time. The debuggee is run to allow 
+    // the step to begin.
     //
-    HRESULT StepOut( IProcess* process, Address address );
-    HRESULT StepInstruction( IProcess* process, bool stepIn, bool sourceMode );
-    HRESULT StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount );
+    HRESULT StepOut( IProcess* process, Address address, bool handleException );
+    HRESULT StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException );
+    HRESULT StepRange( 
+        IProcess* process, bool stepIn, bool sourceMode, AddressRange range, bool handleException );
     HRESULT CancelStep( IProcess* process );
 
     // Causes a running process to enter break mode. A subsequent event will 
