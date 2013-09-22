@@ -246,14 +246,9 @@ void    MachineX86Base::SetCallback( IEventCallback* callback )
         mCallback->AddRef();
 }
 
-void MachineX86Base::GetPendingCallbackBP( Address& address, int& count, BPCookie*& cookies )
+void MachineX86Base::GetPendingCallbackBP( Address& address )
 {
     address = mPendCBAddr;
-    count = mPendCBCookies.size();
-    if ( count > 0 )
-        cookies = &mPendCBCookies.front();
-    else
-        cookies = NULL;
 }
 
 
@@ -280,24 +275,26 @@ HRESULT MachineX86Base::WriteMemory(
     return WriteStepperMemory( address, length, lengthWritten, buffer );
 }
 
-HRESULT MachineX86Base::SetBreakpoint( Address address, BPCookie cookie )
+HRESULT MachineX86Base::SetBreakpoint( Address address )
 {
     _ASSERT( mhProcess != NULL );
     _ASSERT( mProcessId != 0 );
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
 
-    return SetBreakpointInternal( address, cookie, BPPri_High );
+    // Cookies in this library are going away. For now, hardcode one.
+    return SetBreakpointInternal( address, 1, BPPri_High );
 }
 
-HRESULT MachineX86Base::RemoveBreakpoint( Address address, BPCookie cookie )
+HRESULT MachineX86Base::RemoveBreakpoint( Address address )
 {
     _ASSERT( mhProcess != NULL );
     _ASSERT( mProcessId != 0 );
     if ( (mhProcess == NULL) || (mProcessId == 0) )
         return E_UNEXPECTED;
 
-    return RemoveBreakpointInternal( address, cookie, BPPri_High );
+    // Cookies in this library are going away. For now, hardcode one.
+    return RemoveBreakpointInternal( address, 1, BPPri_High );
 }
 
 HRESULT MachineX86Base::IsBreakpointActive( Address address )

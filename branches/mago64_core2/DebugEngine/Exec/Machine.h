@@ -53,7 +53,7 @@ public:
 
     virtual void    SetProcess( HANDLE hProcess, uint32_t id, IProcess* process ) = 0;
     virtual void    SetCallback( IEventCallback* callback ) = 0;
-    virtual void    GetPendingCallbackBP( Address& address, int& count, BPCookie*& cookies ) = 0;
+    virtual void    GetPendingCallbackBP( Address& address ) = 0;
 
     virtual HRESULT ReadMemory( 
         Address address,
@@ -68,8 +68,8 @@ public:
         SIZE_T& lengthWritten, 
         uint8_t* buffer ) = 0;
 
-    virtual HRESULT SetBreakpoint( Address address, BPCookie cookie ) = 0;
-    virtual HRESULT RemoveBreakpoint( Address address, BPCookie cookie ) = 0;
+    virtual HRESULT SetBreakpoint( Address address ) = 0;
+    virtual HRESULT RemoveBreakpoint( Address address ) = 0;
     virtual HRESULT IsBreakpointActive( Address address ) = 0;
 
     virtual HRESULT SetStepOut( Address targetAddress ) = 0;

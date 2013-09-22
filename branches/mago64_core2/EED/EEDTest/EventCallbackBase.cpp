@@ -104,7 +104,7 @@ RunMode EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool 
     return RunMode_Break;
 }
 
-RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
 {
     return RunMode_Break;
 }

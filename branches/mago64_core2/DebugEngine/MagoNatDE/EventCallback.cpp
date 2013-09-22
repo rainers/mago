@@ -446,62 +446,11 @@ namespace Mago
         }
     }
 
-    RunMode EventCallback::OnBreakpointInternal( Program* prog, Thread* thread, Address address, Enumerator< BPCookie >* iter )
+    RunMode EventCallback::OnBreakpointInternal( Program* prog, Thread* thread, Address address, bool embedded )
     {
         HRESULT     hr = S_OK;
-        int         stoppingBPs = 0;
 
-        while ( iter->MoveNext() )
-        {
-            if ( iter->GetCurrent() != EntryPointCookie )
-            {
-                stoppingBPs++;
-            }
-        }
-
-        iter->Reset();
-
-        if ( stoppingBPs > 0 )
-        {
-            RefPtr<BreakpointEvent>     event;
-            CComPtr<IEnumDebugBoundBreakpoints2>    enumBPs;
-
-            hr = MakeCComObject( event );
-            if ( FAILED( hr ) )
-                return RunMode_Run;
-
-            InterfaceArray<IDebugBoundBreakpoint2>  array( stoppingBPs );
-
-            if ( array.Get() == NULL )
-                return RunMode_Run;
-
-            int i = 0;
-            while ( iter->MoveNext() )
-            {
-                if ( iter->GetCurrent() != EntryPointCookie )
-                {
-                    IDebugBoundBreakpoint2* bp = (IDebugBoundBreakpoint2*) iter->GetCurrent();
-
-                    _ASSERT( i < stoppingBPs );
-                    array[i] = bp;
-                    array[i]->AddRef();
-                    i++;
-                }
-            }
-
-            hr = MakeEnumWithCount<EnumDebugBoundBreakpoints>( array, &enumBPs );
-            if ( FAILED( hr ) )
-                return RunMode_Run;
-
-            event->Init( enumBPs );
-
-            hr = SendEvent( event, prog, thread );
-            if ( FAILED( hr ) )
-                return RunMode_Run;
-
-            return RunMode_Break;
-        }
-        else if ( iter->GetCount() == 0 )
+        if ( embedded )
         {
             RefPtr<EmbeddedBreakpointEvent> event;
 
@@ -517,25 +466,83 @@ namespace Mago
 
             return RunMode_Break;
         }
-        else if ( (mEntryPoint != 0) && (address == mEntryPoint) )
+        else
         {
-            RefPtr<EntryPointEvent> entryPointEvent;
+            std::vector< BPCookie > iter;
+            int         stoppingBPs = 0;
 
-            hr = MakeCComObject( entryPointEvent );
+            hr = prog->EnumBPCookies( address, iter );
             if ( FAILED( hr ) )
                 return RunMode_Run;
 
-            hr = SendEvent( entryPointEvent, prog, thread );
-            if ( FAILED( hr ) )
-                return RunMode_Run;
+            for ( std::vector< BPCookie >::iterator it = iter.begin(); it != iter.end(); it++ )
+            {
+                if ( *it != EntryPointCookie )
+                {
+                    stoppingBPs++;
+                }
+            }
 
-            return RunMode_Break;
+            if ( stoppingBPs > 0 )
+            {
+                RefPtr<BreakpointEvent>     event;
+                CComPtr<IEnumDebugBoundBreakpoints2>    enumBPs;
+
+                hr = MakeCComObject( event );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                InterfaceArray<IDebugBoundBreakpoint2>  array( stoppingBPs );
+
+                if ( array.Get() == NULL )
+                    return RunMode_Run;
+
+                int i = 0;
+                for ( std::vector< BPCookie >::iterator it = iter.begin(); it != iter.end(); it++ )
+                {
+                    if ( *it != EntryPointCookie )
+                    {
+                        IDebugBoundBreakpoint2* bp = (IDebugBoundBreakpoint2*) *it;
+
+                        _ASSERT( i < stoppingBPs );
+                        array[i] = bp;
+                        array[i]->AddRef();
+                        i++;
+                    }
+                }
+
+                hr = MakeEnumWithCount<EnumDebugBoundBreakpoints>( array, &enumBPs );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                event->Init( enumBPs );
+
+                hr = SendEvent( event, prog, thread );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                return RunMode_Break;
+            }
+            else if ( (mEntryPoint != 0) && (address == mEntryPoint) )
+            {
+                RefPtr<EntryPointEvent> entryPointEvent;
+
+                hr = MakeCComObject( entryPointEvent );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                hr = SendEvent( entryPointEvent, prog, thread );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                return RunMode_Break;
+            }
         }
 
         return RunMode_Run;
     }
 
-    RunMode EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+    RunMode EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
         OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
 
@@ -549,7 +556,7 @@ namespace Mago
         if ( !prog->FindThread( threadId, thread ) )
             return RunMode_Run;
 
-        runMode = OnBreakpointInternal( prog, thread, address, iter );
+        runMode = OnBreakpointInternal( prog, thread, address, embedded );
 
         // If we stopped because of a regular BP before reaching the entry point, 
         // then we shouldn't stop at the entry point

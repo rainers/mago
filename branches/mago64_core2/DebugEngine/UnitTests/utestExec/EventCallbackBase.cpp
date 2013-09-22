@@ -275,7 +275,7 @@ RunMode EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool 
     return RunMode_Break;
 }
 
-RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
 {
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
@@ -283,11 +283,6 @@ RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, A
         shared_ptr<BreakpointEventNode>   node( new BreakpointEventNode() );
         node->ThreadId = threadId;
         node->Address = address;
-        
-        while ( iter->MoveNext() )
-        {
-            node->Cookies.push_back( iter->GetCurrent() );
-        }
         
         TrackEvent( node );
     }

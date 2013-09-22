@@ -344,14 +344,13 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::SetBreakpoint( IProcess* process, Address address, BPCookie cookie )
+    HRESULT DebuggerProxy::SetBreakpoint( IProcess* process, Address address )
     {
         HRESULT             hr = S_OK;
         SetBreakpointParams params( mExec );
 
         params.Process = process;
         params.Address = address;
-        params.Cookie = cookie;
 
         hr = InvokeCommand( params );
         if ( FAILED( hr ) )
@@ -360,14 +359,13 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie )
+    HRESULT DebuggerProxy::RemoveBreakpoint( IProcess* process, Address address )
     {
         HRESULT                 hr = S_OK;
         RemoveBreakpointParams  params( mExec );
 
         params.Process = process;
         params.Address = address;
-        params.Cookie = cookie;
 
         hr = InvokeCommand( params );
         if ( FAILED( hr ) )

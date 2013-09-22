@@ -520,13 +520,11 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
             || result == MacRes_PendingCallbackEmbeddedBP )
         {
             Address         addr = 0;
-            int             count = 0;
-            BPCookie*       cookies = NULL;
+            bool            embedded = (result == MacRes_PendingCallbackEmbeddedBP);
 
-            machine->GetPendingCallbackBP( addr, count, cookies );
-            IterEnum<BPCookie, BPCookie*> en( cookies, cookies + count, count );
+            machine->GetPendingCallbackBP( addr );
 
-            if ( mCallback->OnBreakpoint( proc, debugEvent.dwThreadId, addr, &en) == RunMode_Run)
+            if ( mCallback->OnBreakpoint( proc, debugEvent.dwThreadId, addr, embedded ) == RunMode_Run )
                 result = MacRes_HandledContinue;
             else
                 result = MacRes_HandledStopped;
@@ -1025,7 +1023,7 @@ HRESULT Exec::WriteMemory(
 
 
     // not tied to the wait/continue state
-HRESULT Exec::SetBreakpoint( IProcess* process, Address address, BPCookie cookie )
+HRESULT Exec::SetBreakpoint( IProcess* process, Address address )
 {
     _ASSERT( process != NULL );
     if ( process == NULL )
@@ -1052,7 +1050,7 @@ HRESULT Exec::SetBreakpoint( IProcess* process, Address address, BPCookie cookie
             goto Error;
     }
 
-    hr = machine->SetBreakpoint( (Address) address, cookie );
+    hr = machine->SetBreakpoint( (Address) address );
 
     if ( suspend )
     {
@@ -1066,7 +1064,7 @@ Error:
 }
 
     // not tied to the wait/continue state
-HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie )
+HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address )
 {
     _ASSERT( process != NULL );
     if ( process == NULL )
@@ -1093,7 +1091,7 @@ HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address, BPCookie coo
             goto Error;
     }
 
-    hr = machine->RemoveBreakpoint( (Address) address, cookie );
+    hr = machine->RemoveBreakpoint( (Address) address );
 
     if ( suspend )
     {
