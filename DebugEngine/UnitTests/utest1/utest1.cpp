@@ -145,19 +145,12 @@ public:
         return RunMode_Break;
     }
 
-    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
+    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  breakpoint at %p\n", address );
         else
             printf( "  breakpoint at %08I64x\n", address );
-
-        while ( iter->MoveNext() )
-        {
-            BPCookie    cookie = iter->GetCurrent();
-
-            printf( "    %I64x\n", cookie );
-        }
 
         mHitBp = true;
 
@@ -330,7 +323,7 @@ int _tmain( int argc, _TCHAR* argv[] )
             // 1137A, 11395
 
             //exec.SetBreakpoint( proc, baseAddr + 0x0001138C, 255 );
-            exec.SetBreakpoint( proc, baseAddr + 0x0001137A, 257 );
+            exec.SetBreakpoint( proc, baseAddr + 0x0001137A );
             //exec.SetBreakpoint( proc, baseAddr + 0x00011395, 129 );
 
             mod->Release();

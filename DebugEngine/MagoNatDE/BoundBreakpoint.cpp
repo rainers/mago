@@ -107,7 +107,7 @@ namespace Mago
 
         if ( fEnable && (mState != BPS_ENABLED) )
         {
-            hr = mDebugger->SetBreakpoint( proc.Get(), mAddr, (BPCookie) this );
+            hr = mProg->SetInternalBreakpoint( mAddr, (BPCookie) this );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -115,7 +115,7 @@ namespace Mago
         }
         else if ( !fEnable && (mState != BPS_DISABLED) )
         {
-            hr = mDebugger->RemoveBreakpoint( proc.Get(), mAddr, (BPCookie) this );
+            hr = mProg->RemoveInternalBreakpoint( mAddr, (BPCookie) this );
             if ( FAILED( hr ) )
                 return hr;
 

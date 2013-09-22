@@ -33,13 +33,11 @@ using namespace MagoST;
 class EventCallback : public EventCallbackBase
 {
     bool        mBPHit;
-    BPCookie    mBPCookie;
     uint32_t    mLastThreadId;
 
 public:
     EventCallback()
         :   mBPHit( false ),
-            mBPCookie( 0 ),
             mLastThreadId( 0 )
     {
     }
@@ -49,21 +47,19 @@ public:
         return mLastThreadId;
     }
 
-    bool TakeBPHit( BPCookie& cookie )
+    bool TakeBPHit()
     {
         if ( !mBPHit )
             return false;
 
-        cookie = mBPCookie;
         mBPHit = false;
         return true;
     }
 
-    RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+    RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
         mLastThreadId = threadId;
         mBPHit = true;
-        mBPCookie = iter->GetCurrent();
         return RunMode_Break;
     }
 };
@@ -148,12 +144,12 @@ HRESULT ProgramValueEnv::StartProgram()
                 procMod = callback->GetProcessModule();
                 Address         va = procMod->GetImageBase() + mStopRva;
 
-                hr = exec->SetBreakpoint( proc, va, Cookie );
+                hr = exec->SetBreakpoint( proc, va );
                 if ( FAILED( hr ) )
                     return hr;
             }
 
-            if ( callback->TakeBPHit( cookie ) && (cookie == Cookie) )
+            if ( callback->TakeBPHit() )
             {
                 mThreadId = callback->GetLastThreadId();
                 break;

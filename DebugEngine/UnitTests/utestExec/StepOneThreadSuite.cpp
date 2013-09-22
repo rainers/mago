@@ -292,7 +292,7 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
             if ( curStep->Action.BPAddressOffset != 0 )
             {
                 uintptr_t   addr = (curStep->Action.BPAddressOffset + baseAddr);
-                TEST_ASSERT_RETURN( SUCCEEDED( exec.SetBreakpoint( process.Get(), addr, 1 ) ) );
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.SetBreakpoint( process.Get(), addr ) ) );
             }
 
             if ( curStep->Action.Action == Action_StepInstruction )

@@ -19,6 +19,7 @@
 #include "CodeContext.h"
 #include "DisassemblyStream.h"
 #include "DRuntime.h"
+#include <algorithm>
 
 
 typedef CComEnumWithCount< 
@@ -681,11 +682,128 @@ namespace Mago
 
     HRESULT Program::SetInternalBreakpoint( Address address, BPCookie cookie )
     {
-        return mDebugger->SetBreakpoint( mCoreProc, address, cookie );
+        HRESULT hr = S_OK;
+
+        {
+            GuardedArea guard( mBPGuard );
+
+            BPMap::iterator itVec = mBPMap.find( address );
+
+            if ( itVec != mBPMap.end() )
+            {
+                // There's at least one cookie for this address already.
+                // So, add this one if needed, and leave, because the BP is already set.
+                CookieVec& vec = itVec->second;
+                CookieVec::iterator itCookie = std::find( vec.begin(), vec.end(), cookie );
+                if ( itCookie == vec.end() )
+                    vec.push_back( cookie );
+
+                return S_OK;
+            }
+        }
+
+        // You can deadlock with the event callback, if you set a BP while the BP table is locked.
+        hr = mDebugger->SetBreakpoint( mCoreProc, address );
+        if ( FAILED( hr ) )
+            return hr;
+
+        // check everything again, in case anything changed since the last time we locked the table
+        {
+            GuardedArea guard( mBPGuard );
+
+            BPMap::iterator itVec = mBPMap.find( address );
+
+            if ( itVec == mBPMap.end() )
+            {
+                std::pair<BPMap::iterator, bool> pair =
+                    mBPMap.insert( BPMap::value_type( address, std::vector<BPCookie>() ) );
+
+                itVec = pair.first;
+                itVec->second.push_back( cookie );
+            }
+            else
+            {
+                CookieVec& vec = itVec->second;
+                CookieVec::iterator itCookie = std::find( vec.begin(), vec.end(), cookie );
+                if ( itCookie == vec.end() )
+                    vec.push_back( cookie );
+            }
+        }
+
+        return S_OK;
     }
 
     HRESULT Program::RemoveInternalBreakpoint( Address address, BPCookie cookie )
     {
-        return mDebugger->RemoveBreakpoint( mCoreProc, address, cookie );
+        HRESULT hr = S_OK;
+
+        {
+            GuardedArea guard( mBPGuard );
+
+            BPMap::iterator itVec = mBPMap.find( address );
+            if ( itVec == mBPMap.end() )
+                return S_OK;
+
+            CookieVec& vec = itVec->second;
+            CookieVec::iterator itCookie = std::find( vec.begin(), vec.end(), cookie );
+            if ( itCookie == vec.end() )
+                return S_OK;
+
+            // Clear the BP only when all cookies are gone. There are others, so remove this one only.
+            if ( vec.size() > 1 )
+            {
+                vec.erase( itCookie );
+                return S_OK;
+            }
+        }
+
+        // You can deadlock with the event callback, if you clear a BP while the BP table is locked.
+        hr = mDebugger->RemoveBreakpoint( mCoreProc, address );
+        if ( FAILED( hr ) )
+            return hr;
+
+        // check everything again, in case anything changed since the last time we locked the table
+        {
+            GuardedArea guard( mBPGuard );
+
+            BPMap::iterator itVec = mBPMap.find( address );
+            if ( itVec == mBPMap.end() )
+                return S_OK;
+
+            CookieVec& vec = itVec->second;
+            CookieVec::iterator itCookie = std::find( vec.begin(), vec.end(), cookie );
+            if ( itCookie == vec.end() )
+                return S_OK;
+
+            vec.erase( itCookie );
+
+            if ( vec.size() == 0 )
+            {
+                mBPMap.erase( itVec );
+            }
+        }
+
+        return S_OK;
+    }
+
+    HRESULT Program::EnumBPCookies( Address address, std::vector< BPCookie >& iter )
+    {
+        GuardedArea guard( mBPGuard );
+
+        iter.clear();
+
+        BPMap::iterator itVec = mBPMap.find( address );
+        if ( itVec == mBPMap.end() )
+            return S_OK;
+
+        CookieVec& vec = itVec->second;
+        iter.reserve( vec.size() );
+
+        for ( CookieVec::iterator it = vec.begin(); it != vec.end(); it++ )
+        {
+            iter.push_back( *it );
+        }
+
+        return S_OK;
     }
 }

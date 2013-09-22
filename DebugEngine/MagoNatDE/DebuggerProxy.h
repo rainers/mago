@@ -63,8 +63,8 @@ namespace Mago
             SIZE_T& lengthWritten, 
             uint8_t* buffer );
 
-        HRESULT SetBreakpoint( IProcess* process, Address address, BPCookie cookie );
-        HRESULT RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie );
+        HRESULT SetBreakpoint( IProcess* process, Address address );
+        HRESULT RemoveBreakpoint( IProcess* process, Address address );
 
         HRESULT StepOut( IProcess* process, Address targetAddr, bool handleException );
         HRESULT StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException );

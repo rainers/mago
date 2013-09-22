@@ -184,8 +184,8 @@ public:
     // Adds or removes a breakpoint. If the process is running when this 
     // method is called, then all threads will be suspended first.
     //
-    HRESULT SetBreakpoint( IProcess* process, Address address, BPCookie cookie );
-    HRESULT RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie );
+    HRESULT SetBreakpoint( IProcess* process, Address address );
+    HRESULT RemoveBreakpoint( IProcess* process, Address address );
 
     // Sets up or cancels stepping for the current thread. Only one stepping 
     // action is allowed in a thread at a time. The debuggee is run to allow 

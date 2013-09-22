@@ -162,19 +162,17 @@ namespace Mago
     {
         IProcess*       Process;
         Address         Address;
-        BPCookie        Cookie;
 
         SetBreakpointParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
-                Address( 0 ),
-                Cookie( 0 )
+                Address( 0 )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.SetBreakpoint( Process, Address, Cookie );
+            OutHResult = Core.SetBreakpoint( Process, Address );
         }
     };
 
@@ -182,19 +180,17 @@ namespace Mago
     {
         IProcess*       Process;
         Address         Address;
-        BPCookie        Cookie;
 
         RemoveBreakpointParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
-                Address( 0 ),
-                Cookie( 0 )
+                Address( 0 )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.RemoveBreakpoint( Process, Address, Cookie );
+            OutHResult = Core.RemoveBreakpoint( Process, Address );
         }
     };
 
