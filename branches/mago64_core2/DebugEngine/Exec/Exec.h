@@ -216,6 +216,7 @@ private:
     HRESULT     HandleException( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent );
 
+    HRESULT     ContinueNoLock( Process* process, bool handleException );
     HRESULT     ContinueInternal( Process* proc, bool handleException );
 
     void        CleanupLastDebugEvent();

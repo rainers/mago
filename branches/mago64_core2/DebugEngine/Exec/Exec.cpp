@@ -231,6 +231,29 @@ Error:
     return hr;
 }
 
+HRESULT Exec::ContinueNoLock( Process* proc, bool handleException )
+{
+    _ASSERT( proc != NULL );
+    _ASSERT( proc->IsStopped() );
+
+    HRESULT     hr = S_OK;
+
+    if ( !proc->IsDeleted() && !proc->IsTerminating() )
+    {
+        IMachine*   machine = proc->GetMachine();
+        _ASSERT( machine != NULL );
+
+        hr = machine->SetContinue();
+        if ( FAILED( hr ) )
+            goto Error;
+    }
+
+    hr = ContinueInternal( proc, handleException );
+
+Error:
+    return hr;
+}
+
 HRESULT Exec::Continue( IProcess* process, bool handleException )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
@@ -250,7 +273,7 @@ HRESULT Exec::Continue( IProcess* process, bool handleException )
     if ( !process->IsStopped() )
         return E_WRONG_STATE;
 
-    hr = ContinueInternal( proc, handleException );
+    hr = ContinueNoLock( proc, handleException );
 
     return hr;
 }
@@ -305,7 +328,7 @@ HRESULT Exec::DispatchAndContinue( Process* proc, const DEBUG_EVENT& debugEvent 
 
     if ( hr == S_OK )
     {
-        hr = ContinueInternal( proc, false );
+        hr = ContinueNoLock( proc, false );
     }
     else
     {
@@ -524,10 +547,18 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
 
             machine->GetPendingCallbackBP( addr );
 
-            if ( mCallback->OnBreakpoint( proc, debugEvent.dwThreadId, addr, embedded ) == RunMode_Run )
+            RunMode mode = mCallback->OnBreakpoint( proc, debugEvent.dwThreadId, addr, embedded );
+            if ( mode == RunMode_Run )
                 result = MacRes_HandledContinue;
-            else
+            else if ( mode == RunMode_Wait )
                 result = MacRes_HandledStopped;
+            else // Break
+            {
+                result = MacRes_HandledStopped;
+                hr = machine->CancelStep();
+                if ( FAILED( hr ) )
+                    goto Error;
+            }
         }
         else if ( result == MacRes_PendingCallbackStep 
             || result == MacRes_PendingCallbackEmbeddedStep )
@@ -553,6 +584,7 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
         {
             hr = S_FALSE;
         }
+        // else, MacRes_HandledContinue, hr == S_OK
     }
 
 Error:
@@ -944,10 +976,18 @@ HRESULT Exec::Detach( IProcess* process )
     if ( proc->IsDeleted() || proc->IsTerminating() )
         return E_PROCESS_ENDED;
 
-    DebugActiveProcessStop( process->GetId() );
-    ResumeSuspendedProcess( process );
-
+    // TODO: suspend and resume all threads if running
+    //       wait for event with 0 timeout
+    //       if got exception
+    //          if got expected SS or not embedded BP (user or step)
+    //              continue handled
     // TODO: tell machine to Detach
+    //       cancel steps on all threads
+    //       remove all BPs
+
+    DebugActiveProcessStop( process->GetId() );
+    // TODO: this might not be needed
+    ResumeSuspendedProcess( process );
 
     proc->SetDeleted();
     proc->SetMachine( NULL );
@@ -1050,7 +1090,7 @@ HRESULT Exec::SetBreakpoint( IProcess* process, Address address )
             goto Error;
     }
 
-    hr = machine->SetBreakpoint( (Address) address );
+    hr = machine->SetBreakpoint( address );
 
     if ( suspend )
     {

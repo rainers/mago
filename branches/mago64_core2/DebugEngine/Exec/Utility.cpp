@@ -323,3 +323,99 @@ Error:
 
     return hr;
 }
+
+HRESULT SuspendOtherThreads( Process* process, UINT32 threadId, ThreadControlProc suspendProc )
+{
+    _ASSERT( process != NULL );
+    _ASSERT( suspendProc != NULL );
+
+    HRESULT hr = S_OK;
+    int     goodCount = 0;
+
+    typedef Process::ThreadIterator It;
+
+    for ( It it = process->ThreadsBegin(); it != process->ThreadsEnd(); it++ )
+    {
+        Thread* thread = it->Get();
+
+        if ( thread->GetId() == threadId )
+            continue;
+
+        hr = ControlThread( thread->GetHandle(), suspendProc );
+        if ( FAILED( hr ) )
+            goto Error;
+
+        goodCount++;
+    }
+
+Error:
+    if ( FAILED( hr ) )
+    {
+        int i = 0;
+
+        for ( It it = process->ThreadsBegin(); it != process->ThreadsEnd(); it++ )
+        {
+            if ( i == goodCount )
+                break;
+
+            Thread* thread = it->Get();
+
+            if ( thread->GetId() == threadId )
+                continue;
+
+            ControlThread( it->Get()->GetHandle(), ::ResumeThread );
+
+            i++;
+        }
+    }
+
+    return hr;
+}
+
+HRESULT ResumeOtherThreads( Process* process, UINT32 threadId, ThreadControlProc suspendProc )
+{
+    _ASSERT( process != NULL );
+    _ASSERT( suspendProc != NULL );
+
+    HRESULT hr = S_OK;
+    int     goodCount = 0;
+
+    typedef Process::ThreadIterator It;
+
+    for ( It it = process->ThreadsBegin(); it != process->ThreadsEnd(); it++ )
+    {
+        Thread* thread = it->Get();
+
+        if ( thread->GetId() == threadId )
+            continue;
+
+        hr = ControlThread( thread->GetHandle(), ::ResumeThread );
+        if ( FAILED( hr ) )
+            goto Error;
+
+        goodCount++;
+    }
+
+Error:
+    if ( FAILED( hr ) )
+    {
+        int i = 0;
+
+        for ( It it = process->ThreadsBegin(); it != process->ThreadsEnd(); it++ )
+        {
+            if ( i == goodCount )
+                break;
+
+            Thread* thread = it->Get();
+
+            if ( thread->GetId() == threadId )
+                continue;
+
+            ControlThread( it->Get()->GetHandle(), suspendProc );
+
+            i++;
+        }
+    }
+
+    return hr;
+}

@@ -7,29 +7,63 @@
 
 #pragma once
 
-class IStepper;
 class Thread;
 
+
+enum ExpectedCode
+{
+    Expect_None,
+    Expect_SS,
+    Expect_BP,
+};
+
+enum Motion
+{
+    Motion_None,
+    Motion_StepIn,
+    Motion_StepOver,
+    Motion_RangeStepIn,
+    Motion_RangeStepOver
+};
+
+enum NotifyAction
+{
+    NotifyNone,
+    NotifyRun,
+    NotifyStepComplete,
+    NotifyTrigger,
+    NotifyCheckRange,
+    NotifyCheckCall
+};
+
+struct ExpectedEvent
+{
+    AddressRange    Range;
+    Address         BPAddress;
+    Address         UnpatchedAddress;
+    int             NotifyAction;
+    Motion          Motion;
+    ExpectedCode    Code;
+    bool            PatchBP;
+    bool            ResumeThreads;
+    bool            ClearTF;
+    bool            RemoveBP;
+};
 
 class ThreadX86Base
 {
     Thread*         mExecThread;
-    IStepper*       mStepper;
-    IStepper*       mResumeStepper;
+    ExpectedEvent   mExpectedEvents[2];
+    int             mExpectedCount;
 
 public:
     ThreadX86Base( Thread* execThread );
     virtual ~ThreadX86Base();
 
+    int             GetExpectedCount();
+    ExpectedEvent*  GetTopExpected();
+    ExpectedEvent*  PushExpected( ExpectedCode code, int notifier );
+    void            PopExpected();
+
     Thread*         GetExecThread();
-
-    BPCookie        GetStepperCookie();
-    BPCookie        GetResumeStepperCookie();
-
-    IStepper*       GetStepper();
-    IStepper*       GetResumeStepper();
-    void            SetStepper( IStepper* stepper );
-    void            SetResumeStepper( IStepper* stepper );
-
-    static uint32_t GetCookieThreadId( BPCookie cookie );
 };
