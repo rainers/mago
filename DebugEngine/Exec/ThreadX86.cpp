@@ -7,18 +7,12 @@
 
 #include "Common.h"
 #include "ThreadX86.h"
-#include "Stepper.h"
 #include "Thread.h"
-
-
-const uint32_t  StepperMarker = 1;
-const uint32_t  ResumeStepperMarker = 2;
 
 
 ThreadX86Base::ThreadX86Base( Thread* execThread )
 :   mExecThread( execThread ),
-    mStepper( NULL ),
-    mResumeStepper( NULL )
+    mExpectedCount( 0 )
 {
     if ( mExecThread != NULL )
         mExecThread->AddRef();
@@ -26,8 +20,7 @@ ThreadX86Base::ThreadX86Base( Thread* execThread )
 
 ThreadX86Base::~ThreadX86Base()
 {
-    delete mStepper;
-    delete mResumeStepper;
+    _ASSERT( mExpectedCount == 0 );
 
     if ( mExecThread != NULL )
         mExecThread->Release();
@@ -38,37 +31,42 @@ Thread*     ThreadX86Base::GetExecThread()
     return mExecThread;
 }
 
-BPCookie    ThreadX86Base::GetStepperCookie()
+int ThreadX86Base::GetExpectedCount()
 {
-    return (mExecThread->GetId() | ((BPCookie) StepperMarker << 32));
+    return mExpectedCount;
 }
 
-BPCookie    ThreadX86Base::GetResumeStepperCookie()
+ExpectedEvent* ThreadX86Base::GetTopExpected()
 {
-    return (mExecThread->GetId() | ((BPCookie) ResumeStepperMarker << 32));
+    if ( mExpectedCount == 0 )
+        return NULL;
+
+    return &mExpectedEvents[mExpectedCount - 1];
 }
 
-IStepper*   ThreadX86Base::GetStepper()
+ExpectedEvent* ThreadX86Base::PushExpected( ExpectedCode code, int notifier )
 {
-    return mStepper;
+    _ASSERT( code == Expect_SS || code == Expect_BP );
+    _ASSERT( notifier != 0 );
+    _ASSERT( mExpectedCount < 2 );
+
+    if ( mExpectedCount >= 2 )
+        return NULL;
+
+    ExpectedEvent* event = &mExpectedEvents[mExpectedCount];
+    mExpectedCount++;
+
+    memset( event, 0, sizeof *event );
+    event->Code = code;
+    event->NotifyAction = notifier;
+
+    return event;
 }
 
-IStepper*   ThreadX86Base::GetResumeStepper()
+void ThreadX86Base::PopExpected()
 {
-    return mResumeStepper;
-}
+    _ASSERT( mExpectedCount > 0 );
 
-void        ThreadX86Base::SetStepper( IStepper* stepper )
-{
-    mStepper = stepper;
-}
-
-void        ThreadX86Base::SetResumeStepper( IStepper* stepper )
-{
-    mResumeStepper = stepper;
-}
-
-uint32_t ThreadX86Base::GetCookieThreadId( BPCookie cookie )
-{
-    return cookie & 0xFFFFFFFF;
+    if ( mExpectedCount > 0 )
+        mExpectedCount--;
 }
