@@ -162,7 +162,7 @@ public:
 
     virtual ~ArrayRefEnum()
     {
-        delete mArray;
+        delete [] mArray;
     }
 
     virtual void    Release()
@@ -183,7 +183,7 @@ public:
 
     virtual bool    MoveNext()
     {
-        if ( mIndex >= mCount )
+        if ( mIndex >= mCount - 1 )
             return false;
 
         mIndex++;
