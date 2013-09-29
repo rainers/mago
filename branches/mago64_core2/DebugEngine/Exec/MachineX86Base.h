@@ -108,15 +108,14 @@ protected:
     HANDLE  GetProcessHandle();
 
 private:
-    // TODO: rename as I like
-    HRESULT ReadStepperMemory( 
+    HRESULT ReadCleanMemory( 
         Address address, 
         SIZE_T length, 
         SIZE_T& lengthRead, 
         SIZE_T& lengthUnreadable, 
         uint8_t* buffer );
 
-    HRESULT WriteStepperMemory( 
+    HRESULT WriteCleanMemory( 
         Address address, 
         SIZE_T length, 
         SIZE_T& lengthWritten, 
@@ -127,6 +126,8 @@ private:
 
     HRESULT PatchBreakpoint( Breakpoint* bp );
     HRESULT UnpatchBreakpoint( Breakpoint* bp );
+    HRESULT TempPatchBreakpoint( Breakpoint* bp );
+    HRESULT TempUnpatchBreakpoint( Breakpoint* bp );
     bool IsBreakpointPatched( Address address );
 
     HRESULT ReadInstruction( 

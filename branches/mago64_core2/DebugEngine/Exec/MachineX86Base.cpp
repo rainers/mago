@@ -38,6 +38,7 @@ class Breakpoint
     uint8_t         mTempInstByte;
     bool            mPatched;
     bool            mUser;
+    bool            mLocked;
 
 public:
     Breakpoint()
@@ -47,7 +48,8 @@ public:
             mOrigInstByte( 0 ),
             mTempInstByte( 0 ),
             mPatched( false ),
-            mUser( false )
+            mUser( false ),
+            mLocked( false )
     {
     }
 
@@ -118,7 +120,7 @@ public:
 
     bool IsActive()
     {
-        return mUser || mStepCount > 0;
+        return mUser || mStepCount > 0 || mLocked;
     }
 
     bool IsStepping()
@@ -137,6 +139,16 @@ public:
     {
         _ASSERT( mStepCount > 0 );
         mStepCount--;
+    }
+
+    bool    IsLocked()
+    {
+        return mLocked;
+    }
+
+    void    SetLocked( bool value )
+    {
+        mLocked = value;
     }
 };
 
@@ -248,7 +260,7 @@ HRESULT MachineX86Base::ReadMemory(
     SIZE_T& lengthUnreadable, 
     uint8_t* buffer )
 {
-    return ReadStepperMemory( address, length, lengthRead, lengthUnreadable, buffer );
+    return ReadCleanMemory( address, length, lengthRead, lengthUnreadable, buffer );
 }
 
 HRESULT MachineX86Base::WriteMemory( 
@@ -261,7 +273,7 @@ HRESULT MachineX86Base::WriteMemory(
     if ( mStoppedThreadId == 0 )
         return E_WRONG_STATE;
 
-    return WriteStepperMemory( address, length, lengthWritten, buffer );
+    return WriteCleanMemory( address, length, lengthWritten, buffer );
 }
 
 HRESULT MachineX86Base::SetBreakpoint( Address address )
@@ -434,6 +446,47 @@ Error:
     return hr;
 }
 
+HRESULT MachineX86Base::TempPatchBreakpoint( Breakpoint* bp )
+{
+    _ASSERT( bp != NULL );
+    _ASSERT( bp->IsLocked() );
+
+    HRESULT hr = S_OK;
+
+    bp->SetLocked( false );
+
+    if ( bp->IsActive() )
+    {
+        hr = PatchBreakpoint( bp );
+        if ( FAILED( hr ) )
+            return hr;
+    }
+    else
+    {
+        mAddrTable->erase( bp->GetAddress() );
+    }
+
+    return S_OK;
+}
+
+// If the step count and user go to 0 while it's unpatched, the BP would be deleted.
+// This method locks the BP while it's unpatched. When about to patch it again, 
+// the BP will be deleted instead if no one needs it anymore.
+
+HRESULT MachineX86Base::TempUnpatchBreakpoint( Breakpoint* bp )
+{
+    _ASSERT( bp != NULL );
+    _ASSERT( !bp->IsLocked() );
+
+    HRESULT hr = S_OK;
+
+    hr = UnpatchBreakpoint( bp );
+    if ( FAILED( hr ) )
+        return hr;
+
+    bp->SetLocked( true );
+    return S_OK;
+}
 
 bool    MachineX86Base::Stopped()
 {
@@ -650,12 +703,9 @@ HRESULT MachineX86Base::RunAllActions( bool cancel, MachineResult& result )
 
     if ( event->PatchBP )
     {
-        // TODO: what if the step count and user go to 0 while it's unpatched? 
-        //       then we'd have to lock the BP and then delete it here
-        //       or, is it only a matter of leaving out the patch here?
         Breakpoint* bp = FindBP( event->UnpatchedAddress );
 
-        hr = PatchBreakpoint( bp );
+        hr = TempPatchBreakpoint( bp );
         if ( FAILED( hr ) )
             goto Error;
     }
@@ -948,7 +998,7 @@ HRESULT MachineX86Base::ReadInstruction(
     CpuSizeMode     cpu = Is64Bit() ? Cpu_64 : Cpu_32;
 
     // this unpatches all BPs in the buffer
-    hr = ReadStepperMemory( curAddress, MAX_INSTRUCTION_SIZE, lenRead, lenUnreadable, mem );
+    hr = ReadCleanMemory( curAddress, MAX_INSTRUCTION_SIZE, lenRead, lenUnreadable, mem );
     if ( FAILED( hr ) )
         return hr;
 
@@ -1183,8 +1233,9 @@ HRESULT MachineX86Base::SetupInstructionStep(
 
     if ( unpatch )
     {
-        Breakpoint*                 bp = FindBP( pc );
-        hr = UnpatchBreakpoint( bp );
+        bp = FindBP( pc );
+
+        hr = TempUnpatchBreakpoint( bp );
         if ( FAILED( hr ) )
             goto Error;
         unpatched = true;
@@ -1236,7 +1287,7 @@ Error:
         if ( setBP )
             RemoveBreakpointInternal( nextAddr, false );
         if ( unpatched )
-            PatchBreakpoint( bp );
+            TempPatchBreakpoint( bp );
         if ( suspended )
             ResumeOtherThreads( mStoppedThreadId );
     }
@@ -1469,7 +1520,7 @@ ThreadX86Base* MachineX86Base::GetStoppedThread()
     return mCurThread;
 }
 
-HRESULT MachineX86Base::ReadStepperMemory( 
+HRESULT MachineX86Base::ReadCleanMemory( 
     Address address, 
     SIZE_T length, 
     SIZE_T& lengthRead, 
@@ -1506,7 +1557,7 @@ HRESULT MachineX86Base::ReadStepperMemory(
     return hr;
 }
 
-HRESULT MachineX86Base::WriteStepperMemory( 
+HRESULT MachineX86Base::WriteCleanMemory( 
     Address address, 
     SIZE_T length, 
     SIZE_T& lengthWritten, 
