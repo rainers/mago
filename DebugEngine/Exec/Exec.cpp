@@ -988,7 +988,6 @@ HRESULT Exec::Detach( IProcess* process )
     //       remove all BPs
 
     DebugActiveProcessStop( process->GetId() );
-    // TODO: this might not be needed
     ResumeSuspendedProcess( process );
 
     proc->SetDeleted();
