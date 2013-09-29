@@ -1344,77 +1344,20 @@ Error:
 // TODO: get rid of sourceMode, no one uses it, except for unit tests
 HRESULT MachineX86Base::SetStepInstruction( bool stepIn, bool sourceMode )
 {
-    _ASSERT( mhProcess != NULL );
-    if ( mhProcess == NULL )
-        return E_UNEXPECTED;
-    _ASSERT( mStoppedThreadId != 0 );
-    _ASSERT( mCurThread != NULL );
-    if ( mStoppedThreadId == 0 )
-        return E_WRONG_STATE;
-
-    HRESULT hr = S_OK;
-    Address pc = 0;
-    Breakpoint* bp = NULL;
-    InstructionType instType = Inst_None;
-    int instLen = 0;
     Motion motion = stepIn ? Motion_StepIn : Motion_StepOver;
 
-    if ( !mStoppedOnException )
-        return S_OK;
-
-    hr = CancelStep();
-    if ( FAILED( hr ) )
-        goto Error;
-
-    hr = GetCurrentPC( pc );
-    if ( FAILED( hr ) )
-        goto Error;
-
-    bp = FindBP( pc );
-
-    hr = ReadInstruction( pc, instType, instLen );
-    if ( FAILED( hr ) )
-        goto Error;
-
-    if ( instType == Inst_Breakpoint )
-    {
-        ExpectedEvent* event = mCurThread->PushExpected( Expect_BP, NotifyStepComplete );
-        if ( event == NULL )
-        {
-            hr = E_FAIL;
-            goto Error;
-        }
-
-        event->BPAddress = pc;
-        // don't try to remove a BP
-        event->ClearTF = true;
-    }
-    else
-    {
-        if ( bp != NULL && bp->IsPatched() )
-        {
-            hr = PassBP( pc, instType, instLen, NotifyStepComplete, Motion_None, NULL );
-            if ( FAILED( hr ) )
-                goto Error;
-        }
-        else
-        {
-            hr = DontPassBP( motion, pc, instType, instLen, NotifyStepComplete, NULL );
-            if ( FAILED( hr ) )
-                goto Error;
-        }
-    }
-
-Error:
-    return hr;
+    return SetStepInstructionCore( motion, NULL, NotifyStepComplete );
 }
 
-// TODO: unify this with SetStepInstruction, it's mostly the same except for 
-//      NotifyStepComplete <-> NotifyCheckRange
-//      Motion_Step* <-> Motion_RangeStep*
-//      passing around the range
 // TODO: get rid of sourceMode, no one uses it, except for unit tests
 HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange range )
+{
+    Motion motion = stepIn ? Motion_RangeStepIn : Motion_RangeStepOver;
+
+    return SetStepInstructionCore( motion, &range, NotifyCheckRange );
+}
+
+HRESULT MachineX86Base::SetStepInstructionCore( Motion motion, const AddressRange* range, int notifier )
 {
     _ASSERT( mhProcess != NULL );
     if ( mhProcess == NULL )
@@ -1429,7 +1372,6 @@ HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange
     Breakpoint* bp = NULL;
     InstructionType instType = Inst_None;
     int instLen = 0;
-    Motion motion = stepIn ? Motion_RangeStepIn : Motion_RangeStepOver;
 
     if ( !mStoppedOnException )
         return S_OK;
@@ -1450,7 +1392,7 @@ HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange
 
     if ( instType == Inst_Breakpoint )
     {
-        ExpectedEvent* event = mCurThread->PushExpected( Expect_BP, NotifyCheckRange );
+        ExpectedEvent* event = mCurThread->PushExpected( Expect_BP, notifier );
         if ( event == NULL )
         {
             hr = E_FAIL;
@@ -1460,20 +1402,21 @@ HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange
         event->BPAddress = pc;
         // don't try to remove a BP
         event->ClearTF = true;
-        event->Range = range;
         event->Motion = motion;
+        if ( range != NULL )
+            event->Range = *range;
     }
     else
     {
         if ( bp != NULL && bp->IsPatched() )
         {
-            hr = PassBP( pc, instType, instLen, NotifyCheckRange, motion, &range );
+            hr = PassBP( pc, instType, instLen, notifier, motion, range );
             if ( FAILED( hr ) )
                 goto Error;
         }
         else
         {
-            hr = DontPassBP( motion, pc, instType, instLen, NotifyCheckRange, &range );
+            hr = DontPassBP( motion, pc, instType, instLen, notifier, range );
             if ( FAILED( hr ) )
                 goto Error;
         }

@@ -208,6 +208,8 @@ private:
         int notifier,
         const AddressRange* range );
 
+    HRESULT SetStepInstructionCore( Motion motion, const AddressRange* range, int notifier );
+
     HRESULT SuspendOtherThreads( UINT32 threadId );
     HRESULT ResumeOtherThreads( UINT32 threadId );
 
