@@ -733,7 +733,7 @@ HRESULT MachineX86Base::RunNotifyCheckRange(
     {
         bool stepIn = (motion == Motion_RangeStepIn) ? true : false;
 
-        hr = SetStepRange( stepIn, false, *range );
+        hr = SetStepRange( stepIn, *range );
         if ( FAILED( hr ) )
             goto Error;
 
@@ -1341,16 +1341,14 @@ Error:
     return hr;
 }
 
-// TODO: get rid of sourceMode, no one uses it, except for unit tests
-HRESULT MachineX86Base::SetStepInstruction( bool stepIn, bool sourceMode )
+HRESULT MachineX86Base::SetStepInstruction( bool stepIn )
 {
     Motion motion = stepIn ? Motion_StepIn : Motion_StepOver;
 
     return SetStepInstructionCore( motion, NULL, NotifyStepComplete );
 }
 
-// TODO: get rid of sourceMode, no one uses it, except for unit tests
-HRESULT MachineX86Base::SetStepRange( bool stepIn, bool sourceMode, AddressRange range )
+HRESULT MachineX86Base::SetStepRange( bool stepIn, AddressRange range )
 {
     Motion motion = stepIn ? Motion_RangeStepIn : Motion_RangeStepOver;
 

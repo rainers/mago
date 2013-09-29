@@ -218,21 +218,19 @@ namespace Mago
     {
         IProcess*       Process;
         bool            StepIn;
-        bool            SourceMode;
         bool            HandleException;
 
         StepInstructionParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
                 StepIn( false ),
-                SourceMode( false ),
                 HandleException( false )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.StepInstruction( Process, StepIn, SourceMode, HandleException );
+            OutHResult = Core.StepInstruction( Process, StepIn, HandleException );
         }
     };
 
@@ -240,7 +238,6 @@ namespace Mago
     {
         IProcess*       Process;
         bool            StepIn;
-        bool            SourceMode;
         AddressRange    Range;
         bool            HandleException;
 
@@ -248,14 +245,13 @@ namespace Mago
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
                 StepIn( false ),
-                SourceMode( false ),
                 HandleException( false )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.StepRange( Process, StepIn, SourceMode, Range, HandleException );
+            OutHResult = Core.StepRange( Process, StepIn, Range, HandleException );
         }
     };
 

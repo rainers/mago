@@ -192,9 +192,9 @@ public:
     // the step to begin.
     //
     HRESULT StepOut( IProcess* process, Address address, bool handleException );
-    HRESULT StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException );
+    HRESULT StepInstruction( IProcess* process, bool stepIn, bool handleException );
     HRESULT StepRange( 
-        IProcess* process, bool stepIn, bool sourceMode, AddressRange range, bool handleException );
+        IProcess* process, bool stepIn, AddressRange range, bool handleException );
     HRESULT CancelStep( IProcess* process );
 
     // Causes a running process to enter break mode. A subsequent event will 

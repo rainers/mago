@@ -240,7 +240,7 @@ namespace Mago
         addrRange.Begin = (Address) addrBegin;
         addrRange.End = (Address) (addrBegin + len - 1);
 
-        hr = mDebugger->StepRange( coreProc, stepIn, true, addrRange, handleException );
+        hr = mDebugger->StepRange( coreProc, stepIn, addrRange, handleException );
 
         return hr;
     }
@@ -254,7 +254,7 @@ namespace Mago
         HRESULT hr = S_OK;
         bool    stepIn = (sk == STEP_INTO);
 
-        hr = mDebugger->StepInstruction( coreProc, stepIn, false, handleException );
+        hr = mDebugger->StepInstruction( coreProc, stepIn, handleException );
 
         return hr;
     }
