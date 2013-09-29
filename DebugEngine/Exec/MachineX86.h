@@ -25,6 +25,7 @@ public:
     MachineX86();
 
 protected:
+    virtual bool Is64Bit();
     virtual HRESULT CacheThreadContext();
     virtual HRESULT FlushThreadContext();
     virtual HRESULT ChangeCurrentPC( int32_t byteOffset );

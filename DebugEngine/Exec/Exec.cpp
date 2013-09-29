@@ -407,7 +407,7 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
 
             proc->DeleteThread( debugEvent.dwThreadId );
 
-            machine->OnExitThread( debugEvent.dwThreadId );
+            hr = machine->OnExitThread( debugEvent.dwThreadId );
         }
         break;
 
@@ -488,7 +488,9 @@ HRESULT Exec::HandleCreateThread( Process* proc, const DEBUG_EVENT& debugEvent )
 
     proc->AddThread( thread.Get() );
 
-    machine->OnCreateThread( thread.Get() );
+    hr = machine->OnCreateThread( thread.Get() );
+    if ( FAILED( hr ) )
+        goto Error;
 
     if ( proc->GetSuspendCount() > 0 )
     {

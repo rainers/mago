@@ -80,13 +80,14 @@ public:
     virtual HRESULT SetThreadContext( uint32_t threadId, const void* context, uint32_t size );
 
     virtual void    OnStopped( uint32_t threadId );
-    virtual void    OnCreateThread( Thread* thread );
-    virtual void    OnExitThread( uint32_t threadId );
+    virtual HRESULT OnCreateThread( Thread* thread );
+    virtual HRESULT OnExitThread( uint32_t threadId );
     virtual HRESULT OnException( uint32_t threadId, const EXCEPTION_DEBUG_INFO* exceptRec, MachineResult& result );
     virtual HRESULT OnContinue();
     virtual void    OnDestroyProcess();
 
 protected:
+    virtual bool Is64Bit() = 0;
     virtual HRESULT CacheThreadContext() = 0;
     virtual HRESULT FlushThreadContext() = 0;
     // Only call after caching the thread context
