@@ -81,6 +81,11 @@ MachineX86::MachineX86()
     memset( &mContext, 0, sizeof mContext );
 }
 
+bool MachineX86::Is64Bit()
+{
+    return false;
+}
+
 HRESULT MachineX86::CacheThreadContext()
 {
     HRESULT hr = S_OK;

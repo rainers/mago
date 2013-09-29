@@ -451,14 +451,17 @@ void MachineX86Base::OnStopped( uint32_t threadId )
     mStoppedThreadId = threadId;
     mStoppedOnException = false;
     mCurThread = FindThread( threadId );
-    // TODO: what if the thread isn't found? return error?
 }
 
-void    MachineX86Base::OnCreateThread( Thread* thread )
+HRESULT MachineX86Base::OnCreateThread( Thread* thread )
 {
     _ASSERT( thread != NULL );
 
+    HRESULT hr = S_OK;
     std::auto_ptr< ThreadX86Base >   threadX86( new ThreadX86Base( thread ) );
+
+    if ( threadX86.get() == NULL )
+        return E_OUTOFMEMORY;
 
     mThreads.insert( ThreadMap::value_type( thread->GetId(), threadX86.get() ) );
     
@@ -468,17 +471,22 @@ void    MachineX86Base::OnCreateThread( Thread* thread )
     {
         // add the created thread to the set of those suspended and waiting for a BP restore
         ThreadControlProc suspendProc = GetWinSuspendThreadProc();
-        // TODO: handle the return code
-        ControlThread( thread->GetHandle(), suspendProc );
+        hr = ControlThread( thread->GetHandle(), suspendProc );
+        if ( FAILED( hr ) )
+            return hr;
     }
+
+    return S_OK;
 }
 
-void    MachineX86Base::OnExitThread( uint32_t threadId )
+HRESULT MachineX86Base::OnExitThread( uint32_t threadId )
 {
+    HRESULT hr = S_OK;
     ThreadMap::iterator it = mThreads.find( threadId );
 
-    // TODO: handle the return code
-    CancelStep();
+    hr = CancelStep();
+    if ( FAILED( hr ) )
+        return hr;
 
     if ( it != mThreads.end() )
     {
@@ -487,6 +495,8 @@ void    MachineX86Base::OnExitThread( uint32_t threadId )
     }
 
     mCurThread = NULL;
+
+    return S_OK;
 }
 
 ThreadX86Base* MachineX86Base::FindThread( uint32_t threadId )
@@ -935,8 +945,7 @@ HRESULT MachineX86Base::ReadInstruction(
     SIZE_T          lenUnreadable = 0;
     int             instLen = 0;
     InstructionType instType = Inst_None;
-    // TODO: what about 64-bit?
-    CpuSizeMode     cpu = Cpu_32;
+    CpuSizeMode     cpu = Is64Bit() ? Cpu_64 : Cpu_32;
 
     // this unpatches all BPs in the buffer
     hr = ReadStepperMemory( curAddress, MAX_INSTRUCTION_SIZE, lenRead, lenUnreadable, mem );

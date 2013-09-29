@@ -65,8 +65,8 @@ public:
     virtual ThreadControlProc GetWinSuspendThreadProc() = 0;
 
     virtual void    OnStopped( uint32_t threadId ) = 0;
-    virtual void    OnCreateThread( Thread* thread ) = 0;
-    virtual void    OnExitThread( uint32_t threadId ) = 0;
+    virtual HRESULT OnCreateThread( Thread* thread ) = 0;
+    virtual HRESULT OnExitThread( uint32_t threadId ) = 0;
     virtual HRESULT OnException( 
         uint32_t threadId, 
         const EXCEPTION_DEBUG_INFO* exceptRec, 
