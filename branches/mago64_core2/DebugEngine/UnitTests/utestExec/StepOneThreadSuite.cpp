@@ -299,14 +299,14 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
             if ( curStep->Action.Action == Action_StepInstruction )
             {
                 TEST_ASSERT_RETURN( SUCCEEDED( 
-                    exec.StepInstruction( process.Get(), curStep->Action.StepIn, curStep->Action.SourceMode, true ) ) );
+                    exec.StepInstruction( process.Get(), curStep->Action.StepIn, true ) ) );
                 continued = true;
             }
             else if ( curStep->Action.Action == Action_StepRange )
             {
                 AddressRange range = { context.Eip, context.Eip };
                 TEST_ASSERT_RETURN( SUCCEEDED( 
-                    exec.StepRange( process.Get(), curStep->Action.StepIn, true, range, true ) ) );
+                    exec.StepRange( process.Get(), curStep->Action.StepIn, range, true ) ) );
                 continued = true;
             }
         }

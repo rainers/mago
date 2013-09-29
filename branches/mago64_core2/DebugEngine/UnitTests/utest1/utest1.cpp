@@ -290,12 +290,12 @@ int _tmain( int argc, _TCHAR* argv[] )
                 //hr = exec.StepInstruction( proc, true );
 
                 if ( stepCount > 1 )
-                    hr = exec.StepInstruction( proc, true, false, true );
+                    hr = exec.StepInstruction( proc, true, true );
                 else
                 {
                     //113A5
                     AddressRange    range = { baseAddr + 0x0001137A, baseAddr + 0x000113A5 };
-                    hr = exec.StepRange( proc, false, false, range, true );
+                    hr = exec.StepRange( proc, false, range, true );
                 }
 
                 if ( FAILED( hr ) )

@@ -1181,7 +1181,7 @@ Error:
     return hr;
 }
 
-HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException )
+HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool handleException )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
@@ -1205,7 +1205,7 @@ HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode, 
     IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
 
-    hr = machine->SetStepInstruction( stepIn, sourceMode );
+    hr = machine->SetStepInstruction( stepIn );
     if ( FAILED( hr ) )
         goto Error;
 
@@ -1218,7 +1218,7 @@ Error:
 }
 
 HRESULT Exec::StepRange( 
-    IProcess* process, bool stepIn, bool sourceMode, AddressRange range, bool handleException )
+    IProcess* process, bool stepIn, AddressRange range, bool handleException )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
@@ -1242,7 +1242,7 @@ HRESULT Exec::StepRange(
     IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
 
-    hr = machine->SetStepRange( stepIn, sourceMode, range );
+    hr = machine->SetStepRange( stepIn, range );
     if ( FAILED( hr ) )
         goto Error;
 
