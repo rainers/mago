@@ -241,8 +241,6 @@ InstructionType GetInstructionTypeAndSize( uint8_t* mem, int memLen, CpuSizeMode
         }
         break;
 
-        // TODO: include jump to 64-bit?
-
         // system call instructions
     case 0x0F:
         if ( remSize < 2 )
