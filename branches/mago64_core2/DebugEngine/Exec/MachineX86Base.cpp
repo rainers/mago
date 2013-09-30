@@ -818,12 +818,22 @@ HRESULT MachineX86Base::RunNotifyCheckCall(
     Address retAddr = 0;
     ExpectedEvent* event = NULL;
     bool setBP = false;
+    RunMode mode = RunMode_Run;
 
     hr = GetCurrentPC( pc );
     if ( FAILED( hr ) )
         goto Error;
 
-    RunMode mode = mCallback->OnCallProbe( mProcess, mStoppedThreadId, pc );
+    if ( pc >= range->Begin && pc <= range->End )
+    {
+        // if you call a procedure in the same range, then there's no need to probe
+        mode = RunMode_Run;
+    }
+    else
+    {
+        mode = mCallback->OnCallProbe( mProcess, mStoppedThreadId, pc );
+    }
+
     if ( mode == RunMode_Break )
     {
         hr = CancelStep();
