@@ -769,6 +769,15 @@ HRESULT MachineX86Base::RunNotifierAction(
     case NotifyCheckCall:
         hr = RunNotifyCheckCall( motion, range, result );
         break;
+
+    case NotifyStepOut:
+        hr = RunNotifyStepOut( motion, range, result );
+        break;
+
+    default:
+        _ASSERT_EXPR( false, L"The notifier action is wrong." );
+        result = MacRes_HandledContinue;
+        break;
     }
 
     return hr;
@@ -876,6 +885,65 @@ HRESULT MachineX86Base::RunNotifyCheckCall(
         // leave the step active
         result = MacRes_HandledStopped;
     }
+
+Error:
+    if ( FAILED( hr ) )
+    {
+        if ( setBP )
+            RemoveBreakpointInternal( retAddr, false );
+        if ( event != NULL )
+            mCurThread->PopExpected();
+    }
+    return hr;
+}
+
+HRESULT MachineX86Base::RunNotifyStepOut( 
+    Motion motion, 
+    const AddressRange* range, 
+    MachineResult& result )
+{
+    HRESULT hr = S_OK;
+    Address pc = 0;
+    Address retAddr = 0;
+    ExpectedEvent* event = NULL;
+    bool setBP = false;
+    int notifier = NotifyNone;
+
+    if ( motion == Motion_StepOver )
+        notifier = NotifyStepComplete;
+    else if ( motion == Motion_RangeStepOver )
+        notifier = NotifyCheckRange;
+
+    hr = GetCurrentPC( pc );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = GetReturnAddress( retAddr );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    event = mCurThread->PushExpected( Expect_BP, notifier );
+    if ( event == NULL )
+    {
+        hr = E_FAIL;
+        goto Error;
+    }
+
+    event->BPAddress = retAddr;
+    event->RemoveBP = true;
+    event->Motion = motion;
+    event->Range = *range;
+
+    hr = SetBreakpointInternal( retAddr, false );
+    if ( FAILED( hr ) )
+        goto Error;
+    setBP = true;
+
+    hr = SetContinue();
+    if ( FAILED( hr ) )
+        goto Error;
+
+    result = MacRes_HandledContinue;
 
 Error:
     if ( FAILED( hr ) )
@@ -1188,6 +1256,11 @@ HRESULT MachineX86Base::PassBPCall(
     {
         _ASSERT( notifier == NotifyCheckRange );
         notifier = NotifyCheckCall;
+    }
+    else if ( motion == Motion_StepOver || motion == Motion_RangeStepOver )
+    {
+        _ASSERT( notifier == NotifyStepComplete || notifier == NotifyCheckRange );
+        notifier = NotifyStepOut;
     }
 
     return SetupInstructionStep( pc, instLen, notifier, Expect_SS, true, true, false, motion, range );
