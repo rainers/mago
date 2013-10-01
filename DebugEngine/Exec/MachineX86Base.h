@@ -225,6 +225,7 @@ private:
         MachineResult& result );
     HRESULT RunNotifyCheckCall( Motion motion, const AddressRange* range, MachineResult& result );
     HRESULT RunNotifyCheckRange( Motion motion, const AddressRange* range, MachineResult& result );
+    HRESULT RunNotifyStepOut( Motion motion, const AddressRange* range, MachineResult& result );
 
     HRESULT Rewind();
     Breakpoint* FindBP( Address address );

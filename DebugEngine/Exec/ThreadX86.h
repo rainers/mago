@@ -33,7 +33,8 @@ enum NotifyAction
     NotifyStepComplete,
     NotifyTrigger,
     NotifyCheckRange,
-    NotifyCheckCall
+    NotifyCheckCall,
+    NotifyStepOut
 };
 
 struct ExpectedEvent
