@@ -73,4 +73,6 @@ public:
         MachineResult& result ) = 0;
     virtual HRESULT OnContinue() = 0;
     virtual void    OnDestroyProcess() = 0;
+
+    virtual HRESULT Detach() = 0;
 };

@@ -978,14 +978,29 @@ HRESULT Exec::Detach( IProcess* process )
     if ( proc->IsDeleted() || proc->IsTerminating() )
         return E_PROCESS_ENDED;
 
-    // TODO: suspend and resume all threads if running
-    //       wait for event with 0 timeout
-    //       if got exception
-    //          if got expected SS or not embedded BP (user or step)
-    //              continue handled
-    // TODO: tell machine to Detach
-    //       cancel steps on all threads
-    //       remove all BPs
+    IMachine* machine = proc->GetMachine();
+    _ASSERT( machine != NULL );
+
+    machine->Detach();
+
+    // do the least needed to shut down
+    proc->SetTerminating();
+
+    if ( proc->IsStopped() )
+    {
+        // Throw out exceptions that are used for debugging, so that the 
+        // debuggee isn't stuck with them, and likely crash.
+        // Let the debuggee handle all other exceptions and events.
+
+        ShortDebugEvent lastEvent = proc->GetLastEvent();
+
+        if ( (lastEvent.EventCode == EXCEPTION_DEBUG_EVENT) 
+            && (lastEvent.ExceptionCode == EXCEPTION_BREAKPOINT
+            || lastEvent.ExceptionCode == EXCEPTION_SINGLE_STEP) )
+        {
+            ContinueInternal( proc, true );
+        }
+    }
 
     DebugActiveProcessStop( process->GetId() );
     ResumeSuspendedProcess( process );
