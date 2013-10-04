@@ -162,6 +162,7 @@ MachineX86Base::MachineX86Base()
     mStoppedOnException( false ),
     mStopped( false ),
     mCurThread( NULL ),
+    mIsolatedThreadId( 0 ),
     mIsolatedThread( false ),
     mCallback( NULL ),
     mPendCBAddr( 0 )
@@ -498,6 +499,38 @@ HANDLE  MachineX86Base::GetProcessHandle()
     return mhProcess;
 }
 
+HRESULT MachineX86Base::Detach()
+{
+    if ( mIsolatedThread )
+    {
+        ResumeOtherThreads( mIsolatedThreadId );
+
+        mIsolatedThread = false;
+        mIsolatedThreadId = 0;
+    }
+
+    if ( mAddrTable != NULL )
+    {
+        for ( BPAddressTable::iterator it = mAddrTable->begin();
+            it != mAddrTable->end();
+            it++ )
+        {
+            Breakpoint* bp = it->second;
+
+            if ( bp->IsPatched() )
+            {
+                UnpatchBreakpoint( bp );
+            }
+
+            bp->Release();
+        }
+
+        mAddrTable->clear();
+    }
+
+    return S_OK;
+}
+
 void MachineX86Base::OnStopped( uint32_t threadId )
 {
     mStopped = true;
@@ -592,6 +625,7 @@ HRESULT MachineX86Base::SuspendOtherThreads( UINT32 threadId )
         return hr;
 
     mIsolatedThread = true;
+    mIsolatedThreadId = threadId;
     return S_OK;
 }
 
@@ -606,6 +640,7 @@ HRESULT MachineX86Base::ResumeOtherThreads( UINT32 threadId )
         return hr;
 
     mIsolatedThread = false;
+    mIsolatedThreadId = 0;
     return S_OK;
 }
 
@@ -646,6 +681,7 @@ void    MachineX86Base::OnDestroyProcess()
 {
     mhProcess = NULL;
     mProcess = NULL;
+    mCurThread = NULL;
 }
 
 HRESULT MachineX86Base::OnException( 
@@ -1087,17 +1123,6 @@ HRESULT MachineX86Base::ReadInstruction(
     size = instLen;
     type = instType;
     return S_OK;
-}
-
-bool MachineX86Base::IsBreakpointPatched( Address address )
-{
-    BPAddressTable::iterator    it = mAddrTable->find( address );
-    bool                        isPatched = false;
-
-    if ( it != mAddrTable->end() && it->second->IsPatched() )
-        isPatched = true;
-
-    return isPatched;
 }
 
 Breakpoint* MachineX86Base::FindBP( Address address )
@@ -1646,7 +1671,6 @@ HRESULT MachineX86Base::WriteCleanMemory(
     SIZE_T& lengthWritten, 
     uint8_t* buffer )
 {
-    HRESULT hr = S_OK;
     BOOL    bRet = FALSE;
 
     // The memory we're overwriting might be patched with BPs, so do it in 3 steps:
@@ -1679,12 +1703,12 @@ HRESULT MachineX86Base::WriteCleanMemory(
 
     bRet = WriteProcessMemory( mhProcess, (void*) address, buffer, length, &lengthWritten );
     if ( !bRet )
-        return HRESULT_FROM_WIN32( hr );
+        return GetLastHr();
 
     // now commit all the bytes for the BPs we overwrote
 
-    if ( lengthWritten == 0 )
-        return S_OK;
+    if ( lengthWritten != length )
+        return HRESULT_FROM_WIN32( ERROR_PARTIAL_COPY );
 
     endAddr = address + lengthWritten - 1;
 

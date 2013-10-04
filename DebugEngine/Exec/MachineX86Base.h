@@ -35,6 +35,7 @@ class MachineX86Base : public IMachine
 
     ThreadMap       mThreads;
     ThreadX86Base*  mCurThread;
+    uint32_t        mIsolatedThreadId;
     bool            mIsolatedThread;
 
     IEventCallback* mCallback;
@@ -86,6 +87,8 @@ public:
     virtual HRESULT OnContinue();
     virtual void    OnDestroyProcess();
 
+    virtual HRESULT Detach();
+
 protected:
     virtual bool Is64Bit() = 0;
     virtual HRESULT CacheThreadContext() = 0;
@@ -128,7 +131,6 @@ private:
     HRESULT UnpatchBreakpoint( Breakpoint* bp );
     HRESULT TempPatchBreakpoint( Breakpoint* bp );
     HRESULT TempUnpatchBreakpoint( Breakpoint* bp );
-    bool IsBreakpointPatched( Address address );
 
     HRESULT ReadInstruction( 
         Address address, 
