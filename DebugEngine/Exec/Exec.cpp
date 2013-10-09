@@ -1008,6 +1008,9 @@ HRESULT Exec::Detach( IProcess* process )
     proc->SetDeleted();
     proc->SetMachine( NULL );
 
+    if ( proc->IsStarted() && mCallback != NULL )
+        mCallback->OnProcessExit( proc, 0 );
+
     mProcMap->erase( process->GetId() );
 
     return hr;
