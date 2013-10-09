@@ -528,6 +528,11 @@ HRESULT MachineX86Base::Detach()
         mAddrTable->clear();
     }
 
+    if ( mStopped )
+    {
+        FlushThreadContext();
+    }
+
     return S_OK;
 }
 
@@ -1492,7 +1497,7 @@ HRESULT MachineX86Base::SetStepOut( Address targetAddress )
     event->BPAddress = targetAddress;
     event->RemoveBP = true;
 
-    hr = SetBreakpoint( targetAddress );
+    hr = SetBreakpointInternal( targetAddress, false );
     if ( FAILED( hr ) )
         goto Error;
 

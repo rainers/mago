@@ -303,8 +303,6 @@ namespace Mago
                                            IDebugCodeContext2* pCodeContext, 
                                            IDebugDisassemblyStream2** ppDisassemblyStream )
     {
-        OutputDebugStringA( "Program::GetDisassemblyStream\n" );
-
         if ( (pCodeContext == NULL) || (ppDisassemblyStream == NULL) )
             return E_INVALIDARG;
 
@@ -318,6 +316,8 @@ namespace Mago
             return E_INVALIDARG;
 
         magoMem->GetAddress( addr );
+
+        _RPT2( _CRT_WARN, "Program::GetDisassemblyStream: addr=%08X scope=%X\n", addr, dwScope );
 
         if ( !FindModuleContainingAddress( addr, mod ) )
             return HRESULT_FROM_WIN32( ERROR_MOD_NOT_FOUND );
