@@ -530,6 +530,7 @@ HRESULT MachineX86Base::Detach()
 
     if ( mStopped )
     {
+        SetSingleStep( false );
         FlushThreadContext();
     }
 

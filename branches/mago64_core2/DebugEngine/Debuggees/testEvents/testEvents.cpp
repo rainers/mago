@@ -101,11 +101,36 @@ int RunException( int scenario )
     return ret;
 }
 
+int RunDetach( int scenario, const wchar_t* eventName )
+{
+    HANDLE hEvent = OpenEvent( SYNCHRONIZE, FALSE, eventName );
+    if ( hEvent == NULL )
+        return -1;
+
+    int x = 10;
+    _asm { int 3 }
+    x++;
+    WaitForSingleObject( hEvent, 10 * 1000 );
+    CloseHandle( hEvent );
+    x++;
+    _asm { nop }
+    x++;
+    return x;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-    if ( (argc > 2) && (_wcsicmp( argv[1], L"exception" ) == 0) )
+    if ( (argc > 1) && (_wcsicmp( argv[1], L"exception" ) == 0) )
     {
+        if ( argc < 3 )
+            return -1;
         return RunException( _wtoi( argv[2] ) );
+    }
+    else if ( argc > 1 && _wcsicmp( argv[1], L"detach" ) == 0 )
+    {
+        if ( argc < 4 )
+            return -1;
+        return RunDetach( _wtoi( argv[2] ), argv[3] );
     }
 
     const wchar_t   RepeatingWstr[] = L"The daily news in Japanese is:  \x6bce\x65e5\x306e\x30cb\x30e5\x30fc\x30b9.";
