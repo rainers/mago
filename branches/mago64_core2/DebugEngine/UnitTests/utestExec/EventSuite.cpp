@@ -544,13 +544,25 @@ void EventSuite::TestExceptionNotHandledAllChances()
 
     for ( int i = 0; !mCallback->GetProcessExited(); i++ )
     {
-        bool    handled = true;
+        bool        handled = true;
+        uint32_t    timeoutMillis = DefaultTimeoutMillis;
 
-        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
+        // it can take more than half a second to get the ProcessExit event 
+        // after an unhandled exception
+        if ( state == State_SecondNotHandled )
+            timeoutMillis = 5 * 1000;
+
+        HRESULT hr = exec.WaitForEvent( timeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
+        {
+            // Timing out is still an error, but it's only expected sometimes 
+            // after SecondNotHandled, if the timeout to wait for the process
+            // to end is still not enough. See where the timeout is set above.
+            TEST_ASSERT( state == State_SecondNotHandled );
             break;
+        }
 
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
