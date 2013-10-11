@@ -30,6 +30,10 @@ private:
     void TestTerminateRunning();
     void TestOptionsSameConsole();
     void TestOptionsNewConsole();
+    void TestDetachRunning();
+    void TestDetachStopped();
+
+    void TestDetachCore( bool detachWhileRunning );
 
     void TryOptions( bool newConsole );
     void BuildEnv( wchar_t* env, int envSize, 
@@ -40,5 +44,6 @@ private:
                       HandlePtr& errFileRead, HandlePtr& errFileWrite, bool& ok );
 
     void AssertProcessFinished( uint32_t pid );
+    void AssertProcessFinished( uint32_t pid, uint32_t expectedExitCode );
     void AssertConsoleWindow( bool newConsole, DWORD procId );
 };

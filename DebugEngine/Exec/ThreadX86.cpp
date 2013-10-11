@@ -20,8 +20,6 @@ ThreadX86Base::ThreadX86Base( Thread* execThread )
 
 ThreadX86Base::~ThreadX86Base()
 {
-    _ASSERT( mExpectedCount == 0 );
-
     if ( mExecThread != NULL )
         mExecThread->Release();
 }

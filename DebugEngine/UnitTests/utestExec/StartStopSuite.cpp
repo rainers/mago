@@ -30,9 +30,11 @@ StartStopSuite::StartStopSuite()
     TEST_ADD( StartStopSuite::TestTerminateStopped );
     TEST_ADD( StartStopSuite::TestTerminateRunning );
     TEST_ADD( StartStopSuite::TestBeginToEnd );
-    // TODO: TestAttach, TestDetachStopped, TestDetachRunning
+    // TODO: TestAttach
     TEST_ADD( StartStopSuite::TestOptionsSameConsole );
     TEST_ADD( StartStopSuite::TestOptionsNewConsole );
+    TEST_ADD( StartStopSuite::TestDetachRunning );
+    TEST_ADD( StartStopSuite::TestDetachStopped );
 }
 
 void StartStopSuite::setup()
@@ -320,6 +322,130 @@ void StartStopSuite::TestOptionsNewConsole()
     TryOptions( true );
 }
 
+void StartStopSuite::TestDetachRunning()
+{
+    TestDetachCore( true );
+}
+
+void StartStopSuite::TestDetachStopped()
+{
+    TestDetachCore( false );
+}
+
+void StartStopSuite::TestDetachCore( bool detachWhileRunning )
+{
+    enum State
+    {
+        State_Init,
+        State_SetBP,
+        State_Stepped,
+        State_Done
+    };
+
+    Exec    exec;
+    State   state = State_Init;
+
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
+
+    LaunchInfo      info = { 0 };
+    wchar_t         cmdLine[ MAX_PATH ] = L"";
+    IProcess*       proc = NULL;
+    const wchar_t*  Debuggee = EventsDebuggee;
+    wchar_t         eventName[256] = L"";
+    const wchar_t*  runningPart = detachWhileRunning ? L"Running" : L"Stopped";
+
+    swprintf_s( eventName, L"utestExec_detach%s-%d", runningPart, GetCurrentProcessId() );
+
+    HANDLE hEvent = CreateEvent( NULL, TRUE, FALSE, eventName );
+    TEST_ASSERT_RETURN( hEvent != NULL );
+
+    swprintf_s( cmdLine, L"\"%s\" detach 1 %s", Debuggee, eventName );
+
+    info.CommandLine = cmdLine;
+    info.Exe = Debuggee;
+
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, proc ) ) );
+
+    uint32_t    pid = proc->GetId();
+    RefPtr<IProcess>    process( proc );
+
+    proc->Release();
+    mCallback->SetTrackLastEvent( true );
+
+    for ( int i = 0; !mCallback->GetProcessExited(); i++ )
+    {
+        bool    handled = true;
+
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
+
+        // this should happen after process exit
+        if ( hr == E_TIMEOUT )
+            break;
+
+        TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
+
+        if ( state == State_Done )
+        {
+            TEST_FAIL( "Got an event after detaching." );
+        }
+
+        if ( process->IsStopped() )
+        {
+            if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_LoadComplete) )
+            {
+                hr = exec.SetBreakpoint( process, 0x0041187B );
+                TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+                state = State_SetBP;
+            }
+            else if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_Breakpoint) )
+            {
+                if ( state == State_SetBP )
+                {
+                    hr = exec.StepInstruction( process, true, false );
+                    TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+                    state = State_Stepped;
+                }
+                else
+                {
+                    TEST_FAIL( "Got an unexpected breakpoint." );
+                }
+            }
+            else if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_StepComplete) )
+            {
+                if ( state == State_Stepped )
+                {
+                    if ( detachWhileRunning )
+                    {
+                        hr = exec.Continue( process, false );
+                        TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+                    }
+                    hr = exec.Detach( process );
+                    TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+                    SetEvent( hEvent );
+                    state = State_Done;
+                }
+                else
+                {
+                    TEST_FAIL( "Got an unexpected step." );
+                }
+            }
+
+            if ( state != State_Done && state != State_Stepped )
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, handled ) ) );
+        }
+    }
+
+    TEST_ASSERT( mCallback->GetLoadCompleted() );
+    TEST_ASSERT( mCallback->GetProcessExited() );
+
+    TEST_ASSERT( state == State_Done );
+    AssertProcessFinished( process->GetId(), 13 );
+}
+
 void StartStopSuite::BuildEnv( wchar_t* env, int envSize, char* expectedEnv, int expectedEnvSize, char* requestedEnv, int requestedEnvSize )
 {
     // there has to be room for a character and the terminator for 3 strings and the environment's terminator
@@ -553,9 +679,33 @@ void StartStopSuite::AssertProcessFinished( uint32_t pid )
     if ( hProc != NULL )
     {
         DWORD   waitRet = WaitForSingleObject( hProc, 10 * 1000 );
+        if ( waitRet != WAIT_OBJECT_0 )
+            TerminateProcess( hProc, (UINT) -1 );
         CloseHandle( hProc );
 
         TEST_ASSERT( waitRet != (DWORD) -1 );
         TEST_ASSERT_MSG( waitRet == WAIT_OBJECT_0, "Debuggee should not be running after Exec is destroyed." )
+    }
+}
+
+void StartStopSuite::AssertProcessFinished( uint32_t pid, uint32_t expectedExitCode )
+{
+    HANDLE  hProc = OpenProcess( PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, pid );
+
+    if ( hProc != NULL )
+    {
+        DWORD   waitRet = WaitForSingleObject( hProc, 10 * 1000 );
+        DWORD   exitCode = 0;
+
+        TEST_ASSERT( GetExitCodeProcess( hProc, &exitCode ) );
+
+        if ( waitRet != WAIT_OBJECT_0 )
+            TerminateProcess( hProc, (UINT) -1 );
+
+        CloseHandle( hProc );
+
+        TEST_ASSERT( exitCode == expectedExitCode );
+        TEST_ASSERT( waitRet != (DWORD) -1 );
+        TEST_ASSERT_MSG( waitRet == WAIT_OBJECT_0, "Debuggee should not be running after Exec is destroyed." );
     }
 }
