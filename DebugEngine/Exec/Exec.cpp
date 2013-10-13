@@ -431,6 +431,11 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
             if ( FAILED( hr ) )
                 goto Error;
 
+            if ( proc->GetOSModule() == NULL )
+            {
+                proc->SetOSModule( mod );
+            }
+
             if ( mCallback != NULL )
             {
                 mCallback->OnModuleLoad( proc, mod.Get() );
@@ -518,13 +523,32 @@ Error:
     return hr;
 }
 
+bool Exec::FoundLoaderBp( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    if ( !proc->ReachedLoaderBp() )
+    {
+        if ( debugEvent.u.Exception.ExceptionRecord.ExceptionCode == STATUS_BREAKPOINT )
+        {
+            Address exceptAddr = (Address) debugEvent.u.Exception.ExceptionRecord.ExceptionAddress;
+            Module* osMod = proc->GetOSModule();
+
+            if ( osMod != NULL && osMod->Contains( exceptAddr ) )
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
 {
     HRESULT hr = S_OK;
     IMachine* machine = proc->GetMachine();
 
     // it doesn't matter if we launched or attached
-    if ( !proc->ReachedLoaderBp() )
+    if ( FoundLoaderBp( proc, debugEvent ) )
     {
         proc->SetReachedLoaderBp();
 

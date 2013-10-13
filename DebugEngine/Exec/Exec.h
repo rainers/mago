@@ -225,4 +225,5 @@ private:
     Process*    FindProcess( uint32_t id );
     HRESULT     CreateModule( Process* proc, const DEBUG_EVENT& event, RefPtr<Module>& mod );
     HRESULT     CreateThread( Process* proc, const DEBUG_EVENT& event, RefPtr<Thread>& thread );
+    bool        FoundLoaderBp( Process* proc, const DEBUG_EVENT& event );
 };

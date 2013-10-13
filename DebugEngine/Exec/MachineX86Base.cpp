@@ -317,6 +317,12 @@ HRESULT MachineX86Base::SetBreakpointInternal( Address address, bool user )
     {
         RefPtr< Breakpoint >    newBp( new Breakpoint() );
 
+        if ( newBp.Get() == NULL )
+        {
+            hr = E_OUTOFMEMORY;
+            goto Error;
+        }
+
         mAddrTable->insert( BPAddressTable::value_type( address, newBp.Get() ) );
         bp = newBp.Detach();
 
