@@ -849,7 +849,7 @@ HRESULT Exec::Attach( uint32_t id, IProcess*& process )
         goto Error;
     }
 
-    hr = mResolver->GetModulePath( hProcPtr.Get(), NULL, filename );
+    hr = mResolver->GetProcessModulePath( hProcPtr.Get(), filename );
     if ( FAILED( hr ) )
         // getting ERROR_PARTIAL_COPY here usually means we won't be able to attach
         goto Error;
