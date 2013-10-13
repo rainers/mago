@@ -118,6 +118,37 @@ int RunDetach( int scenario, const wchar_t* eventName )
     return x;
 }
 
+int RunAttach( int scenario, unsigned int cookie1 )
+{
+    wchar_t eventName[64] = L"";
+    swprintf_s( eventName, L"utestExec_attach-%d", GetCurrentProcessId() );
+    HANDLE hEvent = CreateEvent( NULL, TRUE, FALSE, eventName );
+    if ( hEvent == NULL )
+        return -1;
+
+    SetEvent( hEvent );
+
+    // if this program runs by itself, loop forever
+    // else, the unit test will swallow the breakpoint exception and this program can end
+
+    while ( true )
+    {
+        __try
+        {
+            unsigned int cookie2 = 0;
+            _asm
+            {
+                int 3
+                mov cookie2, eax
+            }
+            return cookie1 ^ cookie2;
+        }
+        __except ( 1 )
+        {
+        }
+    }
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
     if ( (argc > 1) && (_wcsicmp( argv[1], L"exception" ) == 0) )
@@ -131,6 +162,12 @@ int _tmain(int argc, _TCHAR* argv[])
         if ( argc < 4 )
             return -1;
         return RunDetach( _wtoi( argv[2] ), argv[3] );
+    }
+    else if ( (argc > 1) && (_wcsicmp( argv[1], L"attach" ) == 0) )
+    {
+        if ( argc < 4 )
+            return -1;
+        return RunAttach( _wtoi( argv[2] ), _wtoi( argv[3] ) );
     }
 
     const wchar_t   RepeatingWstr[] = L"The daily news in Japanese is:  \x6bce\x65e5\x306e\x30cb\x30e5\x30fc\x30b9.";

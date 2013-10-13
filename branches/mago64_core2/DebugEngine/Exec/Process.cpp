@@ -10,6 +10,7 @@
 #include "Machine.h"
 #include "Thread.h"
 #include "Iter.h"
+#include "Module.h"
 
 
 Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t* exePath )
@@ -27,7 +28,8 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     mDeleted( false ),
     mStopped( false ),
     mStarted( false ),
-    mSuspendCount( 0 )
+    mSuspendCount( 0 ),
+    mOSMod( NULL )
 {
     _ASSERT( hProcess != NULL );
     _ASSERT( id != 0 );
@@ -54,6 +56,11 @@ Process::~Process()
     if ( mhSuspendedThread != NULL )
     {
         CloseHandle( mhSuspendedThread );
+    }
+
+    if ( mOSMod != NULL )
+    {
+        mOSMod->Release();
     }
 }
 
@@ -314,6 +321,26 @@ void    Process::SetLastEvent( const DEBUG_EVENT& debugEvent )
 void    Process::ClearLastEvent()
 {
     memset( &mLastEvent, 0, sizeof mLastEvent );
+}
+
+Module* Process::GetOSModule()
+{
+    return mOSMod;
+}
+
+void    Process::SetOSModule( Module* osModule )
+{
+    if ( mOSMod != NULL )
+    {
+        mOSMod->Release();
+    }
+
+    mOSMod = osModule;
+
+    if ( mOSMod != NULL )
+    {
+        mOSMod->AddRef();
+    }
 }
 
 void    Process::Lock()

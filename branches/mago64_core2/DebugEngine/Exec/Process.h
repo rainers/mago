@@ -11,6 +11,7 @@
 
 
 class IMachine;
+class Module;
 
 struct ShortDebugEvent
 {
@@ -45,6 +46,7 @@ private:
     bool            mStarted;
     int32_t         mSuspendCount;
     ShortDebugEvent mLastEvent;
+    Module*         mOSMod;
 
     ThreadList      mThreads;
 
@@ -101,6 +103,8 @@ public:
     ShortDebugEvent GetLastEvent();
     void            SetLastEvent( const DEBUG_EVENT& debugEvent );
     void            ClearLastEvent();
+    Module*         GetOSModule();
+    void            SetOSModule( Module* osModule );
 
     void            Lock();
     void            Unlock();

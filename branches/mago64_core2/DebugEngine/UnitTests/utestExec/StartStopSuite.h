@@ -32,6 +32,7 @@ private:
     void TestOptionsNewConsole();
     void TestDetachRunning();
     void TestDetachStopped();
+    void TestAttach();
 
     void TestDetachCore( bool detachWhileRunning );
 

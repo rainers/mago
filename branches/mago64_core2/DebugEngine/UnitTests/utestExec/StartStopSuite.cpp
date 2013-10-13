@@ -30,11 +30,11 @@ StartStopSuite::StartStopSuite()
     TEST_ADD( StartStopSuite::TestTerminateStopped );
     TEST_ADD( StartStopSuite::TestTerminateRunning );
     TEST_ADD( StartStopSuite::TestBeginToEnd );
-    // TODO: TestAttach
     TEST_ADD( StartStopSuite::TestOptionsSameConsole );
     TEST_ADD( StartStopSuite::TestOptionsNewConsole );
     TEST_ADD( StartStopSuite::TestDetachRunning );
     TEST_ADD( StartStopSuite::TestDetachStopped );
+    TEST_ADD( StartStopSuite::TestAttach );
 }
 
 void StartStopSuite::setup()
@@ -425,7 +425,6 @@ void StartStopSuite::TestDetachCore( bool detachWhileRunning )
                     }
                     hr = exec.Detach( process );
                     TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
-                    SetEvent( hEvent );
                     state = State_Done;
                 }
                 else
@@ -443,7 +442,138 @@ void StartStopSuite::TestDetachCore( bool detachWhileRunning )
     TEST_ASSERT( mCallback->GetProcessExited() );
 
     TEST_ASSERT( state == State_Done );
+
+    // assert that it's still running
+    BOOL waitRet = WaitForSingleObject( process->GetHandle(), 0 );
+    TEST_ASSERT( waitRet == WAIT_TIMEOUT );
+
+    // Let it run. Then wait a little for it to end.
+    SetEvent( hEvent );
     AssertProcessFinished( process->GetId(), 13 );
+}
+
+void StartStopSuite::TestAttach()
+{
+    enum State
+    {
+        State_Init,
+        State_Done
+    };
+
+    Exec    exec;
+    State   state = State_Init;
+
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
+
+    wchar_t         cmdLine[ MAX_PATH ] = L"";
+    IProcess*       proc = NULL;
+    const wchar_t*  Debuggee = EventsDebuggee;
+    BOOL            bRet = FALSE;
+    UUID            uuid = { 0 };
+
+    CoCreateGuid( &uuid );
+    unsigned int    cookie1 = uuid.Data1;
+    unsigned int    cookie2 = (uuid.Data2 | (uuid.Data3 << 16)) ^ GetCurrentProcessId();
+
+    swprintf_s( cmdLine, L"\"%s\" attach 1 %d", Debuggee, cookie1 );
+
+    STARTUPINFO startupInfo = { 0 };
+    PROCESS_INFORMATION procInfo = { 0 };
+    startupInfo.cb = sizeof startupInfo;
+    bRet = CreateProcess(
+        Debuggee,
+        cmdLine,
+        NULL,
+        NULL,
+        FALSE,
+        0,
+        NULL,
+        NULL,
+        &startupInfo,
+        &procInfo );
+    TEST_ASSERT_RETURN_MSG( bRet, "Couldn't start the debuggee." );
+
+    CloseHandle( procInfo.hProcess );
+    CloseHandle( procInfo.hThread );
+    procInfo.hProcess = NULL;
+    procInfo.hThread = NULL;
+
+    // It seems that you can't attach to the process right after it starts up.
+    // So, let it tell us when it's ready.
+    wchar_t eventName[64] = L"";
+    swprintf_s( eventName, L"utestExec_attach-%d", procInfo.dwProcessId );
+    HANDLE hEvent = CreateEvent( NULL, TRUE, FALSE, eventName );
+    WaitForSingleObject( hEvent, 5 * 1000 );
+
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Attach( procInfo.dwProcessId, proc ) ) );
+
+    RefPtr<IProcess>    process( proc );
+
+    proc->Release();
+    mCallback->SetTrackLastEvent( true );
+
+    for ( int i = 0; !mCallback->GetProcessExited(); i++ )
+    {
+        bool    handled = true;
+
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
+
+        // this should happen after process exit
+        if ( hr == E_TIMEOUT )
+            break;
+
+        TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
+
+        if ( process->IsStopped() )
+        {
+            if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_Breakpoint) )
+            {
+                if ( state == State_Init )
+                {
+                    // it should be an embedded BP
+                    CONTEXT context = { 0 };
+                    context.ContextFlags = CONTEXT_INTEGER;
+
+                    hr = exec.GetThreadContext( 
+                        process.Get(), 
+                        mCallback->GetLastEvent()->ThreadId, 
+                        &context,
+                        sizeof context );
+                    TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+
+                    context.Eax = cookie2;
+                    hr = exec.SetThreadContext( 
+                        process.Get(), 
+                        mCallback->GetLastEvent()->ThreadId, 
+                        &context,
+                        sizeof context );
+                    TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+
+                    state = State_Done;
+                }
+                else
+                {
+                    TEST_FAIL( "Got an unexpected breakpoint." );
+                }
+            }
+
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, handled ) ) );
+        }
+    }
+
+    // When attaching, Windows fakes a loader BP in a dedicated thread.
+    // But, another thread can throw an exception first. 
+    // Furthermore, the process could end before reaching the loader BP.
+    // None of this can happen when launching the process.
+    // So, don't assert LoadCompleted.
+    TEST_ASSERT( mCallback->GetProcessExited() );
+
+    TEST_ASSERT( state == State_Done );
+
+    uint32_t expectedExitCode = cookie1 ^ cookie2;
+    AssertProcessFinished( process->GetId(), expectedExitCode );
 }
 
 void StartStopSuite::BuildEnv( wchar_t* env, int envSize, char* expectedEnv, int expectedEnvSize, char* requestedEnv, int requestedEnvSize )
