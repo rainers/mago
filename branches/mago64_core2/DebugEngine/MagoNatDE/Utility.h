@@ -164,13 +164,13 @@ bool EqualValue( MagoEE::Type* type, const MagoEE::DataValue& left, const MagoEE
 uint32_t HashOf( const void* buffer, uint32_t length );
 
 
-class HeapCloser
+struct HeapDeleter
 {
 public:
-    void operator()( uint8_t* p )
+    static void Delete( uint8_t* p )
     {
         HeapFree( GetProcessHeap(), 0, p );
     }
 };
 
-typedef HandlePtrBase2<uint8_t*, NULL, HeapCloser> HeapPtr;
+typedef UniquePtrBase<uint8_t*, NULL, HeapDeleter> HeapPtr;

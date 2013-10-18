@@ -217,9 +217,9 @@ HRESULT Process::EnumThreads( Enumerator< Thread* >*& enumerator )
 {
     ProcessGuard guard( this );
 
-    RefReleasePtr< ArrayRefEnum<Thread*> > en = new ArrayRefEnum<Thread*>();
+    _RefReleasePtr< ArrayRefEnum<Thread*> >::type en( new ArrayRefEnum<Thread*>() );
 
-    if ( en == NULL )
+    if ( en.Get() == NULL )
         return E_OUTOFMEMORY;
 
     if ( !en->Init( mThreads.begin(), mThreads.end(), mThreads.size() ) )

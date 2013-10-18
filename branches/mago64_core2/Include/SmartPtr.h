@@ -98,12 +98,6 @@ public:
         return p;
     }
 
-    T& operator *() const
-    {
-        _ASSERT( p != NULL );
-        return *p;
-    }
-
     // used this before adding operator T*
     //bool operator ==( const RefPtr& other ) const
     //{
@@ -124,321 +118,189 @@ public:
     {
         return p;
     }
-
-    //T*& Ptr() const
-    //{
-    //    return p;
-    //}
 };
 
 
 template <class T>
-class RefReleasePtr
+struct DefaultDeleter
 {
-    T*  p;
-
-public:
-    RefReleasePtr()
-        :   p( NULL )
+    static void Delete( T* value )
     {
-    }
-
-    RefReleasePtr( T* other )
-        :   p( other )
-    {
-    }
-
-    RefReleasePtr( const RefReleasePtr& other )
-        :   p( other.p )
-    {
-    }
-
-    ~RefReleasePtr()
-    {
-        if ( p != NULL )
-            p->Release();
-    }
-
-    T* Get() const
-    {
-        return p;
-    }
-
-    T*& Ref()
-    {
-        _ASSERT( p == NULL );
-        return p;
-    }
-
-    void Release()
-    {
-        if ( p != NULL )
-        {
-            p->Release();
-            p = NULL;
-        }
-    }
-
-    void Attach( T* other )
-    {
-        if ( p != NULL )
-            p->Release();
-
-        p = other;
-    }
-
-    T* Detach()
-    {
-        T*  outP = p;
-        p = NULL;
-        return outP;
-    }
-
-    RefReleasePtr<T>& operator =( T* other )
-    {
-        if ( p != NULL )
-            p->Release();
-
-        p = other;
-
-        return *this;
-    }
-
-    RefReleasePtr<T>& operator =( const RefReleasePtr& other )
-    {
-        // delegate to operator =( T* other )
-        return *this = other.p;
-    }
-
-    T* operator ->() const
-    {
-        return p;
-    }
-
-    T& operator *() const
-    {
-        _ASSERT( p != NULL );
-        return *p;
-    }
-
-    bool operator ==( const RefReleasePtr& other ) const
-    {
-        return p == other.p;
-    }
-
-    //T*& Ptr() const
-    //{
-    //    return p;
-    //}
-};
-
-
-#ifdef _WINNT_
-
-template <HANDLE EmptyHandle>
-class HandlePtrBase
-{
-    HANDLE  h;
-
-public:
-    HandlePtrBase()
-        :   h( EmptyHandle )
-    {
-    }
-
-    HandlePtrBase( HANDLE handle )
-        :   h( handle )
-    {
-    }
-
-    ~HandlePtrBase()
-    {
-        if ( h != EmptyHandle )
-        {
-            CloseHandle( h );
-        }
-    }
-
-    HANDLE Get() const
-    {
-        return h;
-    }
-
-    operator HANDLE() const
-    {
-        return h;
-    }
-
-    HANDLE& Ref()
-    {
-        _ASSERT( h == EmptyHandle );
-        return h;
-    }
-
-    bool IsEmpty() const
-    {
-        return h == EmptyHandle;
-    }
-
-    // TODO: doesn't seem right to return HandlePtrBase instead of derived class
-    //       one way to get around it is by declaring HandlePtrBase as:
-    // template <class TDerived, HANDLE EmptyHandle> class HandlePtrBase
-    //       and deriving it as:
-    // class HandlePtr : public HandlePtrBase<HandlePtr, NULL>
-    //       remember to add the right constructors that forward to HandlePtrBase's
-
-    HandlePtrBase& operator =( HANDLE handle )
-    {
-        if ( h != EmptyHandle )
-            CloseHandle( h );
-
-        h = handle;
-
-        return *this;
-    }
-
-    void Attach( HANDLE handle )
-    {
-        if ( h != EmptyHandle )
-            CloseHandle( h );
-
-        h = handle;
-    }
-
-    HANDLE Detach()
-    {
-        HANDLE  outH = h;
-        h = EmptyHandle;
-        return outH;
-    }
-
-    void Close()
-    {
-        if ( h != EmptyHandle )
-        {
-            CloseHandle( h );
-            h = EmptyHandle;
-        }
+        delete value;
     }
 };
 
-
-typedef HandlePtrBase<NULL> HandlePtr;
-typedef HandlePtrBase<INVALID_HANDLE_VALUE> FileHandlePtr;
-
-#endif
-
-
-template <class T, T EmptyHandle, class TCloser>
-class HandlePtrBase2
+struct HandleDeleter
 {
-    T   h;
-
-public:
-    HandlePtrBase2()
-        :   h( EmptyHandle )
+    static void Delete( HANDLE handle )
     {
-    }
-
-    HandlePtrBase2( T handle )
-        :   h( handle )
-    {
-    }
-
-    ~HandlePtrBase2()
-    {
-        if ( h != EmptyHandle )
-        {
-            ForceClose( h );
-        }
-    }
-
-    T Get() const
-    {
-        return h;
-    }
-
-    operator T() const
-    {
-        return h;
-    }
-
-    T& Ref()
-    {
-        _ASSERT( h == EmptyHandle );
-        return h;
-    }
-
-    bool IsEmpty() const
-    {
-        return h == EmptyHandle;
-    }
-
-    // TODO: doesn't seem right to return HandlePtrBase2 instead of derived class
-    //       one way to get around it is by declaring HandlePtrBase2 as:
-    // template <class TDerived, HANDLE EmptyHandle> class HandlePtrBase2
-    //       and deriving it as:
-    // class HandlePtr : public HandlePtrBase2<HandlePtr, NULL>
-    //       remember to add the right constructors that forward to HandlePtrBase2's
-
-    HandlePtrBase2& operator =( T handle )
-    {
-        if ( h != EmptyHandle )
-        {
-            ForceClose( h );
-        }
-
-        h = handle;
-
-        return *this;
-    }
-
-    void Attach( T handle )
-    {
-        if ( h != EmptyHandle )
-        {
-            ForceClose( h );
-        }
-
-        h = handle;
-    }
-
-    T Detach()
-    {
-        T  outH = h;
-        h = EmptyHandle;
-        return outH;
-    }
-
-    void Close()
-    {
-        if ( h != EmptyHandle )
-        {
-            ForceClose( h );
-            h = EmptyHandle;
-        }
-    }
-
-private:
-    void ForceClose( T h )
-    {
-        TCloser()( h );
+        CloseHandle( handle );
     }
 };
 
-
-#ifdef _WINNT_
-
-class RegCloser
+template <class T>
+struct ReleaseDeleter
 {
-public:
-    void operator()( HKEY hKey )
+    static void Delete( T* value )
+    {
+        value->Release();
+    }
+};
+
+struct RegistryDeleter
+{
+    static void Delete( HKEY hKey )
     {
         RegCloseKey( hKey );
     }
 };
 
 
-typedef HandlePtrBase2<HKEY, NULL, RegCloser> RegHandlePtr;
+template <class T, T EmptyValue, class TDeleter>
+class UniquePtrBase
+{
+    T p;
 
-#endif
+public:
+    UniquePtrBase()
+        : p( EmptyValue )
+    {
+    }
+
+    explicit UniquePtrBase( T value )
+        : p( value )
+    {
+    }
+
+    // no destructor
+
+    T Get() const
+    {
+        return p;
+    }
+
+    operator T() const
+    {
+        return p;
+    }
+
+    T& Ref()
+    {
+        _ASSERT( p == EmptyValue );
+        return p;
+    }
+
+    bool IsEmpty() const
+    {
+        return p == EmptyValue;
+    }
+
+    UniquePtrBase& operator=( T value )
+    {
+        Attach( value );
+        return *this;
+    }
+
+    void Attach( T value )
+    {
+        if ( value != p )
+        {
+            Delete();
+            p = value;
+        }
+    }
+
+    T Detach()
+    {
+        T outP = p;
+        p = EmptyValue;
+        return outP;
+    }
+
+protected:
+    void Delete()
+    {
+        if ( p != EmptyValue )
+        {
+            TDeleter::Delete( p );
+        }
+    }
+
+private:
+    UniquePtrBase( const UniquePtrBase& );
+    UniquePtrBase& operator=( const UniquePtrBase& );
+};
+
+
+template <HANDLE EmptyHandle>
+class HandlePtrBase : public UniquePtrBase<HANDLE, EmptyHandle, HandleDeleter>
+{
+public:
+    HandlePtrBase()
+        : UniquePtrBase()
+    {
+    }
+
+    explicit HandlePtrBase( HANDLE value )
+        : UniquePtrBase( value )
+    {
+    }
+
+    ~HandlePtrBase()
+    {
+        Delete();
+    }
+
+    HandlePtrBase& operator=( HANDLE value )
+    {
+        Attach( value );
+        return *this;
+    }
+
+private:
+    HandlePtrBase( const HandlePtrBase& other );
+    HandlePtrBase& operator=( const HandlePtrBase& other );
+};
+
+
+template <class T, class TDeleter = DefaultDeleter<T> >
+class UniquePtr : public UniquePtrBase<T*, NULL, TDeleter>
+{
+public:
+    UniquePtr()
+        : UniquePtrBase()
+    {
+    }
+
+    explicit UniquePtr( T* value )
+        : UniquePtrBase( value )
+    {
+    }
+
+    ~UniquePtr()
+    {
+        Delete();
+    }
+
+    T* operator->() const
+    {
+        _ASSERT( Get() != NULL );
+        return Get();
+    }
+
+private:
+    UniquePtr( const UniquePtr& other );
+    UniquePtr& operator=( const UniquePtr& other );
+};
+
+
+template <class T>
+struct _RefReleasePtr
+{
+    typedef UniquePtr<T, ReleaseDeleter<T> > type;
+};
+
+
+typedef HandlePtrBase<NULL> HandlePtr;
+typedef HandlePtrBase<INVALID_HANDLE_VALUE> FileHandlePtr;
+typedef UniquePtrBase<HKEY, NULL, RegistryDeleter> RegHandlePtr;
