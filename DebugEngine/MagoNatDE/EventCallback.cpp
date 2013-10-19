@@ -27,11 +27,11 @@ typedef CComEnumWithCount<
 > EnumDebugBoundBreakpoints;
 
 
-const BPCookie EntryPointCookie = 1;
-
-
 namespace Mago
 {
+    const BPCookie EntryPointCookie = 1;
+
+
     EventCallback::EventCallback( Engine* engine )
         :   mRefCount( 0 ),
             mEngine( engine ),

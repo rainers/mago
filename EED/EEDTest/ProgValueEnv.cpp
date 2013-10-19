@@ -102,7 +102,6 @@ HRESULT ProgramValueEnv::StartProgram()
     RefPtr<EventCallback>   callback;
     RefPtr<IProcess>        proc;
     LaunchInfo              launchInfo = { 0 };
-    const BPCookie          Cookie = 1;
     RefPtr<IModule>         procMod;
 
     auto_ptr<Exec>  exec( new Exec() );
@@ -125,8 +124,6 @@ HRESULT ProgramValueEnv::StartProgram()
 
     for ( ; ; )
     {
-        BPCookie    cookie = 0;
-
         hr = exec->WaitForEvent( INFINITE );
         if ( FAILED( hr ) )
             return hr;

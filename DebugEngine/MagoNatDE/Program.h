@@ -16,6 +16,8 @@ namespace Mago
     class Engine;
     class DRuntime;
 
+    typedef uint64_t    BPCookie;
+
 
     class ATL_NO_VTABLE Program : 
         public CComObjectRootEx<CComMultiThreadModel>,
