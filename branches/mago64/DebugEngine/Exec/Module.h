@@ -47,5 +47,8 @@ public:
     void            SetPreferredImageBase( Address address );
 
     bool            IsDeleted();
+
+    // internal
     void            SetDeleted();
+    bool            Contains( Address addr );
 };

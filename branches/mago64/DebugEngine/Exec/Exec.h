@@ -184,15 +184,17 @@ public:
     // Adds or removes a breakpoint. If the process is running when this 
     // method is called, then all threads will be suspended first.
     //
-    HRESULT SetBreakpoint( IProcess* process, Address address, BPCookie cookie );
-    HRESULT RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie );
+    HRESULT SetBreakpoint( IProcess* process, Address address );
+    HRESULT RemoveBreakpoint( IProcess* process, Address address );
 
     // Sets up or cancels stepping for the current thread. Only one stepping 
-    // action is allowed in a thread at a time.
+    // action is allowed in a thread at a time. The debuggee is run to allow 
+    // the step to begin.
     //
-    HRESULT StepOut( IProcess* process, Address address );
-    HRESULT StepInstruction( IProcess* process, bool stepIn, bool sourceMode );
-    HRESULT StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount );
+    HRESULT StepOut( IProcess* process, Address address, bool handleException );
+    HRESULT StepInstruction( IProcess* process, bool stepIn, bool handleException );
+    HRESULT StepRange( 
+        IProcess* process, bool stepIn, AddressRange range, bool handleException );
     HRESULT CancelStep( IProcess* process );
 
     // Causes a running process to enter break mode. A subsequent event will 
@@ -214,6 +216,7 @@ private:
     HRESULT     HandleException( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent );
 
+    HRESULT     ContinueNoLock( Process* process, bool handleException );
     HRESULT     ContinueInternal( Process* proc, bool handleException );
 
     void        CleanupLastDebugEvent();
@@ -222,4 +225,5 @@ private:
     Process*    FindProcess( uint32_t id );
     HRESULT     CreateModule( Process* proc, const DEBUG_EVENT& event, RefPtr<Module>& mod );
     HRESULT     CreateThread( Process* proc, const DEBUG_EVENT& event, RefPtr<Thread>& thread );
+    bool        FoundLoaderBp( Process* proc, const DEBUG_EVENT& event );
 };

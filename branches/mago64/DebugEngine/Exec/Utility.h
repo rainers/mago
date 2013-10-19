@@ -39,6 +39,8 @@ HRESULT SuspendProcess(
 HRESULT ResumeProcess(     
     Process* process,
     ThreadControlProc suspendProc );
+HRESULT SuspendOtherThreads( Process* process, UINT32 threadId, ThreadControlProc suspendProc );
+HRESULT ResumeOtherThreads( Process* process, UINT32 threadId, ThreadControlProc suspendProc );
 
 
 inline HRESULT GetLastHr()

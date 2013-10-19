@@ -344,14 +344,13 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::SetBreakpoint( IProcess* process, Address address, BPCookie cookie )
+    HRESULT DebuggerProxy::SetBreakpoint( IProcess* process, Address address )
     {
         HRESULT             hr = S_OK;
         SetBreakpointParams params( mExec );
 
         params.Process = process;
         params.Address = address;
-        params.Cookie = cookie;
 
         hr = InvokeCommand( params );
         if ( FAILED( hr ) )
@@ -360,14 +359,13 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie )
+    HRESULT DebuggerProxy::RemoveBreakpoint( IProcess* process, Address address )
     {
         HRESULT                 hr = S_OK;
         RemoveBreakpointParams  params( mExec );
 
         params.Process = process;
         params.Address = address;
-        params.Cookie = cookie;
 
         hr = InvokeCommand( params );
         if ( FAILED( hr ) )
@@ -392,14 +390,13 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException )
+    HRESULT DebuggerProxy::StepInstruction( IProcess* process, bool stepIn, bool handleException )
     {
         HRESULT                 hr = S_OK;
         StepInstructionParams   params( mExec );
 
         params.Process = process;
         params.StepIn = stepIn;
-        params.SourceMode = sourceMode;
         params.HandleException = handleException;
 
         hr = InvokeCommand( params );
@@ -409,16 +406,14 @@ namespace Mago
         return params.OutHResult;
     }
 
-    HRESULT DebuggerProxy::StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount, bool handleException )
+    HRESULT DebuggerProxy::StepRange( IProcess* process, bool stepIn, AddressRange range, bool handleException )
     {
         HRESULT         hr = S_OK;
         StepRangeParams params( mExec );
 
         params.Process = process;
         params.StepIn = stepIn;
-        params.SourceMode = sourceMode;
-        params.Ranges = ranges;
-        params.RangeCount = rangeCount;
+        params.Range = range;
         params.HandleException = handleException;
 
         hr = InvokeCommand( params );

@@ -361,10 +361,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Steppers.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Thread.cpp"
 				>
 			</File>
@@ -448,10 +444,6 @@
 			</File>
 			<File
 				RelativePath=".\Process.h"
-				>
-			</File>
-			<File
-				RelativePath=".\Stepper.h"
 				>
 			</File>
 			<File

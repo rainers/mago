@@ -19,16 +19,20 @@ class MachineX86 : public MachineX86Base
     CONTEXT         mContext;
 #endif
     bool            mIsContextCached;
+    bool            mEnableSS;
 
 public:
     MachineX86();
 
 protected:
+    virtual bool Is64Bit();
     virtual HRESULT CacheThreadContext();
     virtual HRESULT FlushThreadContext();
     virtual HRESULT ChangeCurrentPC( int32_t byteOffset );
     virtual HRESULT SetSingleStep( bool enable );
+    virtual HRESULT ClearSingleStep();
     virtual HRESULT GetCurrentPC( Address& address );
+    virtual HRESULT GetReturnAddress( Address& address );
 
     virtual HRESULT SuspendThread( Thread* thread );
     virtual HRESULT ResumeThread( Thread* thread );

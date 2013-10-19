@@ -16,6 +16,8 @@ namespace Mago
     class Engine;
     class DRuntime;
 
+    typedef uint64_t    BPCookie;
+
 
     class ATL_NO_VTABLE Program : 
         public CComObjectRootEx<CComMultiThreadModel>,
@@ -23,6 +25,8 @@ namespace Mago
     {
         typedef std::map< Address, RefPtr<Module> >     ModuleMap;
         typedef std::map< DWORD, RefPtr<Thread> >       ThreadMap;
+        typedef std::vector< BPCookie >                 CookieVec;
+        typedef std::map< Address, CookieVec >          BPMap;
 
         GUID                            mProgId;
         CComPtr<IDebugProcess2>         mProcess;
@@ -35,9 +39,11 @@ namespace Mago
         DebuggerProxy*                  mDebugger;
         ThreadMap                       mThreadMap;
         ModuleMap                       mModMap;
+        BPMap                           mBPMap;
         RefPtr<Engine>                  mEngine;
         Guard                           mThreadGuard;
         Guard                           mModGuard;
+        Guard                           mBPGuard;
         DWORD                           mNextModLoadIndex;  // protected by mod guard
         RefPtr<Module>                  mProgMod;
         std::unique_ptr<DRuntime>       mDRuntime;
@@ -125,6 +131,7 @@ namespace Mago
 
         HRESULT     SetInternalBreakpoint( Address address, BPCookie cookie );
         HRESULT     RemoveInternalBreakpoint( Address address, BPCookie cookie );
+        HRESULT     EnumBPCookies( Address, std::vector< BPCookie >& iter );
 
     private:
         HRESULT     StepInternal( IDebugThread2* pThread, STEPKIND sk, STEPUNIT step );

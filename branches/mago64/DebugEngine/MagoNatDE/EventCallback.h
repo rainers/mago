@@ -38,16 +38,19 @@ namespace Mago
         virtual void OnOutputString( IProcess* process, const wchar_t* outputString );
         virtual void OnLoadComplete( IProcess* process, DWORD threadId );
         virtual RunMode OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec );
-        virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter );
+        virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded );
         virtual void OnStepComplete( IProcess* process, uint32_t threadId );
         virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId );
         virtual void OnError( IProcess* process, HRESULT hrErr, EventCode event );
-        virtual RunMode OnCallProbe( IProcess* process, uint32_t threadId, Address address );
+        virtual ProbeRunMode OnCallProbe( 
+            IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange );
 
     private:
         HRESULT SendEvent( EventBase* eventBase, Program* program, Thread* thread );
 
         // return whether the debuggee should continue
-        RunMode OnBreakpointInternal( Program* program, Thread* thread, Address address, Enumerator< BPCookie >* iter );
+        RunMode OnBreakpointInternal( Program* program, Thread* thread, Address address, bool embedded );
+        bool FindThunk( 
+            MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange& thunkRange );
     };
 }
