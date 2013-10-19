@@ -145,19 +145,12 @@ public:
         return RunMode_Break;
     }
 
-    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
+    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  breakpoint at %p\n", address );
         else
             printf( "  breakpoint at %08I64x\n", address );
-
-        while ( iter->MoveNext() )
-        {
-            BPCookie    cookie = iter->GetCurrent();
-
-            printf( "    %I64x\n", cookie );
-        }
 
         mHitBp = true;
 
@@ -185,9 +178,10 @@ public:
         printf( "  *** ERROR: %08x while %d\n", hrErr, event );
     }
 
-    virtual RunMode OnCallProbe( IProcess* process, uint32_t threadId, Address address )
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
     {
-        return RunMode_Run;
+        return ProbeRunMode_Run;
     }
 };
 
@@ -297,21 +291,23 @@ int _tmain( int argc, _TCHAR* argv[] )
                 //hr = exec.StepInstruction( proc, true );
 
                 if ( stepCount > 1 )
-                    hr = exec.StepInstruction( proc, true, false );
+                    hr = exec.StepInstruction( proc, true, true );
                 else
                 {
                     //113A5
                     AddressRange    range = { baseAddr + 0x0001137A, baseAddr + 0x000113A5 };
-                    hr = exec.StepRange( proc, false, false, &range, 1 );
+                    hr = exec.StepRange( proc, false, range, true );
                 }
 
                 if ( FAILED( hr ) )
                     goto Error;
             }
-
-            hr = exec.Continue( proc, true );
-            if ( FAILED( hr ) )
-                goto Error;
+            else
+            {
+                hr = exec.Continue( proc, true );
+                if ( FAILED( hr ) )
+                    goto Error;
+            }
         }
 #endif
 
@@ -328,7 +324,7 @@ int _tmain( int argc, _TCHAR* argv[] )
             // 1137A, 11395
 
             //exec.SetBreakpoint( proc, baseAddr + 0x0001138C, 255 );
-            exec.SetBreakpoint( proc, baseAddr + 0x0001137A, 257 );
+            exec.SetBreakpoint( proc, baseAddr + 0x0001137A );
             //exec.SetBreakpoint( proc, baseAddr + 0x00011395, 129 );
 
             mod->Release();

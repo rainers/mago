@@ -249,7 +249,7 @@ InstructionType GetInstructionTypeAndSize( uint8_t* mem, int memLen, CpuSizeMode
             instSize = 2;
 
         if ( instSize > 0 )
-            type = Inst_Call;
+            type = Inst_Syscall;
         break;
 
     default:

@@ -34,12 +34,14 @@ namespace Mago
     //------------------------------------------------------------------------
 
 
-    InstReader::InstReader( uint32_t blockCount, InstBlock** blocks, Address startAddr, Address endAddr )
+    InstReader::InstReader( uint32_t blockCount, InstBlock** blocks, Address startAddr, Address endAddr,
+        Address anchorAddr )
         :   mBlockCount( blockCount ),
             mBlocks( blocks ),
             mStartAddr( startAddr ),
             mEndAddr( endAddr ),
-            mCurAddr( startAddr )
+            mCurAddr( startAddr ),
+            mAnchorAddr( anchorAddr )
     {
         _ASSERT( (blockCount > 0) && (blockCount <= 2) );
         _ASSERT( blocks != NULL );
@@ -61,6 +63,24 @@ namespace Mago
         return &mDisasm;
     }
 
+    // If the last disassembled instruction crosses the anchor, then the last 
+    // instruction is set to invalid and its length is trimmed up to the anchor.
+    // Returns the number of bytes disassembled.
+
+    uint32_t InstReader::TruncateBeforeAnchor()
+    {
+        uint32_t instLen = ud_insn_len( &mDisasm );
+        Address limit = mCurAddr + instLen;
+
+        if ( mCurAddr < mAnchorAddr && limit > mAnchorAddr )
+        {
+            mDisasm.mnemonic = UD_Iinvalid;
+            instLen = mAnchorAddr - mCurAddr;
+        }
+
+        return instLen;
+    }
+
     uint32_t InstReader::Decode()
     {
         uint32_t    instBufLen = 0;
@@ -71,6 +91,7 @@ namespace Mago
         ud_set_input_buffer( &mDisasm, instBuf, instBufLen );
 
         instLen = ud_decode( &mDisasm );
+        instLen = TruncateBeforeAnchor();
         mCurAddr += instLen;
 
         return instLen;
@@ -86,6 +107,7 @@ namespace Mago
         ud_set_input_buffer( &mDisasm, instBuf, instBufLen );
 
         instLen = ud_disassemble( &mDisasm );
+        instLen = TruncateBeforeAnchor();
         mCurAddr += instLen;
 
         return instLen;
@@ -165,7 +187,8 @@ namespace Mago
 
 
     InstCache::InstCache()
-        :   mDebugger( NULL )
+        :   mDebugger( NULL ),
+            mAnchorAddr( 0 )
     {
     }
 
@@ -189,6 +212,11 @@ namespace Mago
         mDebugger = debugger;
 
         return S_OK;
+    }
+
+    void InstCache::SetAnchor( Address anchorAddr )
+    {
+        mAnchorAddr = anchorAddr;
     }
 
     HRESULT InstCache::LoadBlocks( Address addr, int instAway, int& instAwayAvail )
@@ -339,7 +367,7 @@ namespace Mago
     {
         // TODO: assert params
 
-        InstReader  reader( blockCount, blocks, startAddr, endAddr );
+        InstReader  reader( blockCount, blocks, startAddr, endAddr, mAnchorAddr );
         uint32_t    instLen = 0;
         uint32_t    virtPos = startAddr - blocks[0]->Address;
 

@@ -98,3 +98,9 @@ void Module::SetDeleted()
 {
     mDeleted = true;
 }
+
+bool Module::Contains( Address addr )
+{
+    Address modAddr = GetImageBase();
+    return (addr >= modAddr) && ((addr - modAddr) < GetSize());
+}

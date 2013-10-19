@@ -14,6 +14,7 @@ enum Action
 {
     Action_Go,
     Action_StepInstruction,
+    Action_StepRange,
 };
 
 struct ExpectedEvent
@@ -122,7 +123,7 @@ void StepOneThreadSuite::StepInstructionInSourceHaveSource()
         { { ExecEvent_StepComplete, 0x101C, 0 }, { Action_StepInstruction, true, true } },
         { { ExecEvent_StepComplete, 0x101C, 0 }, { Action_StepInstruction, true, true } },
         { { ExecEvent_StepComplete, 0x101E, 0 }, { Action_StepInstruction, true, true } },
-        //{ { ExecEvent_StepComplete, 0x1000, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, 0x1000, 0 }, { Action_StepInstruction, true, true } },
         { { ExecEvent_StepComplete, 0x1023, 0 }, { Action_StepInstruction, true, true } },
         { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, true, true } },
         { { ExecEvent_StepComplete, 0x1070, 0 }, { Action_Go, true, true } },
@@ -139,7 +140,7 @@ void StepOneThreadSuite::StepInstructionInSourceNoSource()
         { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
         { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
-        { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepRange, true, true } },
         { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, true, true } },
         { { ExecEvent_StepComplete, 0x1070, 0 }, { Action_Go, true, true } },
         { { ExecEvent_ProcessExit, 0, 0 }, { Action_Go, true, true } },
@@ -292,14 +293,20 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
             if ( curStep->Action.BPAddressOffset != 0 )
             {
                 uintptr_t   addr = (curStep->Action.BPAddressOffset + baseAddr);
-                TEST_ASSERT_RETURN( SUCCEEDED( exec.SetBreakpoint( process.Get(), addr, 1 ) ) );
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.SetBreakpoint( process.Get(), addr ) ) );
             }
 
             if ( curStep->Action.Action == Action_StepInstruction )
             {
                 TEST_ASSERT_RETURN( SUCCEEDED( 
-                    exec.StepInstruction( process.Get(), curStep->Action.StepIn, curStep->Action.SourceMode ) ) );
-                TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, true ) ) );
+                    exec.StepInstruction( process.Get(), curStep->Action.StepIn, true ) ) );
+                continued = true;
+            }
+            else if ( curStep->Action.Action == Action_StepRange )
+            {
+                AddressRange range = { context.Eip, context.Eip };
+                TEST_ASSERT_RETURN( SUCCEEDED( 
+                    exec.StepRange( process.Get(), curStep->Action.StepIn, range, true ) ) );
                 continued = true;
             }
         }

@@ -162,19 +162,17 @@ namespace Mago
     {
         IProcess*       Process;
         Address         Address;
-        BPCookie        Cookie;
 
         SetBreakpointParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
-                Address( 0 ),
-                Cookie( 0 )
+                Address( 0 )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.SetBreakpoint( Process, Address, Cookie );
+            OutHResult = Core.SetBreakpoint( Process, Address );
         }
     };
 
@@ -182,19 +180,17 @@ namespace Mago
     {
         IProcess*       Process;
         Address         Address;
-        BPCookie        Cookie;
 
         RemoveBreakpointParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
-                Address( 0 ),
-                Cookie( 0 )
+                Address( 0 )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.RemoveBreakpoint( Process, Address, Cookie );
+            OutHResult = Core.RemoveBreakpoint( Process, Address );
         }
     };
 
@@ -214,10 +210,7 @@ namespace Mago
 
         virtual void    Run()
         {
-            OutHResult = Core.StepOut( Process, TargetAddress );
-
-            if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.Continue( Process, HandleException );
+            OutHResult = Core.StepOut( Process, TargetAddress, HandleException );
         }
     };
 
@@ -225,24 +218,19 @@ namespace Mago
     {
         IProcess*       Process;
         bool            StepIn;
-        bool            SourceMode;
         bool            HandleException;
 
         StepInstructionParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
                 StepIn( false ),
-                SourceMode( false ),
                 HandleException( false )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.StepInstruction( Process, StepIn, SourceMode );
-
-            if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.Continue( Process, HandleException );
+            OutHResult = Core.StepInstruction( Process, StepIn, HandleException );
         }
     };
 
@@ -250,28 +238,20 @@ namespace Mago
     {
         IProcess*       Process;
         bool            StepIn;
-        bool            SourceMode;
-        AddressRange*   Ranges;
-        int             RangeCount;
+        AddressRange    Range;
         bool            HandleException;
 
         StepRangeParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
                 StepIn( false ),
-                SourceMode( false ),
-                Ranges( NULL ),
-                RangeCount( 0 ),
                 HandleException( false )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.StepRange( Process, StepIn, SourceMode, Ranges, RangeCount );
-
-            if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.Continue( Process, HandleException );
+            OutHResult = Core.StepRange( Process, StepIn, Range, HandleException );
         }
     };
 

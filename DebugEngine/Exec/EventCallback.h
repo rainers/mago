@@ -10,8 +10,6 @@
 class IProcess;
 class Thread;
 class IModule;
-template <class T>
-class Enumerator;
 
 
 class IEventCallback
@@ -45,10 +43,11 @@ public:
     virtual void OnLoadComplete( IProcess* process, DWORD threadId ) = 0;
 
     virtual RunMode OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec ) = 0;
-    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter ) = 0;
+    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded ) = 0;
     virtual void OnStepComplete( IProcess* process, uint32_t threadId ) = 0;
     virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId ) = 0;
     virtual void OnError( IProcess* process, HRESULT hrErr, EventCode event ) = 0;
 
-    virtual RunMode OnCallProbe( IProcess* process, uint32_t threadId, Address address ) = 0;
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange ) = 0;
 };

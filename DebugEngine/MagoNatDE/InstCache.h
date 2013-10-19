@@ -57,10 +57,12 @@ namespace Mago
         Address         mStartAddr;
         Address         mEndAddr;
         Address         mCurAddr;
+        Address         mAnchorAddr;
         BYTE            mInstBuf[ MaxInstructionSize ];
 
     public:
-        InstReader( uint32_t blockCount, InstBlock** blocks, Address startAddr, Address endAddr );
+        InstReader( uint32_t blockCount, InstBlock** blocks, Address startAddr, Address endAddr, 
+            Address anchorAddr );
 
         const ud_t* GetDisasmData();
         uint32_t Decode();
@@ -71,6 +73,7 @@ namespace Mago
 
     private:
         BYTE* GetInstBuffer( uint32_t& length );
+        uint32_t TruncateBeforeAnchor();
     };
 
 
@@ -78,12 +81,14 @@ namespace Mago
     {
         RefPtr<Program>             mProg;
         DebuggerProxy*              mDebugger;
+        Address                     mAnchorAddr;
         std::auto_ptr<InstBlock>    mBlockCache[2];
 
     public:
         InstCache();
 
         HRESULT Init( Program* program, DebuggerProxy* debugger );
+        void SetAnchor( Address anchorAddr );
 
         HRESULT LoadBlocks( Address addr, int instAway, int& instAwayAvail );
 

@@ -75,9 +75,15 @@ HRESULT MakeMachineX86( IMachine*& machine )
 }
 
 MachineX86::MachineX86()
-    :   mIsContextCached( false )
+    :   mIsContextCached( false ),
+        mEnableSS( false )
 {
     memset( &mContext, 0, sizeof mContext );
+}
+
+bool MachineX86::Is64Bit()
+{
+    return false;
 }
 
 HRESULT MachineX86::CacheThreadContext()
@@ -108,6 +114,12 @@ HRESULT MachineX86::FlushThreadContext()
     ThreadX86Base* threadX86 = GetStoppedThread();
     Thread* thread = threadX86->GetExecThread();
 
+    if ( mEnableSS )
+    {
+        mContext.EFlags |= TRACE_FLAG;
+        mEnableSS = false;
+    }
+
     if ( !SetThreadContextX86( thread->GetHandle(), &mContext ) )
     {
         hr = GetLastHr();
@@ -136,10 +148,17 @@ HRESULT MachineX86::SetSingleStep( bool enable )
     if ( !mIsContextCached )
         return E_FAIL;
 
-    if ( enable )
-        mContext.EFlags |= TRACE_FLAG;
-    else
-        mContext.EFlags &= ~TRACE_FLAG;
+    mEnableSS = enable;
+    return S_OK;
+}
+
+HRESULT MachineX86::ClearSingleStep()
+{
+    _ASSERT( mIsContextCached );
+    if ( !mIsContextCached )
+        return E_FAIL;
+
+    mContext.EFlags &= ~TRACE_FLAG;
 
     return S_OK;
 }
@@ -151,6 +170,25 @@ HRESULT MachineX86::GetCurrentPC( Address& address )
         return E_FAIL;
 
     address = mContext.Eip;
+    return S_OK;
+}
+
+// Gets the return address in the newest stack frame.
+HRESULT MachineX86::GetReturnAddress( Address& address )
+{
+    _ASSERT( mIsContextCached );
+    if ( !mIsContextCached )
+        return E_FAIL;
+
+    BOOL bRet = ReadProcessMemory( 
+        GetProcessHandle(), 
+        (void*) mContext.Esp, 
+        &address, 
+        sizeof address, 
+        NULL );
+    if ( !bRet )
+        return GetLastHr();
+
     return S_OK;
 }
 

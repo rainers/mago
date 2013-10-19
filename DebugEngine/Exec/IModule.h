@@ -25,5 +25,4 @@ public:
     virtual Address         GetPreferredImageBase() = 0;
 
     virtual bool            IsDeleted() = 0;
-    virtual void            SetDeleted() = 0;
 };

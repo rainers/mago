@@ -200,13 +200,21 @@ namespace Mago
         InstBlock*  blocks[2] = { block, nextBlock };
         uint32_t    blockCount = (nextBlock == NULL ? 1 : 2);
         Address     endAddr = (nextBlock == NULL ? block->GetLimit() : nextBlock->GetLimit());
-        InstReader  reader( blockCount, blocks, mReadAddr, endAddr );
+        InstReader  reader( blockCount, blocks, mReadAddr, endAddr, mAnchorAddr );
         uint32_t    instLen = 0;
 
         // we might have already determined there were invalid instructions there
         while ( (instFound < instToFind) && (mInvalidInstLenAtReadPtr > 0) )
         {
             BYTE    dataByte = 0;
+
+            if ( mReadAddr == mAnchorAddr )
+            {
+                // at the anchor, stop treating this as an invalid instruction, 
+                // and try to read a full instruction from scratch
+                mInvalidInstLenAtReadPtr = 0;
+                break;
+            }
 
             if ( !reader.ReadByte( dataByte ) )
                 break;
@@ -292,6 +300,7 @@ namespace Mago
         case SEEK_START_CURRENT:
             // the read address is where we left off, so set the anchor there
             mAnchorAddr = mReadAddr;
+            mInstCache.SetAnchor( mAnchorAddr );
             break;
 
         case SEEK_START_CODECONTEXT:
@@ -305,6 +314,7 @@ namespace Mago
                 magoMem->GetAddress( newAnchor );
 
                 mAnchorAddr = newAnchor;
+                mInstCache.SetAnchor( mAnchorAddr );
             }
             break;
 
@@ -313,6 +323,7 @@ namespace Mago
                 return E_INVALIDARG;
 
             mAnchorAddr = (Address) uCodeLocationId;
+            mInstCache.SetAnchor( mAnchorAddr );
             break;
 
         case SEEK_START_BEGIN:
@@ -320,8 +331,8 @@ namespace Mago
             return E_NOTIMPL;
         }
 
-        _RPT2( _CRT_WARN, "Seek: anchor=%08x iInst=%I64d\n", 
-            mAnchorAddr, iInstructions );
+        _RPT3( _CRT_WARN, "Seek: anchor=%08x iInst=%I64d (seekStart=%d)\n", 
+            mAnchorAddr, iInstructions, dwSeekStart );
 
         return SeekOffset( iInstructions );
     }
@@ -511,6 +522,8 @@ namespace Mago
         mReadAddr = address;
         mProg = program;
 
+        mInstCache.SetAnchor( mAnchorAddr );
+
         return S_OK;
     }
 
@@ -631,7 +644,7 @@ namespace Mago
         InstBlock*  blocks[2] = { block, nextBlock };
         uint32_t    blockCount = (nextBlock == NULL ? 1 : 2);
         Address     endAddr = (nextBlock == NULL ? block->GetLimit() : nextBlock->GetLimit());
-        InstReader  reader( blockCount, blocks, mAnchorAddr, endAddr );
+        InstReader  reader( blockCount, blocks, mAnchorAddr, endAddr, mAnchorAddr );
         uint32_t    instLen = 0;
 
         for ( instLen = reader.Decode(); 
