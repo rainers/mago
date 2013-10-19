@@ -37,9 +37,16 @@ enum NotifyAction
     NotifyStepOut
 };
 
-struct ExpectedEvent
+struct RangeStep
 {
     AddressRange    Range;
+    AddressRange    ThunkRange;
+    bool            InThunk;
+};
+
+struct ExpectedEvent
+{
+    RangeStep*      Range;
     Address         BPAddress;
     Address         UnpatchedAddress;
     int             NotifyAction;
@@ -67,4 +74,7 @@ public:
     void            PopExpected();
 
     Thread*         GetExecThread();
+
+    // you can free it with delete
+    static RangeStep* AllocRange();
 };

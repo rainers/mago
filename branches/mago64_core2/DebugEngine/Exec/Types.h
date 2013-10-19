@@ -23,3 +23,11 @@ enum RunMode
     RunMode_Break,
     RunMode_Wait,
 };
+
+enum ProbeRunMode
+{
+    ProbeRunMode_Run,
+    ProbeRunMode_Break,
+    ProbeRunMode_Wait,
+    ProbeRunMode_WalkThunk,
+};

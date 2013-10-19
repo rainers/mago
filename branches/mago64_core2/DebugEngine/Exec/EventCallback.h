@@ -48,5 +48,6 @@ public:
     virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId ) = 0;
     virtual void OnError( IProcess* process, HRESULT hrErr, EventCode event ) = 0;
 
-    virtual RunMode OnCallProbe( IProcess* process, uint32_t threadId, Address address ) = 0;
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange ) = 0;
 };

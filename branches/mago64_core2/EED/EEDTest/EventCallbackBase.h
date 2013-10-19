@@ -45,7 +45,8 @@ public:
     virtual void OnStepComplete( IProcess* process, uint32_t threadId );
     virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId );
     virtual void OnError( IProcess* process, HRESULT hrErr, EventCode event );
-    virtual RunMode OnCallProbe( IProcess* process, uint32_t threadId, Address address );
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange );
 
     void PrintCallstacksX86( IProcess* process );
     void PrintCallstacksX64( IProcess* process );
