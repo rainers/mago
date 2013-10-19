@@ -15,6 +15,7 @@
 #include "PendingBreakpoint.h"
 #include "BoundBreakpoint.h"
 #include "ComEnumWithCount.h"
+#include <MagoCVConst.h>
 
 
 typedef CComEnumWithCount< 
@@ -604,7 +605,8 @@ namespace Mago
     {
     }
 
-    RunMode EventCallback::OnCallProbe( IProcess* process, uint32_t threadId, Address address )
+    ProbeRunMode EventCallback::OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
     {
         OutputDebugStringA( "EventCallback::OnCallProbe\n" );
 
@@ -613,25 +615,68 @@ namespace Mago
         RefPtr<MagoST::ISession>    session;
 
         if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return RunMode_Run;
+            return ProbeRunMode_Run;
 
         if ( !prog->FindModuleContainingAddress( address, mod ) )
-            return RunMode_Run;
+            return ProbeRunMode_Run;
 
         if ( !mod->GetSymbolSession( session ) )
-            return RunMode_Run;
+            return ProbeRunMode_Run;
 
         uint16_t    sec = 0;
         uint32_t    offset = 0;
         sec = session->GetSecOffsetFromVA( address, offset );
         if ( sec == 0 )
-            return RunMode_Run;
+            return ProbeRunMode_Run;
 
         MagoST::LineNumber  line = { 0 };
 
         if ( !session->FindLine( sec, offset, line ) )
-            return RunMode_Run;
+        {
+            if ( FindThunk( session, sec, offset, thunkRange ) )
+                return ProbeRunMode_WalkThunk;
 
-        return RunMode_Break;
+            return ProbeRunMode_Run;
+        }
+
+        return ProbeRunMode_Break;
+    }
+
+    bool EventCallback::FindThunk( 
+        MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange& thunkRange )
+    {
+        HRESULT hr = S_OK;
+        MagoST::SymHandle symHandle;
+
+        hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, section, offset, symHandle );
+        if ( hr != S_OK )
+        {
+            hr = session->FindOuterSymbolByAddr( 
+                MagoST::SymHeap_StaticSymbols, section, offset, symHandle );
+        }
+        if ( hr == S_OK )
+        {
+            MagoST::SymInfoData infoData;
+            MagoST::ISymbolInfo* symInfo = NULL;
+
+            hr = session->GetSymbolInfo( symHandle, infoData, symInfo );
+            if ( hr == S_OK )
+            {
+                if ( symInfo->GetSymTag() == MagoST::SymTagThunk )
+                {
+                    uint32_t length = 0;
+                    symInfo->GetAddressOffset( offset );
+                    symInfo->GetAddressSegment( section );
+                    symInfo->GetLength( length );
+
+                    uint64_t addr = session->GetVAFromSecOffset( section, offset );
+                    thunkRange.Begin = (Address) addr;
+                    thunkRange.End = (Address) addr + length - 1;
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

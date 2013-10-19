@@ -740,7 +740,7 @@ HRESULT MachineX86Base::RunAllActions( bool cancel, MachineResult& result )
     HRESULT hr = S_OK;
     ExpectedEvent* event = mCurThread->GetTopExpected();
     _ASSERT( event != NULL );
-    AddressRange range = event->Range;
+    RangeStepPtr rangeStep;
 
     if ( event->ClearTF && !cancel )
     {
@@ -775,11 +775,15 @@ HRESULT MachineX86Base::RunAllActions( bool cancel, MachineResult& result )
     int notifier = event->NotifyAction;
     Motion motion = event->Motion;
 
+    // Take over the range step and clear it, so that popping the event won't delete it again.
+    rangeStep.Attach( event->Range );
+    event->Range = NULL;
+
     mCurThread->PopExpected();
 
     if ( !cancel )
     {
-        hr = RunNotifierAction( notifier, motion, &range, result );
+        hr = RunNotifierAction( notifier, motion, rangeStep, result );
     }
 
 Error:
@@ -789,7 +793,7 @@ Error:
 HRESULT MachineX86Base::RunNotifierAction( 
     int notifier, 
     Motion motion, 
-    const AddressRange* range, 
+    RangeStepPtr& rangeStep, 
     MachineResult& result )
 {
     HRESULT hr = S_OK;
@@ -811,15 +815,15 @@ HRESULT MachineX86Base::RunNotifierAction(
         break;
 
     case NotifyCheckRange:
-        hr = RunNotifyCheckRange( motion, range, result );
+        hr = RunNotifyCheckRange( motion, rangeStep, result );
         break;
 
     case NotifyCheckCall:
-        hr = RunNotifyCheckCall( motion, range, result );
+        hr = RunNotifyCheckCall( motion, rangeStep, result );
         break;
 
     case NotifyStepOut:
-        hr = RunNotifyStepOut( motion, range, result );
+        hr = RunNotifyStepOut( motion, rangeStep, result );
         break;
 
     default:
@@ -833,10 +837,10 @@ HRESULT MachineX86Base::RunNotifierAction(
 
 HRESULT MachineX86Base::RunNotifyCheckRange( 
     Motion motion, 
-    const AddressRange* range, 
+    RangeStepPtr& rangeStep, 
     MachineResult& result )
 {
-    if ( range == NULL )
+    if ( rangeStep.Get() == NULL )
         return E_FAIL;
 
     HRESULT hr = S_OK;
@@ -846,15 +850,24 @@ HRESULT MachineX86Base::RunNotifyCheckRange(
     if ( FAILED( hr ) )
         goto Error;
 
-    if ( pc >= range->Begin && pc <= range->End )
+    if ( (rangeStep->InThunk && pc >= rangeStep->ThunkRange.Begin && pc <= rangeStep->ThunkRange.End)
+        || (!rangeStep->InThunk && pc >= rangeStep->Range.Begin && pc <= rangeStep->Range.End) )
     {
         bool stepIn = (motion == Motion_RangeStepIn) ? true : false;
 
-        hr = SetStepRange( stepIn, *range );
+        hr = SetStepRange( stepIn, rangeStep );
         if ( FAILED( hr ) )
             goto Error;
 
         result = MacRes_HandledContinue;
+    }
+    else if ( rangeStep->InThunk )
+    {
+        rangeStep->InThunk = false;
+
+        hr = RunNotifyCheckCall( motion, rangeStep, result );
+        if ( FAILED( hr ) )
+            goto Error;
     }
     else
     {
@@ -867,28 +880,32 @@ Error:
 
 HRESULT MachineX86Base::RunNotifyCheckCall( 
     Motion motion, 
-    const AddressRange* range, 
+    RangeStepPtr& rangeStep, 
     MachineResult& result )
 {
+    if ( rangeStep.Get() == NULL )
+        return E_FAIL;
+
     HRESULT hr = S_OK;
     Address pc = 0;
     Address retAddr = 0;
     ExpectedEvent* event = NULL;
     bool setBP = false;
-    RunMode mode = RunMode_Run;
+    ProbeRunMode mode = ProbeRunMode_Run;
+    AddressRange thunkRange = { 0 };
 
     hr = GetCurrentPC( pc );
     if ( FAILED( hr ) )
         goto Error;
 
-    if ( pc >= range->Begin && pc <= range->End )
+    if ( pc >= rangeStep->Range.Begin && pc <= rangeStep->Range.End )
     {
         // if you call a procedure in the same range, then there's no need to probe
-        mode = RunMode_Run;
+        mode = ProbeRunMode_Run;
     }
     else
     {
-        mode = mCallback->OnCallProbe( mProcess, mStoppedThreadId, pc );
+        mode = mCallback->OnCallProbe( mProcess, mStoppedThreadId, pc, thunkRange );
     }
 
     if ( mode == RunMode_Break )
@@ -912,10 +929,12 @@ HRESULT MachineX86Base::RunNotifyCheckCall(
             goto Error;
         }
 
+        rangeStep->InThunk = false;
+
         event->BPAddress = retAddr;
         event->RemoveBP = true;
         event->Motion = motion;
-        event->Range = *range;
+        event->Range = rangeStep.Detach();
 
         hr = SetBreakpointInternal( retAddr, false );
         if ( FAILED( hr ) )
@@ -923,6 +942,17 @@ HRESULT MachineX86Base::RunNotifyCheckCall(
         setBP = true;
 
         hr = SetContinue();
+        if ( FAILED( hr ) )
+            goto Error;
+
+        result = MacRes_HandledContinue;
+    }
+    else if ( mode == ProbeRunMode_WalkThunk )
+    {
+        rangeStep->InThunk = true;
+        rangeStep->ThunkRange = thunkRange;
+
+        hr = SetStepRange( true, rangeStep );
         if ( FAILED( hr ) )
             goto Error;
 
@@ -947,7 +977,7 @@ Error:
 
 HRESULT MachineX86Base::RunNotifyStepOut( 
     Motion motion, 
-    const AddressRange* range, 
+    RangeStepPtr& rangeStep, 
     MachineResult& result )
 {
     HRESULT hr = S_OK;
@@ -980,7 +1010,7 @@ HRESULT MachineX86Base::RunNotifyStepOut(
     event->BPAddress = retAddr;
     event->RemoveBP = true;
     event->Motion = motion;
-    event->Range = *range;
+    event->Range = rangeStep.Detach();
 
     hr = SetBreakpointInternal( retAddr, false );
     if ( FAILED( hr ) )
@@ -1154,7 +1184,7 @@ HRESULT MachineX86Base::DontPassBP(
     InstructionType instType, 
     int instLen, 
     int notifier, 
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
     _ASSERT( instType != Inst_Breakpoint );
     HRESULT hr = S_OK;
@@ -1162,19 +1192,19 @@ HRESULT MachineX86Base::DontPassBP(
     switch ( instType )
     {
     case Inst_Call:
-        hr = DontPassBPCall( motion, pc, instLen, notifier, range );
+        hr = DontPassBPCall( motion, pc, instLen, notifier, rangeStep );
         break;
 
     case Inst_Syscall:
-        hr = DontPassBPSyscall( motion, pc, instLen, notifier, range );
+        hr = DontPassBPSyscall( motion, pc, instLen, notifier, rangeStep );
         break;
 
     case Inst_RepString:
-        hr = DontPassBPRepString( motion, pc, instLen, notifier, range );
+        hr = DontPassBPRepString( motion, pc, instLen, notifier, rangeStep );
         break;
 
     default:
-        hr = DontPassBPSimple( motion, pc, instLen, notifier, range );
+        hr = DontPassBPSimple( motion, pc, instLen, notifier, rangeStep );
         break;
     }
 
@@ -1186,9 +1216,9 @@ HRESULT MachineX86Base::DontPassBPSimple(
     Address pc, 
     int instLen, 
     int notifier, 
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
-    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, false, false, false, motion, range );
+    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, false,false,false, motion, rangeStep);
 }
 
 HRESULT MachineX86Base::DontPassBPCall( 
@@ -1196,7 +1226,7 @@ HRESULT MachineX86Base::DontPassBPCall(
     Address pc, 
     int instLen, 
     int notifier, 
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
     if ( motion == Motion_RangeStepIn )
     {
@@ -1205,9 +1235,9 @@ HRESULT MachineX86Base::DontPassBPCall(
     }
 
     if ( motion == Motion_StepIn || motion == Motion_RangeStepIn )
-        return SetupInstructionStep( pc, instLen, notifier, Expect_SS, false,false,false, motion, range);
+        return SetupInstructionStep( pc, instLen,notifier,Expect_SS, false,false,false,motion,rangeStep);
     else if ( motion == Motion_StepOver || motion == Motion_RangeStepOver )
-        return SetupInstructionStep( pc, instLen, notifier, Expect_BP, false,false,false, motion, range);
+        return SetupInstructionStep( pc, instLen,notifier,Expect_BP, false,false,false,motion,rangeStep);
 
     return E_UNEXPECTED;
 }
@@ -1217,9 +1247,9 @@ HRESULT MachineX86Base::DontPassBPSyscall(
     Address pc, 
     int instLen, 
     int notifier,
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
-    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, false, false, true, motion, range );
+    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, false,false,true, motion, rangeStep );
 }
 
 HRESULT MachineX86Base::DontPassBPRepString( 
@@ -1227,14 +1257,14 @@ HRESULT MachineX86Base::DontPassBPRepString(
     Address pc, 
     int instLen, 
     int notifier, 
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
     if ( motion == Motion_StepIn )
-        return SetupInstructionStep( pc, instLen, notifier, Expect_SS, false, false, false,motion,range);
+        return SetupInstructionStep( pc, instLen,notifier,Expect_SS, false,false,false,motion,rangeStep);
     else if ( motion == Motion_StepOver 
         || motion == Motion_RangeStepIn 
         || motion == Motion_RangeStepOver )
-        return SetupInstructionStep( pc, instLen, notifier, Expect_BP, false, false, false,motion,range);
+        return SetupInstructionStep( pc, instLen,notifier,Expect_BP, false,false,false,motion,rangeStep);
 
     return E_UNEXPECTED;
 }
@@ -1245,7 +1275,7 @@ HRESULT MachineX86Base::PassBP(
     int instLen, 
     int notifier, 
     Motion motion,
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
     _ASSERT( instType != Inst_Breakpoint );
     HRESULT hr = S_OK;
@@ -1253,19 +1283,19 @@ HRESULT MachineX86Base::PassBP(
     switch ( instType )
     {
     case Inst_Call:
-        hr = PassBPCall( pc, instLen, notifier, motion, range );
+        hr = PassBPCall( pc, instLen, notifier, motion, rangeStep );
         break;
 
     case Inst_Syscall:
-        hr = PassBPSyscall( pc, instLen, notifier, motion, range );
+        hr = PassBPSyscall( pc, instLen, notifier, motion, rangeStep );
         break;
 
     case Inst_RepString:
-        hr = PassBPRepString( pc, instLen, notifier, motion, range );
+        hr = PassBPRepString( pc, instLen, notifier, motion, rangeStep );
         break;
 
     default:
-        hr = PassBPSimple( pc, instLen, notifier, motion, range );
+        hr = PassBPSimple( pc, instLen, notifier, motion, rangeStep );
         break;
     }
 
@@ -1277,9 +1307,9 @@ HRESULT MachineX86Base::PassBPSimple(
     int instLen, 
     int notifier, 
     Motion motion,
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
-    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, true, true, false, motion, range );
+    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, true, true, false, motion, rangeStep);
 }
 
 HRESULT MachineX86Base::PassBPCall( 
@@ -1287,7 +1317,7 @@ HRESULT MachineX86Base::PassBPCall(
     int instLen, 
     int notifier, 
     Motion motion,
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
     if ( motion == Motion_RangeStepIn )
     {
@@ -1300,7 +1330,7 @@ HRESULT MachineX86Base::PassBPCall(
         notifier = NotifyStepOut;
     }
 
-    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, true, true, false, motion, range );
+    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, true, true, false, motion, rangeStep);
 }
 
 HRESULT MachineX86Base::PassBPSyscall( 
@@ -1308,9 +1338,9 @@ HRESULT MachineX86Base::PassBPSyscall(
     int instLen, 
     int notifier, 
     Motion motion,
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
-    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, true, false, true, motion, range );
+    return SetupInstructionStep( pc, instLen, notifier, Expect_SS, true, false, true, motion, rangeStep);
 }
 
 HRESULT MachineX86Base::PassBPRepString( 
@@ -1318,9 +1348,9 @@ HRESULT MachineX86Base::PassBPRepString(
     int instLen, 
     int notifier, 
     Motion motion,
-    const AddressRange* range )
+    RangeStepPtr& rangeStep )
 {
-    return SetupInstructionStep( pc, instLen, notifier, Expect_BP, true, true, false, motion, range );
+    return SetupInstructionStep( pc, instLen, notifier, Expect_BP, true, true, false, motion, rangeStep);
 }
 
 HRESULT MachineX86Base::SetupInstructionStep( 
@@ -1332,7 +1362,7 @@ HRESULT MachineX86Base::SetupInstructionStep(
     bool resumeThreads,
     bool clearTF,
     Motion motion,
-    const AddressRange* range
+    RangeStepPtr& rangeStep
     )
 {
     HRESULT                     hr = S_OK;
@@ -1396,8 +1426,7 @@ HRESULT MachineX86Base::SetupInstructionStep(
     event->ResumeThreads = resumeThreads;
     event->ClearTF = clearTF;
     event->Motion = motion;
-    if ( range != NULL )
-        event->Range = *range;
+    event->Range = rangeStep.Detach();
 
 Error:
     if ( FAILED( hr ) )
@@ -1464,7 +1493,8 @@ HRESULT MachineX86Base::SetContinue()
             if ( event != NULL && event->Code == Expect_SS )
                 notifier = NotifyTrigger;
 
-            hr = PassBP( pc, instType, instLen, notifier, Motion_None, NULL );
+            RangeStepPtr emptyRangeStep;
+            hr = PassBP( pc, instType, instLen, notifier, Motion_None, emptyRangeStep );
             if ( FAILED( hr ) )
                 goto Error;
         }
@@ -1523,19 +1553,33 @@ Error:
 
 HRESULT MachineX86Base::SetStepInstruction( bool stepIn )
 {
+    RangeStepPtr emptyRangeStep;
     Motion motion = stepIn ? Motion_StepIn : Motion_StepOver;
 
-    return SetStepInstructionCore( motion, NULL, NotifyStepComplete );
+    return SetStepInstructionCore( motion, emptyRangeStep, NotifyStepComplete );
 }
 
 HRESULT MachineX86Base::SetStepRange( bool stepIn, AddressRange range )
 {
     Motion motion = stepIn ? Motion_RangeStepIn : Motion_RangeStepOver;
 
-    return SetStepInstructionCore( motion, &range, NotifyCheckRange );
+    RangeStepPtr rangeStep( ThreadX86Base::AllocRange() );
+    if ( rangeStep.Get() == NULL )
+        return E_OUTOFMEMORY;
+
+    rangeStep->Range = range;
+
+    return SetStepInstructionCore( motion, rangeStep, NotifyCheckRange );
 }
 
-HRESULT MachineX86Base::SetStepInstructionCore( Motion motion, const AddressRange* range, int notifier )
+HRESULT MachineX86Base::SetStepRange( bool stepIn, RangeStepPtr& rangeStep )
+{
+    Motion motion = stepIn ? Motion_RangeStepIn : Motion_RangeStepOver;
+
+    return SetStepInstructionCore( motion, rangeStep, NotifyCheckRange );
+}
+
+HRESULT MachineX86Base::SetStepInstructionCore( Motion motion, RangeStepPtr& rangeStep, int notifier )
 {
     _ASSERT( mhProcess != NULL );
     if ( mhProcess == NULL )
@@ -1581,20 +1625,19 @@ HRESULT MachineX86Base::SetStepInstructionCore( Motion motion, const AddressRang
         // don't try to remove a BP
         event->ClearTF = true;
         event->Motion = motion;
-        if ( range != NULL )
-            event->Range = *range;
+        event->Range = rangeStep.Detach();
     }
     else
     {
         if ( bp != NULL && bp->IsPatched() )
         {
-            hr = PassBP( pc, instType, instLen, notifier, motion, range );
+            hr = PassBP( pc, instType, instLen, notifier, motion, rangeStep );
             if ( FAILED( hr ) )
                 goto Error;
         }
         else
         {
-            hr = DontPassBP( motion, pc, instType, instLen, notifier, range );
+            hr = DontPassBP( motion, pc, instType, instLen, notifier, rangeStep );
             if ( FAILED( hr ) )
                 goto Error;
         }

@@ -22,6 +22,12 @@ ThreadX86Base::~ThreadX86Base()
 {
     if ( mExecThread != NULL )
         mExecThread->Release();
+
+    // free resources held by the events
+    while ( mExpectedCount > 0 )
+    {
+        PopExpected();
+    }
 }
 
 Thread*     ThreadX86Base::GetExecThread()
@@ -66,5 +72,26 @@ void ThreadX86Base::PopExpected()
     _ASSERT( mExpectedCount > 0 );
 
     if ( mExpectedCount > 0 )
+    {
         mExpectedCount--;
+
+        ExpectedEvent* event = &mExpectedEvents[mExpectedCount];
+
+        if ( event->Range != NULL )
+        {
+            delete event->Range;
+            event->Range = NULL;
+        }
+    }
+}
+
+RangeStep* ThreadX86Base::AllocRange()
+{
+    RangeStep* range = new RangeStep();
+
+    if ( range == NULL )
+        return NULL;
+
+    memset( range, 0, sizeof *range );
+    return range;
 }

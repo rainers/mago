@@ -121,9 +121,10 @@ void EventCallbackBase::OnError( IProcess* process, HRESULT hrErr, EventCode eve
 {
 }
 
-RunMode EventCallbackBase::OnCallProbe( IProcess* process, uint32_t threadId, Address address )
+ProbeRunMode EventCallbackBase::OnCallProbe( 
+    IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
 {
-    return RunMode_Run;
+    return ProbeRunMode_Run;
 }
 
 void EventCallbackBase::PrintCallstacksX86( IProcess* process )

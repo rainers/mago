@@ -13,6 +13,7 @@ class BPAddressTable;
 class Breakpoint;
 class Thread;
 class ThreadX86Base;
+struct RangeStep;
 enum ExpectedCode;
 enum CpuSizeMode;
 enum InstructionType;
@@ -22,6 +23,7 @@ enum Motion;
 class MachineX86Base : public IMachine
 {
     typedef std::map< uint32_t, ThreadX86Base* >    ThreadMap;
+    typedef UniquePtr<RangeStep>                    RangeStepPtr;
 
     LONG            mRefCount;
 
@@ -142,31 +144,31 @@ private:
         int instLen, 
         int notifier, 
         Motion motion,
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
     HRESULT PassBPSimple( 
         Address pc, 
         int instLen, 
         int notifier, 
         Motion motion,
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
     HRESULT PassBPCall( 
         Address pc, 
         int instLen, 
         int notifier, 
         Motion motion,
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
     HRESULT PassBPSyscall( 
         Address pc, 
         int instLen, 
         int notifier, 
         Motion motion,
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
     HRESULT PassBPRepString( 
         Address pc, 
         int instLen, 
         int notifier, 
         Motion motion,
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
 
     HRESULT SetupInstructionStep( 
         Address pc, 
@@ -177,7 +179,7 @@ private:
         bool resumeThreads,
         bool clearTF,
         Motion motion,
-        const AddressRange* range
+        RangeStepPtr& rangeStep
         );
 
     HRESULT DontPassBP( 
@@ -186,33 +188,33 @@ private:
         InstructionType instType, 
         int instLen, 
         int notifier, 
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
     HRESULT DontPassBPSimple( 
         Motion motion, 
         Address pc, 
         int instLen, 
         int notifier, 
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
     HRESULT DontPassBPCall( 
         Motion motion, 
         Address pc, 
         int instLen, 
         int notifier, 
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
     HRESULT DontPassBPSyscall( 
         Motion motion, 
         Address pc, 
         int instLen, 
         int notifier, 
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
     HRESULT DontPassBPRepString(
         Motion motion, 
         Address pc, 
         int instLen, 
         int notifier,
-        const AddressRange* range );
+        RangeStepPtr& rangeStep );
 
-    HRESULT SetStepInstructionCore( Motion motion, const AddressRange* range, int notifier );
+    HRESULT SetStepInstructionCore( Motion motion, RangeStepPtr& rangeStep, int notifier );
 
     HRESULT SuspendOtherThreads( UINT32 threadId );
     HRESULT ResumeOtherThreads( UINT32 threadId );
@@ -223,14 +225,17 @@ private:
     HRESULT RunNotifierAction( 
         int notifier, 
         Motion motion, 
-        const AddressRange* range, 
+        RangeStepPtr& rangeStep, 
         MachineResult& result );
-    HRESULT RunNotifyCheckCall( Motion motion, const AddressRange* range, MachineResult& result );
-    HRESULT RunNotifyCheckRange( Motion motion, const AddressRange* range, MachineResult& result );
-    HRESULT RunNotifyStepOut( Motion motion, const AddressRange* range, MachineResult& result );
+    HRESULT RunNotifyCheckCall( Motion motion, RangeStepPtr& rangeStep, MachineResult& result );
+    HRESULT RunNotifyCheckRange( Motion motion, RangeStepPtr& rangeStep, MachineResult& result );
+    HRESULT RunNotifyStepOut( Motion motion, RangeStepPtr& rangeStep, MachineResult& result );
 
     HRESULT Rewind();
     Breakpoint* FindBP( Address address );
     ThreadX86Base* FindThread( uint32_t threadId );
     bool AtEmbeddedBP( Address address, Breakpoint* bp );
+
+    // like the public SetStepRange, but uses the range info we already have
+    HRESULT SetStepRange( bool stepIn, RangeStepPtr& rangeStep );
 };

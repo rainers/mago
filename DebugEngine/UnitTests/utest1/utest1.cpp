@@ -178,9 +178,10 @@ public:
         printf( "  *** ERROR: %08x while %d\n", hrErr, event );
     }
 
-    virtual RunMode OnCallProbe( IProcess* process, uint32_t threadId, Address address )
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
     {
-        return RunMode_Run;
+        return ProbeRunMode_Run;
     }
 };
 
