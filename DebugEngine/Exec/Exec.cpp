@@ -1174,7 +1174,7 @@ HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address )
             goto Error;
     }
 
-    hr = machine->RemoveBreakpoint( (Address) address );
+    hr = machine->RemoveBreakpoint( address );
 
     if ( suspend )
     {
