@@ -35,6 +35,7 @@ namespace Mago
         DWORD                                   mId;
         PENDING_BP_STATE_INFO                   mState;
         bool                                    mDeleted;
+        bool                                    mSentEvent;
         CComPtr<IDebugBreakpointRequest2>       mBPRequest;
         CComPtr<IDebugEventCallback2>           mCallback;
         RefPtr<Engine>                          mEngine;

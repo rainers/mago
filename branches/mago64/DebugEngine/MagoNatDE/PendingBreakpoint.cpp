@@ -57,6 +57,7 @@ namespace Mago
     PendingBreakpoint::PendingBreakpoint()
         :   mId( 0 ),
             mDeleted( false ),
+            mSentEvent( false ),
             mDebugger( NULL ),
             mLastBPId( 0 )
     {
@@ -321,34 +322,17 @@ namespace Mago
 
     HRESULT PendingBreakpoint::Bind()
     {
+        mEngine->BeginBindBP();
+
         // Call BindToAllModules on the poll thread for speed.
         // Long term, we should try to remove the poll thread requirement from 
         // the BP set and remove operations for clarity (with speed built-in).
 
-        struct BindFunctor : public CommandFunctor
-        {
-            PendingBreakpoint&  PendingBP;
-            HRESULT             OutHResult;
+        HRESULT hr = BindToAllModules();
 
-            BindFunctor( PendingBreakpoint& bp )
-                :   PendingBP( bp )
-            {
-            }
+        mEngine->EndBindBP();
 
-            void Run()
-            {
-                OutHResult = PendingBP.BindToAllModules();
-            };
-        };
-
-        HRESULT     hr = S_OK;
-        BindFunctor cmd( *this );
-
-        hr = mDebugger->InvokeCommand( cmd );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return cmd.OutHResult;
+        return hr;
     }
 
     HRESULT MakeBinder( IDebugBreakpointRequest2* bpRequest, auto_ptr<BPBinder>& binder )
@@ -438,6 +422,7 @@ namespace Mago
                 return hr;
 
             hr = SendBoundEvent( enumBPs );
+            mSentEvent = true;
         }
         else if ( callback.GetErrorBPCount() > 0 )
         {
@@ -448,9 +433,13 @@ namespace Mago
             callback.GetLastErrorBP( errorBP );
 
             hr = SendErrorEvent( errorBP.Get() );
+            mSentEvent = true;
         }
         else
-            hr = E_FAIL;
+        {
+            // allow adding this pending BP, even if there are no loaded modules (including program)
+            hr = S_OK;
+        }
 
         if ( SUCCEEDED( hr ) )
         {
@@ -515,17 +504,30 @@ namespace Mago
                 return hr;
 
             hr = SendBoundEvent( enumBPs );
+            mSentEvent = true;
         }
         else if ( callback.GetErrorBPCount() > 0 )
         {
-            // At the beginning, Bind was called, which bound to all mods at the
-            // time. If it sent out a bound BP event, then there can be no error.
-            // If it sent out an error BP event, then there's no need to repeat it.
-            // If you do send out this unneeded event here, then it slows down mod
-            // loading a lot. For ex., with 160 mods, mod loading takes ~10x longer.
+            if ( mSentEvent )
+            {
+                // At the beginning, Bind was called, which bound to all mods at the
+                // time. If it sent out a bound BP event, then there can be no error.
+                // If it sent out an error BP event, then there's no need to repeat it.
+                // If you do send out this unneeded event here, then it slows down mod
+                // loading a lot. For ex., with 160 mods, mod loading takes ~10x longer.
 
-            // So, don't send an error event!
-            hr = S_OK;
+                // So, don't send an error event!
+                hr = S_OK;
+            }
+            else
+            {
+                RefPtr<ErrorBreakpoint> errorBP;
+
+                callback.GetLastErrorBP( errorBP );
+
+                hr = SendErrorEvent( errorBP.Get() );
+                mSentEvent = true;
+            }
         }
         else
             hr = E_FAIL;

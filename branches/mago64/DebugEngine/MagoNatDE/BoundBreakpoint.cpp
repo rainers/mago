@@ -101,9 +101,6 @@ namespace Mago
             return E_BP_DELETED;
 
         HRESULT             hr = S_OK;
-        RefPtr<IProcess>    proc;
-
-        mProg->GetCoreProcess( proc.Ref() );
 
         if ( fEnable && (mState != BPS_ENABLED) )
         {
