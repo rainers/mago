@@ -39,6 +39,7 @@ namespace Mago
         DWORD               mLastBPId;
         DWORD               mLastModId;
         CComPtr<IDebugEventCallback2>   mCallback;
+        Guard               mBindBPGuard;
         Guard               mPendingBPGuard;
         Guard               mExceptionGuard;
         EngineExceptionTable    mExceptionInfos;
@@ -129,6 +130,9 @@ namespace Mago
 
         HRESULT BindPendingBPsToModule( Module* mod, Program* prog );
         HRESULT UnbindPendingBPsFromModule( Module* mod, Program* prog );
+
+        void BeginBindBP();
+        void EndBindBP();
 
     private:
         HRESULT EnsurePollThreadRunning();

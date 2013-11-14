@@ -622,6 +622,16 @@ Error:
         }
     }
 
+    void Engine::BeginBindBP()
+    {
+        mBindBPGuard.Enter();
+    }
+
+    void Engine::EndBindBP()
+    {
+        mBindBPGuard.Leave();
+    }
+
     HRESULT Engine::BindPendingBPsToModule( Module* mod, Program* prog )
     {
         _ASSERT( mod != NULL );

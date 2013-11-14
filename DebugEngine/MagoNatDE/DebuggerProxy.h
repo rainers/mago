@@ -38,8 +38,6 @@ namespace Mago
 
         HRESULT GetSystemInfo( IProcess* process, ArchData*& sysInfo );
 
-        HRESULT InvokeCommand( CommandFunctor& cmd );
-
         HRESULT Launch( LaunchInfo* launchInfo, IProcess*& process );
         HRESULT Attach( uint32_t id, IProcess*& process );
 
@@ -87,5 +85,7 @@ namespace Mago
         void    SetReadyThread();
         HRESULT CheckMessage();
         HRESULT ProcessCommand( CommandFunctor* cmd );
+
+        HRESULT InvokeCommand( CommandFunctor& cmd );
     };
 }

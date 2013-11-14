@@ -164,7 +164,21 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnModuleLoad( IProcess* process, IModule* coreModule )
+    void EventCallback::OnModuleLoad( IProcess* process, IModule* module )
+    {
+        mEngine->BeginBindBP();
+        OnModuleLoadInternal( process, module );
+        mEngine->EndBindBP();
+    }
+
+    void EventCallback::OnModuleUnload( IProcess* process, Address baseAddr )
+    {
+        mEngine->BeginBindBP();
+        OnModuleUnloadInternal( process, baseAddr );
+        mEngine->EndBindBP();
+    }
+
+    void EventCallback::OnModuleLoadInternal( IProcess* process, IModule* coreModule )
     {
         OutputDebugStringA( "EventCallback::OnModuleLoad\n" );
 
@@ -229,7 +243,7 @@ namespace Mago
         hr = SendEvent( symEvent.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnModuleUnload( IProcess* process, Address baseAddr )
+    void EventCallback::OnModuleUnloadInternal( IProcess* process, Address baseAddr )
     {
         OutputDebugStringA( "EventCallback::OnModuleUnload\n" );
 

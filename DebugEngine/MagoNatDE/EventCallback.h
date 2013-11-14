@@ -52,5 +52,8 @@ namespace Mago
         RunMode OnBreakpointInternal( Program* program, Thread* thread, Address address, bool embedded );
         bool FindThunk( 
             MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange& thunkRange );
+
+        virtual void OnModuleLoadInternal( IProcess* process, IModule* module );
+        virtual void OnModuleUnloadInternal( IProcess* process, Address baseAddr );
     };
 }
