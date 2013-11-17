@@ -57,7 +57,8 @@ namespace Mago
         mPassExceptionToDebuggee( true ),
         mCanPassExceptionToDebuggee( true ),
         mDebugger( NULL ),
-        mNextModLoadIndex( 0 )
+        mNextModLoadIndex( 0 ),
+        mEntryPoint( 0 )
     {
     }
 
@@ -805,5 +806,15 @@ namespace Mago
         }
 
         return S_OK;
+    }
+
+    Address Program::GetEntryPoint()
+    {
+        return mEntryPoint;
+    }
+
+    void Program::SetEntryPoint( Address address )
+    {
+        mEntryPoint = address;
     }
 }

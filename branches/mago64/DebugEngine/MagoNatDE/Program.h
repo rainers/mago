@@ -45,6 +45,7 @@ namespace Mago
         Guard                           mModGuard;
         Guard                           mBPGuard;
         DWORD                           mNextModLoadIndex;  // protected by mod guard
+        Address                         mEntryPoint;
         RefPtr<Module>                  mProgMod;
         std::unique_ptr<DRuntime>       mDRuntime;
 
@@ -132,6 +133,8 @@ namespace Mago
         HRESULT     SetInternalBreakpoint( Address address, BPCookie cookie );
         HRESULT     RemoveInternalBreakpoint( Address address, BPCookie cookie );
         HRESULT     EnumBPCookies( Address, std::vector< BPCookie >& iter );
+        Address     GetEntryPoint();
+        void        SetEntryPoint( Address address );
 
     private:
         HRESULT     StepInternal( IDebugThread2* pThread, STEPKIND sk, STEPUNIT step );

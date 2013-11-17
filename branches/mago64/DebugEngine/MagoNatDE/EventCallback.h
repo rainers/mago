@@ -21,7 +21,6 @@ namespace Mago
         long    mRefCount;
 
         RefPtr<Engine>          mEngine;
-        Address                 mEntryPoint;
 
     public:
         EventCallback( Engine* engine );

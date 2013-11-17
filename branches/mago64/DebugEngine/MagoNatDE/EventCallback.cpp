@@ -34,8 +34,7 @@ namespace Mago
 
     EventCallback::EventCallback( Engine* engine )
         :   mRefCount( 0 ),
-            mEngine( engine ),
-            mEntryPoint( 0 )
+            mEngine( engine )
     {
     }
 
@@ -364,23 +363,25 @@ namespace Mago
 
         IProcess*   coreProc = prog->GetCoreProcess();
 
-        mEntryPoint = coreProc->GetEntryPoint();
+        Address entryPoint = coreProc->GetEntryPoint();
 
-        if ( mEntryPoint != 0 )
+        if ( entryPoint != 0 )
         {
             RefPtr<Module> mod;
 
-            if ( prog->FindModuleContainingAddress( mEntryPoint, mod ) )
+            if ( prog->FindModuleContainingAddress( entryPoint, mod ) )
             {
                 Address userEntryPoint = 0;
                 if ( FindUserEntryPoint( mod, userEntryPoint ) )
-                    mEntryPoint = userEntryPoint;
+                    entryPoint = userEntryPoint;
             }
 
-            hr = prog->SetInternalBreakpoint( mEntryPoint, EntryPointCookie );
+            hr = prog->SetInternalBreakpoint( entryPoint, EntryPointCookie );
             // if we couldn't set the BP, then don't expect it later
             if ( FAILED( hr ) )
-                mEntryPoint = 0;
+                entryPoint = 0;
+
+            prog->SetEntryPoint( entryPoint );
         }
     }
 
@@ -538,7 +539,7 @@ namespace Mago
 
                 return RunMode_Break;
             }
-            else if ( (mEntryPoint != 0) && (address == mEntryPoint) )
+            else if ( (prog->GetEntryPoint() != 0) && (address == prog->GetEntryPoint()) )
             {
                 RefPtr<EntryPointEvent> entryPointEvent;
 
@@ -579,11 +580,12 @@ namespace Mago
         // Test if we're at the entrypoint, in addition to whether we stopped, because 
         // we could have decided to keep going even though we're at the entry point
 
-        if ( (mEntryPoint != 0) && ((runMode == RunMode_Break) || (address == mEntryPoint)) )
-        {
-            prog->RemoveInternalBreakpoint( mEntryPoint, EntryPointCookie );
+        Address entryPoint = prog->GetEntryPoint();
 
-            mEntryPoint = 0;
+        if ( (entryPoint != 0) && ((runMode == RunMode_Break) || (address == entryPoint)) )
+        {
+            prog->RemoveInternalBreakpoint( entryPoint, EntryPointCookie );
+            prog->SetEntryPoint( 0 );
         }
 
         return runMode;
