@@ -7,19 +7,27 @@
 
 #pragma once
 
-#include "..\Exec\DebuggerProxy.h"
+#include "Exec.h"
+#include <Guard.h>
 
 
-namespace Mago
+namespace MagoCore
 {
-    class ArchData;
-    class IRegisterSet;
+    struct CommandFunctor;
 
 
     class DebuggerProxy
     {
-        MagoCore::DebuggerProxy mExecThread;
-        RefPtr<ArchData>    mArch;
+        Exec                mExec;
+        HANDLE              mhThread;
+        DWORD               mWorkerTid;
+        IEventCallback*     mCallback;
+        HANDLE              mhReadyEvent;
+        HANDLE              mhCommandEvent;
+        HANDLE              mhResultEvent;
+        CommandFunctor*     mCurCommand;
+        volatile bool       mShutdown;
+        Guard               mCommandGuard;
 
     public:
         DebuggerProxy();
@@ -28,8 +36,6 @@ namespace Mago
         HRESULT Init( IEventCallback* callback );
         HRESULT Start();
         void    Shutdown();
-
-        HRESULT GetSystemInfo( IProcess* process, ArchData*& sysInfo );
 
         HRESULT Launch( LaunchInfo* launchInfo, IProcess*& process );
         HRESULT Attach( uint32_t id, IProcess*& process );
@@ -66,10 +72,18 @@ namespace Mago
 
         HRESULT AsyncBreak( IProcess* process );
 
-        HRESULT GetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet*& regSet );
-        HRESULT SetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet* regSet );
+        HRESULT GetThreadContext( IProcess* process, ::Thread* thread, void* context, uint32_t size );
+        HRESULT SetThreadContext( 
+            IProcess* process, ::Thread* thread, const void* context, uint32_t size );
 
     private:
-        HRESULT CacheSystemInfo();
+        static DWORD CALLBACK   DebugPollProc( void* param );
+
+        HRESULT PollLoop();
+        void    SetReadyThread();
+        HRESULT CheckMessage();
+        HRESULT ProcessCommand( CommandFunctor* cmd );
+
+        HRESULT InvokeCommand( CommandFunctor& cmd );
     };
 }

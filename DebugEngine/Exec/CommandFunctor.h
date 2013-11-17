@@ -7,8 +7,10 @@
 
 #pragma once
 
+#include "IProcess.h"
 
-namespace Mago
+
+namespace MagoCore
 {
     struct CommandFunctor
     {
@@ -25,6 +27,9 @@ namespace Mago
                 OutHResult( E_FAIL )
         {
         }
+
+    private:
+        ExecCommandFunctor& operator=( const ExecCommandFunctor& );
     };
 
     struct LaunchParams : public ExecCommandFunctor

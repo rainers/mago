@@ -18,7 +18,6 @@
 #include "BpResolutionLocation.h"
 #include "BPBinderCallback.h"
 #include "BPBinders.h"
-#include "CommandFunctor.h"
 
 using namespace std;
 
