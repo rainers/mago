@@ -715,10 +715,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\CommandFunctor.h"
-				>
-			</File>
-			<File
 				RelativePath=".\Common.h"
 				>
 			</File>

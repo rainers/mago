@@ -325,6 +325,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\DebuggerProxy.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\DecodeX86.cpp"
 				>
 			</File>
@@ -379,7 +383,15 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\CommandFunctor.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Common.h"
+				>
+			</File>
+			<File
+				RelativePath=".\DebuggerProxy.h"
 				>
 			</File>
 			<File
