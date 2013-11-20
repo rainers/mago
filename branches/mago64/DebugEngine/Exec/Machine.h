@@ -23,6 +23,13 @@ class IEventCallback;
 class IProcess;
 class Thread;
 
+class IProbeCallback
+{
+public:
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange ) = 0;
+};
+
 
 class IMachine
 {
@@ -33,7 +40,7 @@ public:
     virtual void    Release() = 0;
 
     virtual void    SetProcess( HANDLE hProcess, uint32_t id, Process* process ) = 0;
-    virtual void    SetCallback( IEventCallback* callback ) = 0;
+    virtual void    SetCallback( IProbeCallback* callback ) = 0;
     virtual void    GetPendingCallbackBP( Address& address ) = 0;
 
     virtual HRESULT ReadMemory( 

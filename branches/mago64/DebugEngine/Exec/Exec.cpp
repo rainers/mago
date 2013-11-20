@@ -24,6 +24,30 @@ class ProcessMap : public std::map< uint32_t, RefPtr< Process > >
 {
 };
 
+class ProbeCallback : public IProbeCallback
+{
+    IEventCallback* mCallback;
+    Process*        mProcess;
+
+public:
+    ProbeCallback( IEventCallback* callback, Process* process )
+        :   mCallback( callback ),
+            mProcess( process )
+    {
+        _ASSERT( callback != NULL );
+        _ASSERT( process != NULL );
+    }
+
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
+    {
+        mProcess->Unlock();
+        ProbeRunMode mode = mCallback->OnCallProbe( process, threadId, address, thunkRange );
+        mProcess->Lock();
+        return mode;
+    }
+};
+
 
 // indexed by Win32 Debug API Event Code (for ex: EXCEPTION_DEBUG_EVENT)
 const IEventCallback::EventCode     gEventMap[] = 
@@ -387,9 +411,11 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
 
             if ( mCallback != NULL )
             {
+                proc->Unlock();
                 mCallback->OnProcessStart( proc );
                 mCallback->OnModuleLoad( proc, mod.Get() );
                 mCallback->OnThreadStart( proc, thread.Get() );
+                proc->Lock();
             }
         }
         break;
@@ -403,7 +429,11 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
     case EXIT_THREAD_DEBUG_EVENT:
         {
             if ( mCallback != NULL )
+            {
+                proc->Unlock();
                 mCallback->OnThreadExit( proc, debugEvent.dwThreadId, debugEvent.u.ExitThread.dwExitCode );
+                proc->Lock();
+            }
 
             proc->DeleteThread( debugEvent.dwThreadId );
 
@@ -417,7 +447,11 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
             proc->SetMachine( NULL );
 
             if ( proc->IsStarted() && mCallback != NULL )
+            {
+                proc->Unlock();
                 mCallback->OnProcessExit( proc, debugEvent.u.ExitProcess.dwExitCode );
+                proc->Lock();
+            }
 
             mProcMap->erase( debugEvent.dwProcessId );
         }
@@ -438,7 +472,9 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
 
             if ( mCallback != NULL )
             {
+                proc->Unlock();
                 mCallback->OnModuleLoad( proc, mod.Get() );
+                proc->Lock();
             }
         }
         break;
@@ -446,7 +482,11 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
     case UNLOAD_DLL_DEBUG_EVENT:
         {
             if ( mCallback != NULL )
+            {
+                proc->Unlock();
                 mCallback->OnModuleUnload( proc, (Address) debugEvent.u.UnloadDll.lpBaseOfDll );
+                proc->Lock();
+            }
         }
         break;
 
@@ -473,7 +513,11 @@ Error:
         IEventCallback::EventCode   code = gEventMap[ debugEvent.dwDebugEventCode ];
 
         if ( mCallback != NULL )
+        {
+            proc->Unlock();
             mCallback->OnError( proc, hr, code );
+            proc->Lock();
+        }
     }
 
     mIsDispatching = false;
@@ -516,7 +560,9 @@ HRESULT Exec::HandleCreateThread( Process* proc, const DEBUG_EVENT& debugEvent )
 
     if ( mCallback != NULL )
     {
+        proc->Unlock();
         mCallback->OnThreadStart( proc, thread.Get() );
+        proc->Lock();
     }
 
 Error:
@@ -553,15 +599,22 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
         proc->SetReachedLoaderBp();
 
         if ( mCallback != NULL )
+        {
+            proc->Unlock();
             mCallback->OnLoadComplete( proc, debugEvent.dwThreadId );
+            proc->Lock();
+        }
 
         hr = S_FALSE;
     }
     else
     {
-        MachineResult    result = MacRes_NotHandled;
+        MachineResult   result = MacRes_NotHandled;
+        ProbeCallback   probeCallback( mCallback, proc );
                     
+        machine->SetCallback( &probeCallback );
         hr = machine->OnException( debugEvent.dwThreadId, &debugEvent.u.Exception, result );
+        machine->SetCallback( NULL );
         if ( FAILED( hr ) )
             goto Error;
 
@@ -573,7 +626,9 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
 
             machine->GetPendingCallbackBP( addr );
 
+            proc->Unlock();
             RunMode mode = mCallback->OnBreakpoint( proc, debugEvent.dwThreadId, addr, embedded );
+            proc->Lock();
             if ( mode == RunMode_Run )
                 result = MacRes_HandledContinue;
             else if ( mode == RunMode_Wait )
@@ -589,7 +644,9 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
         else if ( result == MacRes_PendingCallbackStep 
             || result == MacRes_PendingCallbackEmbeddedStep )
         {
+            proc->Unlock();
             mCallback->OnStepComplete( proc, debugEvent.dwThreadId );
+            proc->Lock();
             result = MacRes_HandledStopped;
         }
 
@@ -598,12 +655,14 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
             hr = S_FALSE;
             if ( mCallback != NULL )
             {
+                proc->Unlock();
                 if ( mCallback->OnException( 
                     proc, 
                     debugEvent.dwThreadId,
                     (debugEvent.u.Exception.dwFirstChance > 0),
                     &debugEvent.u.Exception.ExceptionRecord ) == RunMode_Run )
                     hr = S_OK;
+                proc->Lock();
             }
         }
         else if ( result == MacRes_HandledStopped )
@@ -674,7 +733,9 @@ HRESULT Exec::HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent )
 
     if ( mCallback != NULL )
     {
+        proc->Unlock();
         mCallback->OnOutputString( proc, wstr.get() );
+        proc->Lock();
     }
 
     return hr;
@@ -800,7 +861,6 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     mProcMap->insert( ProcessMap::value_type( procInfo.dwProcessId, proc ) );
 
     machine->SetProcess( proc->GetHandle(), proc->GetId(), proc.Get() );
-    machine->SetCallback( mCallback );
     proc->SetMachine( machine.Get() );
 
     proc->SetMachineType( imageInfo.MachineType );
@@ -881,7 +941,6 @@ HRESULT Exec::Attach( uint32_t id, IProcess*& process )
     mProcMap->insert( ProcessMap::value_type( id, proc ) );
 
     machine->SetProcess( proc->GetHandle(), proc->GetId(), proc.Get() );
-    machine->SetCallback( mCallback );
     proc->SetMachine( machine.Get() );
 
     proc->SetMachineType( imageInfo.MachineType );
@@ -1033,7 +1092,11 @@ HRESULT Exec::Detach( IProcess* process )
     proc->SetMachine( NULL );
 
     if ( proc->IsStarted() && mCallback != NULL )
+    {
+        proc->Unlock();
         mCallback->OnProcessExit( proc, 0 );
+        proc->Lock();
+    }
 
     mProcMap->erase( process->GetId() );
 
