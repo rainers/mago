@@ -40,7 +40,7 @@ class MachineX86Base : public IMachine
     uint32_t        mIsolatedThreadId;
     bool            mIsolatedThread;
 
-    IEventCallback* mCallback;
+    IProbeCallback* mCallback;
     Address         mPendCBAddr;
 
 public:
@@ -53,7 +53,7 @@ public:
     HRESULT         Init();
 
     virtual void    SetProcess( HANDLE hProcess, uint32_t id, Process* process );
-    virtual void    SetCallback( IEventCallback* callback );
+    virtual void    SetCallback( IProbeCallback* callback );
     virtual void    GetPendingCallbackBP( Address& address );
 
     virtual HRESULT ReadMemory( 

@@ -321,6 +321,8 @@ namespace Mago
 
     HRESULT PendingBreakpoint::Bind()
     {
+        _RPT0( _CRT_WARN, "PendingBreakpoint::Bind Enter\n" );
+
         mEngine->BeginBindBP();
 
         // Call BindToAllModules on the poll thread for speed.
@@ -330,6 +332,8 @@ namespace Mago
         HRESULT hr = BindToAllModules();
 
         mEngine->EndBindBP();
+
+        _RPT0( _CRT_WARN, "PendingBreakpoint::Bind Leave\n" );
 
         return hr;
     }

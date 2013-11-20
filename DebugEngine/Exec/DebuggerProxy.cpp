@@ -300,32 +300,12 @@ namespace MagoCore
 
     HRESULT DebuggerProxy::SetBreakpoint( IProcess* process, Address address )
     {
-        HRESULT             hr = S_OK;
-        SetBreakpointParams params( mExec );
-
-        params.Process = process;
-        params.Address = address;
-
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExec.SetBreakpoint( process, address );
     }
 
     HRESULT DebuggerProxy::RemoveBreakpoint( IProcess* process, Address address )
     {
-        HRESULT                 hr = S_OK;
-        RemoveBreakpointParams  params( mExec );
-
-        params.Process = process;
-        params.Address = address;
-
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExec.RemoveBreakpoint( process, address );
     }
 
     HRESULT DebuggerProxy::StepOut( IProcess* process, Address targetAddr, bool handleException )

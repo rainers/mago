@@ -189,11 +189,6 @@ MachineX86Base::~MachineX86Base()
     {
         delete it->second;
     }
-
-    if ( mCallback != NULL )
-    {
-        mCallback->Release();
-    }
 }
 
 
@@ -237,15 +232,9 @@ void    MachineX86Base::SetProcess( HANDLE hProcess, uint32_t id, Process* proce
     mhProcess = hProcess;
 }
 
-void    MachineX86Base::SetCallback( IEventCallback* callback )
+void    MachineX86Base::SetCallback( IProbeCallback* callback )
 {
-    if ( mCallback != NULL )
-        mCallback->Release();
-
     mCallback = callback;
-
-    if ( mCallback != NULL )
-        mCallback->AddRef();
 }
 
 void MachineX86Base::GetPendingCallbackBP( Address& address )
@@ -905,6 +894,7 @@ HRESULT MachineX86Base::RunNotifyCheckCall(
     }
     else
     {
+        _ASSERT( mCallback != NULL );
         mode = mCallback->OnCallProbe( mProcess, mStoppedThreadId, pc, thunkRange );
     }
 
