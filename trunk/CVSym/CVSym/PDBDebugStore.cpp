@@ -10,6 +10,7 @@
 #include "ISymbolInfo.h"
 
 #include "dia2.h"
+#include <assert.h>
 
 namespace PDBStore
 {
