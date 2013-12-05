@@ -484,12 +484,10 @@ Error:
        IDebugProcess2* pProcess
     )
     {
-#if 1
         // CanTerminateProcess during stopping the debugger, but there is a racing condition
-        //  with EXIT_PROCESS_DEBUG_EVENT, which deletes the program from mProgs
-        // returning error here causes a MessageBox, to suppress it, we pretend the world's perfect
-        return S_OK;
-#else
+        //  with EXIT_PROCESS_DEBUG_EVENT, which deletes the program from mProgs.
+        // returning error here causes a MessageBox, to suppress it, we ignore
+        //  the error codes and pretend the world's perfect
         HRESULT         hr = S_OK;
         DWORD           id = 0;
 
@@ -497,19 +495,19 @@ Error:
 
         hr = ::GetProcessId( pProcess, id );
         if ( FAILED( hr ) )
-            return hr;
+            return S_OK; //hr;
 
         if ( !FindProgram( id, prog ) )
-            return E_NOT_FOUND;
+            return S_OK; // E_NOT_FOUND;
 
         return hr;
-#endif
     }
 
     HRESULT Engine::TerminateProcess( 
        IDebugProcess2* pProcess
     )
     {
+        // see comment in CanTeminateProcess
         HRESULT         hr = S_OK;
         DWORD           id = 0;
 
@@ -517,12 +515,13 @@ Error:
 
         hr = ::GetProcessId( pProcess, id );
         if ( FAILED( hr ) )
-            return hr;
+            return S_OK; // hr;
 
         if ( !FindProgram( id, prog ) )
-            return E_NOT_FOUND;
+            return S_OK; // E_NOT_FOUND;
 
-        return mDebugger.Terminate( prog->GetCoreProcess() );
+        hr = mDebugger.Terminate( prog->GetCoreProcess() );
+        return S_OK; // hr
     }
 
 
