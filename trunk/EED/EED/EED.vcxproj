@@ -1,0 +1,140 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{C600B88C-B39F-4475-9144-595A14067E32}</ProjectGuid>
+    <RootNamespace>EED</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\PropSheets\MagoDbg_3rdParty_Release.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\PropSheets\MagoDbg_3rdParty_Debug.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\gdtoa;$(ProjectDir)..\..\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;DMDV2=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MinSpace</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\gdtoa;$(ProjectDir)..\..\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;DMDV2=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Common.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="EED.cpp" />
+    <ClCompile Include="EnumValues.cpp" />
+    <ClCompile Include="Eval.cpp" />
+    <ClCompile Include="EvalAssign.cpp" />
+    <ClCompile Include="EvalBARL.cpp" />
+    <ClCompile Include="EvalLiteral.cpp" />
+    <ClCompile Include="EvalOther.cpp" />
+    <ClCompile Include="Expression.cpp" />
+    <ClCompile Include="FormatValue.cpp" />
+    <ClCompile Include="Keywords.cpp" />
+    <ClCompile Include="NamedChars.cpp" />
+    <ClCompile Include="Object.cpp" />
+    <ClCompile Include="Parser.cpp" />
+    <ClCompile Include="ParserDecl.cpp" />
+    <ClCompile Include="Properties.cpp" />
+    <ClCompile Include="PropTables.cpp" />
+    <ClCompile Include="Scanner.cpp" />
+    <ClCompile Include="SharedString.cpp" />
+    <ClCompile Include="SimpleNameTable.cpp" />
+    <ClCompile Include="Type.cpp" />
+    <ClCompile Include="TypeEnv.cpp" />
+    <ClCompile Include="TypeUnresolved.cpp" />
+    <ClCompile Include="UniAlpha.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="Declaration.h" />
+    <ClInclude Include="EE.h" />
+    <ClInclude Include="EED.h" />
+    <ClInclude Include="EnumValues.h" />
+    <ClInclude Include="Error.h" />
+    <ClInclude Include="Eval.h" />
+    <ClInclude Include="Expression.h" />
+    <ClInclude Include="Strings.h" />
+    <ClInclude Include="FormatValue.h" />
+    <ClInclude Include="ITypeEnv.h" />
+    <ClInclude Include="Keywords.h" />
+    <ClInclude Include="NamedChars.h" />
+    <ClInclude Include="NameTable.h" />
+    <ClInclude Include="Object.h" />
+    <ClInclude Include="Parser.h" />
+    <ClInclude Include="Properties.h" />
+    <ClInclude Include="Property.h" />
+    <ClInclude Include="PropTables.h" />
+    <ClInclude Include="Scanner.h" />
+    <ClInclude Include="SharedString.h" />
+    <ClInclude Include="SimpleNameTable.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="Token.h" />
+    <ClInclude Include="Type.h" />
+    <ClInclude Include="TypeCommon.h" />
+    <ClInclude Include="TypeEnv.h" />
+    <ClInclude Include="TypeUnresolved.h" />
+    <ClInclude Include="UniAlpha.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
