@@ -105,6 +105,22 @@ namespace MagoST
         if ( dir == NULL )
             return E_BAD_FORMAT;
 
+        // get maximum module index
+        for ( DWORD i = 0; i < dirHeader->cDir; i++ )
+        {
+            OMFDirEntry*    entry = (OMFDirEntry*) dir;
+            if ( NULL != GetCVPtr<void>( entry->lfo, entry->cb ) ) // skip some bad records produced by optlink
+                if( entry->SubSection == sstModule )
+                    mCompilandCount++;
+
+            dir += dirHeader->cbDirEntry;
+        }
+        mCompilandDetails.reset( new CompilandDetails[ mCompilandCount ] );
+        if ( mCompilandDetails.get() == NULL )
+            return E_OUTOFMEMORY;
+        memset( mCompilandDetails.get(), 0, mCompilandCount * sizeof( CompilandDetails ) );
+
+        dir = dirStart;
         for ( DWORD i = 0; i < dirHeader->cDir; i++ )
         {
             OMFDirEntry*    entry = (OMFDirEntry*) dir;
@@ -142,24 +158,12 @@ namespace MagoST
         switch ( entry->SubSection )
         {
         case sstModule:
-            _ASSERT( mCompilandDetails.get() == NULL );
-            if ( mCompilandDetails.get() == NULL )
-                mCompilandCount++;
-            // else, ignore all the ones after this stage, because they shouldn't be here
             
             MarkLineNumbers( entry );
             break;
 
         case sstAlignSym:
         case sstSrcModule:
-            if ( mCompilandDetails.get() == NULL )
-            {
-                mCompilandDetails.reset( new CompilandDetails[ mCompilandCount ] );
-                if ( mCompilandDetails.get() == NULL )
-                    return E_OUTOFMEMORY;
-                memset( mCompilandDetails.get(), 0, mCompilandCount * sizeof( CompilandDetails ) );
-            }
-
             if ( (entry->iMod == 0) || (entry->iMod > mCompilandCount) )
                 return E_BAD_FORMAT;
 
