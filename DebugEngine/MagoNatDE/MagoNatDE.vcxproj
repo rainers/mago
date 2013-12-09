@@ -254,6 +254,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ArchData.cpp" />
+    <ClCompile Include="ArchDataX86.cpp" />
     <ClCompile Include="BoundBreakpoint.cpp" />
     <ClCompile Include="BPBinderCallback.cpp" />
     <ClCompile Include="BPBinders.cpp" />
@@ -287,6 +289,7 @@
     </ClCompile>
     <ClCompile Include="DocTracker.cpp" />
     <ClCompile Include="DocumentContext.cpp" />
+    <ClCompile Include="DRuntime.cpp" />
     <ClCompile Include="Engine.cpp" />
     <ClCompile Include="EnumFrameInfo.cpp" />
     <ClCompile Include="EnumPropertyInfo.cpp" />
@@ -329,6 +332,7 @@
       </PrecompiledHeader>
       <CompileAsManaged Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</CompileAsManaged>
     </ClCompile>
+    <ClCompile Include="WinStackWalker.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="MagoNatDE.def" />
@@ -340,6 +344,8 @@
     <Midl Include="MagoNatDE.idl" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ArchDataX86.h" />
+    <ClInclude Include="ArchData.h" />
     <ClInclude Include="BoundBreakpoint.h" />
     <ClInclude Include="BPBinderCallback.h" />
     <ClInclude Include="BPBinders.h" />
@@ -348,7 +354,6 @@
     <ClInclude Include="BreakpointResolution.h" />
     <ClInclude Include="CodeContext.h" />
     <ClInclude Include="ComEnumWithCount.h" />
-    <ClInclude Include="CommandFunctor.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="CVDecls.h" />
@@ -359,6 +364,7 @@
     <ClInclude Include="dllmain.h" />
     <ClInclude Include="DocTracker.h" />
     <ClInclude Include="DocumentContext.h" />
+    <ClInclude Include="DRuntime.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="EnumFrameInfo.h" />
     <ClInclude Include="EnumPropertyInfo.h" />
@@ -388,6 +394,7 @@
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Thread.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="WinStackWalker.h" />
     <ClInclude Include="winternl2.h" />
     <ClInclude Include="MagoNatDE_i.h" />
   </ItemGroup>
