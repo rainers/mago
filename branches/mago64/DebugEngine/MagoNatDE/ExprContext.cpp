@@ -276,8 +276,7 @@ namespace Mago
                 if ( !sym->GetAddressOffset( offset ) )
                     return E_FAIL;
 
-                // TODO: rename to GetTebBase
-                tebAddr = mThread->GetCoreThread()->GetTlsBase();
+                tebAddr = mThread->GetCoreThread()->GetTebBase();
 
                 tlsArrayPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
 
