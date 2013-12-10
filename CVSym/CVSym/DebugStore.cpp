@@ -1677,9 +1677,6 @@ namespace MagoST
             OMFSourceModule* srcMod = GetCVPtr<OMFSourceModule>( entry->lfo );
             if ( srcMod != NULL )
             {
-                DWORD*      srcFilePtrTable = (DWORD*) ((BYTE*) srcMod + 4);
-                OffsetPair* offsetTable = (OffsetPair*) (srcFilePtrTable + srcMod->cFile);
-
                 for ( uint16_t f = 0; f < srcMod->cFile; f++)
                 {
                     int cvoff = entry->lfo + srcMod->baseSrcFile[f];

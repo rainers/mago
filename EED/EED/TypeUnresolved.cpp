@@ -428,6 +428,9 @@ namespace MagoEE
 
     RefPtr<Type> TypeSlice::Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
     {
+        UNREFERENCED_PARAMETER( evalData );
+        UNREFERENCED_PARAMETER( typeEnv );
+        UNREFERENCED_PARAMETER( binder );
         // TODO:
         _ASSERT( false );
         return NULL;
