@@ -860,7 +860,7 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
 
     mProcMap->insert( ProcessMap::value_type( procInfo.dwProcessId, proc ) );
 
-    machine->SetProcess( proc->GetHandle(), proc->GetId(), proc.Get() );
+    machine->SetProcess( proc->GetHandle(), proc.Get() );
     proc->SetMachine( machine.Get() );
 
     proc->SetMachineType( imageInfo.MachineType );
@@ -940,7 +940,7 @@ HRESULT Exec::Attach( uint32_t id, IProcess*& process )
 
     mProcMap->insert( ProcessMap::value_type( id, proc ) );
 
-    machine->SetProcess( proc->GetHandle(), proc->GetId(), proc.Get() );
+    machine->SetProcess( proc->GetHandle(), proc.Get() );
     proc->SetMachine( machine.Get() );
 
     proc->SetMachineType( imageInfo.MachineType );

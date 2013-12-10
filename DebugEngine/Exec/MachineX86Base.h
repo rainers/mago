@@ -52,7 +52,7 @@ public:
 
     HRESULT         Init();
 
-    virtual void    SetProcess( HANDLE hProcess, uint32_t id, Process* process );
+    virtual void    SetProcess( HANDLE hProcess, Process* process );
     virtual void    SetCallback( IProbeCallback* callback );
     virtual void    GetPendingCallbackBP( Address& address );
 

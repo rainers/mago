@@ -39,7 +39,7 @@ public:
     virtual void    AddRef() = 0;
     virtual void    Release() = 0;
 
-    virtual void    SetProcess( HANDLE hProcess, uint32_t id, Process* process ) = 0;
+    virtual void    SetProcess( HANDLE hProcess, Process* process ) = 0;
     virtual void    SetCallback( IProbeCallback* callback ) = 0;
     virtual void    GetPendingCallbackBP( Address& address ) = 0;
 

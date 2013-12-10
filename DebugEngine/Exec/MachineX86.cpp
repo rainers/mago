@@ -272,6 +272,8 @@ HRESULT MachineX86::GetThreadContextWithCache( HANDLE hThread, void* contextBuf,
     _ASSERT( contextBuf != NULL );
     _ASSERT( size >= sizeof( CONTEXT_X86 ) );
     _ASSERT( mIsContextCached );
+    if ( size < sizeof( CONTEXT_X86 ) )
+        return E_INVALIDARG;
 
     // ContextFlags = 0 and CONTEXT_i386 are OK
 
@@ -304,6 +306,8 @@ HRESULT MachineX86::SetThreadContextWithCache( HANDLE hThread, const void* conte
     _ASSERT( contextBuf != NULL );
     _ASSERT( size >= sizeof( CONTEXT_X86 ) );
     _ASSERT( mIsContextCached );
+    if ( size < sizeof( CONTEXT_X86 ) )
+        return E_INVALIDARG;
 
     // ContextFlags = 0 and CONTEXT_i386 are OK
 
