@@ -9,12 +9,12 @@
 #include "Thread.h"
 
 
-Thread::Thread( HANDLE hThread, uint32_t id, Address startAddr, Address tlsBase )
+Thread::Thread( HANDLE hThread, uint32_t id, Address startAddr, Address tebBase )
 :   mRefCount( 0 ),
     mhThread( hThread ),
     mId( id ),
     mStartAddr( startAddr ),
-    mTlsBase( tlsBase )
+    mTebBase( tebBase )
 {
     _ASSERT( hThread != NULL );
     _ASSERT( id != 0 );
@@ -60,7 +60,7 @@ Address   Thread::GetStartAddr()
     return mStartAddr;
 }
 
-Address   Thread::GetTlsBase()
+Address   Thread::GetTebBase()
 {
-    return mTlsBase;
+    return mTebBase;
 }

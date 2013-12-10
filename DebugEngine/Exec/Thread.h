@@ -14,10 +14,10 @@ class Thread
     HANDLE          mhThread;
     uint32_t        mId;
     Address         mStartAddr;
-    Address         mTlsBase;
+    Address         mTebBase;
 
 public:
-    Thread( HANDLE hThread, uint32_t id, Address startAddr, Address tlsBase );
+    Thread( HANDLE hThread, uint32_t id, Address startAddr, Address tebBase );
     ~Thread();
 
     void            AddRef();
@@ -26,5 +26,5 @@ public:
     HANDLE          GetHandle();
     uint32_t        GetId();
     Address         GetStartAddr();
-    Address         GetTlsBase();
+    Address         GetTebBase();
 };
