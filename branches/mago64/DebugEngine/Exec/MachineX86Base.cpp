@@ -220,12 +220,11 @@ HRESULT MachineX86Base::Init()
     return S_OK;
 }
 
-void    MachineX86Base::SetProcess( HANDLE hProcess, uint32_t id, Process* process )
+void    MachineX86Base::SetProcess( HANDLE hProcess, Process* process )
 {
     _ASSERT( mProcess == NULL );
     _ASSERT( mhProcess == NULL );
     _ASSERT( hProcess != NULL );
-    _ASSERT( id != 0 );
     _ASSERT( process != NULL );
 
     mProcess = process;
