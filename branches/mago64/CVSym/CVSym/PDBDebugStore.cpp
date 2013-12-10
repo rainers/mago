@@ -12,6 +12,8 @@
 #include "dia2.h"
 #include <assert.h>
 
+#define UNREF_PARAM( p ) UNREFERENCED_PARAMETER( p )
+
 namespace PDBStore
 {
     struct SymbolScopeIn
@@ -188,8 +190,8 @@ namespace MagoST
         }
 
         // unused
-        virtual bool GetRegisterCount( uint8_t& count ) { return false; }
-        virtual bool GetRegisters( uint8_t*& regs ) { return false; }
+        virtual bool GetRegisterCount( uint8_t& count ) { UNREF_PARAM( count ); return false; }
+        virtual bool GetRegisters( uint8_t*& regs ) { UNREF_PARAM( regs ); return false; }
 
         virtual bool GetUdtKind( UdtKind& udtKind )
         {
@@ -230,11 +232,11 @@ namespace MagoST
 
 #if 1
         // unused
-        virtual bool GetDebugStart( uint32_t& start ) { return false; }
-        virtual bool GetDebugEnd( uint32_t& end ) { return false; }
+        virtual bool GetDebugStart( uint32_t& start ) { UNREF_PARAM( start ); return false; }
+        virtual bool GetDebugEnd( uint32_t& end ) { UNREF_PARAM( end ); return false; }
         //virtual bool GetProcFlags( CV_PROCFLAGS& flags ) { return false; }
-        virtual bool GetProcFlags( uint8_t& flags ) { return false; }
-        virtual bool GetThunkOrdinal( uint8_t& ordinal ) { return false; }
+        virtual bool GetProcFlags( uint8_t& flags ) { UNREF_PARAM( flags ); return false; }
+        virtual bool GetThunkOrdinal( uint8_t& ordinal ) { UNREF_PARAM( ordinal ); return false; }
 
         virtual bool GetBasicType( DWORD& basicType )
         {
@@ -248,7 +250,7 @@ namespace MagoST
         }
 
         // unused
-        virtual bool GetIndexType( TypeIndex& index ) { return false; }
+        virtual bool GetIndexType( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
         virtual bool GetCount( uint32_t& count ) 
         {
             IDiaSymbol* pSymbol = NULL;
@@ -274,7 +276,7 @@ namespace MagoST
             if ( pEnumSymbols )
                 pEnumSymbols->Release();
             pSymbol->Release();
-            count = cnt;
+            count = (uint16_t) cnt;
             return hr == S_OK;
         }
 
@@ -283,28 +285,41 @@ namespace MagoST
             index = mId; // type index the same as the symbol ID, and the fieldlist is the children list
             return true;
         }
-        virtual bool GetProperties( uint16_t& props ) { return false; }
-        virtual bool GetDerivedList( TypeIndex& index ) { return false; }
-        virtual bool GetVShape( TypeIndex& index ) { return false; }
+        virtual bool GetProperties( uint16_t& props ) { UNREF_PARAM( props ); return false; }
+        virtual bool GetDerivedList( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
+        virtual bool GetVShape( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
 
-        virtual bool GetCallConv( uint8_t& callConv ) { return false; }
-        virtual bool GetParamCount( uint16_t& count ) { return false; }
-        virtual bool GetParamList( TypeIndex& index ) { return false; }
+        virtual bool GetCallConv( uint8_t& callConv ) { UNREF_PARAM( callConv ); return false; }
+        virtual bool GetParamCount( uint16_t& count ) { UNREF_PARAM( count ); return false; }
+        virtual bool GetParamList( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
 
-        virtual bool GetClass( TypeIndex& index ) { return false; }
-        virtual bool GetThis( TypeIndex& index ) { return false; }
-        virtual bool GetThisAdjust( int32_t& adjust ) { return false; }
+        virtual bool GetClass( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
+        virtual bool GetThis( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
+        virtual bool GetThisAdjust( int32_t& adjust ) { UNREF_PARAM( adjust ); return false; }
 
-        virtual bool GetOemId( uint32_t& oemId ) { return false; }
-        virtual bool GetOemSymbolId( uint32_t& oemSymId ) { return false; }
-        virtual bool GetTypes( std::vector<TypeIndex>& indexes ) { return false; }
+        virtual bool GetOemId( uint32_t& oemId ) { UNREF_PARAM( oemId ); return false; }
+        virtual bool GetOemSymbolId( uint32_t& oemSymId ) { UNREF_PARAM( oemSymId ); return false; }
+        virtual bool GetTypes( std::vector<TypeIndex>& indexes )
+        {
+            UNREF_PARAM( indexes );
+            return false;
+        }
 
-        virtual bool GetAttribute( uint16_t& attr ) { return false; }
-        virtual bool GetVBaseOffset( uint32_t& offset ) { return false; }
+        virtual bool GetAttribute( uint16_t& attr ) { UNREF_PARAM( attr ); return false; }
+        virtual bool GetVBaseOffset( uint32_t& offset ) { UNREF_PARAM( offset ); return false; }
 
-        virtual bool GetVTableDescriptor( uint32_t index, uint8_t& desc ) { return false; }
+        virtual bool GetVTableDescriptor( uint32_t index, uint8_t& desc )
+        {
+            UNREFERENCED_PARAMETER( index );
+            UNREFERENCED_PARAMETER( desc );
+            return false;
+        }
 
-        virtual bool GetMod( uint16_t& mod ) { return false; }
+        virtual bool GetMod( uint16_t& mod )
+        {
+            UNREFERENCED_PARAMETER( mod );
+            return false;
+        }
 #endif
     };
 
@@ -420,6 +435,8 @@ namespace MagoST
 
     HRESULT PDBDebugStore::SetCompilandSymbolScope( DWORD compilandIndex, SymbolScope& scope )
     {
+        UNREFERENCED_PARAMETER( compilandIndex );
+        UNREFERENCED_PARAMETER( scope );
         // not used
         assert(false);
         return E_NOTIMPL;
@@ -427,6 +444,8 @@ namespace MagoST
 
     HRESULT PDBDebugStore::SetSymbolScope( SymbolHeapId heapId, SymbolScope& scope )
     {
+        UNREFERENCED_PARAMETER( heapId );
+        UNREFERENCED_PARAMETER( scope );
         // not used
         assert(false);
         return E_NOTIMPL;
@@ -504,6 +523,7 @@ namespace MagoST
 
     HRESULT PDBDebugStore::FindNextSymbol( EnumNamedSymbolsData& handle )
     {
+        UNREFERENCED_PARAMETER( handle );
         // not used
         assert(false);
         return E_NOTIMPL;
@@ -519,6 +539,8 @@ namespace MagoST
 
     HRESULT PDBDebugStore::FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle )
     {
+        UNREFERENCED_PARAMETER( heapId );
+
         PDBStore::SymHandleIn& handleIn = (PDBStore::SymHandleIn&) handle;
 
         IDiaSymbol* pSymbol = NULL;
@@ -651,7 +673,7 @@ namespace MagoST
         if( !FAILED( hr ) )
             hr = pFiles->get_Count( &fileCount );
 
-        info.FileCount = fileCount;
+        info.FileCount = (WORD) fileCount;
         info.SegmentCount = 1;
 
         if( pFiles )
@@ -666,6 +688,9 @@ namespace MagoST
 
     HRESULT PDBDebugStore::GetCompilandSegmentInfo( uint16_t index, uint16_t count, SegmentInfo* infos )
     {
+        UNREFERENCED_PARAMETER( index );
+        UNREFERENCED_PARAMETER( count );
+        UNREFERENCED_PARAMETER( infos );
         // not used?
         assert( false );
         return E_NOTIMPL;
@@ -724,6 +749,10 @@ namespace MagoST
 
     HRESULT PDBDebugStore::GetFileSegmentInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t count, SegmentInfo* infos )
     {
+        UNREFERENCED_PARAMETER( compilandIndex );
+        UNREFERENCED_PARAMETER( fileIndex );
+        UNREFERENCED_PARAMETER( count );
+        UNREFERENCED_PARAMETER( infos );
         // not used?
         assert( false );
         return E_NOTIMPL;
@@ -731,6 +760,11 @@ namespace MagoST
 
     HRESULT PDBDebugStore::GetLineInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t segInstanceIndex, uint16_t count, LineInfo* infos )
     {
+        UNREFERENCED_PARAMETER( compilandIndex );
+        UNREFERENCED_PARAMETER( fileIndex );
+        UNREFERENCED_PARAMETER( segInstanceIndex );
+        UNREFERENCED_PARAMETER( count );
+        UNREFERENCED_PARAMETER( infos );
         assert( false );
         return E_NOTIMPL;
     }
@@ -820,7 +854,7 @@ namespace MagoST
                     hr = pLineNumber->get_lineNumber( &line );
                 if( !FAILED( hr ) && lineIndex == 0 )
                 {
-                    segInfo.SegmentInstance = line;
+                    segInfo.SegmentInstance = (WORD) line;
                     segInfo.Start = off;
                     if( ppCompiland )
                         pLineNumber->get_compiland( ppCompiland );
@@ -838,14 +872,14 @@ namespace MagoST
                 }
 
                 mLastSegInfoOffsets.get()[lineIndex] = off;
-                mLastSegInfoLineNumbers.get()[lineIndex] = line;
+                mLastSegInfoLineNumbers.get()[lineIndex] = (WORD) line;
 
                 lineIndex++;
                 pLineNumber->Release();
             }
         }
-        segInfo.SegmentIndex = section;
-        segInfo.LineCount = lineIndex;
+        segInfo.SegmentIndex = (WORD) section;
+        segInfo.LineCount = (WORD) lineIndex;
         segInfo.Offsets = mLastSegInfoOffsets.get ();
         segInfo.LineNumbers = mLastSegInfoLineNumbers.get ();
         return hr;
