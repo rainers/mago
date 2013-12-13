@@ -27,26 +27,26 @@ namespace Mago
         virtual void AddRef();
         virtual void Release();
 
-        virtual void OnProcessStart( IProcess* process );
-        virtual void OnProcessExit( IProcess* process, DWORD exitCode );
-        virtual void OnThreadStart( IProcess* process, ::Thread* thread );
-        virtual void OnThreadExit( IProcess* process, DWORD threadId, DWORD exitCode );
-        virtual void OnModuleLoad( IProcess* process, IModule* module );
-        virtual void OnModuleUnload( IProcess* process, Address baseAddr );
-        virtual void OnOutputString( IProcess* process, const wchar_t* outputString );
-        virtual void OnLoadComplete( IProcess* process, DWORD threadId );
+        virtual void OnProcessStart( DWORD uniquePid );
+        virtual void OnProcessExit( DWORD uniquePid, DWORD exitCode );
+        virtual void OnThreadStart( DWORD uniquePid, ::Thread* thread );
+        virtual void OnThreadExit( DWORD uniquePid, DWORD threadId, DWORD exitCode );
+        virtual void OnModuleLoad( DWORD uniquePid, IModule* module );
+        virtual void OnModuleUnload( DWORD uniquePid, Address baseAddr );
+        virtual void OnOutputString( DWORD uniquePid, const wchar_t* outputString );
+        virtual void OnLoadComplete( DWORD uniquePid, DWORD threadId );
 
         virtual RunMode OnException( 
-            IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec );
+            DWORD uniquePid, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec );
 
         virtual RunMode OnBreakpoint( 
-            IProcess* process, uint32_t threadId, Address address, bool embedded );
+            DWORD uniquePid, uint32_t threadId, Address address, bool embedded );
 
-        virtual void OnStepComplete( IProcess* process, uint32_t threadId );
-        virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId );
-        virtual void OnError( IProcess* process, HRESULT hrErr, IEventCallback::EventCode event );
+        virtual void OnStepComplete( DWORD uniquePid, uint32_t threadId );
+        virtual void OnAsyncBreakComplete( DWORD uniquePid, uint32_t threadId );
+        virtual void OnError( DWORD uniquePid, HRESULT hrErr, IEventCallback::EventCode event );
         virtual ProbeRunMode OnCallProbe( 
-            IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange );
+            DWORD uniquePid, uint32_t threadId, Address address, AddressRange& thunkRange );
 
     private:
         HRESULT SendEvent( EventBase* eventBase, Program* program, Thread* thread );
@@ -56,7 +56,7 @@ namespace Mago
         bool FindThunk( 
             MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange& thunkRange );
 
-        virtual void OnModuleLoadInternal( IProcess* process, IModule* module );
-        virtual void OnModuleUnloadInternal( IProcess* process, Address baseAddr );
+        virtual void OnModuleLoadInternal( DWORD uniquePid, IModule* module );
+        virtual void OnModuleUnloadInternal( DWORD uniquePid, Address baseAddr );
     };
 }
