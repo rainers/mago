@@ -10,6 +10,7 @@
 #include "ArchDataX86.h"
 #include "RegisterSet.h"
 #include "..\Exec\DebuggerProxy.h"
+#include "EventCallback.h"
 
 
 namespace Mago
@@ -23,7 +24,7 @@ namespace Mago
         Shutdown();
     }
 
-    HRESULT DebuggerProxy::Init( IEventCallback* callback )
+    HRESULT DebuggerProxy::Init( EventCallback* callback )
     {
         _ASSERT( callback != NULL );
         if ( (callback == NULL) )
@@ -31,11 +32,13 @@ namespace Mago
 
         HRESULT     hr = S_OK;
 
+        mCallback = callback;
+
         hr = CacheSystemInfo();
         if ( FAILED( hr ) )
             return hr;
 
-        hr = mExecThread.Init( callback );
+        hr = mExecThread.Init( this );
         if ( FAILED( hr ) )
             return hr;
 
@@ -229,5 +232,91 @@ namespace Mago
             return hr;
 
         return S_OK;
+    }
+
+
+    //------------------------------------------------------------------------
+    // IEventCallback
+    //------------------------------------------------------------------------
+
+    void DebuggerProxy::AddRef()
+    {
+        // There's nothing to do, because this will be allocated as part of the engine.
+    }
+
+    void DebuggerProxy::Release()
+    {
+        // There's nothing to do, because this will be allocated as part of the engine.
+    }
+
+    void DebuggerProxy::OnProcessStart( IProcess* process )
+    {
+        mCallback->OnProcessStart( process );
+    }
+
+    void DebuggerProxy::OnProcessExit( IProcess* process, DWORD exitCode )
+    {
+        mCallback->OnProcessExit( process, exitCode );
+    }
+
+    void DebuggerProxy::OnThreadStart( IProcess* process, ::Thread* coreThread )
+    {
+        mCallback->OnThreadStart( process, coreThread );
+    }
+
+    void DebuggerProxy::OnThreadExit( IProcess* process, DWORD threadId, DWORD exitCode )
+    {
+        mCallback->OnThreadExit( process, threadId, exitCode );
+    }
+
+    void DebuggerProxy::OnModuleLoad( IProcess* process, IModule* module )
+    {
+        mCallback->OnModuleLoad( process, module );
+    }
+
+    void DebuggerProxy::OnModuleUnload( IProcess* process, Address baseAddr )
+    {
+        mCallback->OnModuleUnload( process, baseAddr );
+    }
+
+    void DebuggerProxy::OnOutputString( IProcess* process, const wchar_t* outputString )
+    {
+        mCallback->OnOutputString( process, outputString );
+    }
+
+    void DebuggerProxy::OnLoadComplete( IProcess* process, DWORD threadId )
+    {
+        mCallback->OnLoadComplete( process, threadId );
+    }
+
+    RunMode DebuggerProxy::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    {
+        return mCallback->OnException( process, threadId, firstChance, exceptRec );
+    }
+
+    RunMode DebuggerProxy::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
+    {
+        return mCallback->OnBreakpoint( process, threadId, address, embedded );
+    }
+
+    void DebuggerProxy::OnStepComplete( IProcess* process, uint32_t threadId )
+    {
+        mCallback->OnStepComplete( process, threadId );
+    }
+
+    void DebuggerProxy::OnAsyncBreakComplete( IProcess* process, uint32_t threadId )
+    {
+        mCallback->OnAsyncBreakComplete( process, threadId );
+    }
+
+    void DebuggerProxy::OnError( IProcess* process, HRESULT hrErr, EventCode event )
+    {
+        mCallback->OnError( process, hrErr, event );
+    }
+
+    ProbeRunMode DebuggerProxy::OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
+    {
+        return mCallback->OnCallProbe( process, threadId, address, thunkRange );
     }
 }

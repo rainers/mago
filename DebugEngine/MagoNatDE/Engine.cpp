@@ -43,7 +43,7 @@ namespace Mago
     HRESULT Engine::FinalConstruct()
     {
         HRESULT                 hr = S_OK;
-        RefPtr<IEventCallback>  callback( new EventCallback( this ) );
+        RefPtr<EventCallback>   callback( new EventCallback( this ) );
 
         if ( callback.Get() == NULL )
             return E_OUTOFMEMORY;
