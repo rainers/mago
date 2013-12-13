@@ -385,7 +385,8 @@ namespace Mago
         }
     }
 
-    RunMode EventCallback::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    RunMode EventCallback::OnException( 
+        IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
         const DWORD DefaultState = EXCEPTION_STOP_SECOND_CHANCE;
 
@@ -462,7 +463,8 @@ namespace Mago
         }
     }
 
-    RunMode EventCallback::OnBreakpointInternal( Program* prog, Thread* thread, Address address, bool embedded )
+    RunMode EventCallback::OnBreakpointInternal( 
+        Program* prog, Thread* thread, Address address, bool embedded )
     {
         HRESULT     hr = S_OK;
 
@@ -558,7 +560,8 @@ namespace Mago
         return RunMode_Run;
     }
 
-    RunMode EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
+    RunMode EventCallback::OnBreakpoint( 
+        IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
         OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
 
@@ -617,7 +620,7 @@ namespace Mago
     {
     }
 
-    void EventCallback::OnError( IProcess* process, HRESULT hrErr, EventCode event )
+    void EventCallback::OnError( IProcess* process, HRESULT hrErr, IEventCallback::EventCode event )
     {
     }
 
