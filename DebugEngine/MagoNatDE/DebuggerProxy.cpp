@@ -251,72 +251,72 @@ namespace Mago
 
     void DebuggerProxy::OnProcessStart( IProcess* process )
     {
-        mCallback->OnProcessStart( process );
+        mCallback->OnProcessStart( process->GetId() );
     }
 
     void DebuggerProxy::OnProcessExit( IProcess* process, DWORD exitCode )
     {
-        mCallback->OnProcessExit( process, exitCode );
+        mCallback->OnProcessExit( process->GetId(), exitCode );
     }
 
     void DebuggerProxy::OnThreadStart( IProcess* process, ::Thread* coreThread )
     {
-        mCallback->OnThreadStart( process, coreThread );
+        mCallback->OnThreadStart( process->GetId(), coreThread );
     }
 
     void DebuggerProxy::OnThreadExit( IProcess* process, DWORD threadId, DWORD exitCode )
     {
-        mCallback->OnThreadExit( process, threadId, exitCode );
+        mCallback->OnThreadExit( process->GetId(), threadId, exitCode );
     }
 
     void DebuggerProxy::OnModuleLoad( IProcess* process, IModule* module )
     {
-        mCallback->OnModuleLoad( process, module );
+        mCallback->OnModuleLoad( process->GetId(), module );
     }
 
     void DebuggerProxy::OnModuleUnload( IProcess* process, Address baseAddr )
     {
-        mCallback->OnModuleUnload( process, baseAddr );
+        mCallback->OnModuleUnload( process->GetId(), baseAddr );
     }
 
     void DebuggerProxy::OnOutputString( IProcess* process, const wchar_t* outputString )
     {
-        mCallback->OnOutputString( process, outputString );
+        mCallback->OnOutputString( process->GetId(), outputString );
     }
 
     void DebuggerProxy::OnLoadComplete( IProcess* process, DWORD threadId )
     {
-        mCallback->OnLoadComplete( process, threadId );
+        mCallback->OnLoadComplete( process->GetId(), threadId );
     }
 
     RunMode DebuggerProxy::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
-        return mCallback->OnException( process, threadId, firstChance, exceptRec );
+        return mCallback->OnException( process->GetId(), threadId, firstChance, exceptRec );
     }
 
     RunMode DebuggerProxy::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
-        return mCallback->OnBreakpoint( process, threadId, address, embedded );
+        return mCallback->OnBreakpoint( process->GetId(), threadId, address, embedded );
     }
 
     void DebuggerProxy::OnStepComplete( IProcess* process, uint32_t threadId )
     {
-        mCallback->OnStepComplete( process, threadId );
+        mCallback->OnStepComplete( process->GetId(), threadId );
     }
 
     void DebuggerProxy::OnAsyncBreakComplete( IProcess* process, uint32_t threadId )
     {
-        mCallback->OnAsyncBreakComplete( process, threadId );
+        mCallback->OnAsyncBreakComplete( process->GetId(), threadId );
     }
 
     void DebuggerProxy::OnError( IProcess* process, HRESULT hrErr, EventCode event )
     {
-        mCallback->OnError( process, hrErr, event );
+        mCallback->OnError( process->GetId(), hrErr, event );
     }
 
     ProbeRunMode DebuggerProxy::OnCallProbe( 
         IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
     {
-        return mCallback->OnCallProbe( process, threadId, address, thunkRange );
+        return mCallback->OnCallProbe( process->GetId(), threadId, address, thunkRange );
     }
 }

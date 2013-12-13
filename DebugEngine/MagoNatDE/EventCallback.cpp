@@ -83,12 +83,12 @@ namespace Mago
     }
 
 
-    void EventCallback::OnProcessStart( IProcess* process )
+    void EventCallback::OnProcessStart( DWORD uniquePid )
     {
         OutputDebugStringA( "EventCallback::OnProcessStart\n" );
     }
 
-    void EventCallback::OnProcessExit( IProcess* process, DWORD exitCode )
+    void EventCallback::OnProcessExit( DWORD uniquePid, DWORD exitCode )
     {
         OutputDebugStringA( "EventCallback::OnProcessExit\n" );
 
@@ -96,7 +96,7 @@ namespace Mago
         RefPtr<ProgramDestroyEvent> event;
         RefPtr<Program>             prog;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         mEngine->DeleteProgram( prog.Get() );
@@ -110,7 +110,7 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnThreadStart( IProcess* process, ::Thread* coreThread )
+    void EventCallback::OnThreadStart( DWORD uniquePid, ::Thread* coreThread )
     {
         OutputDebugStringA( "EventCallback::OnThreadStart\n" );
 
@@ -119,7 +119,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         hr = prog->CreateThread( coreThread, thread );
@@ -137,7 +137,7 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnThreadExit( IProcess* process, DWORD threadId, DWORD exitCode )
+    void EventCallback::OnThreadExit( DWORD uniquePid, DWORD threadId, DWORD exitCode )
     {
         OutputDebugStringA( "EventCallback::OnThreadExit\n" );
 
@@ -146,7 +146,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         if ( !prog->FindThread( threadId, thread ) )
@@ -163,21 +163,21 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnModuleLoad( IProcess* process, IModule* module )
+    void EventCallback::OnModuleLoad( DWORD uniquePid, IModule* module )
     {
         mEngine->BeginBindBP();
-        OnModuleLoadInternal( process, module );
+        OnModuleLoadInternal( uniquePid, module );
         mEngine->EndBindBP();
     }
 
-    void EventCallback::OnModuleUnload( IProcess* process, Address baseAddr )
+    void EventCallback::OnModuleUnload( DWORD uniquePid, Address baseAddr )
     {
         mEngine->BeginBindBP();
-        OnModuleUnloadInternal( process, baseAddr );
+        OnModuleUnloadInternal( uniquePid, baseAddr );
         mEngine->EndBindBP();
     }
 
-    void EventCallback::OnModuleLoadInternal( IProcess* process, IModule* coreModule )
+    void EventCallback::OnModuleLoadInternal( DWORD uniquePid, IModule* coreModule )
     {
         OutputDebugStringA( "EventCallback::OnModuleLoad\n" );
 
@@ -187,7 +187,7 @@ namespace Mago
         RefPtr<Module>              mod;
         CComPtr<IDebugModule2>      mod2;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         hr = prog->CreateModule( coreModule, mod );
@@ -242,7 +242,7 @@ namespace Mago
         hr = SendEvent( symEvent.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnModuleUnloadInternal( IProcess* process, Address baseAddr )
+    void EventCallback::OnModuleUnloadInternal( DWORD uniquePid, Address baseAddr )
     {
         OutputDebugStringA( "EventCallback::OnModuleUnload\n" );
 
@@ -252,7 +252,7 @@ namespace Mago
         RefPtr<Module>              mod;
         CComPtr<IDebugModule2>      mod2;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         if ( !prog->FindModule( baseAddr, mod ) )
@@ -276,7 +276,7 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnOutputString( IProcess* process, const wchar_t* outputString )
+    void EventCallback::OnOutputString( DWORD uniquePid, const wchar_t* outputString )
     {
         OutputDebugStringA( "EventCallback::OnOutputString\n" );
 
@@ -284,7 +284,7 @@ namespace Mago
         RefPtr<OutputStringEvent>   event;
         RefPtr<Program>             prog;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         hr = MakeCComObject( event );
@@ -340,7 +340,7 @@ namespace Mago
         return true;
     }
 
-    void EventCallback::OnLoadComplete( IProcess* process, DWORD threadId )
+    void EventCallback::OnLoadComplete( DWORD uniquePid, DWORD threadId )
     {
         OutputDebugStringA( "EventCallback::OnLoadComplete\n" );
 
@@ -349,7 +349,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         if ( !prog->FindThread( threadId, thread ) )
@@ -386,7 +386,7 @@ namespace Mago
     }
 
     RunMode EventCallback::OnException( 
-        IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+        DWORD uniquePid, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
         const DWORD DefaultState = EXCEPTION_STOP_SECOND_CHANCE;
 
@@ -397,7 +397,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return RunMode_Break;
 
         if ( !prog->FindThread( threadId, thread ) )
@@ -561,7 +561,7 @@ namespace Mago
     }
 
     RunMode EventCallback::OnBreakpoint( 
-        IProcess* process, uint32_t threadId, Address address, bool embedded )
+        DWORD uniquePid, uint32_t threadId, Address address, bool embedded )
     {
         OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
 
@@ -569,7 +569,7 @@ namespace Mago
         RefPtr<Thread>              thread;
         RunMode                     runMode = RunMode_Break;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return RunMode_Run;
 
         if ( !prog->FindThread( threadId, thread ) )
@@ -594,7 +594,7 @@ namespace Mago
         return runMode;
     }
 
-    void EventCallback::OnStepComplete( IProcess* process, uint32_t threadId )
+    void EventCallback::OnStepComplete( DWORD uniquePid, uint32_t threadId )
     {
         OutputDebugStringA( "EventCallback::OnStepComplete\n" );
 
@@ -603,7 +603,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         if ( !prog->FindThread( threadId, thread ) )
@@ -616,16 +616,16 @@ namespace Mago
         hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnAsyncBreakComplete( IProcess* process, uint32_t threadId )
+    void EventCallback::OnAsyncBreakComplete( DWORD uniquePid, uint32_t threadId )
     {
     }
 
-    void EventCallback::OnError( IProcess* process, HRESULT hrErr, IEventCallback::EventCode event )
+    void EventCallback::OnError( DWORD uniquePid, HRESULT hrErr, IEventCallback::EventCode event )
     {
     }
 
     ProbeRunMode EventCallback::OnCallProbe( 
-        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
+        DWORD uniquePid, uint32_t threadId, Address address, AddressRange& thunkRange )
     {
         OutputDebugStringA( "EventCallback::OnCallProbe\n" );
 
@@ -633,7 +633,7 @@ namespace Mago
         RefPtr<Module>              mod;
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return ProbeRunMode_Run;
 
         if ( !prog->FindModuleContainingAddress( address, mod ) )
