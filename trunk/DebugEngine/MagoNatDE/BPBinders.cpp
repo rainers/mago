@@ -125,9 +125,13 @@ namespace Mago
                     if ( FAILED( hr ) )
                         continue;
 
-                    UINT64  addr = 0;
-                    addr = session->GetVAFromSecOffset( line.Section, line.Offset );
-                    maker->AddBoundBP( addr, mod, binding );
+                    do
+                    {
+                        UINT64  addr = 0;
+                        addr = session->GetVAFromSecOffset( line.Section, line.Offset );
+                        maker->AddBoundBP( addr, mod, binding );
+                    }
+                    while( session->FindNextLineByNum( compIx, fileIx, (uint16_t) mReqLineStart, line ) );
                 }
             }
         }
