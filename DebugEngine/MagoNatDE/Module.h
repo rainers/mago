@@ -10,12 +10,15 @@
 
 namespace Mago
 {
+    class ICoreModule;
+
+
     class ATL_NO_VTABLE Module : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugModule3
     {
         DWORD                       mId;
-        RefPtr<IModule>             mCoreMod;
+        RefPtr<ICoreModule>         mCoreMod;
         DWORD                       mLoadIndex;
         RefPtr<MagoST::ISession>    mSession;
         CComBSTR                    mLoadedSymPath;
@@ -61,7 +64,7 @@ namespace Mago
     public:
         DWORD   GetId();
         void    SetId( DWORD id );
-        void    SetCoreModule( ::IModule* module );
+        void    SetCoreModule( ICoreModule* module );
         void    Dispose();
 
         // TODO: could this benefit from r-value refs?

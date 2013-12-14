@@ -305,6 +305,7 @@
     <ClCompile Include="FormatNum.cpp" />
     <ClCompile Include="FrameProperty.cpp" />
     <ClCompile Include="InstCache.cpp" />
+    <ClCompile Include="LocalProcess.cpp" />
     <ClCompile Include="MagoNatDE.cpp" />
     <ClCompile Include="MemoryBytes.cpp" />
     <ClCompile Include="Module.cpp" />
@@ -379,7 +380,9 @@
     <ClInclude Include="ExprContext.h" />
     <ClInclude Include="FormatNum.h" />
     <ClInclude Include="FrameProperty.h" />
+    <ClInclude Include="ICoreProcess.h" />
     <ClInclude Include="InstCache.h" />
+    <ClInclude Include="LocalProcess.h" />
     <ClInclude Include="MemoryBytes.h" />
     <ClInclude Include="Module.h" />
     <ClInclude Include="PendingBreakpoint.h" />

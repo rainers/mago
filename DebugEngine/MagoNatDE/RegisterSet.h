@@ -10,9 +10,6 @@
 
 namespace Mago
 {
-    class DebuggerProxy;
-
-
     enum RegisterType
     {
         RegType_None,

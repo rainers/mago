@@ -605,6 +605,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\LocalProcess.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\MagoNatDE.cpp"
 				>
 			</File>
@@ -811,7 +815,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ICoreProcess.h"
+				>
+			</File>
+			<File
 				RelativePath=".\InstCache.h"
+				>
+			</File>
+			<File
+				RelativePath=".\LocalProcess.h"
 				>
 			</File>
 			<File

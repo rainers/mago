@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "DRuntime.h"
 #include "DebuggerProxy.h"
+#include "ICoreProcess.h"
 #include <MagoEED.h>
 
 
@@ -49,7 +50,7 @@ struct TypeInfo_Struct
 
 namespace Mago
 {
-    DRuntime::DRuntime( DebuggerProxy* debugger, IProcess* coreProcess )
+    DRuntime::DRuntime( DebuggerProxy* debugger, ICoreProcess* coreProcess )
         :   mDebugger( debugger ),
             mCoreProc( coreProcess )
     {

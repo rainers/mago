@@ -17,6 +17,7 @@
 #include "ArchDataX86.h"
 #include "DRuntime.h"
 #include "Program.h"
+#include "ICoreProcess.h"
 #include <MagoCVConst.h>
 
 #include <algorithm>

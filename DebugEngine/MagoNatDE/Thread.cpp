@@ -14,6 +14,7 @@
 #include "DebuggerProxy.h"
 #include "RegisterSet.h"
 #include "ArchData.h"
+#include "ICoreProcess.h"
 
 
 namespace Mago
@@ -70,7 +71,7 @@ namespace Mago
         {
             if ( mCoreThread.Get() != NULL )
             {
-                ptp->dwThreadId = mCoreThread->GetId();
+                ptp->dwThreadId = mCoreThread->GetTid();
                 ptp->dwFields |= TPF_ID;
             }
         }
@@ -114,7 +115,7 @@ namespace Mago
         if ( mCoreThread.Get() == NULL )
             return E_FAIL;
 
-        *pdwThreadId = mCoreThread->GetId();
+        *pdwThreadId = mCoreThread->GetTid();
         return S_OK;
     }
 
@@ -154,12 +155,12 @@ namespace Mago
 
     //------------------------------------------------------------------------
 
-    ::Thread* Thread::GetCoreThread()
+    ICoreThread* Thread::GetCoreThread()
     {
         return mCoreThread.Get();
     }
 
-    void Thread::SetCoreThread( ::Thread* thread )
+    void Thread::SetCoreThread( ICoreThread* thread )
     {
         mCoreThread = thread;
     }
@@ -175,7 +176,7 @@ namespace Mago
         mDebugger = pollThread;
     }
 
-    IProcess*   Thread::GetCoreProcess()
+    ICoreProcess*   Thread::GetCoreProcess()
     {
         return mProg->GetCoreProcess();
     }
@@ -185,7 +186,7 @@ namespace Mago
         return mDebugger;
     }
 
-    HRESULT Thread::Step( ::IProcess* coreProc, STEPKIND sk, STEPUNIT step, bool handleException )
+    HRESULT Thread::Step( ICoreProcess* coreProc, STEPKIND sk, STEPUNIT step, bool handleException )
     {
         if ( sk == STEP_BACKWARDS )
             return E_NOTIMPL;
@@ -203,7 +204,7 @@ namespace Mago
         return E_NOTIMPL;
     }
 
-    HRESULT Thread::StepStatement( ::IProcess* coreProc, STEPKIND sk, bool handleException )
+    HRESULT Thread::StepStatement( ICoreProcess* coreProc, STEPKIND sk, bool handleException )
     {
         _ASSERT( (sk == STEP_OVER) || (sk == STEP_INTO) );
         if ( (sk != STEP_OVER) && (sk != STEP_INTO) )
@@ -245,7 +246,7 @@ namespace Mago
         return hr;
     }
 
-    HRESULT Thread::StepInstruction( ::IProcess* coreProc, STEPKIND sk, bool handleException )
+    HRESULT Thread::StepInstruction( ICoreProcess* coreProc, STEPKIND sk, bool handleException )
     {
         _ASSERT( (sk == STEP_OVER) || (sk == STEP_INTO) );
         if ( (sk != STEP_OVER) && (sk != STEP_INTO) )
@@ -259,7 +260,7 @@ namespace Mago
         return hr;
     }
 
-    HRESULT Thread::StepOut( ::IProcess* coreProc, bool handleException )
+    HRESULT Thread::StepOut( ICoreProcess* coreProc, bool handleException )
     {
         HRESULT hr = S_OK;
         Address targetAddr = mCallerPC;
@@ -354,7 +355,7 @@ namespace Mago
         HRESULT hr = S_OK;
         SIZE_T  lenRead = 0;
         SIZE_T  lenUnreadable = 0;
-        RefPtr<IProcess>    proc;
+        RefPtr<ICoreProcess>    proc;
 
         pThis->mProg->GetCoreProcess( proc.Ref() );
 

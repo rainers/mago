@@ -19,6 +19,7 @@
 #include "CodeContext.h"
 #include "DisassemblyStream.h"
 #include "DRuntime.h"
+#include "ICoreProcess.h"
 #include <algorithm>
 
 
@@ -442,18 +443,18 @@ namespace Mago
         mEngine = engine;
     }
 
-    IProcess*   Program::GetCoreProcess()
+    ICoreProcess*   Program::GetCoreProcess()
     {
         return mCoreProc.Get();
     }
 
-    void        Program::GetCoreProcess( IProcess*& proc )
+    void        Program::GetCoreProcess( ICoreProcess*& proc )
     {
         proc = mCoreProc.Get();
         proc->AddRef();
     }
 
-    void Program::SetCoreProcess( IProcess* proc )
+    void Program::SetCoreProcess( ICoreProcess* proc )
     {
         mCoreProc = proc;
     }
@@ -534,7 +535,7 @@ namespace Mago
         }
     }
 
-    HRESULT Program::CreateThread( ::Thread* coreThread, RefPtr<Thread>& thread )
+    HRESULT Program::CreateThread( ICoreThread* coreThread, RefPtr<Thread>& thread )
     {
         HRESULT hr = S_OK;
 
@@ -583,10 +584,10 @@ namespace Mago
     void Program::DeleteThread( Thread* thread )
     {
         GuardedArea guard( mThreadGuard );
-        mThreadMap.erase( thread->GetCoreThread()->GetId() );
+        mThreadMap.erase( thread->GetCoreThread()->GetTid() );
     }
 
-    HRESULT Program::CreateModule( ::IModule* coreModule, RefPtr<Module>& mod )
+    HRESULT Program::CreateModule( ICoreModule* coreModule, RefPtr<Module>& mod )
     {
         HRESULT hr = S_OK;
 

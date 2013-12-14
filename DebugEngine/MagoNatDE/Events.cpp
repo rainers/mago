@@ -359,7 +359,7 @@ namespace Mago
             mGuidType = GetDExceptionType();
             mRootExceptionName = GetRootDExceptionName();
             mSearchKey = Name;
-            if ( IProcess* process = prog->GetCoreProcess() )
+            if ( ICoreProcess* process = prog->GetCoreProcess() )
             {
                 DRuntime* druntime = prog->GetDRuntime();
 
