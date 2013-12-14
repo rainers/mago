@@ -15,6 +15,8 @@ namespace Mago
     class ArchData;
     class IRegisterSet;
     class EventCallback;
+    class ICoreProcess;
+    class ICoreThread;
 
 
     class DebuggerProxy : public IEventCallback
@@ -31,18 +33,18 @@ namespace Mago
         HRESULT Start();
         void    Shutdown();
 
-        HRESULT GetSystemInfo( IProcess* process, ArchData*& sysInfo );
+        HRESULT GetSystemInfo( ICoreProcess* process, ArchData*& sysInfo );
 
-        HRESULT Launch( LaunchInfo* launchInfo, IProcess*& process );
-        HRESULT Attach( uint32_t id, IProcess*& process );
+        HRESULT Launch( LaunchInfo* launchInfo, ICoreProcess*& process );
+        HRESULT Attach( uint32_t id, ICoreProcess*& process );
 
-        HRESULT Terminate( IProcess* process );
-        HRESULT Detach( IProcess* process );
+        HRESULT Terminate( ICoreProcess* process );
+        HRESULT Detach( ICoreProcess* process );
 
-        HRESULT ResumeLaunchedProcess( IProcess* process );
+        HRESULT ResumeLaunchedProcess( ICoreProcess* process );
 
         HRESULT ReadMemory( 
-            IProcess* process, 
+            ICoreProcess* process, 
             Address address,
             SIZE_T length, 
             SIZE_T& lengthRead, 
@@ -50,26 +52,27 @@ namespace Mago
             uint8_t* buffer );
 
         HRESULT WriteMemory( 
-            IProcess* process, 
+            ICoreProcess* process, 
             Address address,
             SIZE_T length, 
             SIZE_T& lengthWritten, 
             uint8_t* buffer );
 
-        HRESULT SetBreakpoint( IProcess* process, Address address );
-        HRESULT RemoveBreakpoint( IProcess* process, Address address );
+        HRESULT SetBreakpoint( ICoreProcess* process, Address address );
+        HRESULT RemoveBreakpoint( ICoreProcess* process, Address address );
 
-        HRESULT StepOut( IProcess* process, Address targetAddr, bool handleException );
-        HRESULT StepInstruction( IProcess* process, bool stepIn, bool handleException );
-        HRESULT StepRange( IProcess* process, bool stepIn, AddressRange range, bool handleException );
+        HRESULT StepOut( ICoreProcess* process, Address targetAddr, bool handleException );
+        HRESULT StepInstruction( ICoreProcess* process, bool stepIn, bool handleException );
+        HRESULT StepRange( 
+            ICoreProcess* process, bool stepIn, AddressRange range, bool handleException );
 
-        HRESULT Continue( IProcess* process, bool handleException );
-        HRESULT Execute( IProcess* process, bool handleException );
+        HRESULT Continue( ICoreProcess* process, bool handleException );
+        HRESULT Execute( ICoreProcess* process, bool handleException );
 
-        HRESULT AsyncBreak( IProcess* process );
+        HRESULT AsyncBreak( ICoreProcess* process );
 
-        HRESULT GetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet*& regSet );
-        HRESULT SetThreadContext( IProcess* process, ::Thread* thread, IRegisterSet* regSet );
+        HRESULT GetThreadContext( ICoreProcess* process, ICoreThread* thread, IRegisterSet*& regSet );
+        HRESULT SetThreadContext( ICoreProcess* process, ICoreThread* thread, IRegisterSet* regSet );
 
         // IEventCallback
 

@@ -15,6 +15,8 @@
 #include "ComEnumWithCount.h"
 #include "BpResolutionLocation.h"
 #include "DRuntime.h"
+#include "ICoreProcess.h"
+
 
 using namespace std;
 
@@ -182,7 +184,7 @@ namespace Mago
         prog->SetDebuggerProxy( &mDebugger );
 
         // this was already set during launch
-        IProcess* coreProc = prog->GetCoreProcess();
+        ICoreProcess* coreProc = prog->GetCoreProcess();
         _ASSERT( coreProc != NULL );
 
         std::unique_ptr<DRuntime> druntime( new DRuntime( &mDebugger, coreProc ) );
@@ -374,17 +376,17 @@ namespace Mago
        IDebugProcess2**      ppDebugProcess
         )
     {
-        HRESULT             hr = S_OK;
-        RefPtr<IProcess>    proc;
-        RefPtr<Program>     prog;
-        AD_PROCESS_ID       fullProcId = { 0 };
+        HRESULT                 hr = S_OK;
+        RefPtr<ICoreProcess>    proc;
+        RefPtr<Program>         prog;
+        AD_PROCESS_ID           fullProcId = { 0 };
 
         hr = mDebugger.Launch( &launchParams, proc.Ref() );
         if ( FAILED( hr ) )
             return hr;
 
         fullProcId.ProcessIdType = AD_PROCESS_ID_SYSTEM;
-        fullProcId.ProcessId.dwProcessId = proc->GetId();
+        fullProcId.ProcessId.dwProcessId = proc->GetPid();
 
         hr = pPort->GetProcess( fullProcId, ppDebugProcess );
         if ( FAILED( hr ) )
@@ -398,7 +400,7 @@ namespace Mago
         prog->SetProcess( *ppDebugProcess );
         prog->SetCoreProcess( proc.Get() );
 
-        mProgs.insert( ProgramMap::value_type( proc->GetId(), prog ) );
+        mProgs.insert( ProgramMap::value_type( proc->GetPid(), prog ) );
 
 Error:
         if ( FAILED( hr ) )
@@ -583,7 +585,7 @@ Error:
 
     void Engine::DeleteProgram( Program* prog )
     {
-        mProgs.erase( prog->GetCoreProcess()->GetId() );
+        mProgs.erase( prog->GetCoreProcess()->GetPid() );
 
         prog->Dispose();
     }

@@ -14,6 +14,8 @@ namespace Mago
     class DebuggerProxy;
     class StackFrame;
     class IRegisterSet;
+    class ICoreProcess;
+    class ICoreThread;
 
 
     class ATL_NO_VTABLE Thread : 
@@ -22,7 +24,7 @@ namespace Mago
     {
         typedef std::vector< RefPtr<StackFrame> > Callstack;
 
-        RefPtr<::Thread>    mCoreThread;
+        RefPtr<ICoreThread> mCoreThread;
         RefPtr<Program>     mProg;
         Address             mCurPC;
         Address             mCallerPC;
@@ -65,14 +67,14 @@ namespace Mago
             IDebugLogicalThread2** ppLogicalThread );
 
     public:
-        ::Thread*   GetCoreThread();
-        void        SetCoreThread( ::Thread* thread );
-        Program*    GetProgram();
-        void        SetProgram( Program* prog, DebuggerProxy* pollThread );
-        IProcess*   GetCoreProcess();
-        DebuggerProxy* GetDebuggerProxy();
+        ICoreThread*    GetCoreThread();
+        void            SetCoreThread( ICoreThread* thread );
+        Program*        GetProgram();
+        void            SetProgram( Program* prog, DebuggerProxy* pollThread );
+        ICoreProcess*   GetCoreProcess();
+        DebuggerProxy*  GetDebuggerProxy();
 
-        HRESULT Step( ::IProcess* coreProc, STEPKIND sk, STEPUNIT step, bool handleException );
+        HRESULT Step( ICoreProcess* coreProc, STEPKIND sk, STEPUNIT step, bool handleException );
 
     private:
         HRESULT BuildCallstack( IRegisterSet* topRegSet, Callstack& callstack );
@@ -83,9 +85,9 @@ namespace Mago
             UINT nRadix, 
             IEnumDebugFrameInfo2** ppEnum );
 
-        HRESULT StepStatement( ::IProcess* coreProc, STEPKIND sk, bool handleException );
-        HRESULT StepInstruction( ::IProcess* coreProc, STEPKIND sk, bool handleException );
-        HRESULT StepOut( ::IProcess* coreProc, bool handleException );
+        HRESULT StepStatement( ICoreProcess* coreProc, STEPKIND sk, bool handleException );
+        HRESULT StepInstruction( ICoreProcess* coreProc, STEPKIND sk, bool handleException );
+        HRESULT StepOut( ICoreProcess* coreProc, bool handleException );
 
         static BOOL CALLBACK ReadProcessMemory64(
           HANDLE hProcess,

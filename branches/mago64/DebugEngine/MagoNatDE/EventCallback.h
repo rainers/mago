@@ -14,6 +14,8 @@ namespace Mago
     class Program;
     class Thread;
     class EventBase;
+    class ICoreThread;
+    class ICoreModule;
 
 
     class EventCallback
@@ -29,9 +31,9 @@ namespace Mago
 
         virtual void OnProcessStart( DWORD uniquePid );
         virtual void OnProcessExit( DWORD uniquePid, DWORD exitCode );
-        virtual void OnThreadStart( DWORD uniquePid, ::Thread* thread );
+        virtual void OnThreadStart( DWORD uniquePid, ICoreThread* thread );
         virtual void OnThreadExit( DWORD uniquePid, DWORD threadId, DWORD exitCode );
-        virtual void OnModuleLoad( DWORD uniquePid, IModule* module );
+        virtual void OnModuleLoad( DWORD uniquePid, ICoreModule* module );
         virtual void OnModuleUnload( DWORD uniquePid, Address baseAddr );
         virtual void OnOutputString( DWORD uniquePid, const wchar_t* outputString );
         virtual void OnLoadComplete( DWORD uniquePid, DWORD threadId );
@@ -56,7 +58,7 @@ namespace Mago
         bool FindThunk( 
             MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange& thunkRange );
 
-        virtual void OnModuleLoadInternal( DWORD uniquePid, IModule* module );
+        virtual void OnModuleLoadInternal( DWORD uniquePid, ICoreModule* module );
         virtual void OnModuleUnloadInternal( DWORD uniquePid, Address baseAddr );
     };
 }

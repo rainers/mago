@@ -9,6 +9,7 @@
 #include "InstCache.h"
 #include "Program.h"
 #include "DebuggerProxy.h"
+#include "ICoreProcess.h"
 
 
 namespace Mago
@@ -502,10 +503,10 @@ namespace Mago
         _ASSERT( (cacheIndex >= 0) && (cacheIndex < _countof( mBlockCache )) );
         _ASSERT( InstBlock::Align( baseAddr ) == baseAddr );
 
-        HRESULT             hr = S_OK;
-        RefPtr<IProcess>    proc;
-        SIZE_T              lenRead = 0;
-        SIZE_T              lenUnreadable = 0;
+        HRESULT                 hr = S_OK;
+        RefPtr<ICoreProcess>    proc;
+        SIZE_T                  lenRead = 0;
+        SIZE_T                  lenUnreadable = 0;
 
         mBlockCache[cacheIndex]->Address = baseAddr;
         mBlockCache[cacheIndex]->State = BlockState_Invalid;

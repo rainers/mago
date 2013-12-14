@@ -15,6 +15,7 @@
 #include "PendingBreakpoint.h"
 #include "BoundBreakpoint.h"
 #include "ComEnumWithCount.h"
+#include "ICoreProcess.h"
 #include <MagoCVConst.h>
 
 
@@ -110,7 +111,7 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnThreadStart( DWORD uniquePid, ::Thread* coreThread )
+    void EventCallback::OnThreadStart( DWORD uniquePid, ICoreThread* coreThread )
     {
         OutputDebugStringA( "EventCallback::OnThreadStart\n" );
 
@@ -163,7 +164,7 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnModuleLoad( DWORD uniquePid, IModule* module )
+    void EventCallback::OnModuleLoad( DWORD uniquePid, ICoreModule* module )
     {
         mEngine->BeginBindBP();
         OnModuleLoadInternal( uniquePid, module );
@@ -177,7 +178,7 @@ namespace Mago
         mEngine->EndBindBP();
     }
 
-    void EventCallback::OnModuleLoadInternal( DWORD uniquePid, IModule* coreModule )
+    void EventCallback::OnModuleLoadInternal( DWORD uniquePid, ICoreModule* coreModule )
     {
         OutputDebugStringA( "EventCallback::OnModuleLoad\n" );
 
@@ -361,7 +362,7 @@ namespace Mago
 
         hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
 
-        IProcess*   coreProc = prog->GetCoreProcess();
+        ICoreProcess*   coreProc = prog->GetCoreProcess();
 
         Address entryPoint = coreProc->GetEntryPoint();
 

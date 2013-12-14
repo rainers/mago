@@ -11,21 +11,21 @@
 
 
 struct BB;
-class IProcess;
 
 
 namespace Mago
 {
     class DebuggerProxy;
+    class ICoreProcess;
 
 
     class DRuntime
     {
-        DebuggerProxy*      mDebugger;
-        RefPtr<IProcess>    mCoreProc;
+        DebuggerProxy*          mDebugger;
+        RefPtr<ICoreProcess>    mCoreProc;
 
     public:
-        DRuntime( DebuggerProxy* debugger, IProcess* coreProcess );
+        DRuntime( DebuggerProxy* debugger, ICoreProcess* coreProcess );
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 

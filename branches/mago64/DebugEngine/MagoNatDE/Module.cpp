@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "Module.h"
 #include "DiaLoadCallback.h"
+#include "ICoreProcess.h"
 
 
 namespace Mago
@@ -237,7 +238,7 @@ namespace Mago
         mId = id;
     }
 
-    void    Module::SetCoreModule( ::IModule* module )
+    void    Module::SetCoreModule( ICoreModule* module )
     {
         mCoreMod = module;
     }

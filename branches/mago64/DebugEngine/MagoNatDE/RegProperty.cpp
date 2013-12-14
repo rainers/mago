@@ -439,8 +439,8 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        ::Thread* coreThread = mThread->GetCoreThread();
-        IProcess* coreProcess = mThread->GetCoreProcess();
+        ICoreThread* coreThread = mThread->GetCoreThread();
+        ICoreProcess* coreProcess = mThread->GetCoreProcess();
         DebuggerProxy* debugger = mThread->GetDebuggerProxy();
 
         hr = debugger->SetThreadContext( coreProcess, coreThread, mRegSet );

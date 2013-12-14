@@ -15,6 +15,9 @@ namespace Mago
     class Module;
     class Engine;
     class DRuntime;
+    class ICoreProcess;
+    class ICoreThread;
+    class ICoreModule;
 
     typedef uint64_t    BPCookie;
 
@@ -32,7 +35,7 @@ namespace Mago
         CComPtr<IDebugProcess2>         mProcess;
         CComPtr<IDebugEventCallback2>   mCallback;
         CComBSTR                        mName;
-        RefPtr<IProcess>                mCoreProc;
+        RefPtr<ICoreProcess>            mCoreProc;
         bool                            mAttached;
         bool                            mPassExceptionToDebuggee;
         bool                            mCanPassExceptionToDebuggee;
@@ -99,9 +102,9 @@ namespace Mago
         void        Dispose();
 
         void        SetEngine( Engine* engine );
-        IProcess*   GetCoreProcess();
-        void        GetCoreProcess( IProcess*& proc );
-        void        SetCoreProcess( IProcess* proc );
+        ICoreProcess*   GetCoreProcess();
+        void        GetCoreProcess( ICoreProcess*& proc );
+        void        SetCoreProcess( ICoreProcess* proc );
         void        SetProcess( IDebugProcess2* proc );
         IDebugEventCallback2*   
                     GetCallback();
@@ -117,12 +120,12 @@ namespace Mago
         bool        CanPassExceptionToDebuggee();
         void        NotifyException( bool firstChance, const EXCEPTION_RECORD* exceptRec );
 
-        HRESULT     CreateThread( ::Thread* coreThread, RefPtr<Thread>& thread );
+        HRESULT     CreateThread( ICoreThread* coreThread, RefPtr<Thread>& thread );
         HRESULT     AddThread( Thread* thread );
         bool        FindThread( DWORD threadId, RefPtr<Thread>& thread );
         void        DeleteThread( Thread* thread );
 
-        HRESULT     CreateModule( ::IModule* coreMod, RefPtr<Module>& mod );
+        HRESULT     CreateModule( ICoreModule* coreMod, RefPtr<Module>& mod );
         HRESULT     AddModule( Module* mod );
         bool        FindModule( Address address, RefPtr<Module>& mod );
         bool        FindModuleContainingAddress( Address address, RefPtr<Module>& mod );
