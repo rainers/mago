@@ -85,19 +85,6 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT DebuggerProxy::GetSystemInfo( ICoreProcess* process, ArchData*& sysInfo )
-    {
-        if ( process == NULL )
-            return E_INVALIDARG;
-        if ( mArch.Get() == NULL )
-            return E_NOT_FOUND;
-
-        sysInfo = mArch.Get();
-        sysInfo->AddRef();
-
-        return S_OK;
-    }
-
 //----------------------------------------------------------------------------
 // Commands
 //----------------------------------------------------------------------------
@@ -108,7 +95,7 @@ namespace Mago
         RefPtr<IProcess>        execProc;
         RefPtr<LocalProcess>    coreProc;
 
-        coreProc = new LocalProcess();
+        coreProc = new LocalProcess( mArch );
         if ( coreProc.Get() == NULL )
             return E_OUTOFMEMORY;
 
@@ -128,7 +115,7 @@ namespace Mago
         RefPtr<IProcess>        execProc;
         RefPtr<LocalProcess>    coreProc;
 
-        coreProc = new LocalProcess();
+        coreProc = new LocalProcess( mArch );
         if ( coreProc.Get() == NULL )
             return E_OUTOFMEMORY;
 

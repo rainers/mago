@@ -15,6 +15,7 @@
 #include "Thread.h"
 #include "DebuggerProxy.h"
 #include "RegProperty.h"
+#include "ICoreProcess.h"
 #include <MagoEED.h>
 
 
@@ -281,13 +282,9 @@ namespace Mago
     {
         _ASSERT( thread != NULL );
 
-        HRESULT             hr = S_OK;
-        RefPtr<ArchData>    archData;
-        DebuggerProxy*      debugger = thread->GetDebuggerProxy();
+        ArchData*           archData = NULL;
 
-        hr = debugger->GetSystemInfo( thread->GetCoreProcess(), archData.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
+        archData = thread->GetCoreProcess()->GetArchData();
 
         return EnumRegisters(
             archData,

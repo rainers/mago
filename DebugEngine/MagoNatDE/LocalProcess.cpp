@@ -9,6 +9,7 @@
 
 #include "Common.h"
 #include "LocalProcess.h"
+#include "ArchData.h"
 
 
 namespace Mago
@@ -17,9 +18,11 @@ namespace Mago
     //  LocalProcess
     //------------------------------------------------------------------------
 
-    LocalProcess::LocalProcess()
-        :   mRefCount( 0 )
+    LocalProcess::LocalProcess( ArchData* archData )
+        :   mRefCount( 0 ),
+            mArchData( archData )
     {
+        _ASSERT( archData != NULL );
     }
 
     void LocalProcess::AddRef()
@@ -80,6 +83,11 @@ namespace Mago
     bool LocalProcess::ReachedLoaderBp()
     {
         return mExecProc->ReachedLoaderBp();
+    }
+
+    ArchData* LocalProcess::GetArchData()
+    {
+        return mArchData.Get();
     }
 
     CoreProcessType LocalProcess::GetProcessType()
