@@ -1418,12 +1418,9 @@ namespace Mago
         }
         else
         {
-            RefPtr<ArchData>    archData;
-            DebuggerProxy*      debugger = mThread->GetDebuggerProxy();
+            ArchData*           archData = NULL;
 
-            hr = debugger->GetSystemInfo( mThread->GetCoreProcess(), archData.Ref() );
-            if ( FAILED( hr ) )
-                return hr;
+            archData = mThread->GetCoreProcess()->GetArchData();
 
             int archRegId = archData->GetArchRegId( reg );
             if ( archRegId < 0 )

@@ -33,8 +33,6 @@ namespace Mago
         HRESULT Start();
         void    Shutdown();
 
-        HRESULT GetSystemInfo( ICoreProcess* process, ArchData*& sysInfo );
-
         HRESULT Launch( LaunchInfo* launchInfo, ICoreProcess*& process );
         HRESULT Attach( uint32_t id, ICoreProcess*& process );
 

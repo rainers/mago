@@ -10,6 +10,9 @@
 
 namespace Mago
 {
+    class ArchData;
+
+
     enum CoreProcessType
     {
         CoreProcess_Local,
@@ -35,6 +38,7 @@ namespace Mago
         virtual bool            IsTerminating() = 0;
         virtual bool            ReachedLoaderBp() = 0;
 
+        virtual ArchData*       GetArchData() = 0;
         virtual CoreProcessType GetProcessType() = 0;
 
     private:

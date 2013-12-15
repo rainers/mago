@@ -282,7 +282,7 @@ namespace Mago
 
         HRESULT             hr = S_OK;
         int                 frameIndex = 0;
-        RefPtr<ArchData>    archData;
+        ArchData*           archData = NULL;
         StackWalker*        pWalker = NULL;
         std::unique_ptr<StackWalker> walker;
 
@@ -290,9 +290,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = mDebugger->GetSystemInfo( mProg->GetCoreProcess(), archData.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
+        archData = mProg->GetCoreProcess()->GetArchData();
 
         hr = archData->BeginWalkStack( 
             topRegSet,

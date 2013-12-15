@@ -16,9 +16,10 @@ namespace Mago
     {
         long                mRefCount;
         RefPtr<IProcess>    mExecProc;
+        RefPtr<ArchData>    mArchData;
 
     public:
-        LocalProcess();
+        LocalProcess( ArchData* archData );
 
         virtual void            AddRef();
         virtual void            Release();
@@ -34,6 +35,7 @@ namespace Mago
         virtual bool            IsTerminating();
         virtual bool            ReachedLoaderBp();
 
+        virtual ArchData*       GetArchData();
         virtual CoreProcessType GetProcessType();
 
         void                    Init( IProcess* execProc );
