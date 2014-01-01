@@ -1303,46 +1303,37 @@ namespace MagoST
         int         closestDistAbove = INT_MAX;
         int         closestDistBelow = INT_MAX;
 
-        for ( uint16_t zSegIx = 0; zSegIx < file->cSeg; zSegIx++ )
+        for ( uint16_t zSegIx = 0; zSegIx < file->cSeg && closestDistAbove > 0; zSegIx++ )
         {
             OMFSourceLine*  srcLine = (OMFSourceLine*) ((BYTE*) srcMod + srcLinePtrTable[zSegIx]);
 
             DWORD*  offsetTable = (DWORD*) ((BYTE*) srcLine + 4);
             WORD*   numberTable = (WORD*) (offsetTable + srcLine->cLnOff);
 
-            if ( srcLine->cLnOff == 0 )
-                continue;
-
-            if ( (numberTable[0] <= line) && (numberTable[ srcLine->cLnOff - 1 ] >= line) )
+            // line numbers don't have to be ascending 
+            for ( uint16_t zLn = 0; zLn < srcLine->cLnOff; zLn++ )
             {
-                segInfo.SegmentIndex = srcLine->Seg;
-                segInfo.LineCount = srcLine->cLnOff;
-                segInfo.LineNumbers = numberTable;
-                segInfo.Offsets = offsetTable;
-                segInfo.Start = startEndTable[zSegIx].first;
-                segInfo.End = startEndTable[zSegIx].second;
-                FixEndOffset( segInfo.Offsets[segInfo.LineCount - 1], segInfo.End );
-                return true;
-            }
-
-            if ( numberTable[ srcLine->cLnOff - 1 ] < line )
-            {
-                int dist = line - numberTable[ srcLine->cLnOff - 1 ];
-
-                if ( dist < closestDistAbove )
+                if ( numberTable[ zLn ] < line )
                 {
-                    closestDistAbove = dist;
-                    zClosestAboveSegIx = zSegIx;
+                    int dist = line - numberTable[ zLn ];
+
+                    if ( dist < closestDistAbove )
+                    {
+                        closestDistAbove = dist;
+                        zClosestAboveSegIx = zSegIx;
+                        if( dist == 0 )
+                            break;
+                    }
                 }
-            }
-            else
-            {
-                int dist = numberTable[ 0 ] - line;
-
-                if ( dist < closestDistBelow )
+                else if ( numberTable[ zLn ] > line )
                 {
-                    closestDistBelow = dist;
-                    zClosestBelowSegIx = zSegIx;
+                    int dist = numberTable[ zLn ] - line;
+
+                    if ( dist < closestDistBelow )
+                    {
+                        closestDistBelow = dist;
+                        zClosestBelowSegIx = zSegIx;
+                    }
                 }
             }
         }

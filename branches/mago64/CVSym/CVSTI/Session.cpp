@@ -442,6 +442,25 @@ namespace MagoST
         return true;
     }
 
+    bool Session::FindNextLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber )
+    {
+        FileSegmentInfo fileSegInfo = { 0 };
+
+        if ( !mStore->FindCompilandFileSegment( line, compIndex, fileIndex, fileSegInfo ) )
+            return false;
+
+        for ( int i = lineNumber.LineIndex + 1; i < fileSegInfo.LineCount; i++ )
+        {
+            int curLine = fileSegInfo.LineNumbers[i];
+            if ( curLine == lineNumber.Number )
+            {
+                SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, (uint16_t) i, lineNumber );
+                return true;
+            }
+        }
+        return false;
+    }
+
     void Session::SetLineNumberFromSegment( uint16_t compIx, uint16_t fileIx, const FileSegmentInfo& segInfo, uint16_t lineIndex, LineNumber& lineNumber )
     {
         lineNumber.CompilandIndex = compIx;

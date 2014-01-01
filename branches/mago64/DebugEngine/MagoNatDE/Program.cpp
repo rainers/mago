@@ -268,9 +268,13 @@ namespace Mago
                     {
                         line.NumberEnd = line.Number;
 
-                        bindings.push_back( AddressBinding() );
-                        bindings.back().Addr = session->GetVAFromSecOffset( line.Section, line.Offset );
-                        bindings.back().Mod = mod;
+                        do
+                        {
+                            bindings.push_back( AddressBinding() );
+                            bindings.back().Addr = session->GetVAFromSecOffset( line.Section, line.Offset );
+                            bindings.back().Mod = mod;
+                        }
+                        while( session->FindNextLineByNum( compIx, fileIx, (uint16_t) reqLineStart, line ) );
                     }
                 }
             }
