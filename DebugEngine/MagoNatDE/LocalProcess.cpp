@@ -65,26 +65,6 @@ namespace Mago
         return mExecProc->GetMachineType();
     }
 
-    bool LocalProcess::IsStopped()
-    {
-        return mExecProc->IsStopped();
-    }
-
-    bool LocalProcess::IsDeleted()
-    {
-        return mExecProc->IsDeleted();
-    }
-
-    bool LocalProcess::IsTerminating()
-    {
-        return mExecProc->IsTerminating();
-    }
-
-    bool LocalProcess::ReachedLoaderBp()
-    {
-        return mExecProc->ReachedLoaderBp();
-    }
-
     ArchData* LocalProcess::GetArchData()
     {
         return mArchData.Get();
@@ -205,13 +185,8 @@ namespace Mago
         return mExecMod->GetMachine();
     }
 
-    const wchar_t* LocalModule::GetExePath()
+    const wchar_t* LocalModule::GetPath()
     {
-        return mExecMod->GetExePath();
-    }
-
-    bool LocalModule::IsDeleted()
-    {
-        return mExecMod->IsDeleted();
+        return mExecMod->GetPath();
     }
 }

@@ -150,7 +150,7 @@ void EventSuite::AssertModuleLoads( IProcess* process )
 
         if ( node->Code == IEventCallback::Event_ModuleUnload )
         {
-            if ( wcsstr( ((ModuleUnloadEventNode*) node)->Module->GetExePath(), L"ws2_32.dll" ) != NULL )
+            if ( wcsstr( ((ModuleUnloadEventNode*) node)->Module->GetPath(), L"ws2_32.dll" ) != NULL )
             {
                 if ( dllLoad1 && !dllUnload && !dllLoad2 )
                     dllUnload = true;
@@ -170,20 +170,20 @@ void EventSuite::AssertModuleLoads( IProcess* process )
 
         do
         {
-            pRet = _wfullpath( &fullPathBuf[0], modNode->Module->GetExePath(), fullPathBuf.size() );
+            pRet = _wfullpath( &fullPathBuf[0], modNode->Module->GetPath(), fullPathBuf.size() );
             if ( pRet == NULL )
             {
                 fullPathBuf.resize( fullPathBuf.size() * 2 );
             }
         } while ( pRet == NULL );
 
-        TEST_ASSERT( _wcsicmp( &fullPathBuf[0], modNode->Module->GetExePath() ) == 0 );
-        TEST_ASSERT( GetFileAttributes( modNode->Module->GetExePath() ) != INVALID_FILE_ATTRIBUTES );
+        TEST_ASSERT( _wcsicmp( &fullPathBuf[0], modNode->Module->GetPath() ) == 0 );
+        TEST_ASSERT( GetFileAttributes( modNode->Module->GetPath() ) != INVALID_FILE_ATTRIBUTES );
 
         // TODO: test size?
 
-        size_t          exePathLen = wcslen( modNode->Module->GetExePath() );
-        const wchar_t*  lastWack = wcsrchr( modNode->Module->GetExePath(), L'\\' );
+        size_t          exePathLen = wcslen( modNode->Module->GetPath() );
+        const wchar_t*  lastWack = wcsrchr( modNode->Module->GetPath(), L'\\' );
 
         TEST_ASSERT_MSG( lastWack != NULL, "There was no backslash." );
 
@@ -213,7 +213,7 @@ void EventSuite::AssertModuleLoads( IProcess* process )
         {
             TEST_ASSERT( !procImageLoaded );
             TEST_ASSERT( loadOrder == 1 );
-            TEST_ASSERT( _wcsicmp( modNode->Module->GetExePath(), process->GetExePath() ) == 0 );
+            TEST_ASSERT( _wcsicmp( modNode->Module->GetPath(), process->GetExePath() ) == 0 );
             procImageLoaded = true;
         }
     }

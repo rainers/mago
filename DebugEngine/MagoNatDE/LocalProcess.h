@@ -30,11 +30,6 @@ namespace Mago
         virtual Address         GetEntryPoint();
         virtual uint16_t        GetMachineType();
 
-        virtual bool            IsStopped();
-        virtual bool            IsDeleted();
-        virtual bool            IsTerminating();
-        virtual bool            ReachedLoaderBp();
-
         virtual ArchData*       GetArchData();
         virtual CoreProcessType GetProcessType();
 
@@ -86,9 +81,7 @@ namespace Mago
         virtual Address         GetPreferredImageBase();
         virtual uint32_t        GetSize();
         virtual uint16_t        GetMachine();
-        virtual const wchar_t*  GetExePath();
-
-        virtual bool            IsDeleted();
+        virtual const wchar_t*  GetPath();
 
     private:
         LocalModule( const LocalModule& );

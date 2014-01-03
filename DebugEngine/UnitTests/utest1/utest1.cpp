@@ -90,9 +90,9 @@ public:
         }
 
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
-            printf( "  %p %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetExePath() );
+            printf( "  %p %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetPath() );
         else
-            printf( "  %08I64x %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetExePath() );
+            printf( "  %08I64x %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetPath() );
 
         if ( mMod == NULL )
         {

@@ -54,7 +54,7 @@ namespace Mago
 
         if ( (dwFields & MIF_URL) != 0 )
         {
-            pInfo->m_bstrUrl = SysAllocString( mCoreMod->GetExePath() );
+            pInfo->m_bstrUrl = SysAllocString( mCoreMod->GetPath() );
             if ( pInfo->m_bstrUrl != NULL )
                 pInfo->dwValidFields |= MIF_URL;
         }
@@ -175,7 +175,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = dataSource->LoadDataForExe( mCoreMod->GetExePath(), NULL, callback );
+        hr = dataSource->LoadDataForExe( mCoreMod->GetPath(), NULL, callback );
         if ( FAILED( hr ) )
             return hr;
 
@@ -200,7 +200,7 @@ namespace Mago
         }
         else
         {
-            mLoadedSymPath = mCoreMod->GetExePath();
+            mLoadedSymPath = mCoreMod->GetPath();
         }
 
         if ( sendEvent )
@@ -260,7 +260,7 @@ namespace Mago
         name.Empty();
 
         err = _wsplitpath_s( 
-            mCoreMod->GetExePath(), 
+            mCoreMod->GetPath(), 
             NULL, 0,
             NULL, 0,
             fname, _countof( fname ),
