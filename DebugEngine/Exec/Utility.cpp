@@ -141,9 +141,9 @@ HRESULT GetImageInfo( const wchar_t* path, ImageInfo& info )
 HRESULT ReadMemory( 
    HANDLE hProcess, 
    UINT_PTR address, 
-   SIZE_T length, 
-   SIZE_T& lengthRead, 
-   SIZE_T& lengthUnreadable, 
+   uint32_t length, 
+   uint32_t& lengthRead, 
+   uint32_t& lengthUnreadable, 
    uint8_t* buffer )
 {
     _ASSERT( hProcess != NULL );
@@ -193,17 +193,20 @@ HRESULT ReadMemory(
     
     // cap the length to read to the length the user asked for
     SIZE_T  lenToRead = (lenReadable > length) ? length : lenReadable;
+    SIZE_T  lenRead = 0;
 
     bRet = ::ReadProcessMemory( 
         hProcess, 
         (const void*) address, 
         buffer, 
         lenToRead, 
-        &lengthRead );
+        &lenRead );
     if ( !bRet )
         return GetLastHr();
 
-    lengthUnreadable = (lenUnreadable > (length - lengthRead)) ? length - lengthRead : lenUnreadable;
+    lengthRead = (uint32_t) lenRead;
+    lengthUnreadable = (uint32_t) 
+        ((lenUnreadable > (length - lengthRead)) ? length - lengthRead : lenUnreadable);
 
     _ASSERT( lengthRead <= length );
     _ASSERT( lengthUnreadable <= length );

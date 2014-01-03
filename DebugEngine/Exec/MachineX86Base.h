@@ -58,15 +58,15 @@ public:
 
     virtual HRESULT ReadMemory( 
         Address address, 
-        SIZE_T length, 
-        SIZE_T& lengthRead, 
-        SIZE_T& lengthUnreadable, 
+        uint32_t length, 
+        uint32_t& lengthRead, 
+        uint32_t& lengthUnreadable, 
         uint8_t* buffer );
 
     virtual HRESULT WriteMemory( 
         Address address, 
-        SIZE_T length, 
-        SIZE_T& lengthWritten, 
+        uint32_t length, 
+        uint32_t& lengthWritten, 
         uint8_t* buffer );
 
     virtual HRESULT SetBreakpoint( Address address );
@@ -115,15 +115,15 @@ protected:
 private:
     HRESULT ReadCleanMemory( 
         Address address, 
-        SIZE_T length, 
-        SIZE_T& lengthRead, 
-        SIZE_T& lengthUnreadable, 
+        uint32_t length, 
+        uint32_t& lengthRead, 
+        uint32_t& lengthUnreadable, 
         uint8_t* buffer );
 
     HRESULT WriteCleanMemory( 
         Address address, 
-        SIZE_T length, 
-        SIZE_T& lengthWritten, 
+        uint32_t length, 
+        uint32_t& lengthWritten, 
         uint8_t* buffer );
 
     HRESULT SetBreakpointInternal( Address address, bool user );

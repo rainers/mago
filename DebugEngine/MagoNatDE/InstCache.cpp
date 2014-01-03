@@ -505,8 +505,8 @@ namespace Mago
 
         HRESULT                 hr = S_OK;
         RefPtr<ICoreProcess>    proc;
-        SIZE_T                  lenRead = 0;
-        SIZE_T                  lenUnreadable = 0;
+        uint32_t                lenRead = 0;
+        uint32_t                lenUnreadable = 0;
 
         mBlockCache[cacheIndex]->Address = baseAddr;
         mBlockCache[cacheIndex]->State = BlockState_Invalid;

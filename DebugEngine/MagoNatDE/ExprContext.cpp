@@ -281,8 +281,8 @@ namespace Mago
 
                 tlsArrayPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
 
-                SIZE_T  lenRead = 0;
-                SIZE_T  lenUnreadable = 0;
+                uint32_t    lenRead = 0;
+                uint32_t    lenUnreadable = 0;
 
                 hr = debuggerProxy->ReadMemory( 
                     mThread->GetCoreProcess(), 
@@ -400,8 +400,8 @@ namespace Mago
         HRESULT         hr = S_OK;
         uint8_t         targetBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
         size_t          targetSize = type->GetSize();
-        SIZE_T          lenRead = 0;
-        SIZE_T          lenUnreadable = 0;
+        uint32_t        lenRead = 0;
+        uint32_t        lenUnreadable = 0;
         DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
 
         // no value to get for complex/aggregate types
@@ -505,7 +505,7 @@ namespace Mago
         HRESULT         hr = S_OK;
         uint8_t         sourceBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
         size_t          sourceSize = type->GetSize();
-        SIZE_T          lenWritten = 0;
+        uint32_t        lenWritten = 0;
         DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
 
         // no value to set for complex/aggregate types
@@ -606,9 +606,9 @@ namespace Mago
         uint8_t* buffer )
     {
         HRESULT         hr = S_OK;
-        SIZE_T          len = sizeToRead;
-        SIZE_T          lenRead = 0;
-        SIZE_T          lenUnreadable = 0;
+        uint32_t        len = sizeToRead;
+        uint32_t        lenRead = 0;
+        uint32_t        lenUnreadable = 0;
         DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
 
         hr = debuggerProxy->ReadMemory(

@@ -350,9 +350,9 @@ namespace Mago
         _ASSERT( hProcess != NULL );
         Thread* pThis = (Thread*) hProcess;
 
-        HRESULT hr = S_OK;
-        SIZE_T  lenRead = 0;
-        SIZE_T  lenUnreadable = 0;
+        HRESULT     hr = S_OK;
+        uint32_t    lenRead = 0;
+        uint32_t    lenUnreadable = 0;
         RefPtr<ICoreProcess>    proc;
 
         pThis->mProg->GetCoreProcess( proc.Ref() );

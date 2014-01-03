@@ -511,9 +511,9 @@ namespace Mago
     HRESULT DRuntime::ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, void* buffer )
     {
         HRESULT         hr = S_OK;
-        SIZE_T          len = sizeToRead;
-        SIZE_T          lenRead = 0;
-        SIZE_T          lenUnreadable = 0;
+        uint32_t        len = sizeToRead;
+        uint32_t        lenRead = 0;
+        uint32_t        lenUnreadable = 0;
 
         hr = mDebugger->ReadMemory(
             mCoreProc.Get(),
@@ -577,7 +577,7 @@ namespace Mago
         _ASSERT( pbstrClassName != NULL );
 
         Address vtbl, classinfo;
-        SIZE_T read, unread;
+        uint32_t read, unread;
         HRESULT hr = mDebugger->ReadMemory( 
             mCoreProc, addr, sizeof( vtbl ), read, unread, (uint8_t*) &vtbl );
         if ( SUCCEEDED( hr ) )
@@ -633,7 +633,7 @@ namespace Mago
         _ASSERT( pbstrInfo != NULL );
 
         Throwable throwable;
-        SIZE_T read, unread;
+        uint32_t read, unread;
         HRESULT hr = S_OK;
     
         hr = mDebugger->ReadMemory( 

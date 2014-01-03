@@ -121,9 +121,9 @@ namespace MagoCore
         IProcess*       Process;
         Address         Address;
         uint8_t*        Buffer;
-        SIZE_T          Length;
-        SIZE_T          OutLengthRead;
-        SIZE_T          OutLengthUnreadable;
+        uint32_t        Length;
+        uint32_t        OutLengthRead;
+        uint32_t        OutLengthUnreadable;
 
         ReadMemoryParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
@@ -145,8 +145,8 @@ namespace MagoCore
         IProcess*       Process;
         Address         Address;
         uint8_t*        Buffer;
-        SIZE_T          Length;
-        SIZE_T          OutLengthWritten;
+        uint32_t        Length;
+        uint32_t        OutLengthWritten;
 
         WriteMemoryParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
