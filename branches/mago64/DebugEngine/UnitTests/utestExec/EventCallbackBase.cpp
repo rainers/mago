@@ -196,7 +196,7 @@ void EventCallbackBase::OnThreadExit( IProcess* process, DWORD threadId, DWORD e
 void EventCallbackBase::OnModuleLoad( IProcess* process, IModule* module )
 {
     if ( mVerbose )
-        printf( "  %p %ls\n", (uintptr_t) module->GetImageBase(), module->GetExePath() );
+        printf( "  %p %ls\n", (uintptr_t) module->GetImageBase(), module->GetPath() );
 
     mLastThreadId = 0;
     mModules.insert( ModuleMap::value_type( module->GetImageBase(), module ) );
