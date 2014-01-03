@@ -16,6 +16,7 @@ namespace Mago
     enum CoreProcessType
     {
         CoreProcess_Local,
+        CoreProcess_Remote
     };
 
 
