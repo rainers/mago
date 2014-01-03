@@ -292,7 +292,7 @@ namespace Mago
         context.ContextFlags = CONTEXT_FULL 
             | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
 
-        hr = mExecThread.GetThreadContext( execProc, execThread, &context, sizeof context );
+        hr = mExecThread.GetThreadContext( execProc, execThread->GetId(), &context, sizeof context );
         if ( FAILED( hr ) )
             return hr;
 
@@ -326,7 +326,7 @@ namespace Mago
         if ( !regSet->GetThreadContext( contextBuf, contextSize ) )
             return E_FAIL;
 
-        hr = mExecThread.SetThreadContext( execProc, execThread, contextBuf, contextSize );
+        hr = mExecThread.SetThreadContext( execProc, execThread->GetId(), contextBuf, contextSize );
         if ( FAILED( hr ) )
             return hr;
 
