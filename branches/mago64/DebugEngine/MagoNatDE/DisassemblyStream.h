@@ -14,7 +14,7 @@
 namespace Mago
 {
     class Program;
-    class DebuggerProxy;
+    class IDebuggerProxy;
 
 
     class ATL_NO_VTABLE DisassemblyStream : 
@@ -91,7 +91,7 @@ namespace Mago
             DISASSEMBLY_STREAM_SCOPE disasmScope, 
             Address address, 
             Program* program, 
-            DebuggerProxy* debugger );
+            IDebuggerProxy* debugger );
 
     private:
         HRESULT SeekOffset( INT64 iInstructions );

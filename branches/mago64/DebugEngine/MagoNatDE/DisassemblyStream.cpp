@@ -505,7 +505,7 @@ namespace Mago
         DISASSEMBLY_STREAM_SCOPE disasmScope, 
         Address address, 
         Program* program, 
-        DebuggerProxy* debugger )
+        IDebuggerProxy* debugger )
     {
         _ASSERT( program != NULL );
 

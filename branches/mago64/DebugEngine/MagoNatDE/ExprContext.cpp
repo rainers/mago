@@ -11,7 +11,7 @@
 #include "Module.h"
 #include "Thread.h"
 #include "CVDecls.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 #include "RegisterSet.h"
 #include "winternl2.h"
 #include "ArchDataX86.h"
@@ -272,7 +272,7 @@ namespace Mago
                 DWORD           tlsArrayPtrAddr = 0;
                 DWORD           tlsArrayAddr = 0;
                 DWORD           tlsBufAddr = 0;
-                DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
+                IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
                 if ( !sym->GetAddressOffset( offset ) )
                     return E_FAIL;
@@ -402,7 +402,7 @@ namespace Mago
         size_t          targetSize = type->GetSize();
         uint32_t        lenRead = 0;
         uint32_t        lenUnreadable = 0;
-        DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
+        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
         // no value to get for complex/aggregate types
         if ( !type->IsScalar() 
@@ -506,7 +506,7 @@ namespace Mago
         uint8_t         sourceBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
         size_t          sourceSize = type->GetSize();
         uint32_t        lenWritten = 0;
-        DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
+        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
         // no value to set for complex/aggregate types
         if ( !type->IsScalar() 
@@ -609,7 +609,7 @@ namespace Mago
         uint32_t        len = sizeToRead;
         uint32_t        lenRead = 0;
         uint32_t        lenUnreadable = 0;
-        DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
+        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
         hr = debuggerProxy->ReadMemory(
             mThread->GetCoreProcess(),

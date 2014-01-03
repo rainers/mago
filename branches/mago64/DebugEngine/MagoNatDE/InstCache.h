@@ -16,7 +16,7 @@ namespace Mago
 
 
     class Program;
-    class DebuggerProxy;
+    class IDebuggerProxy;
 
 
     enum BlockState
@@ -80,14 +80,14 @@ namespace Mago
     class InstCache
     {
         RefPtr<Program>             mProg;
-        DebuggerProxy*              mDebugger;
+        IDebuggerProxy*             mDebugger;
         Address                     mAnchorAddr;
         std::auto_ptr<InstBlock>    mBlockCache[2];
 
     public:
         InstCache();
 
-        HRESULT Init( Program* program, DebuggerProxy* debugger );
+        HRESULT Init( Program* program, IDebuggerProxy* debugger );
         void SetAnchor( Address anchorAddr );
 
         HRESULT LoadBlocks( Address addr, int instAway, int& instAwayAvail );

@@ -10,7 +10,7 @@
 
 namespace Mago
 {
-    class DebuggerProxy;
+    class IDebuggerProxy;
     class Thread;
     class Module;
     class Engine;
@@ -39,7 +39,7 @@ namespace Mago
         bool                            mAttached;
         bool                            mPassExceptionToDebuggee;
         bool                            mCanPassExceptionToDebuggee;
-        DebuggerProxy*                  mDebugger;
+        IDebuggerProxy*                 mDebugger;
         ThreadMap                       mThreadMap;
         ModuleMap                       mModMap;
         BPMap                           mBPMap;
@@ -110,7 +110,7 @@ namespace Mago
                     GetCallback();
         void        SetCallback( IDebugEventCallback2* callback );
         void        SetPortSettings( IDebugProgram2* portProgram );
-        void        SetDebuggerProxy( DebuggerProxy* debugger );
+        void        SetDebuggerProxy( IDebuggerProxy* debugger );
         DRuntime*   GetDRuntime();
         void        SetDRuntime( std::unique_ptr<DRuntime>& druntime );
 

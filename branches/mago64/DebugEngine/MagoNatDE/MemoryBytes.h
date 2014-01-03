@@ -10,7 +10,7 @@
 
 namespace Mago
 {
-    class DebuggerProxy;
+    class IDebuggerProxy;
     class ICoreProcess;
 
 
@@ -20,7 +20,7 @@ namespace Mago
     {
         Address                 mAddr;
         uint64_t                mSize;
-        DebuggerProxy*          mDebugger;
+        IDebuggerProxy*         mDebugger;
         RefPtr<ICoreProcess>    mProc;
 
     public:
@@ -50,6 +50,6 @@ namespace Mago
             UINT64* pqwSize );
 
     public:
-        void Init( Address addr, uint64_t size, DebuggerProxy* debugger, ICoreProcess* proc );
+        void Init( Address addr, uint64_t size, IDebuggerProxy* debugger, ICoreProcess* proc );
     };
 }

@@ -11,7 +11,7 @@
 namespace Mago
 {
     class Program;
-    class DebuggerProxy;
+    class IDebuggerProxy;
     class StackFrame;
     class IRegisterSet;
     class ICoreProcess;
@@ -28,7 +28,7 @@ namespace Mago
         RefPtr<Program>     mProg;
         Address             mCurPC;
         Address             mCallerPC;
-        DebuggerProxy*      mDebugger;
+        IDebuggerProxy*     mDebugger;
 
     public:
         Thread();
@@ -70,9 +70,9 @@ namespace Mago
         ICoreThread*    GetCoreThread();
         void            SetCoreThread( ICoreThread* thread );
         Program*        GetProgram();
-        void            SetProgram( Program* prog, DebuggerProxy* pollThread );
+        void            SetProgram( Program* prog, IDebuggerProxy* pollThread );
         ICoreProcess*   GetCoreProcess();
-        DebuggerProxy*  GetDebuggerProxy();
+        IDebuggerProxy* GetDebuggerProxy();
 
         HRESULT Step( ICoreProcess* coreProc, STEPKIND sk, STEPUNIT step, bool handleException );
 

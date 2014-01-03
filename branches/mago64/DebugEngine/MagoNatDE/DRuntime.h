@@ -15,17 +15,17 @@ struct BB;
 
 namespace Mago
 {
-    class DebuggerProxy;
+    class IDebuggerProxy;
     class ICoreProcess;
 
 
     class DRuntime
     {
-        DebuggerProxy*          mDebugger;
+        IDebuggerProxy*         mDebugger;
         RefPtr<ICoreProcess>    mCoreProc;
 
     public:
-        DRuntime( DebuggerProxy* debugger, ICoreProcess* coreProcess );
+        DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess );
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 

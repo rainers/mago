@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "IDebuggerProxy.h"
 #include "..\Exec\DebuggerProxy.h"
 
 
@@ -19,7 +20,7 @@ namespace Mago
     class ICoreThread;
 
 
-    class DebuggerProxy : public IEventCallback
+    class DebuggerProxy : public IDebuggerProxy, public IEventCallback
     {
         MagoCore::DebuggerProxy mExecThread;
         RefPtr<ArchData>        mArch;
@@ -32,6 +33,8 @@ namespace Mago
         HRESULT Init( EventCallback* callback );
         HRESULT Start();
         void    Shutdown();
+
+        // IDebuggerProxy
 
         HRESULT Launch( LaunchInfo* launchInfo, ICoreProcess*& process );
         HRESULT Attach( uint32_t id, ICoreProcess*& process );

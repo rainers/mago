@@ -7,7 +7,7 @@
 
 #include "Common.h"
 #include "Program.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 #include "Thread.h"
 #include "Module.h"
 #include "ComEnumWithCount.h"
@@ -484,7 +484,7 @@ namespace Mago
         _ASSERT( hr == S_OK );
     }
 
-    void Program::SetDebuggerProxy( DebuggerProxy* debugger )
+    void Program::SetDebuggerProxy( IDebuggerProxy* debugger )
     {
         mDebugger = debugger;
     }
