@@ -12,7 +12,6 @@ namespace Mago
 {
     class PendingBreakpoint;
     class Program;
-    class DebuggerProxy;
 
 
     class ATL_NO_VTABLE BoundBreakpoint : 
@@ -25,7 +24,6 @@ namespace Mago
         CComPtr<IDebugBreakpointResolution2>    mBPRes;
         Address                                 mAddr;
         RefPtr<Program>                         mProg;
-        DebuggerProxy*                          mDebugger;
         Guard                                   mStateGuard;
 
     public:
@@ -57,8 +55,7 @@ namespace Mago
             Address addr,
             PendingBreakpoint* pendingBreakpoint, 
             IDebugBreakpointResolution2* resolution,
-            Program* prog,
-            DebuggerProxy* debugger );
+            Program* prog );
         DWORD   GetId();
         void    Dispose();
     };

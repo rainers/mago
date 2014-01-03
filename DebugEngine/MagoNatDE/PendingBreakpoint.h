@@ -14,7 +14,6 @@ namespace Mago
     class BPDocumentContext;
     class BoundBreakpoint;
     class ErrorBreakpoint;
-    class DebuggerProxy;
 
 
     struct ModuleBinding
@@ -41,7 +40,6 @@ namespace Mago
         RefPtr<Engine>                          mEngine;
         RefPtr<BPDocumentContext>               mDocContext;    // optional
         BindingMap                              mBindings;
-        DebuggerProxy*                          mDebugger;
         DWORD                                   mLastBPId;
         Guard                                   mBoundBPGuard;
 
@@ -77,8 +75,7 @@ namespace Mago
             DWORD id,
             Engine* engine,
             IDebugBreakpointRequest2* pBPRequest,
-            IDebugEventCallback2* pCallback, 
-            DebuggerProxy* debugger );
+            IDebugEventCallback2* pCallback );
         void    Dispose();
         DWORD   GetId();
         void    OnBoundBPDelete( BoundBreakpoint* boundBP );

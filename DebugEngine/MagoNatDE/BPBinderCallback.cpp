@@ -24,18 +24,15 @@ namespace Mago
     BPBinderCallback::BPBinderCallback( 
         BPBinder* binder,
         PendingBreakpoint* pendingBP, 
-        BPDocumentContext* docContext, 
-        DebuggerProxy* debugger )
+        BPDocumentContext* docContext )
         :   mBinder( binder ),
             mPendingBP( pendingBP ),
             mDocContext( docContext ),
-            mDebugger( debugger ),
             mBoundBPCount( 0 ),
             mErrorBPCount( 0 )
     {
         _ASSERT( binder != NULL );
         _ASSERT( pendingBP != NULL );
-        _ASSERT( debugger != NULL );
 
         HRESULT         hr = S_OK;
 
@@ -284,7 +281,7 @@ namespace Mago
             return;
 
         const DWORD Id = mPendingBP->GetNextBPId();
-        boundBP->Init( Id, (Address) address, mPendingBP, breakpointResolution, mCurProg.Get(), mDebugger );
+        boundBP->Init( Id, (Address) address, mPendingBP, breakpointResolution, mCurProg.Get() );
 
         binding->BoundBPs.push_back( boundBP );
     }
