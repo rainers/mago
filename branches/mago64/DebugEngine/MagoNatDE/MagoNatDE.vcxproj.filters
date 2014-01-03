@@ -166,6 +166,9 @@
     <ClCompile Include="LocalProcess.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RemoteProcess.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="MagoNatDE.def">
@@ -351,6 +354,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="IDebuggerProxy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RemoteProcess.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
