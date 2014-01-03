@@ -9,7 +9,6 @@
 #include "BoundBreakpoint.h"
 #include "PendingBreakpoint.h"
 #include "Program.h"
-#include "DebuggerProxy.h"
 
 
 namespace Mago
@@ -19,8 +18,7 @@ namespace Mago
     BoundBreakpoint::BoundBreakpoint()
     :   mId( 0 ),
         mState( BPS_NONE ),
-        mAddr( 0 ),
-        mDebugger( NULL )
+        mAddr( 0 )
     {
     }
 
@@ -130,21 +128,18 @@ namespace Mago
             Address addr,
             PendingBreakpoint* pendingBreakpoint, 
             IDebugBreakpointResolution2* resolution,
-            Program* prog,
-            DebuggerProxy* debugger )
+            Program* prog )
     {
         _ASSERT( id != 0 );
         _ASSERT( pendingBreakpoint != NULL );
         _ASSERT( resolution != NULL );
         _ASSERT( prog != NULL );
-        _ASSERT( debugger != NULL );
 
         mId = id;
         mAddr = addr;
         mPendingBP = pendingBreakpoint;
         mBPRes = resolution;
         mProg = prog;
-        mDebugger = debugger;
     } 
 
     DWORD BoundBreakpoint::GetId()

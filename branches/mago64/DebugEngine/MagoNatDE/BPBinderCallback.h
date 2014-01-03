@@ -13,7 +13,6 @@ namespace Mago
     class PendingBreakpoint;
     class BPDocumentContext;
     class ErrorBreakpoint;
-    class DebuggerProxy;
     struct ModuleBinding;
 
 
@@ -62,7 +61,6 @@ namespace Mago
         PendingBreakpoint*      mPendingBP;
         RefPtr<BPDocumentContext> mDocContext;
         CComPtr<IDebugDocumentContext2> mDocContextInterface;
-        DebuggerProxy*          mDebugger;
         RefPtr<Program>         mCurProg;
         CComPtr<IDebugProgram2>         mCurProgInterface;
         RefPtr<ErrorBreakpoint> mLastErrorBP;
@@ -72,8 +70,7 @@ namespace Mago
         BPBinderCallback( 
             BPBinder* binder,
             PendingBreakpoint* pendingBP, 
-            BPDocumentContext* docContext, 
-            DebuggerProxy* debugger );
+            BPDocumentContext* docContext );
 
         int GetBoundBPCount();
         int GetErrorBPCount();

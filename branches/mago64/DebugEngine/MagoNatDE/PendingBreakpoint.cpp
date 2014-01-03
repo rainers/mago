@@ -57,7 +57,6 @@ namespace Mago
         :   mId( 0 ),
             mDeleted( false ),
             mSentEvent( false ),
-            mDebugger( NULL ),
             mLastBPId( 0 )
     {
         mState.flags = PBPSF_NONE;
@@ -387,7 +386,7 @@ namespace Mago
             return hr;
 
         // generate bound and error breakpoints
-        BPBinderCallback        callback( binder.get(), this, mDocContext.Get(), mDebugger );
+        BPBinderCallback        callback( binder.get(), this, mDocContext.Get() );
         mEngine->ForeachProgram( &callback );
 
         if ( mDocContext.Get() == NULL )
@@ -470,7 +469,7 @@ namespace Mago
             return hr;
 
         // generate bound and error breakpoints
-        BPBinderCallback        callback( binder.get(), this, mDocContext.Get(), mDebugger );
+        BPBinderCallback        callback( binder.get(), this, mDocContext.Get() );
         callback.BindToModule( mod, prog );
 
         if ( mDocContext.Get() == NULL )
@@ -595,20 +594,17 @@ namespace Mago
         DWORD id,
         Engine* engine,
         IDebugBreakpointRequest2* pBPRequest,
-        IDebugEventCallback2* pCallback,
-        DebuggerProxy* debugger )
+        IDebugEventCallback2* pCallback )
     {
         _ASSERT( id != 0 );
         _ASSERT( engine != NULL );
         _ASSERT( pBPRequest != NULL );
         _ASSERT( pCallback != NULL );
-        _ASSERT( debugger != NULL );
 
         mId = id;
         mEngine = engine;
         mBPRequest = pBPRequest;
         mCallback = pCallback;
-        mDebugger = debugger;
     }
 
     DWORD PendingBreakpoint::GetId()

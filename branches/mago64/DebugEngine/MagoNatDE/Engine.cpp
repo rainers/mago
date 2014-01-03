@@ -282,7 +282,7 @@ namespace Mago
 
         const DWORD Id = GetNextBPId();
 
-        pendBP->Init( Id, this, pBPRequest, mCallback, &mDebugger );
+        pendBP->Init( Id, this, pBPRequest, mCallback );
 
         hr = pendBP->QueryInterface( __uuidof( IDebugPendingBreakpoint2 ), (void**) &ad7PendBP );
         if ( FAILED( hr ) )
