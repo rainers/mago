@@ -13,7 +13,7 @@
 #include "RegisterSet.h"
 #include "ArchData.h"
 #include "Thread.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 #include "RegProperty.h"
 #include "ICoreProcess.h"
 #include <MagoEED.h>

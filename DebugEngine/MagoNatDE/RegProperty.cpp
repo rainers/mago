@@ -13,7 +13,7 @@
 #include <Real.h>
 #include "Thread.h"
 #include "ArchData.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 
 
 namespace Mago
@@ -441,7 +441,7 @@ namespace Mago
 
         ICoreThread* coreThread = mThread->GetCoreThread();
         ICoreProcess* coreProcess = mThread->GetCoreProcess();
-        DebuggerProxy* debugger = mThread->GetDebuggerProxy();
+        IDebuggerProxy* debugger = mThread->GetDebuggerProxy();
 
         hr = debugger->SetThreadContext( coreProcess, coreThread, mRegSet );
         if ( FAILED( hr ) )

@@ -350,6 +350,9 @@
     <ClInclude Include="LocalProcess.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="IDebuggerProxy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MagoNatDE.rc">

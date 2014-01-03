@@ -8,7 +8,7 @@
 #include "Common.h"
 #include "MemoryBytes.h"
 #include "CodeContext.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 #include "ICoreProcess.h"
 
 
@@ -116,7 +116,7 @@ namespace Mago
     //////////////////////////////////////////////////////////// 
     // MemoryBytes
 
-    void MemoryBytes::Init( Address addr, uint64_t size, DebuggerProxy* debugger, ICoreProcess* proc )
+    void MemoryBytes::Init( Address addr, uint64_t size, IDebuggerProxy* debugger, ICoreProcess* proc )
     {
         _ASSERT( debugger != NULL );
         _ASSERT( proc != NULL );

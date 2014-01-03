@@ -8,7 +8,7 @@
 #include "Common.h"
 #include "InstCache.h"
 #include "Program.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 #include "ICoreProcess.h"
 
 
@@ -193,7 +193,7 @@ namespace Mago
     {
     }
 
-    HRESULT InstCache::Init( Program* program, DebuggerProxy* debugger )
+    HRESULT InstCache::Init( Program* program, IDebuggerProxy* debugger )
     {
         _ASSERT( program != NULL );
         _ASSERT( debugger != NULL );

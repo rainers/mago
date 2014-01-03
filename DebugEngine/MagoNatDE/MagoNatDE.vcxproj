@@ -381,6 +381,7 @@
     <ClInclude Include="FormatNum.h" />
     <ClInclude Include="FrameProperty.h" />
     <ClInclude Include="ICoreProcess.h" />
+    <ClInclude Include="IDebuggerProxy.h" />
     <ClInclude Include="InstCache.h" />
     <ClInclude Include="LocalProcess.h" />
     <ClInclude Include="MemoryBytes.h" />

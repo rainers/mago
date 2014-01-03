@@ -11,7 +11,7 @@
 #include "Module.h"
 #include "StackFrame.h"
 #include "EnumFrameInfo.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 #include "RegisterSet.h"
 #include "ArchData.h"
 #include "ICoreProcess.h"
@@ -170,7 +170,7 @@ namespace Mago
         return mProg;
     }
 
-    void Thread::SetProgram( Program* prog, DebuggerProxy* pollThread )
+    void Thread::SetProgram( Program* prog, IDebuggerProxy* pollThread )
     {
         mProg = prog;
         mDebugger = pollThread;
@@ -181,7 +181,7 @@ namespace Mago
         return mProg->GetCoreProcess();
     }
 
-    DebuggerProxy* Thread::GetDebuggerProxy()
+    IDebuggerProxy* Thread::GetDebuggerProxy()
     {
         return mDebugger;
     }
