@@ -14,7 +14,6 @@
 #include "EventCallback.h"
 #include "Machine.h"
 #include "MakeMachine.h"
-#include "Iter.h"
 #include <Psapi.h>
 
 using namespace std;
@@ -1108,9 +1107,9 @@ HRESULT Exec::Detach( IProcess* process )
 HRESULT Exec::ReadMemory( 
     IProcess* process, 
     Address address, 
-    SIZE_T length, 
-    SIZE_T& lengthRead, 
-    SIZE_T& lengthUnreadable, 
+    uint32_t length, 
+    uint32_t& lengthRead, 
+    uint32_t& lengthUnreadable, 
     uint8_t* buffer )
 {
     _ASSERT( process != NULL );
@@ -1139,8 +1138,8 @@ HRESULT Exec::ReadMemory(
 HRESULT Exec::WriteMemory( 
     IProcess* process, 
     Address address, 
-    SIZE_T length, 
-    SIZE_T& lengthWritten, 
+    uint32_t length, 
+    uint32_t& lengthWritten, 
     uint8_t* buffer )
 {
     _ASSERT( process != NULL );

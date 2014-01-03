@@ -45,15 +45,15 @@ public:
 
     virtual HRESULT ReadMemory( 
         Address address,
-        SIZE_T length, 
-        SIZE_T& lengthRead, 
-        SIZE_T& lengthUnreadable, 
+        uint32_t length, 
+        uint32_t& lengthRead, 
+        uint32_t& lengthUnreadable, 
         uint8_t* buffer ) = 0;
 
     virtual HRESULT WriteMemory( 
         Address address,
-        SIZE_T length, 
-        SIZE_T& lengthWritten, 
+        uint32_t length, 
+        uint32_t& lengthWritten, 
         uint8_t* buffer ) = 0;
 
     virtual HRESULT SetBreakpoint( Address address ) = 0;

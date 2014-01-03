@@ -48,16 +48,16 @@ namespace MagoCore
         HRESULT ReadMemory( 
             IProcess* process, 
             Address address,
-            SIZE_T length, 
-            SIZE_T& lengthRead, 
-            SIZE_T& lengthUnreadable, 
+            uint32_t length, 
+            uint32_t& lengthRead, 
+            uint32_t& lengthUnreadable, 
             uint8_t* buffer );
 
         HRESULT WriteMemory( 
             IProcess* process, 
             Address address,
-            SIZE_T length, 
-            SIZE_T& lengthWritten, 
+            uint32_t length, 
+            uint32_t& lengthWritten, 
             uint8_t* buffer );
 
         HRESULT SetBreakpoint( IProcess* process, Address address );

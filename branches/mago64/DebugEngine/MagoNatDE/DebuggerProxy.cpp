@@ -162,9 +162,9 @@ namespace Mago
     HRESULT DebuggerProxy::ReadMemory( 
         ICoreProcess* process, 
         Address address,
-        SIZE_T length, 
-        SIZE_T& lengthRead, 
-        SIZE_T& lengthUnreadable, 
+        uint32_t length, 
+        uint32_t& lengthRead, 
+        uint32_t& lengthUnreadable, 
         uint8_t* buffer )
     {
         if ( process->GetProcessType() != CoreProcess_Local )
@@ -178,8 +178,8 @@ namespace Mago
     HRESULT DebuggerProxy::WriteMemory( 
         ICoreProcess* process, 
         Address address,
-        SIZE_T length, 
-        SIZE_T& lengthWritten, 
+        uint32_t length, 
+        uint32_t& lengthWritten, 
         uint8_t* buffer )
     {
         if ( process->GetProcessType() != CoreProcess_Local )

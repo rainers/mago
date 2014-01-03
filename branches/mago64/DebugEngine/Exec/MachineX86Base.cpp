@@ -244,9 +244,9 @@ void MachineX86Base::GetPendingCallbackBP( Address& address )
 
 HRESULT MachineX86Base::ReadMemory( 
     Address address, 
-    SIZE_T length, 
-    SIZE_T& lengthRead, 
-    SIZE_T& lengthUnreadable, 
+    uint32_t length, 
+    uint32_t& lengthRead, 
+    uint32_t& lengthUnreadable, 
     uint8_t* buffer )
 {
     return ReadCleanMemory( address, length, lengthRead, lengthUnreadable, buffer );
@@ -254,8 +254,8 @@ HRESULT MachineX86Base::ReadMemory(
 
 HRESULT MachineX86Base::WriteMemory( 
     Address address, 
-    SIZE_T length, 
-    SIZE_T& lengthWritten, 
+    uint32_t length, 
+    uint32_t& lengthWritten, 
     uint8_t* buffer )
 {
     _ASSERT( mStoppedThreadId != 0 );
@@ -1136,8 +1136,8 @@ HRESULT MachineX86Base::ReadInstruction(
 {
     HRESULT         hr = S_OK;
     BYTE            mem[MAX_INSTRUCTION_SIZE] = { 0 };
-    SIZE_T          lenRead = 0;
-    SIZE_T          lenUnreadable = 0;
+    uint32_t        lenRead = 0;
+    uint32_t        lenUnreadable = 0;
     int             instLen = 0;
     InstructionType instType = Inst_None;
     CpuSizeMode     cpu = Is64Bit() ? Cpu_64 : Cpu_32;
@@ -1674,9 +1674,9 @@ ThreadX86Base* MachineX86Base::GetStoppedThread()
 
 HRESULT MachineX86Base::ReadCleanMemory( 
     Address address, 
-    SIZE_T length, 
-    SIZE_T& lengthRead, 
-    SIZE_T& lengthUnreadable, 
+    uint32_t length, 
+    uint32_t& lengthRead, 
+    uint32_t& lengthUnreadable, 
     uint8_t* buffer )
 {
     HRESULT hr = S_OK;
@@ -1711,8 +1711,8 @@ HRESULT MachineX86Base::ReadCleanMemory(
 
 HRESULT MachineX86Base::WriteCleanMemory( 
     Address address, 
-    SIZE_T length, 
-    SIZE_T& lengthWritten, 
+    uint32_t length, 
+    uint32_t& lengthWritten, 
     uint8_t* buffer )
 {
     BOOL    bRet = FALSE;
@@ -1745,9 +1745,13 @@ HRESULT MachineX86Base::WriteCleanMemory(
         }
     }
 
-    bRet = WriteProcessMemory( mhProcess, (void*) address, buffer, length, &lengthWritten );
+    SIZE_T  lenWritten = 0;
+
+    bRet = WriteProcessMemory( mhProcess, (void*) address, buffer, length, &lenWritten );
     if ( !bRet )
         return GetLastHr();
+
+    lengthWritten = (uint32_t) lenWritten;
 
     // now commit all the bytes for the BPs we overwrote
 

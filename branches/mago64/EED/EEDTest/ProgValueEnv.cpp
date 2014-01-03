@@ -392,8 +392,8 @@ boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Declaration* decl 
 
             tlsPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
 
-            SIZE_T  lenRead = 0;
-            SIZE_T  lenUnreadable = 0;
+            uint32_t    lenRead = 0;
+            uint32_t    lenUnreadable = 0;
 
             hr = mExec->ReadMemory( mProc, tlsPtrAddr, 4, lenRead, lenUnreadable, (uint8_t*) &tlsArrayAddr );
             if ( FAILED( hr ) )
@@ -441,8 +441,8 @@ boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Address address, T
 
     uint8_t     targetBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
     size_t      targetSize = type->GetSize();
-    SIZE_T      lenRead = 0;
-    SIZE_T      lenUnreadable = 0;
+    uint32_t    lenRead = 0;
+    uint32_t    lenUnreadable = 0;
 
     hr = mExec->ReadMemory( mProc, (Address) address, targetSize, lenRead, lenUnreadable, targetBuf );
     if ( FAILED( hr ) )

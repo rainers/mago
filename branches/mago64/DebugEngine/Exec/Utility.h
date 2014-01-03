@@ -23,9 +23,9 @@ HRESULT GetImageInfo( const wchar_t* path, ImageInfo& info );
 HRESULT ReadMemory( 
     HANDLE hProcess, 
     UINT_PTR address, 
-    SIZE_T length, 
-    SIZE_T& lengthRead, 
-    SIZE_T& lengthUnreadable, 
+    uint32_t length, 
+    uint32_t& lengthRead, 
+    uint32_t& lengthUnreadable, 
     uint8_t* buffer );
 
 typedef DWORD (__stdcall *ThreadControlProc)( HANDLE hThread );

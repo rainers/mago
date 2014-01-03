@@ -222,7 +222,7 @@ HRESULT Process::EnumThreads( Enumerator< Thread* >*& enumerator )
     if ( en.Get() == NULL )
         return E_OUTOFMEMORY;
 
-    if ( !en->Init( mThreads.begin(), mThreads.end(), mThreads.size() ) )
+    if ( !en->Init( mThreads.begin(), mThreads.end(), (int) mThreads.size() ) )
         return E_OUTOFMEMORY;
 
     enumerator = en.Detach();
