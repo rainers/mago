@@ -315,6 +315,7 @@
     <ClCompile Include="Property.cpp" />
     <ClCompile Include="RegisterSet.cpp" />
     <ClCompile Include="RegProperty.cpp" />
+    <ClCompile Include="RemoteDebuggerProxy.cpp" />
     <ClCompile Include="RemoteProcess.cpp" />
     <ClCompile Include="SingleDocumentContext.cpp" />
     <ClCompile Include="StackFrame.cpp" />
@@ -393,6 +394,7 @@
     <ClInclude Include="Property.h" />
     <ClInclude Include="RegisterSet.h" />
     <ClInclude Include="RegProperty.h" />
+    <ClInclude Include="RemoteDebuggerProxy.h" />
     <ClInclude Include="RemoteProcess.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SingleDocumentContext.h" />
