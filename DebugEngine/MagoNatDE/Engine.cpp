@@ -54,6 +54,10 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
+        hr = mRemoteDebugger.Init( callback.Get() );
+        if ( FAILED( hr ) )
+            return hr;
+
         return hr;
     }
 
@@ -168,6 +172,7 @@ namespace Mago
         DWORD       id = 0;
 
         RefPtr<Program>     prog;
+        IDebuggerProxy*     debugger = NULL;
 
         if ( celtPrograms != 1 )
             return E_UNEXPECTED;
@@ -181,13 +186,13 @@ namespace Mago
 
         prog->SetPortSettings( rgpPrograms[0] );
         prog->SetCallback( pCallback );
-        prog->SetDebuggerProxy( &mDebugger );
+        debugger = prog->GetDebuggerProxy();
 
         // this was already set during launch
         ICoreProcess* coreProc = prog->GetCoreProcess();
         _ASSERT( coreProc != NULL );
 
-        std::unique_ptr<DRuntime> druntime( new DRuntime( &mDebugger, coreProc ) );
+        std::unique_ptr<DRuntime> druntime( new DRuntime( debugger, coreProc ) );
         if ( druntime.get() == NULL )
             return E_OUTOFMEMORY;
 
@@ -231,7 +236,7 @@ namespace Mago
 
         if ( dwReason == ATTACH_REASON_LAUNCH )
         {
-            hr = mDebugger.ResumeLaunchedProcess( prog->GetCoreProcess() );
+            hr = debugger->ResumeLaunchedProcess( prog->GetCoreProcess() );
             if ( FAILED( hr ) )
                 return hr;
         }
@@ -380,8 +385,11 @@ namespace Mago
         RefPtr<ICoreProcess>    proc;
         RefPtr<Program>         prog;
         AD_PROCESS_ID           fullProcId = { 0 };
+        IDebuggerProxy*         debugger = NULL;
 
-        hr = mDebugger.Launch( &launchParams, proc.Ref() );
+        debugger = &mDebugger;
+
+        hr = debugger->Launch( &launchParams, proc.Ref() );
         if ( FAILED( hr ) )
             return hr;
 
@@ -399,6 +407,7 @@ namespace Mago
         prog->SetEngine( this );
         prog->SetProcess( *ppDebugProcess );
         prog->SetCoreProcess( proc.Get() );
+        prog->SetDebuggerProxy( debugger );
 
         mProgs.insert( ProgramMap::value_type( proc->GetPid(), prog ) );
 
@@ -407,7 +416,7 @@ Error:
         {
             if ( proc.Get() != NULL )
             {
-                mDebugger.Terminate( proc.Get() );
+                debugger->Terminate( proc.Get() );
             }
         }
 
@@ -437,6 +446,7 @@ Error:
         CComPtr<IDebugPort2>        port;
         CComPtr<IDebugDefaultPort2> defaultPort;
         CComPtr<IDebugPortNotify2>  portNotify;
+        IDebuggerProxy*             debugger = NULL;
 
         hr = ::GetProcessId( pProcess, id );
         if ( FAILED( hr ) )
@@ -444,6 +454,8 @@ Error:
 
         if ( !FindProgram( id, prog ) )
             return E_NOT_FOUND;
+
+        debugger = prog->GetDebuggerProxy();
 
         hr = pProcess->GetPort( &port );
         if ( FAILED( hr ) )
@@ -480,7 +492,7 @@ Error:
         {
             if ( prog.Get() != NULL )
             {
-                mDebugger.Terminate( prog->GetCoreProcess() );
+                debugger->Terminate( prog->GetCoreProcess() );
                 DeleteProgram( prog.Get() );
             }
         }
@@ -520,6 +532,7 @@ Error:
         DWORD           id = 0;
 
         RefPtr<Program>             prog;
+        IDebuggerProxy*             debugger = NULL;
 
         hr = ::GetProcessId( pProcess, id );
         if ( FAILED( hr ) )
@@ -528,7 +541,9 @@ Error:
         if ( !FindProgram( id, prog ) )
             return S_OK; // E_NOT_FOUND;
 
-        hr = mDebugger.Terminate( prog->GetCoreProcess() );
+        debugger = prog->GetDebuggerProxy();
+
+        hr = debugger->Terminate( prog->GetCoreProcess() );
         return S_OK; // hr
     }
 
@@ -560,6 +575,7 @@ Error:
             return;
 
         mDebugger.Shutdown();
+        mRemoteDebugger.Shutdown();
         // TODO: this should probably be guarded, too
 
         for ( BPMap::iterator it = mBPs.begin();

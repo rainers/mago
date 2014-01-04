@@ -484,6 +484,11 @@ namespace Mago
         _ASSERT( hr == S_OK );
     }
 
+    IDebuggerProxy* Program::GetDebuggerProxy()
+    {
+        return mDebugger;
+    }
+
     void Program::SetDebuggerProxy( IDebuggerProxy* debugger )
     {
         mDebugger = debugger;
