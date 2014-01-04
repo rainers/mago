@@ -27,6 +27,7 @@ namespace Mago
         ~RemoteDebuggerProxy();
 
         HRESULT Init( EventCallback* callback );
+        void Shutdown();
 
         // IDebuggerProxy
 

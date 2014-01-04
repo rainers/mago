@@ -12,6 +12,7 @@
 #include "resource.h"       // main symbols
 #include "MagoNatDE_i.h"
 #include "DebuggerProxy.h"
+#include "RemoteDebuggerProxy.h"
 #include "ExceptionTable.h"
 
 
@@ -32,6 +33,7 @@ namespace Mago
         typedef std::map< DWORD, RefPtr<PendingBreakpoint> >    BPMap;
 
         DebuggerProxy       mDebugger;
+        RemoteDebuggerProxy mRemoteDebugger;
         bool                mPollThreadStarted;
         bool                mSentEngineCreate;
         ProgramMap          mProgs;

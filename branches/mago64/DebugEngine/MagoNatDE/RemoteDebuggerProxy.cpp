@@ -38,6 +38,10 @@ namespace Mago
         return S_OK;
     }
 
+    void RemoteDebuggerProxy::Shutdown()
+    {
+    }
+
 
     //----------------------------------------------------------------------------
     // IDebuggerProxy
