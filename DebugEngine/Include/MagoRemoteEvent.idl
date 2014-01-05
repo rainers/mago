@@ -1,0 +1,154 @@
+/*
+   Copyright (c) 2013 Aldo J. Nunez
+
+   Licensed under the Apache License, Version 2.0.
+   See the LICENSE text file for details.
+*/
+
+// MagoRemoteEvent.idl : IDL source for MagoNatDE IPC
+//
+
+import "oaidl.idl";
+import "ocidl.idl";
+import "MagoRemoteCommon.idl";
+
+
+[
+    uuid(F5FECC74-6345-464A-B479-74F22857271C),
+    version(1.0)
+]
+interface MagoRemoteEvent
+{
+    typedef enum MagoRemote_RunMode
+    {
+        MagoRemote_RunMode_Run,
+        MagoRemote_RunMode_Break,
+        MagoRemote_RunMode_Wait,
+    } MagoRemote_RunMode;
+
+    typedef enum MagoRemote_ProbeRunMode
+    {
+        MagoRemote_PRunMode_Run,
+        MagoRemote_PRunMode_Break,
+        MagoRemote_PRunMode_Wait,
+        MagoRemote_PRunMode_WalkThunk,
+    } MagoRemote_ProbeRunMode;
+
+    typedef struct MagoRemote_ThreadInfo
+    {
+        MagoRemote_Address      StartAddr;
+        MagoRemote_Address      TebBase;
+        unsigned int            Tid;
+    } MagoRemote_ThreadInfo;
+
+    typedef struct MagoRemote_ModuleInfo
+    {
+        [string]
+        const wchar_t*          Path;
+        MagoRemote_Address      ImageBase;
+        MagoRemote_Address      PreferredImageBase;
+        unsigned int            DebugInfoFileOffset;
+        unsigned int            DebugInfoSize;
+        unsigned int            Size;
+        unsigned short          MachineType;
+    } MagoRemote_ModuleInfo;
+
+    const int MagoRemote_ExceptionMaxParams = 15;
+
+    typedef struct MagoRemote_ExceptionRecord
+    {
+        DWORD   ExceptionCode;
+        DWORD   ExceptionFlags;
+        DWORD64 ExceptionAddress;
+        DWORD   NumberParameters;
+        DWORD64 ExceptionInformation[MagoRemote_ExceptionMaxParams];
+    } MagoRemote_ExceptionRecord;
+
+
+
+    typedef [context_handle] void* HCTXEVENT;
+
+    HRESULT MagoRemoteEvent_Open( 
+        [in] handle_t hBinding,
+        [in] GUID* sessionUuid,
+        [out] HCTXEVENT* hContext );
+
+    void MagoRemoteEvent_Close(
+        [in, out] HCTXEVENT* hContext );
+
+
+
+    void MagoRemoteEvent_OnProcessStart( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid );
+
+    void MagoRemoteEvent_OnProcessExit( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] DWORD exitCode );
+
+    void MagoRemoteEvent_OnThreadStart( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] MagoRemote_ThreadInfo* thread );
+
+    void MagoRemoteEvent_OnThreadExit( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] DWORD threadId, 
+        [in] DWORD exitCode );
+
+    void MagoRemoteEvent_OnModuleLoad( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid,
+        [in] MagoRemote_ModuleInfo* modInfo
+        );
+
+    void MagoRemoteEvent_OnModuleUnload( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] MagoRemote_Address baseAddress );
+
+    void MagoRemoteEvent_OnOutputString( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in, string] const wchar_t* outputString );
+
+    void MagoRemoteEvent_OnLoadComplete( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] DWORD threadId );
+
+    MagoRemote_RunMode MagoRemoteEvent_OnException( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] DWORD threadId, 
+        [in] boolean firstChance, 
+        [in] unsigned int recordCount,
+        [size_is( recordCount )]
+        [in] MagoRemote_ExceptionRecord* exceptRecords );
+
+    MagoRemote_RunMode MagoRemoteEvent_OnBreakpoint( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] unsigned int threadId, 
+        [in] MagoRemote_Address address, 
+        [in] boolean embedded );
+
+    void MagoRemoteEvent_OnStepComplete( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] unsigned int threadId );
+
+    void MagoRemoteEvent_OnAsyncBreak( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] unsigned int threadId );
+
+    MagoRemote_ProbeRunMode MagoRemoteEvent_OnCallProbe( 
+        [in] HCTXEVENT hContext,
+        [in] unsigned int pid, 
+        [in] unsigned int threadId, 
+        [in] MagoRemote_Address address, 
+        [out] MagoRemote_AddressRange* thunkRange );
+};
