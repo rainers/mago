@@ -184,9 +184,20 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="ReadMe.txt" />
+    <None Include="..\Include\MagoRemoteCmd.acf" />
+    <None Include="..\Include\MagoRemoteEvent.acf" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="MagoNatDE.idl">
+      <Filter>Source Files</Filter>
+    </Midl>
+    <Midl Include="..\Include\MagoRemoteCmd.idl">
+      <Filter>Source Files</Filter>
+    </Midl>
+    <Midl Include="..\Include\MagoRemoteEvent.idl">
+      <Filter>Source Files</Filter>
+    </Midl>
+    <Midl Include="..\Include\MagoRemoteCommon.idl">
       <Filter>Source Files</Filter>
     </Midl>
   </ItemGroup>
@@ -364,6 +375,12 @@
     </ClInclude>
     <ClInclude Include="RemoteDebuggerProxy.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MagoRemoteCmd_i.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MagoRemoteEvent_i.h">
+      <Filter>Generated Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

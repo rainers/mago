@@ -1,0 +1,18 @@
+/*
+   Copyright (c) 2013 Aldo J. Nunez
+
+   Licensed under the Apache License, Version 2.0.
+   See the LICENSE text file for details.
+*/
+
+// MagoRemoteCommon.idl : IDL source for common definitions for MagoNatDE IPC
+//
+
+
+typedef unsigned __int64 MagoRemote_Address;
+
+typedef struct MagoRemote_AddressRange
+{
+    MagoRemote_Address  Begin;
+    MagoRemote_Address  End;
+} MagoRemote_AddressRange;
