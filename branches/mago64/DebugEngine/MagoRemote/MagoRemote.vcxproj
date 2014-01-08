@@ -104,6 +104,8 @@
     <None Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="App.h" />
+    <ClInclude Include="EventCallback.h" />
     <ClInclude Include="MagoRemote.h" />
     <ClInclude Include="MagoRemoteCmd_h.h" />
     <ClInclude Include="MagoRemoteEvent_h.h" />
@@ -112,6 +114,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="EventCallback.cpp" />
     <ClCompile Include="MagoRemote.cpp" />
     <ClCompile Include="Common.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
