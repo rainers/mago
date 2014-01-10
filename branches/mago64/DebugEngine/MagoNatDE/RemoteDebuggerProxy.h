@@ -21,12 +21,14 @@ namespace Mago
     class RemoteDebuggerProxy : public IDebuggerProxy
     {
         RefPtr<EventCallback>   mCallback;
+        GUID                    mSessionGuid;
 
     public:
         RemoteDebuggerProxy();
         ~RemoteDebuggerProxy();
 
         HRESULT Init( EventCallback* callback );
+        HRESULT Start();
         void Shutdown();
 
         // IDebuggerProxy
