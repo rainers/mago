@@ -10,6 +10,8 @@
 #include "MagoNatDE_i.h"
 
 
+#define MAGO_SUBKEY             L"SOFTWARE\\MagoDebugger"
+
 // {B9D303A5-4EC7-4444-A7F8-6BFA4C7977EF}
 static const GUID gGuidDLang = 
 { 0xb9d303a5, 0x4ec7, 0x4444, { 0xa7, 0xf8, 0x6b, 0xfa, 0x4c, 0x79, 0x77, 0xef } };
@@ -96,4 +98,53 @@ bool GetString( DWORD strId, CString& str )
 
     str = s;
     return true;
+}
+
+LSTATUS OpenRootRegKey( bool readWrite, HKEY& hKey )
+{
+    REGSAM samDesired = readWrite ? (KEY_READ | KEY_WRITE) : KEY_READ;
+    return RegOpenKeyEx( HKEY_LOCAL_MACHINE, MAGO_SUBKEY, 0, samDesired, &hKey );
+}
+
+LSTATUS GetRegString( HKEY hKey, const wchar_t* valueName, wchar_t* charBuf, int& charLen )
+{
+    if ( charBuf == NULL || charLen < 0 )
+        return ERROR_INVALID_PARAMETER;
+
+    DWORD   regType = 0;
+    DWORD   bufLen = charLen * sizeof( wchar_t );
+    DWORD   bytesRead= bufLen;
+    LSTATUS ret = 0;
+
+    ret = RegQueryValueEx(
+        hKey,
+        valueName,
+        NULL,
+        &regType,
+        (BYTE*) charBuf,
+        &bytesRead );
+    if ( ret != ERROR_SUCCESS )
+        return ret;
+
+    if ( regType != REG_SZ || (bytesRead % sizeof( wchar_t )) != 0 )
+        return ERROR_UNSUPPORTED_TYPE;
+
+    int charsRead = bytesRead / sizeof( wchar_t );
+
+    if ( charsRead == 0 || charBuf[charsRead - 1] != L'\0' )
+    {
+        // there's no more room to add a null
+        if ( charsRead == charLen )
+            return ERROR_MORE_DATA;
+
+        charBuf[charsRead] = L'\0';
+        charLen = charsRead + 1;
+    }
+    else
+    {
+        // the string we read already ends in null
+        charLen = charsRead;
+    }
+
+    return ERROR_SUCCESS;
 }
