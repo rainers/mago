@@ -10,9 +10,12 @@
 #include "ArchData.h"
 #include "Config.h"
 #include "EventCallback.h"
-#include "MagoDECommon.h"
+#include "MagoRemoteCmd_i.h"
+#include "MagoRemoteEvent_i.h"
 #include "RegisterSet.h"
 #include "RemoteProcess.h"
+#include "RpcUtil.h"
+#include <MagoDECommon.h>
 
 
 #define AGENT_X64_VALUE         L"Remote_x64"
@@ -89,18 +92,148 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT StartServer( const wchar_t* sessionGuidStr )
+    {
+        HRESULT         hr = S_OK;
+        RPC_STATUS      rpcRet = RPC_S_OK;
+        bool            registered = false;
+        std::wstring    endpoint( AGENT_EVENT_IF_LOCAL_ENDPOINT_PREFIX );
+
+        endpoint.append( sessionGuidStr );
+
+        rpcRet = RpcServerUseProtseqEp(
+            AGENT_LOCAL_PROTOCOL_SEQUENCE,
+            RPC_C_PROTSEQ_MAX_REQS_DEFAULT,
+            (RPC_WSTR) endpoint.c_str(),
+            NULL );
+        if ( rpcRet != RPC_S_OK )
+        {
+            hr = HRESULT_FROM_WIN32( rpcRet );
+            goto Error;
+        }
+
+        rpcRet = RpcServerRegisterIf2(
+            MagoRemoteEvent_v1_0_s_ifspec,
+            NULL,
+            NULL,
+            RPC_IF_ALLOW_LOCAL_ONLY,
+            RPC_C_LISTEN_MAX_CALLS_DEFAULT,
+            (unsigned int) -1,
+            NULL );
+        if ( rpcRet != RPC_S_OK )
+        {
+            hr = HRESULT_FROM_WIN32( rpcRet );
+            goto Error;
+        }
+        registered = true;
+
+        rpcRet = RpcServerListen( 1, RPC_C_LISTEN_MAX_CALLS_DEFAULT, TRUE );
+        if ( rpcRet != RPC_S_OK )
+        {
+            hr = HRESULT_FROM_WIN32( rpcRet );
+            goto Error;
+        }
+
+Error:
+        if ( FAILED( hr ) )
+        {
+            if ( registered )
+                RpcServerUnregisterIf( MagoRemoteEvent_v1_0_s_ifspec, NULL, FALSE );
+        }
+        return hr;
+    }
+
+    HRESULT StopServer()
+    {
+        RpcServerUnregisterIf( MagoRemoteEvent_v1_0_s_ifspec, NULL, FALSE );
+        RpcMgmtStopServerListening( NULL );
+        RpcMgmtWaitServerListen();
+        return S_OK;
+    }
+
+    HRESULT OpenCmdInterface( RPC_BINDING_HANDLE hBinding, const GUID& sessionGuid, HCTXCMD& hContext )
+    {
+        HRESULT hr = S_OK;
+
+        __try
+        {
+            hr = MagoRemoteCmd_Open( hBinding, &sessionGuid, &hContext );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
+
+        return hr;
+    }
+
+    HRESULT StartClient( const wchar_t* sessionGuidStr, const GUID& sessionGuid, HCTXCMD& hContext )
+    {
+        HRESULT             hr = S_OK;
+        RPC_STATUS          rpcRet = RPC_S_OK;
+        RPC_WSTR            strBinding = NULL;
+        RPC_BINDING_HANDLE  hBinding = NULL;
+        std::wstring        endpoint( AGENT_CMD_IF_LOCAL_ENDPOINT_PREFIX );
+
+        endpoint.append( sessionGuidStr );
+
+        rpcRet = RpcStringBindingCompose(
+            NULL,
+            AGENT_LOCAL_PROTOCOL_SEQUENCE,
+            NULL,
+            (RPC_WSTR) endpoint.c_str(),
+            NULL,
+            &strBinding );
+        if ( rpcRet != RPC_S_OK )
+            return HRESULT_FROM_WIN32( rpcRet );
+
+        rpcRet = RpcBindingFromStringBinding( strBinding, &hBinding );
+        RpcStringFree( &strBinding );
+        if ( rpcRet != RPC_S_OK )
+            return HRESULT_FROM_WIN32( rpcRet );
+
+        // MSDN recommends letting the RPC runtime resolve the binding, so skip RpcEpResolveBinding
+
+        hr = OpenCmdInterface( hBinding, sessionGuid, hContext );
+
+        // Now that we've connected and gotten a context handle, 
+        // we don't need the binding handle anymore.
+        RpcBindingFree( &hBinding );
+
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
+    HRESULT StopClient( HCTXCMD& hContext )
+    {
+        __try
+        {
+            MagoRemoteCmd_Close( &hContext );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            // nothing to do
+        }
+
+        return S_OK;
+    }
+
 
     //------------------------------------------------------------------------
     // RemoteDebuggerProxy
     //------------------------------------------------------------------------
 
     RemoteDebuggerProxy::RemoteDebuggerProxy()
-        :   mSessionGuid( GUID_NULL )
+        :   mSessionGuid( GUID_NULL ),
+            mhContext( NULL )
     {
     }
 
     RemoteDebuggerProxy::~RemoteDebuggerProxy()
     {
+        Shutdown();
     }
 
     HRESULT RemoteDebuggerProxy::Init( EventCallback* callback )
@@ -139,11 +272,24 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
+        hr = StartServer( sessionGuidStr );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = StartClient( sessionGuidStr, sessionGuid, mhContext );
+        if ( FAILED( hr ) )
+        {
+            StopServer();
+            return hr;
+        }
+
         return S_OK;
     }
 
     void RemoteDebuggerProxy::Shutdown()
     {
+        StopServer();
+        StopClient( mhContext );
     }
 
 

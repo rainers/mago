@@ -7,7 +7,8 @@
 
 #include "Common.h"
 #include "App.h"
-#include "MagoDECommon.h"
+#include "RemoteCmdRpc.h"
+#include <MagoDECommon.h>
 
 
 enum
@@ -21,6 +22,7 @@ namespace Mago
 {
     HRESULT InitSingleSessionLoop( const wchar_t* sessionUuidStr )
     {
+        HRESULT     hr = S_OK;
         HandlePtr   hEventPtr;
         wchar_t     eventName[AgentStartupEventNameLength + 1] = AGENT_STARTUP_EVENT_PREFIX;
 
@@ -29,6 +31,10 @@ namespace Mago
         hEventPtr = CreateEvent( NULL, TRUE, FALSE, eventName );
         if ( hEventPtr.IsEmpty() )
             return HRESULT_FROM_WIN32( GetLastError() );
+
+        hr = InitRpcServerLocal( sessionUuidStr );
+        if ( FAILED( hr ) )
+            return hr;
 
         // after starting to listen, notify our client that it can connect
         SetEvent( hEventPtr );
@@ -70,6 +76,8 @@ namespace Mago
 
         if ( timerId != 0 )
             KillTimer( NULL, timerId );
+
+        UninitRpcServer();
 
         return msg.wParam;
     }

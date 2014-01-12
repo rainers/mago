@@ -54,6 +54,12 @@
     <ClInclude Include="EventCallback.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RpcUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RemoteCmdRpc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MagoRemote.cpp">

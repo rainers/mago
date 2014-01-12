@@ -17,15 +17,32 @@ void __RPC_USER HCTXEVENT_rundown( HCTXEVENT hContext )
 
 HRESULT MagoRemoteEvent_Open( 
     /* [in] */ handle_t hBinding,
-    /* [in] */ GUID *sessionUuid,
+    /* [in] */ const GUID *sessionUuid,
     /* [out] */ HCTXEVENT *phContext)
 {
-    return E_NOTIMPL;
+    if ( hBinding == NULL || sessionUuid == NULL || phContext == NULL )
+        return E_INVALIDARG;
+
+    GUID* sessionUuidCopy = new GUID();
+    if ( sessionUuidCopy == NULL )
+        return E_OUTOFMEMORY;
+
+    *sessionUuidCopy = *sessionUuid;
+    *phContext = sessionUuidCopy;
+
+    return S_OK;
 }
 
 void MagoRemoteEvent_Close( 
     /* [out][in] */ HCTXEVENT *phContext)
 {
+    if ( phContext == NULL || *phContext == NULL )
+        return;
+
+    GUID* sessionUuid = (GUID*) *phContext;
+    delete sessionUuid;
+
+    *phContext = NULL;
 }
 
 void MagoRemoteEvent_OnProcessStart( 
