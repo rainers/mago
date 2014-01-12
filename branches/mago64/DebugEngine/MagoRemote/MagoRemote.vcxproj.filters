@@ -68,6 +68,18 @@
     <ClCompile Include="EventCallback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MagoRemoteCmd_s.c">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MagoRemoteEvent_c.c">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RpcUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RemoteCmdRpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MagoRemote.rc">

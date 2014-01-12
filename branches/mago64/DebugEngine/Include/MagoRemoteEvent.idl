@@ -71,10 +71,10 @@ interface MagoRemoteEvent
     HRESULT MagoRemoteEvent_Open( 
         [in] handle_t hBinding,
         [in] GUID* sessionUuid,
-        [out] HCTXEVENT* hContext );
+        [out] HCTXEVENT* phContext );
 
     void MagoRemoteEvent_Close(
-        [in, out] HCTXEVENT* hContext );
+        [in, out] HCTXEVENT* phContext );
 
 
 

@@ -118,7 +118,7 @@
     </ResourceCompile>
     <Link>
       <RegisterOutput>false</RegisterOutput>
-      <AdditionalDependencies>Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\CVSym\$(Configuration);$(ProjectDir)..\..\EED\$(Configuration);$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\MagoNatDE.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -201,7 +201,7 @@
     </ResourceCompile>
     <Link>
       <RegisterOutput>false</RegisterOutput>
-      <AdditionalDependencies>Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\CVSym\$(Configuration);$(ProjectDir)..\..\EED\$(Configuration);$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\MagoNatDE.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -307,6 +307,14 @@
     <ClCompile Include="InstCache.cpp" />
     <ClCompile Include="LocalProcess.cpp" />
     <ClCompile Include="MagoNatDE.cpp" />
+    <ClCompile Include="MagoRemoteCmd_c.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="MagoRemoteEvent_s.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="MemoryBytes.cpp" />
     <ClCompile Include="Module.cpp" />
     <ClCompile Include="PendingBreakpoint.cpp" />
@@ -316,7 +324,9 @@
     <ClCompile Include="RegisterSet.cpp" />
     <ClCompile Include="RegProperty.cpp" />
     <ClCompile Include="RemoteDebuggerProxy.cpp" />
+    <ClCompile Include="RemoteEventRpc.cpp" />
     <ClCompile Include="RemoteProcess.cpp" />
+    <ClCompile Include="RpcUtil.cpp" />
     <ClCompile Include="SingleDocumentContext.cpp" />
     <ClCompile Include="StackFrame.cpp" />
     <ClCompile Include="Thread.cpp" />
