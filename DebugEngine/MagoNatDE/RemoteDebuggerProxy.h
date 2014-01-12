@@ -9,6 +9,8 @@
 
 #include "IDebuggerProxy.h"
 
+typedef void* HCTXCMD;
+
 
 namespace Mago
 {
@@ -22,6 +24,7 @@ namespace Mago
     {
         RefPtr<EventCallback>   mCallback;
         GUID                    mSessionGuid;
+        HCTXCMD                 mhContext;
 
     public:
         RemoteDebuggerProxy();

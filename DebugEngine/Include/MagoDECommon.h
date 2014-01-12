@@ -8,7 +8,10 @@
 #pragma once
 
 
-#define AGENT_STARTUP_EVENT_PREFIX    L"MagoRemoteStartup"
+#define AGENT_STARTUP_EVENT_PREFIX              L"MagoRemoteStartup"
+#define AGENT_LOCAL_PROTOCOL_SEQUENCE           L"ncalrpc"
+#define AGENT_CMD_IF_LOCAL_ENDPOINT_PREFIX      L"MagoRemoteCmd"
+#define AGENT_EVENT_IF_LOCAL_ENDPOINT_PREFIX    L"MagoRemoteEvent"
 
 enum
 {

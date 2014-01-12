@@ -34,6 +34,9 @@
 #include <inttypes.h>
 #include <crtdbg.h>
 
+// C++
+#include <string>
+
 // Magus
 #include <SmartPtr.h>
 #include <Guard.h>
