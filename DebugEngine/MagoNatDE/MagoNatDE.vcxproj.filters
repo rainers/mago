@@ -172,6 +172,18 @@
     <ClCompile Include="RemoteDebuggerProxy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MagoRemoteCmd_c.c">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MagoRemoteEvent_s.c">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RpcUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RemoteEventRpc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="MagoNatDE.def">
