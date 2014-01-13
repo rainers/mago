@@ -6,6 +6,8 @@
 */
 
 #include "Common.h"
+#include "RemoteCmdRpc.h"
+#include "App.h"
 #include "MagoRemoteCmd_h.h"
 #include "MagoRemoteEvent_h.h"
 #include "RpcUtil.h"
@@ -144,19 +146,14 @@ void __RPC_USER HCTXCMD_rundown( HCTXCMD hContext )
     MagoRemoteCmd_Close( &hContext );
 }
 
-HRESULT MagoRemoteCmd_Open( 
-    /* [in] */ handle_t hBinding,
-    /* [in] */ const GUID *sessionUuid,
-    /* [out] */ HCTXCMD *phContext)
+HRESULT OpenSession(
+    const GUID* sessionUuid,
+    HCTXCMD* phContext )
 {
-    UNREFERENCED_PARAMETER( hBinding );
-
     HRESULT                         hr = S_OK;
     RPC_BINDING_HANDLE              hEventBinding = NULL;
     HCTXEVENT                       hEventCtx = NULL;
     UniquePtr<CmdContext>           context;
-
-    *phContext = NULL;
 
     hr = GetEventBinding( sessionUuid, hEventBinding );
     if ( FAILED( hr ) )
@@ -181,6 +178,33 @@ HRESULT MagoRemoteCmd_Open(
     return S_OK;
 }
 
+HRESULT MagoRemoteCmd_Open( 
+    /* [in] */ handle_t hBinding,
+    /* [in] */ const GUID *sessionUuid,
+    /* [out] */ HCTXCMD *phContext)
+{
+    if ( hBinding == NULL || sessionUuid == NULL || phContext == NULL )
+        return E_INVALIDARG;
+
+    HRESULT hr = S_OK;
+
+    *phContext = NULL;
+
+    if ( !Mago::NewSession() )
+        return E_WRONG_STATE;
+
+    Mago::NotifyAddSession();
+
+    hr = OpenSession( sessionUuid, phContext );
+    if ( FAILED( hr ) )
+    {
+        Mago::NotifyRemoveSession();
+        return hr;
+    }
+
+    return S_OK;
+}
+
 void MagoRemoteCmd_Close( 
     /* [out][in] */ HCTXCMD *phContext)
 {
@@ -192,6 +216,8 @@ void MagoRemoteCmd_Close(
     delete context;
 
     *phContext = NULL;
+
+    Mago::NotifyRemoveSession();
 }
 
 HRESULT MagoRemoteCmd_Launch( 
