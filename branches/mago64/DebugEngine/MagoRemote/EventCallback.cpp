@@ -15,8 +15,9 @@ namespace Mago
     //  EventCallback
     //----------------------------------------------------------------------------
 
-    EventCallback::EventCallback()
-        :   mRefCount( 0 )
+    EventCallback::EventCallback( HCTXEVENT hEventContext )
+        :   mRefCount( 0 ),
+            mhEventCtx( hEventContext )
     {
     }
 

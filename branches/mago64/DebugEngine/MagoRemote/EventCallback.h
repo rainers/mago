@@ -8,14 +8,18 @@
 #pragma once
 
 
+typedef void* HCTXEVENT;
+
+
 namespace Mago
 {
     class EventCallback : public IEventCallback
     {
         long            mRefCount;
+        HCTXEVENT       mhEventCtx;
 
     public:
-        EventCallback();
+        EventCallback( HCTXEVENT hEventContext );
         ~EventCallback();
 
         virtual void AddRef();

@@ -8,14 +8,18 @@
 #include "Common.h"
 #include "RemoteCmdRpc.h"
 #include "App.h"
+#include "EventCallback.h"
 #include "MagoRemoteCmd_h.h"
 #include "MagoRemoteEvent_h.h"
 #include "RpcUtil.h"
 #include <MagoDECommon.h>
+#include <..\Exec\DebuggerProxy.h>
 
 
 struct CmdContext
 {
+    MagoCore::DebuggerProxy ExecThread;
+    HCTXEVENT               HEventContext;
 };
 
 
@@ -137,6 +141,8 @@ void CloseEventInterface( HCTXEVENT* phEventContext )
     {
         _RPT1( _CRT_WARN, "Exception from call to MagoRemoteEvent_Close: %08X\n", 
             RpcExceptionCode() );
+
+        RpcSsDestroyClientContext( phEventContext );
     }
 }
 
@@ -144,6 +150,35 @@ void CloseEventInterface( HCTXEVENT* phEventContext )
 void __RPC_USER HCTXCMD_rundown( HCTXCMD hContext )
 {
     MagoRemoteCmd_Close( &hContext );
+}
+
+HRESULT MakeCmdContext( HCTXEVENT hEventCtx, CmdContext*& context )
+{
+    HRESULT                         hr = S_OK;
+    RefPtr<Mago::EventCallback>     callback;
+    UniquePtr<CmdContext>           cmdContext;
+
+    callback = new Mago::EventCallback( hEventCtx );
+    if ( callback.Get() == NULL )
+        return E_OUTOFMEMORY;
+
+    cmdContext.Attach( new CmdContext() );
+    if ( cmdContext.IsEmpty() )
+        return E_OUTOFMEMORY;
+
+    cmdContext->HEventContext = hEventCtx;
+
+    hr = cmdContext->ExecThread.Init( callback.Get() );
+    if ( FAILED( hr ) )
+        return hr;
+
+    hr = cmdContext->ExecThread.Start();
+    if ( FAILED( hr ) )
+        return hr;
+
+    context = cmdContext.Detach();
+
+    return S_OK;
 }
 
 HRESULT OpenSession(
@@ -166,12 +201,14 @@ HRESULT OpenSession(
     if ( FAILED( hr ) )
         return hr;
 
-    // TODO: store the context handle, and if it fails, close the event interface
-    hEventCtx = NULL;
+    hr = MakeCmdContext( hEventCtx, context.Ref() );
+    if ( FAILED( hr ) )
+    {
+        CloseEventInterface( &hEventCtx );
+        return hr;
+    }
 
-    context.Attach( new CmdContext() );
-    if ( context.IsEmpty() )
-        return E_OUTOFMEMORY;
+    hEventCtx = NULL;
 
     *phContext = context.Detach();
 
@@ -212,6 +249,9 @@ void MagoRemoteCmd_Close(
         return;
 
     CmdContext* context = (CmdContext*) *phContext;
+
+    context->ExecThread.Shutdown();
+    CloseEventInterface( &context->HEventContext );
 
     delete context;
 
