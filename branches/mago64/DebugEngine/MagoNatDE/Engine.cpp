@@ -50,11 +50,15 @@ namespace Mago
         if ( callback.Get() == NULL )
             return E_OUTOFMEMORY;
 
+        mRemoteDebugger = new RemoteDebuggerProxy();
+        if ( mRemoteDebugger.Get() == NULL )
+            return E_OUTOFMEMORY;
+
         hr = mDebugger.Init( callback.Get() );
         if ( FAILED( hr ) )
             return hr;
 
-        hr = mRemoteDebugger.Init( callback.Get() );
+        hr = mRemoteDebugger->Init( callback.Get() );
         if ( FAILED( hr ) )
             return hr;
 
@@ -575,7 +579,7 @@ Error:
             return;
 
         mDebugger.Shutdown();
-        mRemoteDebugger.Shutdown();
+        mRemoteDebugger->Shutdown();
         // TODO: this should probably be guarded, too
 
         for ( BPMap::iterator it = mBPs.begin();

@@ -397,6 +397,12 @@
     <ClInclude Include="RpcUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="IRemoteEventCallback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RemoteEventRpc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MagoNatDE.rc">
