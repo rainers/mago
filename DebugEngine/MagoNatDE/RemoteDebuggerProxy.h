@@ -8,6 +8,7 @@
 #pragma once
 
 #include "IDebuggerProxy.h"
+#include "IRemoteEventCallback.h"
 
 typedef void* HCTXCMD;
 
@@ -20,8 +21,9 @@ namespace Mago
     class IRegisterSet;
 
 
-    class RemoteDebuggerProxy : public IDebuggerProxy
+    class RemoteDebuggerProxy : public IDebuggerProxy, public IRemoteEventCallback
     {
+        long                    mRefCount;
         RefPtr<EventCallback>   mCallback;
         GUID                    mSessionGuid;
         HCTXCMD                 mhContext;
@@ -29,6 +31,9 @@ namespace Mago
     public:
         RemoteDebuggerProxy();
         ~RemoteDebuggerProxy();
+
+        void AddRef();
+        void Release();
 
         HRESULT Init( EventCallback* callback );
         HRESULT Start();
@@ -74,5 +79,9 @@ namespace Mago
 
         HRESULT GetThreadContext( ICoreProcess* process, ICoreThread* thread, IRegisterSet*& regSet );
         HRESULT SetThreadContext( ICoreProcess* process, ICoreThread* thread, IRegisterSet* regSet );
+
+        // IRemoteEventCallback
+
+        const GUID& GetSessionGuid();
     };
 }

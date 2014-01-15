@@ -33,7 +33,7 @@ namespace Mago
         typedef std::map< DWORD, RefPtr<PendingBreakpoint> >    BPMap;
 
         DebuggerProxy       mDebugger;
-        RemoteDebuggerProxy mRemoteDebugger;
+        RefPtr<RemoteDebuggerProxy> mRemoteDebugger;
         bool                mPollThreadStarted;
         bool                mSentEngineCreate;
         ProgramMap          mProgs;

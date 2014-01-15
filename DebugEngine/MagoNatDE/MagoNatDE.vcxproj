@@ -427,6 +427,7 @@
     <ClInclude Include="ICoreProcess.h" />
     <ClInclude Include="IDebuggerProxy.h" />
     <ClInclude Include="InstCache.h" />
+    <ClInclude Include="IRemoteEventCallback.h" />
     <ClInclude Include="LocalProcess.h" />
     <ClInclude Include="MagoRemoteCmd_i.h" />
     <ClInclude Include="MagoRemoteEvent_i.h" />
@@ -439,6 +440,7 @@
     <ClInclude Include="RegisterSet.h" />
     <ClInclude Include="RegProperty.h" />
     <ClInclude Include="RemoteDebuggerProxy.h" />
+    <ClInclude Include="RemoteEventRpc.h" />
     <ClInclude Include="RemoteProcess.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="RpcUtil.h" />

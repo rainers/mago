@@ -13,6 +13,7 @@
 #include "MagoRemoteCmd_i.h"
 #include "MagoRemoteEvent_i.h"
 #include "RegisterSet.h"
+#include "RemoteEventRpc.h"
 #include "RemoteProcess.h"
 #include "RpcUtil.h"
 #include <MagoDECommon.h>
@@ -214,7 +215,7 @@ Error:
         }
         __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
         {
-            // nothing to do
+            RpcSsDestroyClientContext( &hContext );
         }
 
         return S_OK;
@@ -226,7 +227,8 @@ Error:
     //------------------------------------------------------------------------
 
     RemoteDebuggerProxy::RemoteDebuggerProxy()
-        :   mSessionGuid( GUID_NULL ),
+        :   mRefCount( 0 ),
+            mSessionGuid( GUID_NULL ),
             mhContext( NULL )
     {
     }
@@ -234,6 +236,21 @@ Error:
     RemoteDebuggerProxy::~RemoteDebuggerProxy()
     {
         Shutdown();
+    }
+
+    void RemoteDebuggerProxy::AddRef()
+    {
+        InterlockedIncrement( &mRefCount );
+    }
+
+    void RemoteDebuggerProxy::Release()
+    {
+        long newRef = InterlockedDecrement( &mRefCount );
+        _ASSERT( newRef >= 0 );
+        if ( newRef == 0 )
+        {
+            delete this;
+        }
     }
 
     HRESULT RemoteDebuggerProxy::Init( EventCallback* callback )
@@ -276,7 +293,9 @@ Error:
         if ( FAILED( hr ) )
             return hr;
 
+        SetRemoteEventCallback( this );
         hr = StartClient( sessionGuidStr, sessionGuid, mhContext );
+        SetRemoteEventCallback( NULL );
         if ( FAILED( hr ) )
         {
             StopServer();
@@ -288,8 +307,12 @@ Error:
 
     void RemoteDebuggerProxy::Shutdown()
     {
-        StopServer();
+        // When you close the client interface to the remote agent (Cmd), the agent closes its 
+        // client interface to the debug engine (Event). To allow that call back, stop the client 
+        // before stopping the server.
+
         StopClient( mhContext );
+        StopServer();
     }
 
 
@@ -592,5 +615,11 @@ Error:
         // TODO: send it to the remote agent
 
         return E_NOTIMPL;
+    }
+
+
+    const GUID& RemoteDebuggerProxy::GetSessionGuid()
+    {
+        return mSessionGuid;
     }
 }

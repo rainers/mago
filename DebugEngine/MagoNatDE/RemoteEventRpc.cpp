@@ -6,7 +6,42 @@
 */
 
 #include "Common.h"
+#include "RemoteEventRpc.h"
+#include "IRemoteEventCallback.h"
 #include "MagoRemoteEvent_i.h"
+
+
+struct EventContext
+{
+    RefPtr<Mago::IRemoteEventCallback>  Callback;
+};
+
+
+namespace Mago
+{
+    IRemoteEventCallback*   mCallback;
+
+
+    void SetRemoteEventCallback( IRemoteEventCallback* callback )
+    {
+        IRemoteEventCallback*   oldCallback = NULL;
+
+        if ( callback != NULL )
+            callback->AddRef();
+
+        oldCallback = (IRemoteEventCallback*) 
+            InterlockedExchangePointer( (void**) &mCallback, callback );
+
+        if ( oldCallback != NULL )
+            oldCallback->Release();
+    }
+
+    // The interface that's returned still has a reference.
+    IRemoteEventCallback* TakeEventCallback()
+    {
+        return (IRemoteEventCallback*) InterlockedExchangePointer( (void**) &mCallback, NULL );
+    }
+}
 
 
 // The RPC runtime will call this function, if the connection to the client is lost.
@@ -23,12 +58,19 @@ HRESULT MagoRemoteEvent_Open(
     if ( hBinding == NULL || sessionUuid == NULL || phContext == NULL )
         return E_INVALIDARG;
 
-    GUID* sessionUuidCopy = new GUID();
-    if ( sessionUuidCopy == NULL )
+    UniquePtr<EventContext> context( new EventContext() );
+    if ( context.Get() == NULL )
         return E_OUTOFMEMORY;
 
-    *sessionUuidCopy = *sessionUuid;
-    *phContext = sessionUuidCopy;
+    context->Callback.Attach( Mago::TakeEventCallback() );
+
+    if ( context->Callback.Get() == NULL )
+        return E_FAIL;
+
+    if ( context->Callback->GetSessionGuid() != *sessionUuid )
+        return E_FAIL;
+
+    *phContext = context.Detach();
 
     return S_OK;
 }
@@ -39,8 +81,8 @@ void MagoRemoteEvent_Close(
     if ( phContext == NULL || *phContext == NULL )
         return;
 
-    GUID* sessionUuid = (GUID*) *phContext;
-    delete sessionUuid;
+    EventContext*   context = (EventContext*) *phContext;
+    delete context;
 
     *phContext = NULL;
 }
