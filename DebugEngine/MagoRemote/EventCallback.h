@@ -46,5 +46,8 @@ namespace Mago
 
         virtual ProbeRunMode OnCallProbe( 
             IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange );
+
+    private:
+        HCTXEVENT GetContextHandle();
     };
 }

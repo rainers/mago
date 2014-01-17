@@ -9,3 +9,4 @@
 
 
 int RPC_ENTRY CommonRpcExceptionFilter( unsigned long exceptionCode );
+wchar_t* MidlAllocString( const wchar_t* str );

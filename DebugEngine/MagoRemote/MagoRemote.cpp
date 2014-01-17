@@ -8,6 +8,9 @@
 // MagoRemote.cpp : Defines the entry point for the application.
 //
 
+// TODO: in addition to machine type, return processor features and OS version with launched or 
+//       attached processes
+
 #include "Common.h"
 #include "MagoRemote.h"
 #include "App.h"

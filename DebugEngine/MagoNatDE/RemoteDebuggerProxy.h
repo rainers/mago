@@ -10,7 +10,10 @@
 #include "IDebuggerProxy.h"
 #include "IRemoteEventCallback.h"
 
+
 typedef void* HCTXCMD;
+typedef struct MagoRemote_LaunchInfo MagoRemote_LaunchInfo;
+typedef struct MagoRemote_ProcInfo MagoRemote_ProcInfo;
 
 
 namespace Mago
@@ -83,5 +86,42 @@ namespace Mago
         // IRemoteEventCallback
 
         const GUID& GetSessionGuid();
+
+        virtual void OnProcessStart( uint32_t pid );
+        virtual void OnProcessExit( uint32_t pid, DWORD exitCode );
+        virtual void OnThreadStart( uint32_t pid, MagoRemote_ThreadInfo* thread );
+        virtual void OnThreadExit( uint32_t pid, DWORD threadId, DWORD exitCode );
+        virtual void OnModuleLoad( uint32_t pid, MagoRemote_ModuleInfo* modInfo );
+        virtual void OnModuleUnload( uint32_t pid, MagoRemote_Address baseAddr );
+        virtual void OnOutputString( uint32_t pid, const wchar_t* outputString );
+        virtual void OnLoadComplete( uint32_t pid, DWORD threadId );
+
+        virtual MagoRemote_RunMode OnException( 
+            uint32_t pid, 
+            DWORD threadId, 
+            bool firstChance, 
+            unsigned int recordCount,
+            MagoRemote_ExceptionRecord* exceptRecords );
+
+        virtual MagoRemote_RunMode OnBreakpoint( 
+            uint32_t pid, uint32_t threadId, MagoRemote_Address address, bool embedded );
+
+        virtual void OnStepComplete( uint32_t pid, uint32_t threadId );
+        virtual void OnAsyncBreakComplete( uint32_t pid, uint32_t threadId );
+
+        virtual MagoRemote_ProbeRunMode OnCallProbe( 
+            uint32_t pid, 
+            uint32_t threadId, 
+            MagoRemote_Address address, 
+            MagoRemote_AddressRange* thunkRange );
+
+    private:
+        HCTXCMD GetContextHandle();
+        HRESULT LaunchNoException( 
+            MagoRemote_LaunchInfo& cmdLaunchInfo, 
+            MagoRemote_ProcInfo& cmdProcInfo );
+        HRESULT AttachNoException( 
+            uint32_t pid, 
+            MagoRemote_ProcInfo& cmdProcInfo );
     };
 }
