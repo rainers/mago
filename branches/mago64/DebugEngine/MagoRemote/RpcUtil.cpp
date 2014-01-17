@@ -22,6 +22,21 @@ void __RPC_USER midl_user_free( void* p )
     free( p );
 }
 
+wchar_t* MidlAllocString( const wchar_t* str )
+{
+    size_t sizeInChars = wcslen( str ) + 1;
+    size_t sizeInBytes = sizeInChars * sizeof( wchar_t );
+    wchar_t* strCopy = NULL;
+
+    strCopy = (wchar_t*) midl_user_allocate( sizeInBytes );
+    if ( strCopy == NULL )
+        return NULL;
+
+    wcscpy_s( strCopy, sizeInChars, str );
+
+    return strCopy;
+}
+
 // This function is modeled after RpcExceptionFilter declared in rpcdce.h, which is only available 
 // in Windows Vista and later.
 

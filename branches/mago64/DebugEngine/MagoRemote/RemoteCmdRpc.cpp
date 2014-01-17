@@ -12,14 +12,70 @@
 #include "MagoRemoteCmd_h.h"
 #include "MagoRemoteEvent_h.h"
 #include "RpcUtil.h"
-#include <MagoDECommon.h>
 #include <..\Exec\DebuggerProxy.h>
+#include <MagoDECommon.h>
+#include <map>
 
 
 struct CmdContext
 {
+    typedef std::map<UINT32, IProcess*> CmdProcessMap;
+
     MagoCore::DebuggerProxy ExecThread;
     HCTXEVENT               HEventContext;
+    CmdProcessMap           ProcMap;
+    Guard                   ProcGuard;
+
+    ~CmdContext()
+    {
+        for ( CmdProcessMap::iterator it = ProcMap.begin();
+            it != ProcMap.end();
+            it++ )
+        {
+            it->second->Release();
+        }
+    }
+
+    HRESULT AddProcess( IProcess* process )
+    {
+        _ASSERT( process != NULL );
+        typedef CmdProcessMap M;
+
+        GuardedArea guard( ProcGuard );
+
+        M::_Pairib pair = ProcMap.insert( CmdProcessMap::value_type( process->GetId(), process ) );
+        _ASSERT( pair.second );
+        if ( pair.second )
+            process->AddRef();
+
+        return S_OK;
+    }
+
+    void RemoveProcess( UINT32 pid )
+    {
+        GuardedArea guard( ProcGuard );
+
+        CmdProcessMap::iterator it = ProcMap.find( pid );
+        if ( it == ProcMap.end() )
+            return;
+
+        it->second->Release();
+        ProcMap.erase( it );
+    }
+
+    bool FindProcess( UINT32 pid, IProcess*& process )
+    {
+        GuardedArea guard( ProcGuard );
+
+        CmdProcessMap::iterator it = ProcMap.find( pid );
+        if ( it == ProcMap.end() )
+            return false;
+
+        process = it->second;
+        process->AddRef();
+
+        return true;
+    }
 };
 
 
@@ -260,15 +316,67 @@ void MagoRemoteCmd_Close(
     Mago::NotifyRemoveSession();
 }
 
+HRESULT ToWireProcess( IProcess* process, MagoRemote_ProcInfo* procInfo )
+{
+    wchar_t*    path = NULL;
+
+    path = MidlAllocString( process->GetExePath() );
+    if ( path == NULL )
+        return E_OUTOFMEMORY;
+
+    procInfo->CreateMethod = (UINT16) process->GetCreateMethod();
+    procInfo->EntryPoint = process->GetEntryPoint();
+    procInfo->ExePath = path;
+    procInfo->MachineType = process->GetMachineType();
+    procInfo->Pid = process->GetId();
+
+    return S_OK;
+}
+
 HRESULT MagoRemoteCmd_Launch( 
     /* [in] */ HCTXCMD hContext,
     /* [in] */ MagoRemote_LaunchInfo *launchInfo,
     /* [out] */ MagoRemote_ProcInfo *procInfo)
 {
-    if ( hContext == NULL )
+    if ( hContext == NULL || launchInfo == NULL || procInfo == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    LaunchInfo          execLaunchInfo = { 0 };
+    RefPtr<IProcess>    process;
+
+    execLaunchInfo.Exe = launchInfo->Exe;
+    execLaunchInfo.CommandLine = launchInfo->CommandLine;
+    execLaunchInfo.Dir = launchInfo->Dir;
+    execLaunchInfo.EnvBstr = launchInfo->EnvBstr;
+
+    if ( (launchInfo->Flags & MagoRemote_PFlags_NewConsole) != 0 )
+        execLaunchInfo.NewConsole = true;
+    if ( (launchInfo->Flags & MagoRemote_PFlags_Suspend) != 0 )
+        execLaunchInfo.Suspend = true;
+
+    hr = context->ExecThread.Launch( &execLaunchInfo, process.Ref() );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = ToWireProcess( process.Get(), procInfo );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = context->AddProcess( process.Get() );
+    if ( FAILED( hr ) )
+        goto Error;
+
+Error:
+    if ( FAILED( hr ) )
+    {
+        if ( procInfo->ExePath != NULL )
+            MIDL_user_free( procInfo->ExePath );
+        if ( process.Get() != NULL )
+            context->ExecThread.Terminate( process.Get() );
+    }
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_Attach( 
@@ -276,10 +384,34 @@ HRESULT MagoRemoteCmd_Attach(
     /* [in] */ unsigned int pid,
     /* [out] */ MagoRemote_ProcInfo *procInfo)
 {
-    if ( hContext == NULL )
+    if ( hContext == NULL || procInfo == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    hr = context->ExecThread.Attach( pid, process.Ref() );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = ToWireProcess( process.Get(), procInfo );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = context->AddProcess( process.Get() );
+    if ( FAILED( hr ) )
+        goto Error;
+
+Error:
+    if ( FAILED( hr ) )
+    {
+        if ( procInfo->ExePath != NULL )
+            MIDL_user_free( procInfo->ExePath );
+        if ( process.Get() != NULL )
+            context->ExecThread.Detach( process.Get() );
+    }
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_Terminate( 
@@ -289,7 +421,16 @@ HRESULT MagoRemoteCmd_Terminate(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.Terminate( process.Get() );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_Detach( 
@@ -299,7 +440,16 @@ HRESULT MagoRemoteCmd_Detach(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.Detach( process.Get() );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_ResumeProcess( 
@@ -309,7 +459,16 @@ HRESULT MagoRemoteCmd_ResumeProcess(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.ResumeLaunchedProcess( process.Get() );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_ReadMemory( 
@@ -321,10 +480,25 @@ HRESULT MagoRemoteCmd_ReadMemory(
     /* [out] */ unsigned int *lengthUnreadable,
     /* [out][size_is] */ byte *buffer)
 {
-    if ( hContext == NULL )
+    if ( hContext == NULL || lengthRead == NULL || lengthUnreadable == NULL || buffer == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.ReadMemory( 
+        process.Get(),
+        (Address) address,
+        length,
+        *lengthRead,
+        *lengthUnreadable,
+        buffer );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_WriteMemory( 
@@ -335,10 +509,24 @@ HRESULT MagoRemoteCmd_WriteMemory(
     /* [out] */ unsigned int *lengthWritten,
     /* [in][size_is] */ byte *buffer)
 {
-    if ( hContext == NULL )
+    if ( hContext == NULL || lengthWritten == NULL || buffer == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.WriteMemory( 
+        process.Get(),
+        (Address) address,
+        length,
+        *lengthWritten,
+        buffer );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_SetBreakpoint( 
@@ -349,7 +537,16 @@ HRESULT MagoRemoteCmd_SetBreakpoint(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.SetBreakpoint( process.Get(), (Address) address );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_RemoveBreakpoint( 
@@ -360,7 +557,16 @@ HRESULT MagoRemoteCmd_RemoveBreakpoint(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.RemoveBreakpoint( process.Get(), (Address) address );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_StepOut( 
@@ -372,7 +578,19 @@ HRESULT MagoRemoteCmd_StepOut(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.StepOut( 
+        process.Get(), 
+        (Address) targetAddr, 
+        handleException ? true : false );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_StepInstruction( 
@@ -384,7 +602,19 @@ HRESULT MagoRemoteCmd_StepInstruction(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.StepInstruction( 
+        process.Get(), 
+        stepIn ? true : false, 
+        handleException ? true : false );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_StepRange( 
@@ -397,7 +627,21 @@ HRESULT MagoRemoteCmd_StepRange(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+    AddressRange        execRange = { (Address) range.Begin, (Address) range.End };
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.StepRange( 
+        process.Get(), 
+        stepIn ? true : false, 
+        execRange, 
+        handleException ? true : false );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_Continue( 
@@ -408,7 +652,16 @@ HRESULT MagoRemoteCmd_Continue(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.Continue( process.Get(), handleException ? true : false );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_Execute( 
@@ -419,7 +672,16 @@ HRESULT MagoRemoteCmd_Execute(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.Execute( process.Get(), handleException ? true : false );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_AsyncBreak( 
@@ -429,7 +691,16 @@ HRESULT MagoRemoteCmd_AsyncBreak(
     if ( hContext == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.AsyncBreak( process.Get() );
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_GetThreadContext( 
@@ -442,10 +713,28 @@ HRESULT MagoRemoteCmd_GetThreadContext(
     /* [out] */ unsigned int *sizeRead,
     /* [out][length_is][size_is] */ byte *regBuffer)
 {
-    if ( hContext == NULL )
+    // TODO:
+    UNREFERENCED_PARAMETER( extFeatureMask );
+
+    if ( hContext == NULL || sizeRead == NULL || regBuffer == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    // TODO: pass the masks to ExecThread, which can set them specific to the machine
+    CONTEXT* contextX86 = (CONTEXT*) regBuffer;
+    contextX86->ContextFlags = mainFeatureMask;
+
+    hr = context->ExecThread.GetThreadContext( process.Get(), tid, regBuffer, size );
+    if ( SUCCEEDED( hr ) )
+        *sizeRead = size;
+
+    return hr;
 }
 
 HRESULT MagoRemoteCmd_SetThreadContext( 
@@ -455,8 +744,17 @@ HRESULT MagoRemoteCmd_SetThreadContext(
     /* [in] */ unsigned int size,
     /* [in][size_is] */ byte *regBuffer)
 {
-    if ( hContext == NULL )
+    if ( hContext == NULL || regBuffer == NULL )
         return E_INVALIDARG;
 
-    return E_NOTIMPL;
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.SetThreadContext( process.Get(), tid, regBuffer, size );
+
+    return hr;
 }

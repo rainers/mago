@@ -315,6 +315,11 @@ Error:
         StopServer();
     }
 
+    HCTXCMD RemoteDebuggerProxy::GetContextHandle()
+    {
+        return mhContext;
+    }
+
 
     //----------------------------------------------------------------------------
     // IDebuggerProxy
@@ -327,19 +332,128 @@ Error:
             return E_INVALIDARG;
 
         HRESULT hr = S_OK;
+        RefPtr<RemoteProcess>   coreProc;
+        MagoRemote_LaunchInfo   cmdLaunchInfo = { 0 };
+        MagoRemote_ProcInfo     cmdProcInfo = { 0 };
+        uint32_t                envBstrSize = 0;
 
-        // TODO: send the request to the remote agent
+        if ( launchInfo->EnvBstr != NULL )
+        {
+            const wchar_t* start = launchInfo->EnvBstr;
+            const wchar_t* p = start;
+            while ( *p != L'\0' )
+            {
+                p = wcschr( p, L'\0' );
+                p++;
+            }
+            envBstrSize = p - start + 1;
+        }
 
-        return E_NOTIMPL;
+        cmdLaunchInfo.CommandLine = launchInfo->CommandLine;
+        cmdLaunchInfo.Dir = launchInfo->Dir;
+        cmdLaunchInfo.Exe = launchInfo->Exe;
+        cmdLaunchInfo.EnvBstr = launchInfo->EnvBstr;
+        cmdLaunchInfo.EnvBstrSize = (uint16_t) envBstrSize;
+        cmdLaunchInfo.Flags = 0;
+
+        if ( launchInfo->NewConsole )
+            cmdLaunchInfo.Flags |= MagoRemote_PFlags_NewConsole;
+        if ( launchInfo->Suspend )
+            cmdLaunchInfo.Flags |= MagoRemote_PFlags_Suspend;
+
+        coreProc = new RemoteProcess();
+        if ( coreProc.Get() == NULL )
+            return E_OUTOFMEMORY;
+
+        hr = LaunchNoException( cmdLaunchInfo, cmdProcInfo );
+        if ( FAILED( hr ) )
+            return hr;
+
+        coreProc->Init( 
+            cmdProcInfo.Pid,
+            cmdProcInfo.ExePath,
+            (CreateMethod) cmdProcInfo.CreateMethod,
+            (Address) cmdProcInfo.EntryPoint,
+            cmdProcInfo.MachineType,
+            NULL );
+        process = coreProc.Detach();
+
+        MIDL_user_free( cmdProcInfo.ExePath );
+
+        return S_OK;
+    }
+
+    // Can't use __try in functions that require object unwinding. So, pull the call out.
+    HRESULT RemoteDebuggerProxy::LaunchNoException( 
+        MagoRemote_LaunchInfo& cmdLaunchInfo, 
+        MagoRemote_ProcInfo& cmdProcInfo )
+    {
+        HRESULT hr = S_OK;
+
+        __try
+        {
+            hr = MagoRemoteCmd_Launch( 
+                GetContextHandle(),
+                &cmdLaunchInfo,
+                &cmdProcInfo );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
+
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::Attach( uint32_t pid, ICoreProcess*& process )
     {
         HRESULT hr = S_OK;
+        RefPtr<RemoteProcess>   coreProc;
+        MagoRemote_ProcInfo     cmdProcInfo = { 0 };
 
-        // TODO: send the request to the remote agent
+        coreProc = new RemoteProcess();
+        if ( coreProc.Get() == NULL )
+            return E_OUTOFMEMORY;
 
-        return E_NOTIMPL;
+        hr = AttachNoException( pid, cmdProcInfo );
+        if ( FAILED( hr ) )
+            return hr;
+
+        coreProc->Init( 
+            cmdProcInfo.Pid,
+            cmdProcInfo.ExePath,
+            (CreateMethod) cmdProcInfo.CreateMethod,
+            (Address) cmdProcInfo.EntryPoint,
+            cmdProcInfo.MachineType,
+            // TODO: ArchData
+            NULL );
+        process = coreProc.Detach();
+
+        MIDL_user_free( cmdProcInfo.ExePath );
+
+        return S_OK;
+    }
+
+    // Can't use __try in functions that require object unwinding. So, pull the call out.
+    HRESULT RemoteDebuggerProxy::AttachNoException( 
+        uint32_t pid, 
+        MagoRemote_ProcInfo& cmdProcInfo )
+    {
+        HRESULT hr = S_OK;
+
+        __try
+        {
+            hr = MagoRemoteCmd_Attach( 
+                GetContextHandle(),
+                pid,
+                &cmdProcInfo );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
+
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::Terminate( ICoreProcess* process )
@@ -353,9 +467,18 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_Terminate( 
+                GetContextHandle(),
+                process->GetPid() );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::Detach( ICoreProcess* process )
@@ -369,9 +492,18 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_Detach( 
+                GetContextHandle(),
+                process->GetPid() );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::ResumeLaunchedProcess( ICoreProcess* process )
@@ -385,9 +517,18 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_ResumeProcess( 
+                GetContextHandle(),
+                process->GetPid() );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::ReadMemory( 
@@ -399,7 +540,7 @@ Error:
         uint8_t* buffer )
     {
         _ASSERT( process != NULL );
-        if ( process == NULL )
+        if ( process == NULL || buffer == NULL )
             return E_INVALIDARG;
 
         if ( process->GetProcessType() != CoreProcess_Remote )
@@ -407,9 +548,23 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_ReadMemory( 
+                GetContextHandle(),
+                process->GetPid(),
+                address,
+                length,
+                &lengthRead,
+                &lengthUnreadable,
+                buffer );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::WriteMemory( 
@@ -420,7 +575,7 @@ Error:
         uint8_t* buffer )
     {
         _ASSERT( process != NULL );
-        if ( process == NULL )
+        if ( process == NULL || buffer == NULL )
             return E_INVALIDARG;
 
         if ( process->GetProcessType() != CoreProcess_Remote )
@@ -428,9 +583,22 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_WriteMemory( 
+                GetContextHandle(),
+                process->GetPid(),
+                address,
+                length,
+                &lengthWritten,
+                buffer );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::SetBreakpoint( ICoreProcess* process, Address address )
@@ -444,9 +612,19 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_SetBreakpoint( 
+                GetContextHandle(),
+                process->GetPid(),
+                address );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::RemoveBreakpoint( ICoreProcess* process, Address address )
@@ -460,9 +638,19 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_RemoveBreakpoint( 
+                GetContextHandle(),
+                process->GetPid(),
+                address );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::StepOut( ICoreProcess* process, Address targetAddr, bool handleException )
@@ -476,9 +664,20 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_StepOut( 
+                GetContextHandle(),
+                process->GetPid(),
+                targetAddr,
+                handleException );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::StepInstruction( ICoreProcess* process, bool stepIn, bool handleException )
@@ -492,9 +691,20 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_StepInstruction( 
+                GetContextHandle(),
+                process->GetPid(),
+                stepIn,
+                handleException );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::StepRange( 
@@ -509,9 +719,23 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            MagoRemote_AddressRange cmdRange = { range.Begin, range.End };
 
-        return E_NOTIMPL;
+            hr = MagoRemoteCmd_StepRange( 
+                GetContextHandle(),
+                process->GetPid(),
+                stepIn,
+                cmdRange,
+                handleException );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
+
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::Continue( ICoreProcess* process, bool handleException )
@@ -525,9 +749,19 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_Continue( 
+                GetContextHandle(),
+                process->GetPid(),
+                handleException );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::Execute( ICoreProcess* process, bool handleException )
@@ -541,9 +775,19 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_Execute( 
+                GetContextHandle(),
+                process->GetPid(),
+                handleException );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::AsyncBreak( ICoreProcess* process )
@@ -557,9 +801,18 @@ Error:
 
         HRESULT hr = S_OK;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_AsyncBreak( 
+                GetContextHandle(), 
+                process->GetPid() );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
     HRESULT RemoteDebuggerProxy::GetThreadContext( 
@@ -581,7 +834,27 @@ Error:
         DWORD contextFlags = CONTEXT_FULL 
             | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
 
-        // TODO: send the request to the remote agent
+        __try
+        {
+            uint32_t    sizeRead = 0;
+
+            hr = MagoRemoteCmd_GetThreadContext(
+                GetContextHandle(),
+                process->GetPid(),
+                thread->GetTid(),
+                contextFlags,
+                0,
+                sizeof context,
+                &sizeRead,
+                (byte*) &context );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
+
+        if ( FAILED( hr ) )
+            return hr;
 
         ArchData* archData = process->GetArchData();
 
@@ -589,7 +862,7 @@ Error:
         if ( FAILED( hr ) )
             return hr;
 
-        return E_NOTIMPL;
+        return S_OK;
     }
 
     HRESULT RemoteDebuggerProxy::SetThreadContext( 
@@ -612,14 +885,163 @@ Error:
         if ( !regSet->GetThreadContext( contextBuf, contextSize ) )
             return E_FAIL;
 
-        // TODO: send it to the remote agent
+        __try
+        {
+            hr = MagoRemoteCmd_SetThreadContext(
+                GetContextHandle(),
+                process->GetPid(),
+                thread->GetTid(),
+                contextSize,
+                (byte*) contextBuf );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
 
-        return E_NOTIMPL;
+        return hr;
     }
 
 
     const GUID& RemoteDebuggerProxy::GetSessionGuid()
     {
         return mSessionGuid;
+    }
+
+    void RemoteDebuggerProxy::OnProcessStart( uint32_t pid )
+    {
+        mCallback->OnProcessStart( pid );
+    }
+
+    void RemoteDebuggerProxy::OnProcessExit( uint32_t pid, DWORD exitCode )
+    {
+        mCallback->OnProcessExit( pid, exitCode );
+    }
+
+    void RemoteDebuggerProxy::OnThreadStart( uint32_t pid, MagoRemote_ThreadInfo* threadInfo )
+    {
+        if ( threadInfo == NULL )
+            return;
+
+        RefPtr<RemoteThread> coreThread;
+
+        coreThread = new RemoteThread( 
+            threadInfo->Tid, 
+            (Address) threadInfo->StartAddr, 
+            (Address) threadInfo->TebBase );
+        if ( coreThread.Get() == NULL )
+            return;
+
+        mCallback->OnThreadStart( pid, coreThread );
+    }
+
+    void RemoteDebuggerProxy::OnThreadExit( uint32_t pid, DWORD threadId, DWORD exitCode )
+    {
+        mCallback->OnThreadExit( pid, threadId, exitCode );
+    }
+
+    void RemoteDebuggerProxy::OnModuleLoad( uint32_t pid, MagoRemote_ModuleInfo* modInfo )
+    {
+        if ( modInfo == NULL )
+            return;
+
+        RefPtr<RemoteModule> coreModule;
+
+        coreModule = new RemoteModule( 
+            (Address) modInfo->ImageBase, 
+            (Address) modInfo->PreferredImageBase,
+            modInfo->Size,
+            modInfo->MachineType,
+            modInfo->Path );
+        if ( coreModule.Get() == NULL )
+            return;
+
+        mCallback->OnModuleLoad( pid, coreModule );
+    }
+
+    void RemoteDebuggerProxy::OnModuleUnload( uint32_t pid, MagoRemote_Address baseAddr )
+    {
+        mCallback->OnModuleUnload( pid, (Address) baseAddr );
+    }
+
+    void RemoteDebuggerProxy::OnOutputString( uint32_t pid, const wchar_t* outputString )
+    {
+        if ( outputString == NULL )
+            return;
+
+        mCallback->OnOutputString( pid, outputString );
+    }
+
+    void RemoteDebuggerProxy::OnLoadComplete( uint32_t pid, DWORD threadId )
+    {
+        mCallback->OnLoadComplete( pid, threadId );
+    }
+
+    MagoRemote_RunMode RemoteDebuggerProxy::OnException( 
+        uint32_t pid, 
+        DWORD threadId, 
+        bool firstChance, 
+        unsigned int recordCount,
+        MagoRemote_ExceptionRecord* exceptRecords )
+    {
+        if ( exceptRecords == NULL )
+            return MagoRemote_RunMode_Run;
+
+        EXCEPTION_RECORD    exceptRec = { 0 };
+
+        // TODO: more than 1 record
+        exceptRec.ExceptionAddress = (void*) exceptRecords[0].ExceptionAddress;
+        exceptRec.ExceptionCode = exceptRecords[0].ExceptionCode;
+        exceptRec.ExceptionFlags = exceptRecords[0].ExceptionFlags;
+        exceptRec.ExceptionRecord = NULL;
+        exceptRec.NumberParameters = exceptRecords[0].NumberParameters;
+
+        for ( DWORD j = 0; j < exceptRec.NumberParameters; j++ )
+        {
+            exceptRec.ExceptionInformation[j] = (ULONG_PTR) exceptRecords[0].ExceptionInformation[j];
+        }
+
+        return (MagoRemote_RunMode) 
+            mCallback->OnException( pid, threadId, firstChance, &exceptRec );
+    }
+
+    MagoRemote_RunMode RemoteDebuggerProxy::OnBreakpoint( 
+        uint32_t pid, uint32_t threadId, MagoRemote_Address address, bool embedded )
+    {
+        return (MagoRemote_RunMode) 
+            mCallback->OnBreakpoint( pid, threadId, (Address) address, embedded );
+    }
+
+    void RemoteDebuggerProxy::OnStepComplete( uint32_t pid, uint32_t threadId )
+    {
+        mCallback->OnStepComplete( pid, threadId );
+    }
+
+    void RemoteDebuggerProxy::OnAsyncBreakComplete( uint32_t pid, uint32_t threadId )
+    {
+        mCallback->OnAsyncBreakComplete( pid, threadId );
+    }
+
+    MagoRemote_ProbeRunMode RemoteDebuggerProxy::OnCallProbe( 
+        uint32_t pid, 
+        uint32_t threadId, 
+        MagoRemote_Address address, 
+        MagoRemote_AddressRange* thunkRange )
+    {
+        if ( thunkRange == NULL )
+            return MagoRemote_PRunMode_Run;
+
+        AddressRange    execThunkRange = { 0 };
+
+        ProbeRunMode mode = mCallback->OnCallProbe(
+            pid,
+            threadId, 
+            (Address) address,
+            execThunkRange );
+
+        thunkRange->Begin = execThunkRange.Begin;
+        thunkRange->End = execThunkRange.End;
+
+        return (MagoRemote_ProbeRunMode) mode;
     }
 }

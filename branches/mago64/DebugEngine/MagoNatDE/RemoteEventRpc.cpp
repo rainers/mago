@@ -91,6 +91,12 @@ void MagoRemoteEvent_OnProcessStart(
     /* [in] */ HCTXEVENT hContext,
     /* [in] */ unsigned int pid)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnProcessStart( pid );
 }
 
 void MagoRemoteEvent_OnProcessExit( 
@@ -98,6 +104,12 @@ void MagoRemoteEvent_OnProcessExit(
     /* [in] */ unsigned int pid,
     /* [in] */ DWORD exitCode)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnProcessExit( pid, exitCode );
 }
 
 void MagoRemoteEvent_OnThreadStart( 
@@ -105,6 +117,12 @@ void MagoRemoteEvent_OnThreadStart(
     /* [in] */ unsigned int pid,
     /* [in] */ MagoRemote_ThreadInfo *thread)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnThreadStart( pid, thread );
 }
 
 void MagoRemoteEvent_OnThreadExit( 
@@ -113,6 +131,12 @@ void MagoRemoteEvent_OnThreadExit(
     /* [in] */ DWORD threadId,
     /* [in] */ DWORD exitCode)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnThreadExit( pid, threadId, exitCode );
 }
 
 void MagoRemoteEvent_OnModuleLoad( 
@@ -120,6 +144,12 @@ void MagoRemoteEvent_OnModuleLoad(
     /* [in] */ unsigned int pid,
     /* [in] */ MagoRemote_ModuleInfo *modInfo)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnModuleLoad( pid, modInfo );
 }
 
 void MagoRemoteEvent_OnModuleUnload( 
@@ -127,6 +157,12 @@ void MagoRemoteEvent_OnModuleUnload(
     /* [in] */ unsigned int pid,
     /* [in] */ MagoRemote_Address baseAddress)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnModuleUnload( pid, baseAddress );
 }
 
 void MagoRemoteEvent_OnOutputString( 
@@ -134,6 +170,12 @@ void MagoRemoteEvent_OnOutputString(
     /* [in] */ unsigned int pid,
     /* [string][in] */ const wchar_t *outputString)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnOutputString( pid, outputString );
 }
 
 void MagoRemoteEvent_OnLoadComplete( 
@@ -141,6 +183,12 @@ void MagoRemoteEvent_OnLoadComplete(
     /* [in] */ unsigned int pid,
     /* [in] */ DWORD threadId)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnLoadComplete( pid, threadId );
 }
 
 MagoRemote_RunMode MagoRemoteEvent_OnException( 
@@ -151,7 +199,19 @@ MagoRemote_RunMode MagoRemoteEvent_OnException(
     /* [in] */ unsigned int recordCount,
     /* [in][size_is] */ MagoRemote_ExceptionRecord *exceptRecords)
 {
-    return MagoRemote_RunMode_Run;
+    if ( hContext == NULL )
+        return MagoRemote_RunMode_Run;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    MagoRemote_RunMode mode = context->Callback->OnException( 
+        pid, 
+        threadId, 
+        firstChance ? true : false, 
+        recordCount, 
+        exceptRecords );
+
+    return mode;
 }
 
 MagoRemote_RunMode MagoRemoteEvent_OnBreakpoint( 
@@ -161,7 +221,18 @@ MagoRemote_RunMode MagoRemoteEvent_OnBreakpoint(
     /* [in] */ MagoRemote_Address address,
     /* [in] */ boolean embedded)
 {
-    return MagoRemote_RunMode_Run;
+    if ( hContext == NULL )
+        return MagoRemote_RunMode_Run;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    MagoRemote_RunMode mode = context->Callback->OnBreakpoint( 
+        pid, 
+        threadId, 
+        address, 
+        embedded ? true : false );
+
+    return mode;
 }
 
 void MagoRemoteEvent_OnStepComplete( 
@@ -169,6 +240,12 @@ void MagoRemoteEvent_OnStepComplete(
     /* [in] */ unsigned int pid,
     /* [in] */ unsigned int threadId)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnStepComplete( pid, threadId );
 }
 
 void MagoRemoteEvent_OnAsyncBreak( 
@@ -176,6 +253,12 @@ void MagoRemoteEvent_OnAsyncBreak(
     /* [in] */ unsigned int pid,
     /* [in] */ unsigned int threadId)
 {
+    if ( hContext == NULL )
+        return;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    context->Callback->OnAsyncBreakComplete( pid, threadId );
 }
 
 MagoRemote_ProbeRunMode MagoRemoteEvent_OnCallProbe( 
@@ -185,5 +268,16 @@ MagoRemote_ProbeRunMode MagoRemoteEvent_OnCallProbe(
     /* [in] */ MagoRemote_Address address,
     /* [out] */ MagoRemote_AddressRange *thunkRange)
 {
-    return MagoRemote_PRunMode_Run;
+    if ( hContext == NULL )
+        return MagoRemote_PRunMode_Run;
+
+    EventContext*   context = (EventContext*) hContext;
+
+    MagoRemote_ProbeRunMode mode = context->Callback->OnCallProbe( 
+        pid, 
+        threadId, 
+        address, 
+        thunkRange );
+
+    return mode;
 }
