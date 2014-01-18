@@ -372,8 +372,7 @@ Error:
         coreProc->Init( 
             cmdProcInfo.Pid,
             cmdProcInfo.ExePath,
-            (CreateMethod) cmdProcInfo.CreateMethod,
-            (Address) cmdProcInfo.EntryPoint,
+            Create_Launch,
             cmdProcInfo.MachineType,
             NULL );
         process = coreProc.Detach();
@@ -422,8 +421,7 @@ Error:
         coreProc->Init( 
             cmdProcInfo.Pid,
             cmdProcInfo.ExePath,
-            (CreateMethod) cmdProcInfo.CreateMethod,
-            (Address) cmdProcInfo.EntryPoint,
+            Create_Attach,
             cmdProcInfo.MachineType,
             // TODO: ArchData
             NULL );

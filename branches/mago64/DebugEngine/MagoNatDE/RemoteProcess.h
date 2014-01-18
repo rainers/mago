@@ -18,7 +18,6 @@ namespace Mago
         RefPtr<ArchData>    mArchData;
 
         std::wstring        mExePath;
-        Address             mEntryPoint;
         uint32_t            mPid;
         CreateMethod        mCreateMethod;
         uint16_t            mMachineType;
@@ -32,7 +31,6 @@ namespace Mago
         virtual CreateMethod    GetCreateMethod();
         virtual uint32_t        GetPid();
         virtual const wchar_t*  GetExePath();
-        virtual Address         GetEntryPoint();
         virtual uint16_t        GetMachineType();
 
         virtual ArchData*       GetArchData();
@@ -42,7 +40,6 @@ namespace Mago
             uint32_t pid, 
             const wchar_t* exePath, 
             CreateMethod createMethod, 
-            Address entryPoint, 
             uint16_t machineType,
             ArchData* archData );
 

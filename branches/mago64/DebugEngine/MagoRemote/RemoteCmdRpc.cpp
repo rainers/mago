@@ -324,8 +324,6 @@ HRESULT ToWireProcess( IProcess* process, MagoRemote_ProcInfo* procInfo )
     if ( path == NULL )
         return E_OUTOFMEMORY;
 
-    procInfo->CreateMethod = (UINT16) process->GetCreateMethod();
-    procInfo->EntryPoint = process->GetEntryPoint();
     procInfo->ExePath = path;
     procInfo->MachineType = process->GetMachineType();
     procInfo->Pid = process->GetId();
