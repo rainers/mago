@@ -54,6 +54,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "udis86", "udis86\udis86\udis86.vcxproj", "{640F0DA5-72AC-4354-8BB5-81D9DCAE29BC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MagoRemote", "DebugEngine\MagoRemote\MagoRemote.vcxproj", "{E101E50F-5E93-4519-825A-6B19D988DA77}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C51C2776-4A52-4CC2-ADAB-0BBB7C8C1CDF} = {C51C2776-4A52-4CC2-ADAB-0BBB7C8C1CDF}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -50,6 +50,7 @@ namespace Mago
         DWORD                           mNextModLoadIndex;  // protected by mod guard
         Address                         mEntryPoint;
         RefPtr<Module>                  mProgMod;
+        RefPtr<Thread>                  mProgThread;
         std::unique_ptr<DRuntime>       mDRuntime;
 
     public:
@@ -125,6 +126,7 @@ namespace Mago
         HRESULT     AddThread( Thread* thread );
         bool        FindThread( DWORD threadId, RefPtr<Thread>& thread );
         void        DeleteThread( Thread* thread );
+        Address     FindEntryPoint();
 
         HRESULT     CreateModule( ICoreModule* coreMod, RefPtr<Module>& mod );
         HRESULT     AddModule( Module* mod );

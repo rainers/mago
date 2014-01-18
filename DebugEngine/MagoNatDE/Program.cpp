@@ -434,6 +434,7 @@ namespace Mago
 
         mModMap.clear();
 
+        mProgThread.Release();
         mProgMod.Release();
         mEngine.Release();
     }
@@ -562,6 +563,9 @@ namespace Mago
         if ( id == 0 )
             return E_FAIL;
 
+        if ( mProgThread == NULL )
+            mProgThread = thread;
+
         ThreadMap::iterator it = mThreadMap.find( id );
 
         if ( it != mThreadMap.end() )
@@ -590,6 +594,14 @@ namespace Mago
     {
         GuardedArea guard( mThreadGuard );
         mThreadMap.erase( thread->GetCoreThread()->GetTid() );
+    }
+
+    Address Program::FindEntryPoint()
+    {
+        if ( mProgThread == NULL )
+            return 0;
+
+        return mProgThread->GetCoreThread()->GetStartAddr();
     }
 
     HRESULT Program::CreateModule( ICoreModule* coreModule, RefPtr<Module>& mod )
