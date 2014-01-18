@@ -55,11 +55,6 @@ namespace Mago
         return mExecProc->GetExePath();
     }
 
-    Address LocalProcess::GetEntryPoint()
-    {
-        return mExecProc->GetEntryPoint();
-    }
-
     uint16_t LocalProcess::GetMachineType()
     {
         return mExecProc->GetMachineType();

@@ -27,7 +27,6 @@ namespace Mago
         virtual CreateMethod    GetCreateMethod();
         virtual uint32_t        GetPid();
         virtual const wchar_t*  GetExePath();
-        virtual Address         GetEntryPoint();
         virtual uint16_t        GetMachineType();
 
         virtual ArchData*       GetArchData();

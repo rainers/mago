@@ -29,10 +29,8 @@ interface MagoRemoteCmd
     {
         [string]
         wchar_t*                ExePath;
-        MagoRemote_Address      EntryPoint;
         unsigned int            Pid;
         unsigned short          MachineType;
-        unsigned short          CreateMethod;
     } MagoRemote_ProcInfo;
 
     typedef enum MagoRemote_ProcFlags

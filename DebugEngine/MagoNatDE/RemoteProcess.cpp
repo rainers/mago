@@ -20,7 +20,6 @@ namespace Mago
 
     RemoteProcess::RemoteProcess()
         :   mRefCount( 0 ),
-            mEntryPoint( 0 ),
             mPid( 0 ),
             mCreateMethod( Create_Launch ),
             mMachineType( 0 )
@@ -57,11 +56,6 @@ namespace Mago
         return mExePath.c_str();
     }
 
-    Address RemoteProcess::GetEntryPoint()
-    {
-        return mEntryPoint;
-    }
-
     uint16_t RemoteProcess::GetMachineType()
     {
         return mMachineType;
@@ -81,7 +75,6 @@ namespace Mago
             uint32_t pid, 
             const wchar_t* exePath, 
             CreateMethod createMethod, 
-            Address entryPoint, 
             uint16_t machineType,
             ArchData* archData )
     {
@@ -93,7 +86,6 @@ namespace Mago
         mPid = pid;
         mExePath = exePath;
         mCreateMethod = createMethod;
-        mEntryPoint = entryPoint;
         mMachineType = machineType;
         mArchData = archData;
     }
