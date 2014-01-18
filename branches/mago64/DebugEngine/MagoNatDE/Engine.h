@@ -140,11 +140,22 @@ namespace Mago
         HRESULT EnsurePollThreadRunning();
         void ShutdownIfNeeded();
 
+        HRESULT StartDebuggerProxy( 
+            bool useInProcDebugger,
+            IDebuggerProxy*& debugger );
+        HRESULT StartDebuggerProxyForLaunch( 
+            const wchar_t* pszMachine, 
+            IDebugPort2* pPort, 
+            const wchar_t* pszExe, 
+            const wchar_t* pszOptions, 
+            DWORD dwLaunchFlags,
+            IDebuggerProxy*& debugger );
         HRESULT LaunchSuspendedInternal( 
-           IDebugPort2*          pPort,
-           LaunchInfo&           launchParams,
-           IDebugEventCallback2* pCallback,
-           IDebugProcess2**      ppDebugProcess
+            IDebuggerProxy*       debugger,
+            IDebugPort2*          pPort,
+            LaunchInfo&           launchParams,
+            IDebugEventCallback2* pCallback,
+            IDebugProcess2**      ppDebugProcess
         );
         HRESULT ResumeProcessInternal( IDebugProcess2* pProcess );
 

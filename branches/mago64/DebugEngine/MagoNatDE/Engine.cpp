@@ -316,6 +316,52 @@ namespace Mago
     ////////////////////////////////////////////////////////////////////////////// 
     // IDebugEngineLaunch2 methods 
 
+    HRESULT Engine::StartDebuggerProxy( 
+        bool useInProcDebugger,
+        IDebuggerProxy*& debugger )
+    {
+        HRESULT hr = S_OK;
+
+        if ( useInProcDebugger )
+        {
+            hr = EnsurePollThreadRunning();
+            if ( FAILED( hr ) )
+                return hr;
+
+            debugger = &mDebugger;
+        }
+        else
+        {
+            hr = mRemoteDebugger->Start();
+            if ( FAILED( hr ) )
+                return hr;
+
+            debugger = mRemoteDebugger;
+        }
+
+        return S_OK;
+    }
+
+    HRESULT Engine::StartDebuggerProxyForLaunch( 
+        const wchar_t* pszMachine, 
+        IDebugPort2* pPort, 
+        const wchar_t* pszExe, 
+        const wchar_t* pszOptions, 
+        DWORD dwLaunchFlags,
+        IDebuggerProxy*& debugger )
+    {
+        HRESULT hr = S_OK;
+        bool    useInProcDebugger = true;
+
+        // TODO: figure out which one should be used based on the kind of EXE it is
+
+        hr = StartDebuggerProxy( useInProcDebugger, debugger );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
     HRESULT Engine::LaunchSuspended( 
        LPCOLESTR             pszMachine,
        IDebugPort2*          pPort,
@@ -363,11 +409,20 @@ namespace Mago
         info.StdError = (HANDLE) hStdError;
         info.Suspend = true;
 
-        hr = EnsurePollThreadRunning();
+        IDebuggerProxy* debugger = NULL;
+
+        hr = StartDebuggerProxyForLaunch( 
+            pszMachine, 
+            pPort, 
+            pszExe, 
+            pszOptions, 
+            dwLaunchFlags,
+            debugger );
         if ( FAILED( hr ) )
             return hr;
 
         hr = LaunchSuspendedInternal(
+            debugger,
             pPort,
             info,
             pCallback,
@@ -379,19 +434,19 @@ namespace Mago
     }
 
     HRESULT Engine::LaunchSuspendedInternal( 
-       IDebugPort2*          pPort,
-       LaunchInfo&           launchParams,
-       IDebugEventCallback2* pCallback,
-       IDebugProcess2**      ppDebugProcess
+        IDebuggerProxy*       debugger,
+        IDebugPort2*          pPort,
+        LaunchInfo&           launchParams,
+        IDebugEventCallback2* pCallback,
+        IDebugProcess2**      ppDebugProcess
         )
     {
+        _ASSERT( debugger != NULL );
+
         HRESULT                 hr = S_OK;
         RefPtr<ICoreProcess>    proc;
         RefPtr<Program>         prog;
         AD_PROCESS_ID           fullProcId = { 0 };
-        IDebuggerProxy*         debugger = NULL;
-
-        debugger = &mDebugger;
 
         hr = debugger->Launch( &launchParams, proc.Ref() );
         if ( FAILED( hr ) )
