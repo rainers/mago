@@ -362,9 +362,7 @@ namespace Mago
 
         hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
 
-        ICoreProcess*   coreProc = prog->GetCoreProcess();
-
-        Address entryPoint = coreProc->GetEntryPoint();
+        Address entryPoint = prog->FindEntryPoint();
 
         if ( entryPoint != 0 )
         {

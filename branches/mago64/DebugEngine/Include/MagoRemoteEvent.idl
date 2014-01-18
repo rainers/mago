@@ -90,7 +90,7 @@ interface MagoRemoteEvent
     void MagoRemoteEvent_OnThreadStart( 
         [in] HCTXEVENT hContext,
         [in] unsigned int pid, 
-        [in] MagoRemote_ThreadInfo* thread );
+        [in] MagoRemote_ThreadInfo* threadInfo );
 
     void MagoRemoteEvent_OnThreadExit( 
         [in] HCTXEVENT hContext,

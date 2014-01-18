@@ -115,14 +115,14 @@ void MagoRemoteEvent_OnProcessExit(
 void MagoRemoteEvent_OnThreadStart( 
     /* [in] */ HCTXEVENT hContext,
     /* [in] */ unsigned int pid,
-    /* [in] */ MagoRemote_ThreadInfo *thread)
+    /* [in] */ MagoRemote_ThreadInfo *threadInfo)
 {
     if ( hContext == NULL )
         return;
 
     EventContext*   context = (EventContext*) hContext;
 
-    context->Callback->OnThreadStart( pid, thread );
+    context->Callback->OnThreadStart( pid, threadInfo );
 }
 
 void MagoRemoteEvent_OnThreadExit( 
