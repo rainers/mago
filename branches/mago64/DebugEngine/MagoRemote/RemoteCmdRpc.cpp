@@ -316,6 +316,31 @@ void MagoRemoteCmd_Close(
     Mago::NotifyRemoveSession();
 }
 
+UINT64 GetProcessorFeatures()
+{
+    UINT64 procFeatures = 0;
+
+    if ( IsProcessorFeaturePresent( PF_MMX_INSTRUCTIONS_AVAILABLE ) )
+        procFeatures |= Mago::PF_X86_MMX;
+
+    if ( IsProcessorFeaturePresent( PF_3DNOW_INSTRUCTIONS_AVAILABLE ) )
+        procFeatures |= Mago::PF_X86_3DNow;
+
+    if ( IsProcessorFeaturePresent( PF_XMMI_INSTRUCTIONS_AVAILABLE ) )
+        procFeatures |= Mago::PF_X86_SSE;
+
+    if ( IsProcessorFeaturePresent( PF_XMMI64_INSTRUCTIONS_AVAILABLE ) )
+        procFeatures |= Mago::PF_X86_SSE2;
+
+    if ( IsProcessorFeaturePresent( PF_SSE3_INSTRUCTIONS_AVAILABLE ) )
+        procFeatures |= Mago::PF_X86_SSE3;
+
+    if ( IsProcessorFeaturePresent( PF_XSAVE_ENABLED ) )
+        procFeatures |= Mago::PF_X86_AVX;
+
+    return procFeatures;
+}
+
 HRESULT ToWireProcess( IProcess* process, MagoRemote_ProcInfo* procInfo )
 {
     wchar_t*    path = NULL;
@@ -327,6 +352,7 @@ HRESULT ToWireProcess( IProcess* process, MagoRemote_ProcInfo* procInfo )
     procInfo->ExePath = path;
     procInfo->MachineType = process->GetMachineType();
     procInfo->Pid = process->GetId();
+    procInfo->MachineFeatures = GetProcessorFeatures();
 
     return S_OK;
 }
