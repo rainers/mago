@@ -333,6 +333,7 @@ Error:
 
         HRESULT hr = S_OK;
         RefPtr<RemoteProcess>   coreProc;
+        RefPtr<ArchData>        archData;
         MagoRemote_LaunchInfo   cmdLaunchInfo = { 0 };
         MagoRemote_ProcInfo     cmdProcInfo = { 0 };
         uint32_t                envBstrSize = 0;
@@ -369,12 +370,20 @@ Error:
         if ( FAILED( hr ) )
             return hr;
 
+        // TODO: get the features from the remote agent
+        hr = ArchData::MakeArchData( cmdProcInfo.MachineType, 0, archData.Ref() );
+        if ( FAILED( hr ) )
+        {
+            MIDL_user_free( cmdProcInfo.ExePath );
+            return hr;
+        }
+
         coreProc->Init( 
             cmdProcInfo.Pid,
             cmdProcInfo.ExePath,
             Create_Launch,
             cmdProcInfo.MachineType,
-            NULL );
+            archData.Get() );
         process = coreProc.Detach();
 
         MIDL_user_free( cmdProcInfo.ExePath );
@@ -408,6 +417,7 @@ Error:
     {
         HRESULT hr = S_OK;
         RefPtr<RemoteProcess>   coreProc;
+        RefPtr<ArchData>        archData;
         MagoRemote_ProcInfo     cmdProcInfo = { 0 };
 
         coreProc = new RemoteProcess();
@@ -418,13 +428,20 @@ Error:
         if ( FAILED( hr ) )
             return hr;
 
+        // TODO: get the features from the remote agent
+        hr = ArchData::MakeArchData( cmdProcInfo.MachineType, 0, archData.Ref() );
+        if ( FAILED( hr ) )
+        {
+            MIDL_user_free( cmdProcInfo.ExePath );
+            return hr;
+        }
+
         coreProc->Init( 
             cmdProcInfo.Pid,
             cmdProcInfo.ExePath,
             Create_Attach,
             cmdProcInfo.MachineType,
-            // TODO: ArchData
-            NULL );
+            archData.Get() );
         process = coreProc.Detach();
 
         MIDL_user_free( cmdProcInfo.ExePath );
