@@ -29,6 +29,7 @@ interface MagoRemoteCmd
     {
         [string]
         wchar_t*                ExePath;
+        unsigned __int64        MachineFeatures;
         unsigned int            Pid;
         unsigned short          MachineType;
     } MagoRemote_ProcInfo;

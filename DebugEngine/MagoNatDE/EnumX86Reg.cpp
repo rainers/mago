@@ -9,6 +9,7 @@
 #include "EnumX86Reg.h"
 #include "RegProperty.h"
 #include "ArchDataX86.h"
+#include <MagoDECommon.h>
 
 
 namespace Mago

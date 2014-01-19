@@ -370,8 +370,10 @@ Error:
         if ( FAILED( hr ) )
             return hr;
 
-        // TODO: get the features from the remote agent
-        hr = ArchData::MakeArchData( cmdProcInfo.MachineType, 0, archData.Ref() );
+        hr = ArchData::MakeArchData( 
+            cmdProcInfo.MachineType, 
+            cmdProcInfo.MachineFeatures, 
+            archData.Ref() );
         if ( FAILED( hr ) )
         {
             MIDL_user_free( cmdProcInfo.ExePath );
@@ -428,8 +430,10 @@ Error:
         if ( FAILED( hr ) )
             return hr;
 
-        // TODO: get the features from the remote agent
-        hr = ArchData::MakeArchData( cmdProcInfo.MachineType, 0, archData.Ref() );
+        hr = ArchData::MakeArchData( 
+            cmdProcInfo.MachineType, 
+            cmdProcInfo.MachineFeatures, 
+            archData.Ref() );
         if ( FAILED( hr ) )
         {
             MIDL_user_free( cmdProcInfo.ExePath );

@@ -22,3 +22,17 @@ enum
     AgentStartupEventNameLength = _countof( AGENT_STARTUP_EVENT_PREFIX ) - 1 + GUID_LENGTH,
     AgentStartupTimeoutMillis = 30 * 1000,
 };
+
+namespace Mago
+{
+    enum ProcFeaturesX86
+    {
+        PF_X86_None         = 0,
+        PF_X86_MMX          = 1,
+        PF_X86_3DNow        = 2,
+        PF_X86_SSE          = 4,
+        PF_X86_SSE2         = 8,
+        PF_X86_SSE3         = 0x10,
+        PF_X86_AVX          = 0x20,
+    };
+}

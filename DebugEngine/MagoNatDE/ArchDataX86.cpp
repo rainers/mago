@@ -10,6 +10,7 @@
 #include "WinStackWalker.h"
 #include "RegisterSet.h"
 #include "EnumX86Reg.h"
+#include <MagoDECommon.h>
 
 
 namespace Mago
