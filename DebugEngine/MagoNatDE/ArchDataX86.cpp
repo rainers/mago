@@ -35,8 +35,34 @@ namespace
 }
 
 
-    ArchDataX86::ArchDataX86( ProcFeaturesX86 procFeatures )
-        :   mProcFeatures( procFeatures )
+    ArchDataX86::ArchDataX86()
+        :   mProcFeatures( PF_X86_None )
+    {
+        UINT64 procFeatures = 0;
+
+        if ( IsProcessorFeaturePresent( PF_MMX_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_MMX;
+
+        if ( IsProcessorFeaturePresent( PF_3DNOW_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_3DNow;
+
+        if ( IsProcessorFeaturePresent( PF_XMMI_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_SSE;
+
+        if ( IsProcessorFeaturePresent( PF_XMMI64_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_SSE2;
+
+        if ( IsProcessorFeaturePresent( PF_SSE3_INSTRUCTIONS_AVAILABLE ) )
+            procFeatures |= PF_X86_SSE3;
+
+        if ( IsProcessorFeaturePresent( PF_XSAVE_ENABLED ) )
+            procFeatures |= PF_X86_AVX;
+
+        mProcFeatures = (ProcFeaturesX86) procFeatures;
+    }
+
+    ArchDataX86::ArchDataX86( UINT64 procFeatures )
+        :   mProcFeatures( (ProcFeaturesX86) procFeatures )
     {
     }
 

@@ -20,7 +20,8 @@ namespace Mago
         ProcFeaturesX86 mProcFeatures;
 
     public:
-        ArchDataX86( ProcFeaturesX86 procFeatures );
+        ArchDataX86();
+        ArchDataX86( UINT64 procFeatures );
 
         virtual HRESULT BeginWalkStack( 
             IRegisterSet* topRegSet, 
@@ -47,6 +48,7 @@ namespace Mago
 
     enum ProcFeaturesX86
     {
+        PF_X86_None         = 0,
         PF_X86_MMX          = 1,
         PF_X86_3DNow        = 2,
         PF_X86_SSE          = 4,

@@ -58,27 +58,7 @@ namespace Mago
 
     HRESULT DebuggerProxy::CacheSystemInfo()
     {
-        int procFeatures = 0;
-
-        if ( IsProcessorFeaturePresent( PF_MMX_INSTRUCTIONS_AVAILABLE ) )
-            procFeatures |= PF_X86_MMX;
-
-        if ( IsProcessorFeaturePresent( PF_3DNOW_INSTRUCTIONS_AVAILABLE ) )
-            procFeatures |= PF_X86_3DNow;
-
-        if ( IsProcessorFeaturePresent( PF_XMMI_INSTRUCTIONS_AVAILABLE ) )
-            procFeatures |= PF_X86_SSE;
-
-        if ( IsProcessorFeaturePresent( PF_XMMI64_INSTRUCTIONS_AVAILABLE ) )
-            procFeatures |= PF_X86_SSE2;
-
-        if ( IsProcessorFeaturePresent( PF_SSE3_INSTRUCTIONS_AVAILABLE ) )
-            procFeatures |= PF_X86_SSE3;
-
-        if ( IsProcessorFeaturePresent( PF_XSAVE_ENABLED ) )
-            procFeatures |= PF_X86_AVX;
-
-        mArch = new ArchDataX86( (ProcFeaturesX86) procFeatures );
+        mArch = new ArchDataX86();
         if ( mArch.Get() == NULL )
             return E_OUTOFMEMORY;
 
