@@ -9,7 +9,7 @@
 #include "PDBDebugStore.h"
 #include "ISymbolInfo.h"
 
-#include "dia2.h"
+#include <dia2.h>
 #include <assert.h>
 
 #define UNREF_PARAM( p ) UNREFERENCED_PARAMETER( p )
