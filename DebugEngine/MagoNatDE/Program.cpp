@@ -497,13 +497,13 @@ namespace Mago
 
     DRuntime* Program::GetDRuntime()
     {
-        return mDRuntime.get();
+        return mDRuntime.Get();
     }
 
-    void Program::SetDRuntime( std::unique_ptr<DRuntime>& druntime )
+    void Program::SetDRuntime( UniquePtr<DRuntime>& druntime )
     {
-        mDRuntime.reset( NULL );
-        mDRuntime.swap( druntime );
+        mDRuntime.Attach( NULL );
+        mDRuntime.Swap( druntime );
     }
 
     bool Program::GetAttached()

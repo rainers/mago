@@ -23,6 +23,10 @@ enum
     AgentStartupTimeoutMillis = 30 * 1000,
 };
 
+#ifndef PF_XSAVE_ENABLED // not available before SDK 7.0
+#define PF_XSAVE_ENABLED 17
+#endif
+
 namespace Mago
 {
     enum ProcFeaturesX86

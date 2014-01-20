@@ -51,7 +51,7 @@ namespace Mago
         Address                         mEntryPoint;
         RefPtr<Module>                  mProgMod;
         RefPtr<Thread>                  mProgThread;
-        std::unique_ptr<DRuntime>       mDRuntime;
+        UniquePtr<DRuntime>             mDRuntime;
 
     public:
         Program();
@@ -114,7 +114,7 @@ namespace Mago
         IDebuggerProxy* GetDebuggerProxy();
         void        SetDebuggerProxy( IDebuggerProxy* debugger );
         DRuntime*   GetDRuntime();
-        void        SetDRuntime( std::unique_ptr<DRuntime>& druntime );
+        void        SetDRuntime( UniquePtr<DRuntime>& druntime );
 
         bool        GetAttached();
         void        SetAttached();

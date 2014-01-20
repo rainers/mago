@@ -89,8 +89,8 @@ namespace
         if ( contextSize < sizeof( CONTEXT_X86 ) )
             return E_INVALIDARG;
 
-        auto context = (const CONTEXT_X86*) contextPtr;
-        std::unique_ptr<WindowsStackWalker> walker( new WindowsStackWalker(
+        const CONTEXT_X86*  context = (const CONTEXT_X86*) contextPtr;
+        UniquePtr<WindowsStackWalker> walker( new WindowsStackWalker(
             IMAGE_FILE_MACHINE_I386,
             context->Eip,
             context->Esp,
@@ -104,7 +104,7 @@ namespace
         if ( FAILED( hr ) )
             return hr;
 
-        stackWalker = walker.release();
+        stackWalker = walker.Detach();
         return S_OK;
     }
 
@@ -143,7 +143,7 @@ namespace
         if ( threadContextSize < sizeof( CONTEXT_X86 ) )
             return E_INVALIDARG;
 
-        auto context = (const CONTEXT_X86*) threadContext;
+        const CONTEXT_X86*  context = (const CONTEXT_X86*) threadContext;
         regSet = new TinyRegisterSet( 
             gRegDesc,
             RegCount,

@@ -44,19 +44,19 @@ namespace Mago
         if ( threadContext == NULL )
             return E_INVALIDARG;
 
-        mThreadContext.reset( new BYTE[threadContextSize] );
-        if ( mThreadContext.get() == NULL )
+        mThreadContext.Attach( new BYTE[threadContextSize] );
+        if ( mThreadContext.Get() == NULL )
             return E_OUTOFMEMORY;
 
         mThreadContextSize = threadContextSize;
 
-        memcpy( mThreadContext.get(), threadContext, threadContextSize );
+        memcpy( mThreadContext.Get(), threadContext, threadContextSize );
         return S_OK;
     }
 
     bool WindowsStackWalker::WalkStack()
     {
-        if ( mThreadContext.get() == NULL )
+        if ( mThreadContext.Get() == NULL )
             return false;
 
         return StackWalk64( 
@@ -64,7 +64,7 @@ namespace Mago
             mProcessContext,
             NULL,
             &mGenericFrame,
-            mThreadContext.get(),
+            mThreadContext.Get(),
             mReadMemProc,
             mFuncTabProc,
             mGetModBaseProc,
@@ -73,7 +73,7 @@ namespace Mago
 
     void WindowsStackWalker::GetThreadContext( const void*& context, uint32_t& contextSize )
     {
-        context = mThreadContext.get();
+        context = mThreadContext.Get();
         contextSize = mThreadContextSize;
     }
 }

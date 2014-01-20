@@ -79,7 +79,7 @@ namespace Mago
         long                    mRefCount;
         const RegisterDesc*     mRegDesc;
         uint32_t                mRegCount;
-        std::unique_ptr<BYTE[]> mContextBuf;
+        UniquePtr<BYTE[]>       mContextBuf;
         uint16_t                mContextSize;
         uint16_t                mPCId;
 
