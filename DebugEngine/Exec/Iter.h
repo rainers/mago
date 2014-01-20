@@ -114,7 +114,7 @@ public:
 
 template <class T>
 class ListForwardRefIterEnum : 
-    public RefIterEnum< T, typename std::list< RefPtr< typename std::remove_pointer<T>::type > >::iterator >
+    public RefIterEnum< T, typename std::list< RefPtr< typename std::tr1::remove_pointer<T>::type > >::iterator >
 {
 public:
     ListForwardRefIterEnum( It begin, It end, int count )
@@ -127,7 +127,7 @@ public:
 template <class T>
 class ArrayRefEnum : public Enumerator<T>
 {
-    typedef typename std::remove_pointer<T>::type NoPtrType;
+    typedef typename std::tr1::remove_pointer<T>::type NoPtrType;
     typedef RefPtr<NoPtrType> RefType;
 
     RefType*    mArray;

@@ -29,6 +29,7 @@
 #include <map>
 #include <vector>
 #include <limits>
+#include <type_traits>
 
 // Windows
 #include <windows.h>

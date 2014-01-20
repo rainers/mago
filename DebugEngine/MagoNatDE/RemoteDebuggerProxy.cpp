@@ -61,7 +61,7 @@ namespace Mago
 
         bRet = CreateProcess(
             agentPath,
-            &cmdLine.front(),   // not empty, so we can call it
+            &cmdLine.at( 0 ),   // not empty, so we can call it
             NULL,
             NULL,
             FALSE,
