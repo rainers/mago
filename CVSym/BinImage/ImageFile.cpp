@@ -9,8 +9,6 @@
 #include "ImageFile.h"
 #include "BinUtil.h"
 
-using namespace boost;
-
 const DWORD NtHeaderBufSize = 1024;
 
 

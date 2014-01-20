@@ -46,9 +46,6 @@ using namespace ATL;
 #include <list>
 #include <limits>
 
-// Boost
-#include <boost/scoped_array.hpp>
-
 // VS Debug
 #include <msdbg.h>
 

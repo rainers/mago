@@ -175,7 +175,7 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
 {
     HRESULT hr = S_OK;
     int     nzChars = 0;
-    scoped_array<char>  nameChars;
+    UniquePtr<char[]>  nameChars;
     SymHandle   childSH;
     DWORD   flags = 0;
 
@@ -189,23 +189,23 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
     if ( nzChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
 
-    nameChars.reset( new char[ nzChars ] );
-    if ( nameChars.get() == NULL )
+    nameChars.Attach( new char[ nzChars ] );
+    if ( nameChars.Get() == NULL )
         return E_OUTOFMEMORY;
 
-    nzChars = WideCharToMultiByte( CP_UTF8, flags, name, -1, nameChars.get(), nzChars, NULL, NULL );
+    nzChars = WideCharToMultiByte( CP_UTF8, flags, name, -1, nameChars.Get(), nzChars, NULL, NULL );
     if ( nzChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
 
     // take away one for the terminator
-    hr = mSymSession->FindChildSymbol( mBlockSH, nameChars.get(), nzChars-1, childSH );
+    hr = mSymSession->FindChildSymbol( mBlockSH, nameChars.Get(), nzChars-1, childSH );
     if ( hr != S_OK )
     {
         EnumNamedSymbolsData    enumData = { 0 };
 
         for ( int i = 0; i < SymHeap_Count; i++ )
         {
-            hr = mSymSession->FindFirstSymbol( (SymbolHeapId) i, nameChars.get(), nzChars-1, enumData );
+            hr = mSymSession->FindFirstSymbol( (SymbolHeapId) i, nameChars.Get(), nzChars-1, enumData );
             if ( hr == S_OK )
                 break;
         }

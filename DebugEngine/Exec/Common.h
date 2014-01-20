@@ -30,10 +30,6 @@
 #include <vector>
 #include <limits>
 
-// Boost
-#include <boost/scoped_array.hpp>
-#include <boost/type_traits/remove_pointer.hpp>
-
 // Windows
 #include <windows.h>
 // these are just a few of many that are more trouble than they're worth

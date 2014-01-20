@@ -115,10 +115,10 @@ namespace MagoST
 
             dir += dirHeader->cbDirEntry;
         }
-        mCompilandDetails.reset( new CompilandDetails[ mCompilandCount ] );
-        if ( mCompilandDetails.get() == NULL )
+        mCompilandDetails.Attach( new CompilandDetails[ mCompilandCount ] );
+        if ( mCompilandDetails.Get() == NULL )
             return E_OUTOFMEMORY;
-        memset( mCompilandDetails.get(), 0, mCompilandCount * sizeof( CompilandDetails ) );
+        memset( mCompilandDetails.Get(), 0, mCompilandCount * sizeof( CompilandDetails ) );
 
         dir = dirStart;
         for ( DWORD i = 0; i < dirHeader->cDir; i++ )

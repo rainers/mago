@@ -22,7 +22,7 @@ namespace MagoST
         };
 
         long    mRefCount;
-        boost::scoped_array<Section>    mSections;
+        UniquePtr<Section[]>    mSections;
         uint16_t    mSecCount;
 
     public:

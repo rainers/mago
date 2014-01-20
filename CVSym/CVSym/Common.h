@@ -24,9 +24,6 @@
 #include <list>
 #include <vector>
 
-// Boost
-#include <boost/scoped_array.hpp>
-
 // Windows
 #include <windows.h>
 

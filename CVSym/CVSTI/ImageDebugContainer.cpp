@@ -12,7 +12,6 @@
 #include "ILoadCallback.h"
 
 using namespace std;
-using namespace boost;
 using namespace BinImage;
 
 
@@ -98,7 +97,7 @@ namespace MagoST
         DWORD       viewDiff = 0;
         MappedPtr   view;
         IMAGE_DEBUG_MISC*       misc = NULL;
-        scoped_array<wchar_t>   strBuf;
+        UniquePtr<wchar_t[]>    strBuf;
         DWORD       dataLen = 0;
 
         if ( miscDebugDir->SizeOfData < sizeof( IMAGE_DEBUG_MISC ) )
@@ -127,12 +126,12 @@ namespace MagoST
 
             // TODO: why were we calling wcsnlen twice?
             //charCount = wcsnlen( (wchar_t*) misc->Data, charCount );
-            strBuf.reset( new wchar_t[ charCount + 1 ] );
-            if ( strBuf.get() == NULL )
+            strBuf.Attach( new wchar_t[ charCount + 1 ] );
+            if ( strBuf.Get() == NULL )
                 return E_OUTOFMEMORY;
 
             // adds terminator
-            wcsncpy_s( strBuf.get(), charCount + 1, (wchar_t*) misc->Data, charCount );
+            wcsncpy_s( strBuf.Get(), charCount + 1, (wchar_t*) misc->Data, charCount );
         }
         else
         {
@@ -149,8 +148,8 @@ namespace MagoST
             if ( nChars == 0 )
                 return GetLastHr();
 
-            strBuf.reset( new wchar_t[ nChars + 1 ] );
-            if ( strBuf.get() == NULL )
+            strBuf.Attach( new wchar_t[ nChars + 1 ] );
+            if ( strBuf.Get() == NULL )
                 return E_OUTOFMEMORY;
 
             nChars = MultiByteToWideChar( 
@@ -158,7 +157,7 @@ namespace MagoST
                 MB_PRECOMPOSED | MB_ERR_INVALID_CHARS,
                 (char*) misc->Data,
                 charCount,
-                strBuf.get(),
+                strBuf.Get(),
                 nChars + 1 );
             if ( nChars == 0 )
                 return GetLastHr();
@@ -166,7 +165,7 @@ namespace MagoST
             strBuf[nChars] = L'\0';
         }
 
-        hr = LoadDbg( strBuf.get(), callback );
+        hr = LoadDbg( strBuf.Get(), callback );
 
         return hr;
     }

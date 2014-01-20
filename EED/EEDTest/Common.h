@@ -31,7 +31,6 @@
 
 // Boost
 #include <boost/shared_ptr.hpp>
-#include <boost/scoped_array.hpp>
 
 // Windows
 #include <windows.h>
