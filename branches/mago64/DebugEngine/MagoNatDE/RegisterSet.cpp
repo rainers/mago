@@ -108,12 +108,12 @@ namespace Mago
         if ( context == NULL || contextSize == 0 )
             return E_INVALIDARG;
 
-        mContextBuf.reset( new BYTE[contextSize] );
-        if ( mContextBuf.get() == NULL )
+        mContextBuf.Attach( new BYTE[contextSize] );
+        if ( mContextBuf.Get() == NULL )
             return E_OUTOFMEMORY;
 
         mContextSize = (uint16_t) contextSize;
-        memcpy( mContextBuf.get(), context, contextSize );
+        memcpy( mContextBuf.Get(), context, contextSize );
         return S_OK;
     }
 
@@ -144,7 +144,7 @@ namespace Mago
             const RegisterDesc& parentRegDesc = mRegDesc[regDesc.ParentRegId];
             uint64_t    n = 0;
 
-            n = ReadInt( mContextBuf.get(), parentRegDesc.ContextOffset, parentRegDesc.ContextSize, false );
+            n = ReadInt( mContextBuf.Get(), parentRegDesc.ContextOffset, parentRegDesc.ContextSize, false );
 
             n = (n >> regDesc.SubregOffset) & regDesc.SubregMask;
 
@@ -160,7 +160,7 @@ namespace Mago
         else
         {
             _ASSERT( (uint32_t) (regDesc.ContextOffset + regDesc.ContextSize) <= mContextSize );
-            BYTE*   bytes = mContextBuf.get();
+            BYTE*   bytes = mContextBuf.Get();
             memcpy( &value.Value, bytes + regDesc.ContextOffset, regDesc.ContextSize );
         }
 
@@ -191,7 +191,7 @@ namespace Mago
             newN = value.GetInt();
 
             oldN = ReadInt( 
-                mContextBuf.get(), 
+                mContextBuf.Get(), 
                 parentRegDesc.ContextOffset, 
                 parentRegDesc.ContextSize, 
                 false );
@@ -199,12 +199,12 @@ namespace Mago
             newN = (oldN & ~shiftedMask) | ((newN << regDesc.SubregOffset) & shiftedMask);
 
             _ASSERT( (uint32_t) (parentRegDesc.ContextOffset + parentRegDesc.ContextSize) <= mContextSize );
-            WriteInteger( newN, mContextBuf.get(), parentRegDesc.ContextOffset, parentRegDesc.ContextSize );
+            WriteInteger( newN, mContextBuf.Get(), parentRegDesc.ContextOffset, parentRegDesc.ContextSize );
         }
         else
         {
             _ASSERT( (uint32_t) (regDesc.ContextOffset + regDesc.ContextSize) <= mContextSize );
-            BYTE*   bytes = mContextBuf.get();
+            BYTE*   bytes = mContextBuf.Get();
 
             memcpy( bytes + regDesc.ContextOffset, &value.Value, regDesc.ContextSize );
         }
@@ -223,7 +223,7 @@ namespace Mago
 
     bool RegisterSet::GetThreadContext( const void*& context, uint32_t& contextSize )
     {
-        context = mContextBuf.get();
+        context = mContextBuf.Get();
         contextSize = mContextSize;
         return true;
     }

@@ -196,8 +196,8 @@ namespace Mago
         ICoreProcess* coreProc = prog->GetCoreProcess();
         _ASSERT( coreProc != NULL );
 
-        std::unique_ptr<DRuntime> druntime( new DRuntime( debugger, coreProc ) );
-        if ( druntime.get() == NULL )
+        UniquePtr<DRuntime> druntime( new DRuntime( debugger, coreProc ) );
+        if ( druntime.Get() == NULL )
             return E_OUTOFMEMORY;
 
         prog->SetDRuntime( druntime );

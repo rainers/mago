@@ -19,12 +19,12 @@ namespace Mago
 
     void ArchData::AddRef()
     {
-        InterlockedIncrement( (unsigned int*) &mRefCount );
+        InterlockedIncrement( &mRefCount );
     }
 
     void ArchData::Release()
     {
-        int newRefCount = InterlockedDecrement( (unsigned int*) &mRefCount );
+        int newRefCount = InterlockedDecrement( &mRefCount );
         if ( newRefCount == 0 )
             delete this;
     }

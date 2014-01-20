@@ -70,7 +70,7 @@ namespace Mago
 
     class ArchData
     {
-        int mRefCount;
+        LONG    mRefCount;
 
     public:
         ArchData();

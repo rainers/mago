@@ -21,7 +21,7 @@ namespace Mago
         ReadProcessMemory64Proc     mReadMemProc;
         FunctionTableAccess64Proc   mFuncTabProc;
         GetModuleBase64Proc         mGetModBaseProc;
-        std::unique_ptr<BYTE[]>     mThreadContext;
+        UniquePtr<BYTE[]>           mThreadContext;
         uint32_t                    mThreadContextSize;
 
     public:

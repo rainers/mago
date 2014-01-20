@@ -284,7 +284,7 @@ namespace Mago
         int                 frameIndex = 0;
         ArchData*           archData = NULL;
         StackWalker*        pWalker = NULL;
-        std::unique_ptr<StackWalker> walker;
+        UniquePtr<StackWalker> walker;
 
         hr = AddCallstackFrame( topRegSet, callstack );
         if ( FAILED( hr ) )
@@ -302,7 +302,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        walker.reset( pWalker );
+        walker.Attach( pWalker );
         // walk past the first frame, because we have it already
         walker->WalkStack();
 

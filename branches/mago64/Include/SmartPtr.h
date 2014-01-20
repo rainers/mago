@@ -130,6 +130,15 @@ struct DefaultDeleter
     }
 };
 
+template <class T>
+struct DefaultDeleter<T[]>
+{
+    static void Delete( T* value )
+    {
+        delete [] value;
+    }
+};
+
 struct HandleDeleter
 {
     static void Delete( HANDLE handle )
@@ -159,6 +168,7 @@ struct RegistryDeleter
 template <class T, T EmptyValue, class TDeleter>
 class UniquePtrBase
 {
+protected:
     T p;
 
 public:
@@ -286,6 +296,51 @@ public:
     {
         _ASSERT( Get() != NULL );
         return Get();
+    }
+
+    void Swap( UniquePtr& other )
+    {
+        T* otherP = other.p;
+        other.p = p;
+        p = otherP;
+    }
+
+private:
+    UniquePtr( const UniquePtr& other );
+    UniquePtr& operator=( const UniquePtr& other );
+};
+
+
+template <class T, class TDeleter>
+class UniquePtr<T[], TDeleter> : public UniquePtrBase<T*, NULL, TDeleter>
+{
+public:
+    UniquePtr()
+        : UniquePtrBase()
+    {
+    }
+
+    explicit UniquePtr( T* value )
+        : UniquePtrBase( value )
+    {
+    }
+
+    ~UniquePtr()
+    {
+        Delete();
+    }
+
+    T* operator->() const
+    {
+        _ASSERT( Get() != NULL );
+        return Get();
+    }
+
+    void Swap( UniquePtr& other )
+    {
+        T* otherP = other.p;
+        other.p = p;
+        p = otherP;
     }
 
 private:
