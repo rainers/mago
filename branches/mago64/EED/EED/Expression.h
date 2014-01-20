@@ -825,8 +825,8 @@ namespace MagoEE
             Utf16String     mNewUtf16Str;
             Utf32String     mNewUtf32Str;
 
-            boost::scoped_array<wchar_t>    mStrBuf16;
-            boost::scoped_array<dchar_t>    mStrBuf32;
+            UniquePtr<wchar_t[]>    mStrBuf16;
+            UniquePtr<dchar_t[]>    mStrBuf32;
 
         public:
             AlternateStrings();

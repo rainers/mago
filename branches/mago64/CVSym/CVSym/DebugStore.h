@@ -110,7 +110,7 @@ namespace MagoST
 
         WORD    mTLSSegment;
         DWORD   mCompilandCount;
-        boost::scoped_array<CompilandDetails>   mCompilandDetails;
+        UniquePtr<CompilandDetails[]>   mCompilandDetails;
 
         uint16_t mTextSegment;
         std::vector<bool> mMarkOffsets;

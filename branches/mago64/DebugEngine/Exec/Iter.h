@@ -114,7 +114,7 @@ public:
 
 template <class T>
 class ListForwardRefIterEnum : 
-    public RefIterEnum< T, typename std::list< RefPtr< typename boost::remove_pointer<T>::type > >::iterator >
+    public RefIterEnum< T, typename std::list< RefPtr< typename std::remove_pointer<T>::type > >::iterator >
 {
 public:
     ListForwardRefIterEnum( It begin, It end, int count )

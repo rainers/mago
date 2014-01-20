@@ -681,9 +681,9 @@ HRESULT Exec::HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent )
     const uint16_t  TotalLen = debugEvent.u.DebugString.nDebugStringLength;
     SIZE_T          bytesRead = 0;
     BOOL            bRet = FALSE;
-    boost::scoped_array< wchar_t >  wstr( new wchar_t[ TotalLen ] );
+    UniquePtr<wchar_t[]>    wstr( new wchar_t[ TotalLen ] );
     
-    if ( wstr.get() == NULL )
+    if ( wstr.Get() == NULL )
         return E_OUTOFMEMORY;
 
     if ( debugEvent.u.DebugString.fUnicode )
@@ -691,7 +691,7 @@ HRESULT Exec::HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent )
         bRet = ::ReadProcessMemory( 
             proc->GetHandle(), 
             debugEvent.u.DebugString.lpDebugStringData, 
-            wstr.get(), 
+            wstr.Get(), 
             TotalLen * sizeof( wchar_t ), 
             &bytesRead );
         wstr[ TotalLen - 1 ] = L'\0';
@@ -701,7 +701,7 @@ HRESULT Exec::HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent )
     }
     else
     {
-        boost::scoped_array< char >     astr( new char[ TotalLen ] );
+        UniquePtr<char[]>   astr( new char[ TotalLen ] );
         int     countRet = 0;
 
         if ( astr == NULL )
@@ -710,7 +710,7 @@ HRESULT Exec::HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent )
         bRet = ::ReadProcessMemory( 
             proc->GetHandle(), 
             debugEvent.u.DebugString.lpDebugStringData, 
-            astr.get(), 
+            astr.Get(), 
             TotalLen * sizeof( char ), 
             &bytesRead );
         astr[ TotalLen - 1 ] = '\0';
@@ -721,9 +721,9 @@ HRESULT Exec::HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent )
         countRet = MultiByteToWideChar(
             CP_ACP,
             MB_ERR_INVALID_CHARS | MB_USEGLYPHCHARS,
-            astr.get(),
+            astr.Get(),
             -1,
-            wstr.get(),
+            wstr.Get(),
             TotalLen );
 
         if ( countRet == 0 )
@@ -733,7 +733,7 @@ HRESULT Exec::HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent )
     if ( mCallback != NULL )
     {
         proc->Unlock();
-        mCallback->OnOutputString( proc, wstr.get() );
+        mCallback->OnOutputString( proc, wstr.Get() );
         proc->Lock();
     }
 

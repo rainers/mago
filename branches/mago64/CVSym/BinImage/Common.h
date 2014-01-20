@@ -20,9 +20,6 @@
 #include <crtdbg.h>
 #include <inttypes.h>
 
-// Boost
-#include <boost/scoped_array.hpp>
-
 // Windows
 #include <windows.h>
 
