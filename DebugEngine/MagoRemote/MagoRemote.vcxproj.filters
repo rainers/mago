@@ -20,14 +20,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
-    <None Include="small.ico">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="MagoRemote.ico">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="..\Include\MagoRemoteCmd.acf" />
     <None Include="..\Include\MagoRemoteEvent.acf" />
+    <None Include="MagoRemoteSmall.ico">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
