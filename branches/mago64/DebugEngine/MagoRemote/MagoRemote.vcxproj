@@ -100,8 +100,8 @@
     <None Include="..\Include\MagoRemoteCmd.acf" />
     <None Include="..\Include\MagoRemoteEvent.acf" />
     <None Include="MagoRemote.ico" />
+    <None Include="MagoRemoteSmall.ico" />
     <None Include="ReadMe.txt" />
-    <None Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
