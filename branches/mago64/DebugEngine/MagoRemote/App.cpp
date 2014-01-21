@@ -20,8 +20,8 @@ enum
     ConnectTimeoutErrorCode = -1,
 };
 
-UINT32 gMainTid;
-UINT32 gStartedExclusiveSession;
+UINT32  gMainTid;
+LONG    gStartedExclusiveSession;
 
 
 namespace Mago
