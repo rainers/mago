@@ -34,31 +34,30 @@ namespace Mago
         virtual void OnThreadStart( DWORD uniquePid, ICoreThread* thread );
         virtual void OnThreadExit( DWORD uniquePid, DWORD threadId, DWORD exitCode );
         virtual void OnModuleLoad( DWORD uniquePid, ICoreModule* module );
-        virtual void OnModuleUnload( DWORD uniquePid, Address baseAddr );
+        virtual void OnModuleUnload( DWORD uniquePid, Address64 baseAddr );
         virtual void OnOutputString( DWORD uniquePid, const wchar_t* outputString );
         virtual void OnLoadComplete( DWORD uniquePid, DWORD threadId );
 
         virtual RunMode OnException( 
-            DWORD uniquePid, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec );
-
+            DWORD uniquePid, DWORD threadId, bool firstChance, const EXCEPTION_RECORD64*exceptRec);
         virtual RunMode OnBreakpoint( 
-            DWORD uniquePid, uint32_t threadId, Address address, bool embedded );
-
+            DWORD uniquePid, uint32_t threadId, Address64 address, bool embedded );
         virtual void OnStepComplete( DWORD uniquePid, uint32_t threadId );
         virtual void OnAsyncBreakComplete( DWORD uniquePid, uint32_t threadId );
         virtual void OnError( DWORD uniquePid, HRESULT hrErr, IEventCallback::EventCode event );
         virtual ProbeRunMode OnCallProbe( 
-            DWORD uniquePid, uint32_t threadId, Address address, AddressRange& thunkRange );
+            DWORD uniquePid, uint32_t threadId, Address64 address, AddressRange64& thunkRange );
 
     private:
         HRESULT SendEvent( EventBase* eventBase, Program* program, Thread* thread );
 
         // return whether the debuggee should continue
-        RunMode OnBreakpointInternal( Program* program, Thread* thread, Address address, bool embedded );
+        RunMode OnBreakpointInternal( 
+            Program* program, Thread* thread, Address64 address, bool embedded );
         bool FindThunk( 
-            MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange& thunkRange );
+            MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange64& thunkRange );
 
         virtual void OnModuleLoadInternal( DWORD uniquePid, ICoreModule* module );
-        virtual void OnModuleUnloadInternal( DWORD uniquePid, Address baseAddr );
+        virtual void OnModuleUnloadInternal( DWORD uniquePid, Address64 baseAddr );
     };
 }

@@ -28,7 +28,7 @@ namespace Mago
 
         virtual HRESULT ReadMemory( 
             ICoreProcess* process, 
-            Address address,
+            Address64 address,
             uint32_t length, 
             uint32_t& lengthRead, 
             uint32_t& lengthUnreadable, 
@@ -36,18 +36,18 @@ namespace Mago
 
         virtual HRESULT WriteMemory( 
             ICoreProcess* process, 
-            Address address,
+            Address64 address,
             uint32_t length, 
             uint32_t& lengthWritten, 
             uint8_t* buffer ) = 0;
 
-        virtual HRESULT SetBreakpoint( ICoreProcess* process, Address address ) = 0;
-        virtual HRESULT RemoveBreakpoint( ICoreProcess* process, Address address ) = 0;
+        virtual HRESULT SetBreakpoint( ICoreProcess* process, Address64 address ) = 0;
+        virtual HRESULT RemoveBreakpoint( ICoreProcess* process, Address64 address ) = 0;
 
-        virtual HRESULT StepOut( ICoreProcess* process, Address targetAddr, bool handleException ) = 0;
+        virtual HRESULT StepOut( ICoreProcess* process, Address64 targetAddr, bool handleException ) = 0;
         virtual HRESULT StepInstruction( ICoreProcess* process, bool stepIn, bool handleException ) = 0;
         virtual HRESULT StepRange( 
-            ICoreProcess* process, bool stepIn, AddressRange range, bool handleException ) = 0;
+            ICoreProcess* process, bool stepIn, AddressRange64 range, bool handleException ) = 0;
 
         virtual HRESULT Continue( ICoreProcess* process, bool handleException ) = 0;
         virtual HRESULT Execute( ICoreProcess* process, bool handleException ) = 0;

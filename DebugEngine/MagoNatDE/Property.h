@@ -23,6 +23,7 @@ namespace Mago
         CComBSTR            mFullExprText;
         MagoEE::EvalResult  mObjVal;
         RefPtr<ExprContext> mExprContext;
+        int                 mPtrSize;
 
     public:
         Property();

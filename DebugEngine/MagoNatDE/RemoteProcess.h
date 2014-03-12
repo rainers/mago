@@ -54,18 +54,18 @@ namespace Mago
         long                mRefCount;
 
         uint32_t            mTid;
-        Address             mStartAddr;
-        Address             mTebBase;
+        Address64           mStartAddr;
+        Address64           mTebBase;
 
     public:
-        RemoteThread( uint32_t tid, Address startAddr, Address tebBase );
+        RemoteThread( uint32_t tid, Address64 startAddr, Address64 tebBase );
 
         virtual void            AddRef();
         virtual void            Release();
 
         virtual uint32_t        GetTid();
-        virtual Address         GetStartAddr();
-        virtual Address         GetTebBase();
+        virtual Address64       GetStartAddr();
+        virtual Address64       GetTebBase();
         virtual CoreProcessType GetProcessType();
 
     private:
@@ -78,16 +78,16 @@ namespace Mago
     {
         long                mRefCount;
 
-        Address             mImageBase;
-        Address             mPrefImageBase;
+        Address64           mImageBase;
+        Address64           mPrefImageBase;
         uint32_t            mSize;
         uint16_t            mMachineType;
         std::wstring        mPath;
 
     public:
         RemoteModule( 
-            Address imageBase, 
-            Address prefImageBase, 
+            Address64 imageBase, 
+            Address64 prefImageBase, 
             uint32_t size, 
             uint16_t machineType, 
             const wchar_t* path );
@@ -95,8 +95,8 @@ namespace Mago
         virtual void            AddRef();
         virtual void            Release();
 
-        virtual Address         GetImageBase();
-        virtual Address         GetPreferredImageBase();
+        virtual Address64       GetImageBase();
+        virtual Address64       GetPreferredImageBase();
         virtual uint32_t        GetSize();
         virtual uint16_t        GetMachine();
         virtual const wchar_t*  GetPath();

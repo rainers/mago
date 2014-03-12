@@ -70,14 +70,14 @@ namespace Mago
         // TODO: could this benefit from r-value refs?
         void    GetName( CComBSTR& name );
 
-        Address GetAddress();
+        Address64 GetAddress();
         DWORD   GetSize();
         DWORD   GetLoadIndex();
         void    SetLoadIndex( DWORD index );
         bool    GetSymbolSession( RefPtr<MagoST::ISession>& session );
 
         HRESULT LoadSymbols( bool sendEvent );
-        bool    Contains( Address addr );
+        bool    Contains( Address64 addr );
 
     private:
         RefPtr<MagoST::ISession>    GetSession();

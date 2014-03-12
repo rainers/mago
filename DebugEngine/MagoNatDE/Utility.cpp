@@ -675,3 +675,22 @@ uint32_t HashOf( const void* buffer, uint32_t length )
 
     return hash;
 }
+
+
+namespace Mago
+{
+    const wchar_t AddressPrefix[] = L"0x";
+
+    void FormatAddress( wchar_t* str, size_t length, Address64 address, int ptrSize, bool usePrefix )
+    {
+        const wchar_t* activePrefix = L"";
+
+        if ( usePrefix )
+            activePrefix = AddressPrefix;
+
+        if ( ptrSize == 8 )
+            swprintf_s( str, length, L"%s%016I64x", activePrefix, (uint64_t) address );
+        else
+            swprintf_s( str, length, L"%s%08x", activePrefix, (uint32_t) address );
+    }
+}

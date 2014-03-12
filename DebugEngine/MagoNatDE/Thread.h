@@ -26,8 +26,8 @@ namespace Mago
 
         RefPtr<ICoreThread> mCoreThread;
         RefPtr<Program>     mProg;
-        Address             mCurPC;
-        Address             mCallerPC;
+        Address64           mCurPC;
+        Address64           mCallerPC;
         IDebuggerProxy*     mDebugger;
 
     public:

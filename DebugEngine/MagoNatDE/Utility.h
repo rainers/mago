@@ -174,3 +174,20 @@ public:
 };
 
 typedef UniquePtrBase<uint8_t*, NULL, HeapDeleter> HeapPtr;
+
+
+namespace Mago
+{
+    typedef uint64_t Address64;
+
+    struct AddressRange64
+    {
+        Address64 Begin;
+        Address64 End;
+    };
+
+    // 2 chars a byte in hex, and 2 for 0x prefix
+    const size_t MaxAddrStringLength = (sizeof Address64 * 2) + 2;
+
+    void FormatAddress( wchar_t* str, size_t length, Address64 address, int ptrSize, bool usePrefix );
+}

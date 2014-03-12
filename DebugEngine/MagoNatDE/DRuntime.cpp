@@ -32,6 +32,9 @@ struct TypeInfo_Struct
 {
     uint32_t    vptr;
     uint32_t    monitor;
+
+    // TODO: Pointers to an instance actually point here. 
+    //       So, get rid of the 2 above, or adjust the addresses
     uint32_t    nameLength;
     uint32_t    namePtr;
     uint32_t    m_initLength;
@@ -517,7 +520,7 @@ namespace Mago
 
         hr = mDebugger->ReadMemory(
             mCoreProc.Get(),
-            (Address) addr,
+            (Address64) addr,
             len,
             lenRead,
             lenUnreadable,
@@ -572,11 +575,11 @@ namespace Mago
         const DynamicArray<MemberInfo> (*xgetMembers)(DynamicArray<char*>);
     };
 
-    HRESULT DRuntime::GetClassName( Address addr, BSTR* pbstrClassName )
+    HRESULT DRuntime::GetClassName( Address64 addr, BSTR* pbstrClassName )
     {
         _ASSERT( pbstrClassName != NULL );
 
-        Address vtbl, classinfo;
+        Address64 vtbl, classinfo;
         uint32_t read, unread;
         HRESULT hr = mDebugger->ReadMemory( 
             mCoreProc, addr, sizeof( vtbl ), read, unread, (uint8_t*) &vtbl );
@@ -597,7 +600,7 @@ namespace Mago
                         if ( buf == NULL )
                             return E_OUTOFMEMORY;
                         hr = mDebugger->ReadMemory( 
-                            mCoreProc, (Address) className.ptr, className.length, read, unread, (uint8_t*) buf );
+                            mCoreProc, (Address64) className.ptr, className.length, read, unread, (uint8_t*) buf );
                         if ( SUCCEEDED( hr ) )
                         {
                             // read at most className.length
@@ -628,7 +631,7 @@ namespace Mago
         // ...
     };
 
-    HRESULT DRuntime::GetExceptionInfo( Address addr, BSTR* pbstrInfo )
+    HRESULT DRuntime::GetExceptionInfo( Address64 addr, BSTR* pbstrInfo )
     {
         _ASSERT( pbstrInfo != NULL );
 
@@ -657,7 +660,7 @@ namespace Mago
             char* p = buf;
             if ( throwable.msg.length > 0 )
             {
-                hr = mDebugger->ReadMemory( mCoreProc, (Address) throwable.msg.ptr, throwable.msg.length, 
+                hr = mDebugger->ReadMemory( mCoreProc, (Address64) throwable.msg.ptr, throwable.msg.length, 
                                             read, unread, (uint8_t*) p );
                 if ( SUCCEEDED( hr ) )
                 {
@@ -670,7 +673,7 @@ namespace Mago
                 *p++ = 'a';
                 *p++ = 't';
                 *p++ = ' ';
-                hr = mDebugger->ReadMemory( mCoreProc, (Address) throwable.file.ptr, throwable.file.length, 
+                hr = mDebugger->ReadMemory( mCoreProc, (Address64) throwable.file.ptr, throwable.file.length, 
                                             read, unread, (uint8_t*) p );
                 if ( SUCCEEDED( hr ) )
                 {

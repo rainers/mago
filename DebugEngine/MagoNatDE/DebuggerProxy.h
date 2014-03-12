@@ -46,7 +46,7 @@ namespace Mago
 
         HRESULT ReadMemory( 
             ICoreProcess* process, 
-            Address address,
+            Address64 address,
             uint32_t length, 
             uint32_t& lengthRead, 
             uint32_t& lengthUnreadable, 
@@ -54,18 +54,21 @@ namespace Mago
 
         HRESULT WriteMemory( 
             ICoreProcess* process, 
-            Address address,
+            Address64 address,
             uint32_t length, 
             uint32_t& lengthWritten, 
             uint8_t* buffer );
 
-        HRESULT SetBreakpoint( ICoreProcess* process, Address address );
-        HRESULT RemoveBreakpoint( ICoreProcess* process, Address address );
+        HRESULT SetBreakpoint( ICoreProcess* process, Address64 address );
+        HRESULT RemoveBreakpoint( ICoreProcess* process, Address64 address );
 
-        HRESULT StepOut( ICoreProcess* process, Address targetAddr, bool handleException );
+        HRESULT StepOut( ICoreProcess* process, Address64 targetAddr, bool handleException );
         HRESULT StepInstruction( ICoreProcess* process, bool stepIn, bool handleException );
         HRESULT StepRange( 
-            ICoreProcess* process, bool stepIn, AddressRange range, bool handleException );
+            ICoreProcess* process, 
+            bool stepIn, 
+            AddressRange64 range, 
+            bool handleException );
 
         HRESULT Continue( ICoreProcess* process, bool handleException );
         HRESULT Execute( ICoreProcess* process, bool handleException );

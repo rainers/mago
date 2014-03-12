@@ -171,7 +171,7 @@ namespace Mago
         mEngine->EndBindBP();
     }
 
-    void EventCallback::OnModuleUnload( DWORD uniquePid, Address baseAddr )
+    void EventCallback::OnModuleUnload( DWORD uniquePid, Address64 baseAddr )
     {
         mEngine->BeginBindBP();
         OnModuleUnloadInternal( uniquePid, baseAddr );
@@ -243,7 +243,7 @@ namespace Mago
         hr = SendEvent( symEvent.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnModuleUnloadInternal( DWORD uniquePid, Address baseAddr )
+    void EventCallback::OnModuleUnloadInternal( DWORD uniquePid, Address64 baseAddr )
     {
         OutputDebugStringA( "EventCallback::OnModuleUnload\n" );
 
@@ -299,7 +299,7 @@ namespace Mago
 
     // find the entry point that the user defined in their program
 
-    bool FindUserEntryPoint( Module* mainMod, Address& entryPoint )
+    bool FindUserEntryPoint( Module* mainMod, Address64& entryPoint )
     {
         HRESULT hr = S_OK;
         RefPtr<MagoST::ISession> session;
@@ -337,7 +337,7 @@ namespace Mago
         if ( addr == 0 )
             return false;
 
-        entryPoint = (Address) addr;
+        entryPoint = (Address64) addr;
         return true;
     }
 
@@ -362,7 +362,7 @@ namespace Mago
 
         hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
 
-        Address entryPoint = prog->FindEntryPoint();
+        Address64 entryPoint = prog->FindEntryPoint();
 
         if ( entryPoint != 0 )
         {
@@ -370,7 +370,7 @@ namespace Mago
 
             if ( prog->FindModuleContainingAddress( entryPoint, mod ) )
             {
-                Address userEntryPoint = 0;
+                Address64 userEntryPoint = 0;
                 if ( FindUserEntryPoint( mod, userEntryPoint ) )
                     entryPoint = userEntryPoint;
             }
@@ -385,7 +385,7 @@ namespace Mago
     }
 
     RunMode EventCallback::OnException( 
-        DWORD uniquePid, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+        DWORD uniquePid, DWORD threadId, bool firstChance, const EXCEPTION_RECORD64* exceptRec )
     {
         const DWORD DefaultState = EXCEPTION_STOP_SECOND_CHANCE;
 
@@ -463,7 +463,7 @@ namespace Mago
     }
 
     RunMode EventCallback::OnBreakpointInternal( 
-        Program* prog, Thread* thread, Address address, bool embedded )
+        Program* prog, Thread* thread, Address64 address, bool embedded )
     {
         HRESULT     hr = S_OK;
 
@@ -560,7 +560,7 @@ namespace Mago
     }
 
     RunMode EventCallback::OnBreakpoint( 
-        DWORD uniquePid, uint32_t threadId, Address address, bool embedded )
+        DWORD uniquePid, uint32_t threadId, Address64 address, bool embedded )
     {
         OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
 
@@ -582,7 +582,7 @@ namespace Mago
         // Test if we're at the entrypoint, in addition to whether we stopped, because 
         // we could have decided to keep going even though we're at the entry point
 
-        Address entryPoint = prog->GetEntryPoint();
+        Address64 entryPoint = prog->GetEntryPoint();
 
         if ( (entryPoint != 0) && ((runMode == RunMode_Break) || (address == entryPoint)) )
         {
@@ -624,7 +624,7 @@ namespace Mago
     }
 
     ProbeRunMode EventCallback::OnCallProbe( 
-        DWORD uniquePid, uint32_t threadId, Address address, AddressRange& thunkRange )
+        DWORD uniquePid, uint32_t threadId, Address64 address, AddressRange64& thunkRange )
     {
         OutputDebugStringA( "EventCallback::OnCallProbe\n" );
 
@@ -661,7 +661,7 @@ namespace Mago
     }
 
     bool EventCallback::FindThunk( 
-        MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange& thunkRange )
+        MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange64& thunkRange )
     {
         HRESULT hr = S_OK;
         MagoST::SymHandle symHandle;
@@ -688,8 +688,8 @@ namespace Mago
                     symInfo->GetLength( length );
 
                     uint64_t addr = session->GetVAFromSecOffset( section, offset );
-                    thunkRange.Begin = (Address) addr;
-                    thunkRange.End = (Address) addr + length - 1;
+                    thunkRange.Begin = (Address64) addr;
+                    thunkRange.End = (Address64) addr + length - 1;
                     return true;
                 }
             }

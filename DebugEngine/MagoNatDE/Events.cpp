@@ -345,16 +345,16 @@ namespace Mago
     void ExceptionEvent::Init( 
         Program* prog, 
         bool firstChance, 
-        const EXCEPTION_RECORD* record, 
+        const EXCEPTION_RECORD64* exceptRec,
         bool canPassToDebuggee )
     {
         mProg = prog;
         mState = firstChance ? EXCEPTION_STOP_FIRST_CHANCE : EXCEPTION_STOP_SECOND_CHANCE;
-        mCode = record->ExceptionCode;
+        mCode = exceptRec->ExceptionCode;
         mCanPassToDebuggee = canPassToDebuggee;
 
         wchar_t name[100] = L"";
-        if ( record->ExceptionCode == DExceptionCode )
+        if ( exceptRec->ExceptionCode == DExceptionCode )
         {
             mGuidType = GetDExceptionType();
             mRootExceptionName = GetRootDExceptionName();
@@ -363,8 +363,8 @@ namespace Mago
             {
                 DRuntime* druntime = prog->GetDRuntime();
 
-                druntime->GetClassName( record->ExceptionInformation[0], &mExceptionName );
-                druntime->GetExceptionInfo( record->ExceptionInformation[0], &mExceptionInfo );
+                druntime->GetClassName( exceptRec->ExceptionInformation[0], &mExceptionName );
+                druntime->GetExceptionInfo( exceptRec->ExceptionInformation[0], &mExceptionInfo );
             }
 
             if ( mExceptionName == NULL )
@@ -374,7 +374,7 @@ namespace Mago
         {
             // make it a Win32 exception
             mGuidType = GetWin32ExceptionType();
-            swprintf_s( name, L"%08x", record->ExceptionCode );
+            swprintf_s( name, L"%08x", exceptRec->ExceptionCode );
             mRootExceptionName = GetRootWin32ExceptionName();
             mSearchKey = Code;
             mExceptionName = name;

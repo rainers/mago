@@ -11,12 +11,17 @@
 #include "ExprContext.h"
 #include "CodeContext.h"
 
+#include "Thread.h"
+#include "ICoreProcess.h"
+#include "ArchData.h"
+
 
 namespace Mago
 {
     // Property
 
     Property::Property()
+        :   mPtrSize( 0 )
     {
     }
 
@@ -203,24 +208,24 @@ namespace Mago
 
         HRESULT hr = S_OK;
         RefPtr<CodeContext> codeCxt;
-        Address addr = 0;
+        Address64 addr = 0;
 
         // TODO: let the EE figure this out
         if ( mObjVal.ObjVal._Type->IsPointer() )
         {
-            addr = (Address) mObjVal.ObjVal.Value.Addr;
+            addr = (Address64) mObjVal.ObjVal.Value.Addr;
         }
         else if ( mObjVal.ObjVal._Type->IsIntegral() )
         {
-            addr = (Address) mObjVal.ObjVal.Value.UInt64Value;
+            addr = (Address64) mObjVal.ObjVal.Value.UInt64Value;
         }
         else if ( mObjVal.ObjVal._Type->IsSArray() )
         {
-            addr = (Address) mObjVal.ObjVal.Addr;
+            addr = (Address64) mObjVal.ObjVal.Addr;
         }
         else if ( mObjVal.ObjVal._Type->IsDArray() )
         {
-            addr = (Address) mObjVal.ObjVal.Value.Array.Addr;
+            addr = (Address64) mObjVal.ObjVal.Value.Array.Addr;
         }
         else
             return S_GETMEMORYCONTEXT_NO_MEMORY_CONTEXT;
@@ -229,7 +234,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = codeCxt->Init( addr, NULL, NULL );
+        hr = codeCxt->Init( addr, NULL, NULL, mPtrSize );
         if ( FAILED( hr ) )
             return hr;
 
@@ -335,6 +340,12 @@ namespace Mago
         mFullExprText = fullExprText;
         mObjVal = objVal;
         mExprContext = exprContext;
+
+        Thread*     thread = exprContext->GetThread();
+        ArchData*   archData = thread->GetCoreProcess()->GetArchData();
+
+        mPtrSize = archData->GetPointerSize();
+
         return S_OK;
     }
 

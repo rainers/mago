@@ -58,7 +58,7 @@ namespace Mago
 
         void Init( Program* program );
 
-        void Update( Address address );
+        void Update( Address64 address );
 
         // Returns true if the last update changed the document. This includes 
         // changes to and from no document. Documents with the same name but in

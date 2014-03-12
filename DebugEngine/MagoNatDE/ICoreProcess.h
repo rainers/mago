@@ -51,8 +51,8 @@ namespace Mago
         virtual void            Release() = 0;
 
         virtual uint32_t        GetTid() = 0;
-        virtual Address         GetStartAddr() = 0;
-        virtual Address         GetTebBase() = 0;
+        virtual Address64       GetStartAddr() = 0;
+        virtual Address64       GetTebBase() = 0;
         virtual CoreProcessType GetProcessType() = 0;
 
     private:
@@ -69,8 +69,8 @@ namespace Mago
         virtual void            AddRef() = 0;
         virtual void            Release() = 0;
 
-        virtual Address         GetImageBase() = 0;
-        virtual Address         GetPreferredImageBase() = 0;
+        virtual Address64       GetImageBase() = 0;
+        virtual Address64       GetPreferredImageBase() = 0;
         virtual uint32_t        GetSize() = 0;
         virtual uint16_t        GetMachine() = 0;
         virtual const wchar_t*  GetPath() = 0;

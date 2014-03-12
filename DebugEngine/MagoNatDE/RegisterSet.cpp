@@ -254,9 +254,9 @@ namespace Mago
         uint16_t pcId,
         uint16_t stackId,
         uint16_t frameId,
-        Address pc,
-        Address stack,
-        Address frame )
+        Address64 pc,
+        Address64 stack,
+        Address64 frame )
         :   mRefCount( 0 ),
             mRegDesc( regDesc ),
             mRegCount( regCount ),

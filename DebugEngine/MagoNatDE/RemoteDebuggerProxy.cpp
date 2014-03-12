@@ -552,7 +552,7 @@ Error:
 
     HRESULT RemoteDebuggerProxy::ReadMemory( 
         ICoreProcess* process, 
-        Address address,
+        Address64 address,
         uint32_t length, 
         uint32_t& lengthRead, 
         uint32_t& lengthUnreadable, 
@@ -588,7 +588,7 @@ Error:
 
     HRESULT RemoteDebuggerProxy::WriteMemory( 
         ICoreProcess* process, 
-        Address address,
+        Address64 address,
         uint32_t length, 
         uint32_t& lengthWritten, 
         uint8_t* buffer )
@@ -620,7 +620,7 @@ Error:
         return hr;
     }
 
-    HRESULT RemoteDebuggerProxy::SetBreakpoint( ICoreProcess* process, Address address )
+    HRESULT RemoteDebuggerProxy::SetBreakpoint( ICoreProcess* process, Address64 address )
     {
         _ASSERT( process != NULL );
         if ( process == NULL )
@@ -646,7 +646,7 @@ Error:
         return hr;
     }
 
-    HRESULT RemoteDebuggerProxy::RemoveBreakpoint( ICoreProcess* process, Address address )
+    HRESULT RemoteDebuggerProxy::RemoveBreakpoint( ICoreProcess* process, Address64 address )
     {
         _ASSERT( process != NULL );
         if ( process == NULL )
@@ -672,7 +672,7 @@ Error:
         return hr;
     }
 
-    HRESULT RemoteDebuggerProxy::StepOut( ICoreProcess* process, Address targetAddr, bool handleException )
+    HRESULT RemoteDebuggerProxy::StepOut( ICoreProcess* process, Address64 targetAddr, bool handleException )
     {
         _ASSERT( process != NULL );
         if ( process == NULL )
@@ -727,7 +727,7 @@ Error:
     }
 
     HRESULT RemoteDebuggerProxy::StepRange( 
-        ICoreProcess* process, bool stepIn, AddressRange range, bool handleException )
+        ICoreProcess* process, bool stepIn, AddressRange64 range, bool handleException )
     {
         _ASSERT( process != NULL );
         if ( process == NULL )
@@ -946,8 +946,8 @@ Error:
 
         coreThread = new RemoteThread( 
             threadInfo->Tid, 
-            (Address) threadInfo->StartAddr, 
-            (Address) threadInfo->TebBase );
+            (Address64) threadInfo->StartAddr, 
+            (Address64) threadInfo->TebBase );
         if ( coreThread.Get() == NULL )
             return;
 
@@ -967,8 +967,8 @@ Error:
         RefPtr<RemoteModule> coreModule;
 
         coreModule = new RemoteModule( 
-            (Address) modInfo->ImageBase, 
-            (Address) modInfo->PreferredImageBase,
+            (Address64) modInfo->ImageBase, 
+            (Address64) modInfo->PreferredImageBase,
             modInfo->Size,
             modInfo->MachineType,
             modInfo->Path );
@@ -980,7 +980,7 @@ Error:
 
     void RemoteDebuggerProxy::OnModuleUnload( uint32_t pid, MagoRemote_Address baseAddr )
     {
-        mCallback->OnModuleUnload( pid, (Address) baseAddr );
+        mCallback->OnModuleUnload( pid, (Address64) baseAddr );
     }
 
     void RemoteDebuggerProxy::OnOutputString( uint32_t pid, const wchar_t* outputString )
@@ -1006,10 +1006,10 @@ Error:
         if ( exceptRecords == NULL )
             return MagoRemote_RunMode_Run;
 
-        EXCEPTION_RECORD    exceptRec = { 0 };
+        EXCEPTION_RECORD64  exceptRec = { 0 };
 
         // TODO: more than 1 record
-        exceptRec.ExceptionAddress = (void*) exceptRecords[0].ExceptionAddress;
+        exceptRec.ExceptionAddress = exceptRecords[0].ExceptionAddress;
         exceptRec.ExceptionCode = exceptRecords[0].ExceptionCode;
         exceptRec.ExceptionFlags = exceptRecords[0].ExceptionFlags;
         exceptRec.ExceptionRecord = NULL;
@@ -1017,7 +1017,7 @@ Error:
 
         for ( DWORD j = 0; j < exceptRec.NumberParameters; j++ )
         {
-            exceptRec.ExceptionInformation[j] = (ULONG_PTR) exceptRecords[0].ExceptionInformation[j];
+            exceptRec.ExceptionInformation[j] = exceptRecords[0].ExceptionInformation[j];
         }
 
         return (MagoRemote_RunMode) 
@@ -1028,7 +1028,7 @@ Error:
         uint32_t pid, uint32_t threadId, MagoRemote_Address address, bool embedded )
     {
         return (MagoRemote_RunMode) 
-            mCallback->OnBreakpoint( pid, threadId, (Address) address, embedded );
+            mCallback->OnBreakpoint( pid, threadId, (Address64) address, embedded );
     }
 
     void RemoteDebuggerProxy::OnStepComplete( uint32_t pid, uint32_t threadId )
@@ -1050,12 +1050,12 @@ Error:
         if ( thunkRange == NULL )
             return MagoRemote_PRunMode_Run;
 
-        AddressRange    execThunkRange = { 0 };
+        AddressRange64  execThunkRange = { 0 };
 
         ProbeRunMode mode = mCallback->OnCallProbe(
             pid,
             threadId, 
-            (Address) address,
+            (Address64) address,
             execThunkRange );
 
         thunkRange->Begin = execThunkRange.Begin;
