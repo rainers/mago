@@ -25,9 +25,9 @@ namespace MagoEE
             MagoEE::Uninit();
         }
 
-        HRESULT MakeTypeEnv( ITypeEnv*& typeEnv )
+        HRESULT MakeTypeEnv( int ptrSize, ITypeEnv*& typeEnv )
         {
-            return MagoEE::MakeTypeEnv( typeEnv );
+            return MagoEE::MakeTypeEnv( ptrSize, typeEnv );
         }
 
         HRESULT MakeNameTable( NameTable*& nameTable )

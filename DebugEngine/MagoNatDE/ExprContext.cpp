@@ -664,8 +664,9 @@ namespace Mago
         // we have to be able to evaluate expressions even if there aren't symbols
 
         HRESULT hr = S_OK;
+        ArchData*   archData = mThread->GetCoreProcess()->GetArchData();
 
-        hr = MagoEE::EED::MakeTypeEnv( mTypeEnv.Ref() );
+        hr = MagoEE::EED::MakeTypeEnv( archData->GetPointerSize(), mTypeEnv.Ref() );
         if ( FAILED( hr ) )
             return hr;
 

@@ -24,9 +24,10 @@ namespace MagoEE
         RefPtr<Type>    mBasic[TMAX];
         RefPtr<Type>    mVoidPtr;
         ENUMTY          mAlias[ALIASTMAX];
+        int             mPtrSize;
 
     public:
-        TypeEnv();
+        TypeEnv( int pointerSize );
 
         bool Init();
 

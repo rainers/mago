@@ -217,7 +217,7 @@ int _tmain(int argc, _TCHAR* argv[])
         if ( FAILED( hr ) )
             return 1;
 
-        hr = MagoEE::MakeTypeEnv( typeEnv.Ref() );
+        hr = MagoEE::MakeTypeEnv( 4, typeEnv.Ref() );
         if ( FAILED( hr ) )
             return 1;
 
