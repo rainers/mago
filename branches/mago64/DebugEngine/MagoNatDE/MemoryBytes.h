@@ -18,7 +18,7 @@ namespace Mago
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugMemoryBytes2
     {
-        Address                 mAddr;
+        Address64               mAddr;
         uint64_t                mSize;
         IDebuggerProxy*         mDebugger;
         RefPtr<ICoreProcess>    mProc;
@@ -50,6 +50,6 @@ namespace Mago
             UINT64* pqwSize );
 
     public:
-        void Init( Address addr, uint64_t size, IDebuggerProxy* debugger, ICoreProcess* proc );
+        void Init( Address64 addr, uint64_t size, IDebuggerProxy* debugger, ICoreProcess* proc );
     };
 }

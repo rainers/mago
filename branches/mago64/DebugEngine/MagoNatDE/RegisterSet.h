@@ -109,9 +109,9 @@ namespace Mago
         long                    mRefCount;
         const RegisterDesc*     mRegDesc;
         uint32_t                mRegCount;
-        Address                 mPC;
-        Address                 mStack;
-        Address                 mFrame;
+        Address64               mPC;
+        Address64               mStack;
+        Address64               mFrame;
         uint16_t                mPCId;
         uint16_t                mStackId;
         uint16_t                mFrameId;
@@ -123,9 +123,9 @@ namespace Mago
             uint16_t pcId,
             uint16_t stackId,
             uint16_t frameId,
-            Address pc,
-            Address stack,
-            Address frame );
+            Address64 pc,
+            Address64 stack,
+            Address64 frame );
 
         virtual void AddRef();
         virtual void Release();

@@ -42,7 +42,7 @@ namespace Mago
             return E_INVALIDARG;
 
         HRESULT     hr = S_OK;
-        Address     addr = 0;
+        Address64   addr = 0;
         uint32_t    lenRead = 0;
         uint32_t    lenUnreadable = 0;
         CComQIPtr<IMagoMemoryContext>   memCxt = pStartContext;
@@ -81,7 +81,7 @@ namespace Mago
             return E_INVALIDARG;
 
         HRESULT     hr = S_OK;
-        Address     addr = 0;
+        Address64   addr = 0;
         uint32_t    lenWritten = 0;
         CComQIPtr<IMagoMemoryContext>   memCxt = pStartContext;
 
@@ -116,7 +116,7 @@ namespace Mago
     //////////////////////////////////////////////////////////// 
     // MemoryBytes
 
-    void MemoryBytes::Init( Address addr, uint64_t size, IDebuggerProxy* debugger, ICoreProcess* proc )
+    void MemoryBytes::Init( Address64 addr, uint64_t size, IDebuggerProxy* debugger, ICoreProcess* proc )
     {
         _ASSERT( debugger != NULL );
         _ASSERT( proc != NULL );

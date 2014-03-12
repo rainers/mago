@@ -113,12 +113,12 @@ namespace Mago
         return mExecThread->GetId();
     }
 
-    Address LocalThread::GetStartAddr()
+    Address64    LocalThread::GetStartAddr()
     {
         return mExecThread->GetStartAddr();
     }
 
-    Address LocalThread::GetTebBase()
+    Address64    LocalThread::GetTebBase()
     {
         return mExecThread->GetTebBase();
     }
@@ -160,12 +160,12 @@ namespace Mago
         }
     }
 
-    Address LocalModule::GetImageBase()
+    Address64        LocalModule::GetImageBase()
     {
         return mExecMod->GetImageBase();
     }
 
-    Address LocalModule::GetPreferredImageBase()
+    Address64        LocalModule::GetPreferredImageBase()
     {
         return mExecMod->GetPreferredImageBase();
     }

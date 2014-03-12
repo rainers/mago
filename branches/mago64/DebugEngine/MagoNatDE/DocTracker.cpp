@@ -140,7 +140,7 @@ namespace Mago
         return false;
     }
 
-    void DocTracker::Update( Address address )
+    void DocTracker::Update( Address64 address )
     {
         RefPtr<Module>              mod;
         RefPtr<MagoST::ISession>    session;

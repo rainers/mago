@@ -43,6 +43,7 @@ namespace Mago
         virtual uint32_t GetRegisterGroupCount();
         virtual bool GetRegisterGroup( uint32_t index, RegGroup& group );
         virtual int GetArchRegId( int debugRegId );
+        virtual int GetPointerSize();
     };
 
 

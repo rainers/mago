@@ -125,7 +125,7 @@ namespace Mago
 
     void BoundBreakpoint::Init( 
             DWORD id,
-            Address addr,
+            Address64 addr,
             PendingBreakpoint* pendingBreakpoint, 
             IDebugBreakpointResolution2* resolution,
             Program* prog )

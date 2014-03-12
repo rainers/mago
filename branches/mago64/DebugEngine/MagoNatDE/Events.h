@@ -230,7 +230,11 @@ namespace Mago
 
     public:
         ExceptionEvent();
-        void Init( Program* prog, bool firstChance, const EXCEPTION_RECORD* record, bool canPassToDebuggee );
+        void Init( 
+            Program* prog, 
+            bool firstChance, 
+            const EXCEPTION_RECORD64* exceptRec,
+            bool canPassToDebuggee );
 
         STDMETHOD( GetException )( EXCEPTION_INFO* pExceptionInfo );
         STDMETHOD( GetExceptionDescription )( BSTR* pbstrDescription );

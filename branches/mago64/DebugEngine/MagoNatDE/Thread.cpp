@@ -138,7 +138,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        mCurPC = (Address) topRegSet->GetPC();
+        mCurPC = (Address64) topRegSet->GetPC();
         // in case we can't get the return address of top frame, 
         // make sure our StepOut method knows that we don't know the caller's PC
         mCallerPC = 0;
@@ -214,7 +214,7 @@ namespace Mago
         bool    stepIn = (sk == STEP_INTO);
         RefPtr<Module>          mod;
         RefPtr<MagoST::ISession>    session;
-        AddressRange            addrRange = { 0 };
+        AddressRange64              addrRange = { 0 };
         MagoST::LineNumber      line;
 
         if ( !mProg->FindModuleContainingAddress( mCurPC, mod ) )
@@ -238,8 +238,8 @@ namespace Mago
         addrBegin = session->GetVAFromSecOffset( sec, line.Offset );
         len = line.Length;
 
-        addrRange.Begin = (Address) addrBegin;
-        addrRange.End = (Address) (addrBegin + len - 1);
+        addrRange.Begin = (Address64) addrBegin;
+        addrRange.End = (Address64) (addrBegin + len - 1);
 
         hr = mDebugger->StepRange( coreProc, stepIn, addrRange, handleException );
 
@@ -263,7 +263,7 @@ namespace Mago
     HRESULT Thread::StepOut( ICoreProcess* coreProc, bool handleException )
     {
         HRESULT hr = S_OK;
-        Address targetAddr = mCallerPC;
+        Address64 targetAddr = mCallerPC;
 
         if ( targetAddr == 0 )
             return E_FAIL;
@@ -327,7 +327,7 @@ namespace Mago
 
             // if we haven't gotten the first return address, then do so now
             if ( frameIndex == 0 )
-                mCallerPC = (Address) addr;
+                mCallerPC = (Address64) addr;
 
             hr = AddCallstackFrame( regSet, callstack );
             if ( FAILED( hr ) )
@@ -359,7 +359,7 @@ namespace Mago
 
         hr = pThis->mDebugger->ReadMemory( 
             proc.Get(), 
-            (Address) lpBaseAddress, 
+            (Address64) lpBaseAddress, 
             nSize, 
             lenRead, 
             lenUnreadable, 
@@ -390,7 +390,7 @@ namespace Mago
 
         RefPtr<Module>      mod;
 
-        if ( !pThis->mProg->FindModuleContainingAddress( (Address) address, mod ) )
+        if ( !pThis->mProg->FindModuleContainingAddress( (Address64) address, mod ) )
             return 0;
 
         return mod->GetAddress();
@@ -399,9 +399,10 @@ namespace Mago
     HRESULT Thread::AddCallstackFrame( IRegisterSet* regSet, Callstack& callstack )
     {
         HRESULT             hr = S_OK;
-        const Address       addr = (Address) regSet->GetPC();
+        const Address64     addr = (Address64) regSet->GetPC();
         RefPtr<Module>      mod;
         RefPtr<StackFrame>  stackFrame;
+        ArchData*           archData = NULL;
 
         mProg->FindModuleContainingAddress( addr, mod );
 
@@ -409,7 +410,9 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        stackFrame->Init( addr, regSet, this, mod.Get() );
+        archData = mProg->GetCoreProcess()->GetArchData();
+
+        stackFrame->Init( addr, regSet, this, mod.Get(), archData->GetPointerSize() );
 
         callstack.push_back( stackFrame );
 

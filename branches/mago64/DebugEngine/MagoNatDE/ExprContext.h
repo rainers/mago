@@ -21,7 +21,7 @@ namespace Mago
         public IDebugExpressionContext2,
         public MagoEE::IValueBinder
     {
-        Address                         mPC;
+        Address64                       mPC;
         RefPtr<IRegisterSet>            mRegSet;
         RefPtr<Module>                  mModule;
         RefPtr<Thread>                  mThread;
@@ -97,7 +97,7 @@ namespace Mago
         //////////////////////////////////////////////////////////// 
         // IMagoSymStore 
 
-        STDMETHOD( GetAddress )( Address& address ) { _ASSERT( false ); return E_NOTIMPL; }
+        STDMETHOD( GetAddress )( Address64& address ) { _ASSERT( false ); return E_NOTIMPL; }
         STDMETHOD( GetSession )( MagoST::ISession*& session );
 
         MagoEE::ITypeEnv* GetTypeEnv();
@@ -138,7 +138,7 @@ namespace Mago
             Thread* thread,
             MagoST::SymHandle funcSH, 
             MagoST::SymHandle blockSH,
-            Address pc,
+            Address64 pc,
             IRegisterSet* regSet );
 
         Thread* GetThread();

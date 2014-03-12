@@ -273,7 +273,7 @@ namespace Mago
             name = fname;
     }
 
-    Address Module::GetAddress()
+    Address64 Module::GetAddress()
     {
         if ( mCoreMod == NULL )
             return 0;
@@ -317,9 +317,9 @@ namespace Mago
         mSession = session;
     }
 
-    bool    Module::Contains( Address addr )
+    bool    Module::Contains( Address64 addr )
     {
-        Address modAddr = GetAddress();
+        Address64 modAddr = GetAddress();
         return (addr >= modAddr) && ((addr - modAddr) < GetSize());
     }
 }

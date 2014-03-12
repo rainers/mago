@@ -95,7 +95,7 @@ namespace Mago
     //  RemoteThread
     //------------------------------------------------------------------------
 
-    RemoteThread::RemoteThread( uint32_t tid, Address startAddr, Address tebBase )
+    RemoteThread::RemoteThread( uint32_t tid, Address64 startAddr, Address64 tebBase )
         :   mRefCount( 0 ),
             mTid( tid ),
             mStartAddr( startAddr ),
@@ -124,12 +124,12 @@ namespace Mago
         return mTid;
     }
 
-    Address RemoteThread::GetStartAddr()
+    Address64 RemoteThread::GetStartAddr()
     {
         return mStartAddr;
     }
 
-    Address RemoteThread::GetTebBase()
+    Address64 RemoteThread::GetTebBase()
     {
         return mTebBase;
     }
@@ -145,8 +145,8 @@ namespace Mago
     //------------------------------------------------------------------------
 
     RemoteModule::RemoteModule( 
-            Address imageBase, 
-            Address prefImageBase, 
+            Address64 imageBase, 
+            Address64 prefImageBase, 
             uint32_t size, 
             uint16_t machineType, 
             const wchar_t* path )
@@ -177,12 +177,12 @@ namespace Mago
         }
     }
 
-    Address RemoteModule::GetImageBase()
+    Address64 RemoteModule::GetImageBase()
     {
         return mImageBase;
     }
 
-    Address RemoteModule::GetPreferredImageBase()
+    Address64 RemoteModule::GetPreferredImageBase()
     {
         return mPrefImageBase;
     }

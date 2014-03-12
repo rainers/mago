@@ -268,51 +268,64 @@ namespace Mago
         case LocIsTLS:
             {
                 uint32_t        offset = 0;
-                DWORD           tebAddr = 0;
-                DWORD           tlsArrayPtrAddr = 0;
-                DWORD           tlsArrayAddr = 0;
-                DWORD           tlsBufAddr = 0;
+                Address64       tebAddr = 0;
+                Address64       tlsArrayPtrAddr = 0;
+                Address64       tlsArrayAddr = 0;
+                Address64       tlsBufAddr = 0;
                 IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
+                ICoreProcess*   coreProc = mThread->GetCoreProcess();
+                ArchData*       archData = coreProc->GetArchData();
+                uint32_t        ptrSize = archData->GetPointerSize();
 
                 if ( !sym->GetAddressOffset( offset ) )
                     return E_FAIL;
 
                 tebAddr = mThread->GetCoreThread()->GetTebBase();
 
-                tlsArrayPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
+                if ( ptrSize == sizeof( UINT64 ) )
+                    tlsArrayPtrAddr = tebAddr + offsetof( TEB64, ThreadLocalStoragePointer );
+                else
+                    tlsArrayPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
 
                 uint32_t    lenRead = 0;
                 uint32_t    lenUnreadable = 0;
 
+#if !defined( _M_IX86 )
+#error Mago doesn't implement a debugger engine for the current architecture.
+#endif
+                // read the pointer straight into a long address, even if the pointer is short
                 hr = debuggerProxy->ReadMemory( 
                     mThread->GetCoreProcess(), 
                     tlsArrayPtrAddr, 
-                    4, 
+                    ptrSize, 
                     lenRead, 
                     lenUnreadable, 
                     (uint8_t*) &tlsArrayAddr );
                 if ( FAILED( hr ) )
                     return hr;
-                if ( lenRead < 4 )
+                if ( lenRead < ptrSize )
                     return E_FAIL;
 
                 if ( (tlsArrayAddr == 0) || (tlsArrayAddr == tlsArrayPtrAddr) )
                 {
                     // go to the reserved slots in the TEB
-                    tlsArrayAddr = tebAddr + offsetof( TEB32, TlsSlots );
+                    if ( ptrSize == sizeof( UINT64 ) )
+                        tlsArrayAddr = tebAddr + offsetof( TEB64, TlsSlots );
+                    else
+                        tlsArrayAddr = tebAddr + offsetof( TEB32, TlsSlots );
                 }
 
                 // assuming TLS slot 0
                 hr = debuggerProxy->ReadMemory( 
                     mThread->GetCoreProcess(), 
                     tlsArrayAddr, 
-                    4, 
+                    ptrSize, 
                     lenRead, 
                     lenUnreadable, 
                     (uint8_t*) &tlsBufAddr );
                 if ( FAILED( hr ) )
                     return hr;
-                if ( lenRead < 4 )
+                if ( lenRead < ptrSize )
                     return E_FAIL;
 
                 addr = tlsBufAddr + offset;
@@ -417,7 +430,7 @@ namespace Mago
 
         hr = debuggerProxy->ReadMemory( 
             mThread->GetCoreProcess(), 
-            (Address) addr, 
+            (Address64) addr, 
             targetSize, 
             lenRead, 
             lenUnreadable, 
@@ -587,7 +600,7 @@ namespace Mago
 
         hr = debuggerProxy->WriteMemory( 
             mThread->GetCoreProcess(), 
-            (Address) addr, 
+            (Address64) addr, 
             sourceSize, 
             lenWritten, 
             sourceBuf );
@@ -613,7 +626,7 @@ namespace Mago
 
         hr = debuggerProxy->ReadMemory(
             mThread->GetCoreProcess(),
-            (Address) addr,
+            (Address64) addr,
             len,
             lenRead,
             lenUnreadable,
@@ -634,7 +647,7 @@ namespace Mago
         Thread* thread,
         MagoST::SymHandle funcSH, 
         MagoST::SymHandle blockSH,
-        Address pc,
+        Address64 pc,
         IRegisterSet* regSet )
     {
         _ASSERT( regSet != NULL );

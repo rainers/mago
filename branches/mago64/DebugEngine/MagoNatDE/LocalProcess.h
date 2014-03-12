@@ -53,8 +53,8 @@ namespace Mago
         virtual void            Release();
 
         virtual uint32_t        GetTid();
-        virtual Address         GetStartAddr();
-        virtual Address         GetTebBase();
+        virtual Address64       GetStartAddr();
+        virtual Address64       GetTebBase();
         virtual CoreProcessType GetProcessType();
 
         ::Thread*               GetExecThread();
@@ -76,8 +76,8 @@ namespace Mago
         virtual void            AddRef();
         virtual void            Release();
 
-        virtual Address         GetImageBase();
-        virtual Address         GetPreferredImageBase();
+        virtual Address64       GetImageBase();
+        virtual Address64       GetPreferredImageBase();
         virtual uint32_t        GetSize();
         virtual uint16_t        GetMachine();
         virtual const wchar_t*  GetPath();

@@ -12,6 +12,8 @@
 #include "CodeContext.h"
 #include "SingleDocumentContext.h"
 #include <udis86.h>
+#include "ArchData.h"
+#include "ICoreProcess.h"
 
 
 namespace Mago
@@ -42,9 +44,9 @@ namespace Mago
 
         if ( (dwFields & DSF_ADDRESS) != 0 )
         {
-            wchar_t addrStr[20 + 1] = L"";
+            wchar_t addrStr[MaxAddrStringLength + 1] = L"";
 
-            swprintf_s( addrStr, L"%08X", mReadAddr );
+            FormatAddress( addrStr, _countof( addrStr ), mReadAddr, mPtrSize, false );
             pDisassembly->bstrAddress = SysAllocString( addrStr );
             pDisassembly->dwFields |= DSF_ADDRESS;
         }
@@ -74,9 +76,9 @@ namespace Mago
 
         if ( (dwFields & DSF_ADDRESS) != 0 )
         {
-            wchar_t addrStr[20 + 1] = L"";
+            wchar_t addrStr[MaxAddrStringLength + 1] = L"";
 
-            swprintf_s( addrStr, L"%08X", mReadAddr );
+            FormatAddress( addrStr, _countof( addrStr ), mReadAddr, mPtrSize, false );
             pDisassembly->bstrAddress = SysAllocString( addrStr );
             pDisassembly->dwFields |= DSF_ADDRESS;
         }
@@ -199,8 +201,8 @@ namespace Mago
         InstBlock*  nextBlock = mInstCache.GetBlockContaining( block->GetLimit() );
         InstBlock*  blocks[2] = { block, nextBlock };
         uint32_t    blockCount = (nextBlock == NULL ? 1 : 2);
-        Address     endAddr = (nextBlock == NULL ? block->GetLimit() : nextBlock->GetLimit());
-        InstReader  reader( blockCount, blocks, mReadAddr, endAddr, mAnchorAddr );
+        Address64   endAddr = (nextBlock == NULL ? block->GetLimit() : nextBlock->GetLimit());
+        InstReader  reader( blockCount, blocks, mReadAddr, endAddr, mAnchorAddr, mPtrSize );
         uint32_t    instLen = 0;
 
         // we might have already determined there were invalid instructions there
@@ -305,7 +307,7 @@ namespace Mago
 
         case SEEK_START_CODECONTEXT:
             {
-                Address                         newAnchor = 0;
+                Address64                       newAnchor = 0;
                 CComQIPtr<IMagoMemoryContext>   magoMem = pCodeContext;
 
                 if ( magoMem == NULL )
@@ -319,10 +321,10 @@ namespace Mago
             break;
 
         case SEEK_START_CODELOCID:
-            if ( (Address) uCodeLocationId != uCodeLocationId )
+            if ( (Address64) uCodeLocationId != uCodeLocationId )
                 return E_INVALIDARG;
 
-            mAnchorAddr = (Address) uCodeLocationId;
+            mAnchorAddr = (Address64) uCodeLocationId;
             mInstCache.SetAnchor( mAnchorAddr );
             break;
 
@@ -344,7 +346,7 @@ namespace Mago
         if ( (pCodeContext == NULL) || (puCodeLocationId == NULL) )
             return E_INVALIDARG;
 
-        Address addr = 0;
+        Address64 addr = 0;
         CComQIPtr<IMagoMemoryContext>   magoMem = pCodeContext;
 
         if ( magoMem == NULL )
@@ -357,7 +359,7 @@ namespace Mago
     }
 
     bool DisassemblyStream::GetDocContext( 
-        Address address, 
+        Address64 address, 
         Module* mod, 
         IDebugDocumentContext2** docContext )
     {
@@ -432,7 +434,7 @@ namespace Mago
         _RPT1( _CRT_WARN, "DisassemblyStream::GetCodeContext: %08x\n", (UINT32) uCodeLocationId );
 
         HRESULT             hr = S_OK;
-        Address             addr = (Address) uCodeLocationId;
+        Address64           addr = (Address64) uCodeLocationId;
         RefPtr<CodeContext> codeContext;
         RefPtr<Module>      mod;
         CComPtr<IDebugDocumentContext2> docCtx;
@@ -448,7 +450,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = codeContext->Init( addr, mod, docCtx );
+        hr = codeContext->Init( addr, mod, docCtx, mPtrSize );
         if ( FAILED( hr ) )
             return hr;
 
@@ -503,15 +505,18 @@ namespace Mago
 
     HRESULT DisassemblyStream::Init( 
         DISASSEMBLY_STREAM_SCOPE disasmScope, 
-        Address address, 
+        Address64 address, 
         Program* program, 
         IDebuggerProxy* debugger )
     {
         _ASSERT( program != NULL );
 
         HRESULT hr = S_OK;
+        ArchData*   archData = NULL;
 
-        hr = mInstCache.Init( program, debugger );
+        archData = program->GetCoreProcess()->GetArchData();
+
+        hr = mInstCache.Init( program, debugger, archData->GetPointerSize() );
         if ( FAILED( hr ) )
             return hr;
 
@@ -521,6 +526,7 @@ namespace Mago
         mAnchorAddr = address;
         mReadAddr = address;
         mProg = program;
+        mPtrSize = archData->GetPointerSize();
 
         mInstCache.SetAnchor( mAnchorAddr );
 
@@ -569,10 +575,10 @@ namespace Mago
         int         instFound = 0;
         int32_t     virtAnchorOffset = 0;
         int32_t     virtPos = 0;
-        Address     baseAddr = 0;
+        Address64   baseAddr = 0;
 
         baseAddr = block->Address - InstBlock::BlockSize;
-        virtAnchorOffset = InstBlock::BlockSize + mAnchorAddr - block->Address;
+        virtAnchorOffset = InstBlock::BlockSize + (uint32_t) (mAnchorAddr - block->Address);
         virtPos = virtAnchorOffset;
 
         // we don't want it going all the way to the end of the range
@@ -643,8 +649,8 @@ namespace Mago
         InstBlock*  nextBlock = mInstCache.GetBlockContaining( block->GetLimit() );
         InstBlock*  blocks[2] = { block, nextBlock };
         uint32_t    blockCount = (nextBlock == NULL ? 1 : 2);
-        Address     endAddr = (nextBlock == NULL ? block->GetLimit() : nextBlock->GetLimit());
-        InstReader  reader( blockCount, blocks, mAnchorAddr, endAddr, mAnchorAddr );
+        Address64   endAddr = (nextBlock == NULL ? block->GetLimit() : nextBlock->GetLimit());
+        InstReader  reader( blockCount, blocks, mAnchorAddr, endAddr, mAnchorAddr, mPtrSize );
         uint32_t    instLen = 0;
 
         for ( instLen = reader.Decode(); 

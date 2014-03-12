@@ -33,7 +33,7 @@ namespace Mago
 
     class BPCodeAddressBinder : public BPBinder
     {
-        Address     mAddress;
+        Address64   mAddress;
 
     public:
         BPCodeAddressBinder( IDebugBreakpointRequest2* request );

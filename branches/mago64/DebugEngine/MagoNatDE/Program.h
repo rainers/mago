@@ -26,10 +26,10 @@ namespace Mago
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProgram2
     {
-        typedef std::map< Address, RefPtr<Module> >     ModuleMap;
+        typedef std::map< Address64, RefPtr<Module> >   ModuleMap;
         typedef std::map< DWORD, RefPtr<Thread> >       ThreadMap;
         typedef std::vector< BPCookie >                 CookieVec;
-        typedef std::map< Address, CookieVec >          BPMap;
+        typedef std::map< Address64, CookieVec >        BPMap;
 
         GUID                            mProgId;
         CComPtr<IDebugProcess2>         mProcess;
@@ -48,7 +48,7 @@ namespace Mago
         Guard                           mModGuard;
         Guard                           mBPGuard;
         DWORD                           mNextModLoadIndex;  // protected by mod guard
-        Address                         mEntryPoint;
+        Address64                       mEntryPoint;
         RefPtr<Module>                  mProgMod;
         RefPtr<Thread>                  mProgThread;
         UniquePtr<DRuntime>             mDRuntime;
@@ -120,27 +120,27 @@ namespace Mago
         void        SetAttached();
         void        SetPassExceptionToDebuggee( bool value );
         bool        CanPassExceptionToDebuggee();
-        void        NotifyException( bool firstChance, const EXCEPTION_RECORD* exceptRec );
+        void        NotifyException( bool firstChance, const EXCEPTION_RECORD64* exceptRec );
 
         HRESULT     CreateThread( ICoreThread* coreThread, RefPtr<Thread>& thread );
         HRESULT     AddThread( Thread* thread );
         bool        FindThread( DWORD threadId, RefPtr<Thread>& thread );
         void        DeleteThread( Thread* thread );
-        Address     FindEntryPoint();
+        Address64   FindEntryPoint();
 
         HRESULT     CreateModule( ICoreModule* coreMod, RefPtr<Module>& mod );
         HRESULT     AddModule( Module* mod );
-        bool        FindModule( Address address, RefPtr<Module>& mod );
-        bool        FindModuleContainingAddress( Address address, RefPtr<Module>& mod );
+        bool        FindModule( Address64 address, RefPtr<Module>& mod );
+        bool        FindModuleContainingAddress( Address64 address, RefPtr<Module>& mod );
         void        DeleteModule( Module* mod );
 
         void        ForeachModule( ModuleCallback* callback );
 
-        HRESULT     SetInternalBreakpoint( Address address, BPCookie cookie );
-        HRESULT     RemoveInternalBreakpoint( Address address, BPCookie cookie );
-        HRESULT     EnumBPCookies( Address, std::vector< BPCookie >& iter );
-        Address     GetEntryPoint();
-        void        SetEntryPoint( Address address );
+        HRESULT     SetInternalBreakpoint( Address64 address, BPCookie cookie );
+        HRESULT     RemoveInternalBreakpoint( Address64 address, BPCookie cookie );
+        HRESULT     EnumBPCookies( Address64, std::vector< BPCookie >& iter );
+        Address64   GetEntryPoint();
+        void        SetEntryPoint( Address64 address );
 
     private:
         HRESULT     StepInternal( IDebugThread2* pThread, STEPKIND sk, STEPUNIT step );

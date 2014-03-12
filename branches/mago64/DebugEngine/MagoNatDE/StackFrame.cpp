@@ -20,7 +20,8 @@
 namespace Mago
 {
     StackFrame::StackFrame()
-        :   mPC( 0 )
+        :   mPC( 0 ),
+            mPtrSize( 0 )
     {
         memset( &mFuncSH, 0, sizeof mFuncSH );
         memset( &mBlockSH, 0, sizeof mBlockSH );
@@ -47,7 +48,7 @@ namespace Mago
         hr = GetDocumentContext( &docContext );
         // there doesn't have to be a document context
 
-        hr = codeContext->Init( mPC, mModule, docContext );
+        hr = codeContext->Init( mPC, mModule, docContext, mPtrSize );
         if ( FAILED( hr ) )
             return hr;
 
@@ -332,19 +333,22 @@ namespace Mago
     //----------------------------------------------------------------------------
 
     void StackFrame::Init(
-        Address pc,
+        Address64 pc,
         IRegisterSet* regSet,
         Thread* thread,
-        Module* module )
+        Module* module,
+        int ptrSize )
     {
         _ASSERT( regSet != NULL );
         _ASSERT( thread != NULL );
         // there might be no module
+        _ASSERT( ptrSize == 4 || ptrSize == 8 );
 
         mPC = pc;
         mRegSet = regSet;
         mThread = thread;
         mModule = module;
+        mPtrSize = ptrSize;
     }
 
     HRESULT StackFrame::GetLineInfo( LineInfo& info )
@@ -383,7 +387,7 @@ namespace Mago
         if ( info.LineEnd.dwColumn > 0 )
             info.LineEnd.dwColumn--;
 
-        info.Address = (Address) session->GetVAFromSecOffset( line.Section, line.Offset );
+        info.Address = (Address64) session->GetVAFromSecOffset( line.Section, line.Offset );
 
         MagoST::FileInfo    fileInfo = { 0 };
         hr = session->GetFileInfo( line.CompilandIndex, line.FileIndex, fileInfo );
@@ -439,8 +443,11 @@ namespace Mago
         UINT radix, 
         CString& fullName )
     {
-        C_ASSERT( sizeof mPC == 4 );
-        fullName.AppendFormat( L"%08x", mPC );
+        wchar_t addrStr[MaxAddrStringLength + 1] = L"";
+
+        FormatAddress( addrStr, _countof( addrStr ), mPC, mPtrSize, false );
+
+        fullName.Append( addrStr );
 
         return S_OK;
     }
@@ -508,7 +515,7 @@ namespace Mago
         fullName.AppendChar( L')' );
 
         bool hasLineInfo = false;
-        Address baseAddr = 0;
+        Address64 baseAddr = 0;
 
         if ( (flags & FIF_FUNCNAME_LINES) != 0 )
         {
@@ -532,13 +539,13 @@ namespace Mago
 
             symInfo->GetAddressSegment( sec );
             symInfo->GetAddressOffset( offset );
-            baseAddr = (Address) session->GetVAFromSecOffset( sec, offset );
+            baseAddr = (Address64) session->GetVAFromSecOffset( sec, offset );
         }
 
         if ( ((flags & FIF_FUNCNAME_OFFSET) != 0) && (mPC != baseAddr) )
         {
             const wchar_t* bytesStr = GetString( IDS_BYTES );
-            fullName.AppendFormat( L" + 0x%x %s", mPC - baseAddr, bytesStr );
+            fullName.AppendFormat( L" + 0x%x %s", (uint32_t) (mPC - baseAddr), bytesStr );
         }
 
         return S_OK;

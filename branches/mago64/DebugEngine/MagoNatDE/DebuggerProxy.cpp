@@ -65,6 +65,7 @@ namespace Mago
         return S_OK;
     }
 
+
 //----------------------------------------------------------------------------
 // Commands
 //----------------------------------------------------------------------------
@@ -141,7 +142,7 @@ namespace Mago
 
     HRESULT DebuggerProxy::ReadMemory( 
         ICoreProcess* process, 
-        Address address,
+        Address64 address,
         uint32_t length, 
         uint32_t& lengthRead, 
         uint32_t& lengthUnreadable, 
@@ -152,12 +153,18 @@ namespace Mago
 
         IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        return mExecThread.ReadMemory( execProc, address, length, lengthRead, lengthUnreadable, buffer );
+        return mExecThread.ReadMemory( 
+            execProc, 
+            (Address) address, 
+            length, 
+            lengthRead, 
+            lengthUnreadable, 
+            buffer );
     }
 
     HRESULT DebuggerProxy::WriteMemory( 
         ICoreProcess* process, 
-        Address address,
+        Address64 address,
         uint32_t length, 
         uint32_t& lengthWritten, 
         uint8_t* buffer )
@@ -167,37 +174,42 @@ namespace Mago
 
         IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        return mExecThread.WriteMemory( execProc, address, length, lengthWritten, buffer );
+        return mExecThread.WriteMemory( 
+            execProc, 
+            (Address) address, 
+            length, 
+            lengthWritten, 
+            buffer );
     }
 
-    HRESULT DebuggerProxy::SetBreakpoint( ICoreProcess* process, Address address )
+    HRESULT DebuggerProxy::SetBreakpoint( ICoreProcess* process, Address64 address )
     {
         if ( process->GetProcessType() != CoreProcess_Local )
             return E_FAIL;
 
         IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        return mExecThread.SetBreakpoint( execProc, address );
+        return mExecThread.SetBreakpoint( execProc, (Address) address );
     }
 
-    HRESULT DebuggerProxy::RemoveBreakpoint( ICoreProcess* process, Address address )
+    HRESULT DebuggerProxy::RemoveBreakpoint( ICoreProcess* process, Address64 address )
     {
         if ( process->GetProcessType() != CoreProcess_Local )
             return E_FAIL;
 
         IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        return mExecThread.RemoveBreakpoint( execProc, address );
+        return mExecThread.RemoveBreakpoint( execProc, (Address) address );
     }
 
-    HRESULT DebuggerProxy::StepOut( ICoreProcess* process, Address targetAddr, bool handleException )
+    HRESULT DebuggerProxy::StepOut( ICoreProcess* process, Address64 targetAddr, bool handleException )
     {
         if ( process->GetProcessType() != CoreProcess_Local )
             return E_FAIL;
 
         IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        return mExecThread.StepOut( execProc, targetAddr, handleException );
+        return mExecThread.StepOut( execProc, (Address) targetAddr, handleException );
     }
 
     HRESULT DebuggerProxy::StepInstruction( ICoreProcess* process, bool stepIn, bool handleException )
@@ -211,14 +223,15 @@ namespace Mago
     }
 
     HRESULT DebuggerProxy::StepRange( 
-        ICoreProcess* process, bool stepIn, AddressRange range, bool handleException )
+        ICoreProcess* process, bool stepIn, AddressRange64 range, bool handleException )
     {
         if ( process->GetProcessType() != CoreProcess_Local )
             return E_FAIL;
 
         IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
+        AddressRange        range32 = { (Address) range.Begin, (Address) range.End };
 
-        return mExecThread.StepRange( execProc, stepIn, range, handleException );
+        return mExecThread.StepRange( execProc, stepIn, range32, handleException );
     }
 
     HRESULT DebuggerProxy::Continue( ICoreProcess* process, bool handleException )
@@ -378,7 +391,20 @@ namespace Mago
 
     RunMode DebuggerProxy::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
-        return mCallback->OnException( process->GetId(), threadId, firstChance, exceptRec );
+        EXCEPTION_RECORD64 exceptRec64;
+
+        exceptRec64.ExceptionCode = exceptRec->ExceptionCode;
+        exceptRec64.ExceptionAddress = (DWORD64) exceptRec->ExceptionAddress;
+        exceptRec64.ExceptionFlags = exceptRec->ExceptionFlags;
+        exceptRec64.NumberParameters = exceptRec->NumberParameters;
+        exceptRec64.ExceptionRecord = 0;
+
+        for ( DWORD i = 0; i < exceptRec->NumberParameters; i++ )
+        {
+            exceptRec64.ExceptionInformation[i] = exceptRec->ExceptionInformation[i];
+        }
+
+        return mCallback->OnException( process->GetId(), threadId, firstChance, &exceptRec64 );
     }
 
     RunMode DebuggerProxy::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
@@ -404,6 +430,13 @@ namespace Mago
     ProbeRunMode DebuggerProxy::OnCallProbe( 
         IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
     {
-        return mCallback->OnCallProbe( process->GetId(), threadId, address, thunkRange );
+        AddressRange64 thunkRange64 = { 0 };
+
+        ProbeRunMode mode = mCallback->OnCallProbe( process->GetId(), threadId, address, thunkRange64 );
+
+        thunkRange.Begin = (Address) thunkRange64.Begin;
+        thunkRange.End = (Address) thunkRange64.End;
+
+        return mode;
     }
 }

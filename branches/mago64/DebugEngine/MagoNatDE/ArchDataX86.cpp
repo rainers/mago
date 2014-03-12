@@ -150,9 +150,9 @@ namespace
             RegX86_EIP,
             RegX86_ESP,
             RegX86_EBP,
-            (Address) context->Eip,
-            (Address) context->Esp,
-            (Address) context->Ebp );
+            (Address64) context->Eip,
+            (Address64) context->Esp,
+            (Address64) context->Ebp );
         if ( regSet == NULL )
             return E_OUTOFMEMORY;
 
@@ -205,6 +205,11 @@ namespace
             return -1;
 
         return gRegMapX86[debugRegId];
+    }
+
+    int ArchDataX86::GetPointerSize()
+    {
+        return 4;
     }
 
 
