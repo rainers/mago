@@ -15,8 +15,9 @@
 
 namespace MagoEE
 {
-    TypeEnv::TypeEnv()
-        :   mRefCount( 0 )
+    TypeEnv::TypeEnv( int pointerSize )
+        :   mRefCount( 0 ),
+            mPtrSize( pointerSize )
     {
     }
 
@@ -42,10 +43,23 @@ namespace MagoEE
 
         memset( mAlias, 0, sizeof mAlias );
 
-        mAlias[Tsize_t] = Tuns32;
-        mAlias[Tptrdiff_t] = Tint32;
+        if ( mPtrSize == 8 )
+        {
+            mAlias[Tsize_t] = Tuns64;
+            mAlias[Tptrdiff_t] = Tint64;
+        }
+        else if ( mPtrSize == 4 )
+        {
+            mAlias[Tsize_t] = Tuns32;
+            mAlias[Tptrdiff_t] = Tint32;
+        }
+        else
+        {
+            _ASSERT_EXPR( false, L"Unknown pointer size." );
+            return false;
+        }
 
-        mVoidPtr = new TypePointer( GetType( Tvoid ) );
+        mVoidPtr = new TypePointer( GetType( Tvoid ), mPtrSize );
 
         return true;
     }
@@ -88,14 +102,14 @@ namespace MagoEE
 
     HRESULT TypeEnv::NewPointer( Type* pointed, Type*& pointer )
     {
-        pointer = new TypePointer( pointed );
+        pointer = new TypePointer( pointed, mPtrSize );
         pointer->AddRef();
         return S_OK;
     }
 
     HRESULT TypeEnv::NewReference( Type* pointed, Type*& pointer )
     {
-        pointer = new TypeReference( pointed );
+        pointer = new TypeReference( pointed, mPtrSize );
         pointer->AddRef();
         return S_OK;
     }
@@ -104,7 +118,7 @@ namespace MagoEE
     {
         // TODO: don't allocate these every time
         RefPtr<Type>    lenType = GetType( Tuns32 );
-        RefPtr<Type>    ptrType = new TypePointer( elem );
+        RefPtr<Type>    ptrType = new TypePointer( elem, mPtrSize );
 
         type = new TypeDArray( elem, lenType, ptrType );
         type->AddRef();
@@ -174,7 +188,7 @@ namespace MagoEE
 
     HRESULT TypeEnv::NewDelegate( Type* funcType, Type*& type )
     {
-        RefPtr<Type>    ptrToFunc = new TypePointer( funcType );
+        RefPtr<Type>    ptrToFunc = new TypePointer( funcType, mPtrSize );
         type = new TypeDelegate( ptrToFunc );
         type->AddRef();
         return S_OK;

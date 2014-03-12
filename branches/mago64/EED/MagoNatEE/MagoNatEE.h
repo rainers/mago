@@ -27,7 +27,7 @@ namespace MagoEE
         EXPORT HRESULT Init();
         EXPORT void Uninit();
 
-        EXPORT HRESULT MakeTypeEnv( ITypeEnv*& typeEnv );
+        EXPORT HRESULT MakeTypeEnv( int ptrSize, ITypeEnv*& typeEnv );
         EXPORT HRESULT MakeNameTable( NameTable*& nameTable );
 
         EXPORT HRESULT ParseText( 

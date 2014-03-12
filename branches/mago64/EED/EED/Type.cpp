@@ -565,19 +565,20 @@ namespace MagoEE
     //  TypePointer
     //----------------------------------------------------------------------------
 
-    TypePointer::TypePointer( Type* child )
-        :   TypeNext( Tpointer, child )
+    TypePointer::TypePointer( Type* child, int ptrSize )
+        :   TypeNext( Tpointer, child ),
+            mPtrSize( ptrSize )
     {
     }
 
     uint32_t TypePointer::GetSize()
     {
-        return sizeof( void* );
+        return mPtrSize;
     }
 
     RefPtr<Type> TypePointer::Copy()
     {
-        RefPtr<Type>    type = new TypePointer( Next.Get() );
+        RefPtr<Type>    type = new TypePointer( Next.Get(), mPtrSize );
         return type;
     }
 
@@ -617,7 +618,7 @@ namespace MagoEE
         if ( resolvedNext == NULL )
             return NULL;
 
-        RefPtr<Type>    type = new TypePointer( resolvedNext );
+        RefPtr<Type>    type = new TypePointer( resolvedNext, mPtrSize );
         type->Mod = Mod;
         return type;
     }
@@ -627,19 +628,20 @@ namespace MagoEE
     //  TypeReference
     //----------------------------------------------------------------------------
 
-    TypeReference::TypeReference( Type* child )
-        :   TypeNext( Treference, child )
+    TypeReference::TypeReference( Type* child, int ptrSize )
+        :   TypeNext( Treference, child ),
+            mPtrSize( ptrSize )
     {
     }
 
     uint32_t TypeReference::GetSize()
     {
-        return sizeof( void* );
+        return mPtrSize;
     }
 
     RefPtr<Type> TypeReference::Copy()
     {
-        RefPtr<Type>    type = new TypeReference( Next.Get() );
+        RefPtr<Type>    type = new TypeReference( Next.Get(), mPtrSize );
         return type;
     }
 
@@ -683,7 +685,7 @@ namespace MagoEE
         if ( resolvedNext == NULL )
             return NULL;
 
-        RefPtr<Type>    type = new TypeReference( resolvedNext );
+        RefPtr<Type>    type = new TypeReference( resolvedNext, mPtrSize );
         type->Mod = Mod;
         return type;
     }

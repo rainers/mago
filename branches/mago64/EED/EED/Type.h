@@ -179,8 +179,10 @@ namespace MagoEE
 
     class TypePointer : public TypeNext
     {
+        int mPtrSize;
+
     public:
-        TypePointer( Type* child );
+        TypePointer( Type* child, int ptrSize );
         virtual RefPtr<Type>    Copy();
         virtual bool IsPointer();
         virtual bool IsScalar();
@@ -194,8 +196,10 @@ namespace MagoEE
 
     class TypeReference : public TypeNext
     {
+        int mPtrSize;
+
     public:
-        TypeReference( Type* child );
+        TypeReference( Type* child, int ptrSize );
         virtual RefPtr<Type>    Copy();
         virtual bool IsPointer();
         virtual bool IsReference();
