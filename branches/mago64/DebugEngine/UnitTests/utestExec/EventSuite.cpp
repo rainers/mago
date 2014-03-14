@@ -352,9 +352,8 @@ void EventSuite::TryHandlingException( bool firstTimeHandled, bool expectedChanc
             RefPtr<Thread>  thread;
 
             TEST_ASSERT_RETURN( process->FindThread( mCallback->GetLastThreadId(), thread.Ref() ) );
-            context.ContextFlags = CONTEXT_X86_FULL;
             TEST_ASSERT_RETURN( 
-                exec.GetThreadContext( process, thread->GetId(), &context, sizeof context ) == S_OK );
+                exec.GetThreadContext( process, thread->GetId(), CONTEXT_X86_FULL, 0, &context, sizeof context ) == S_OK );
 
             if ( (mCallback->GetLastEvent().get() != NULL) 
                 && (mCallback->GetLastEvent()->Code == ExecEvent_Exception) )

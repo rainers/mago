@@ -1413,7 +1413,13 @@ HRESULT Exec::AsyncBreak( IProcess* process )
     return S_OK;
 }
 
-HRESULT Exec::GetThreadContext( IProcess* process, uint32_t threadId, void* context, uint32_t size )
+HRESULT Exec::GetThreadContext( 
+    IProcess* process, 
+    uint32_t threadId, 
+    uint32_t features, 
+    uint64_t extFeatures, 
+    void* context, 
+    uint32_t size )
 {
     _ASSERT( process != NULL );
     if ( process == NULL )
@@ -1434,12 +1440,16 @@ HRESULT Exec::GetThreadContext( IProcess* process, uint32_t threadId, void* cont
     IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
 
-    hr = machine->GetThreadContext( threadId, context, size );
+    hr = machine->GetThreadContext( threadId, features, extFeatures, context, size );
 
     return hr;
 }
 
-HRESULT Exec::SetThreadContext( IProcess* process, uint32_t threadId, const void* context, uint32_t size)
+HRESULT Exec::SetThreadContext( 
+    IProcess* process, 
+    uint32_t threadId, 
+    const void* context, 
+    uint32_t size)
 {
     _ASSERT( process != NULL );
     if ( process == NULL )

@@ -534,11 +534,12 @@ void StartStopSuite::TestAttach()
                 {
                     // it should be an embedded BP
                     CONTEXT context = { 0 };
-                    context.ContextFlags = CONTEXT_INTEGER;
 
                     hr = exec.GetThreadContext( 
                         process.Get(), 
                         mCallback->GetLastEvent()->ThreadId, 
+                        CONTEXT_INTEGER,
+                        0,
                         &context,
                         sizeof context );
                     TEST_ASSERT_RETURN( SUCCEEDED( hr ) );

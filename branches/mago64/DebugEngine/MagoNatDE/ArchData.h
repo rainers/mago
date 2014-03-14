@@ -68,6 +68,14 @@ namespace Mago
     };
 
 
+    struct ArchThreadContextSpec
+    {
+        int         Size;
+        uint32_t    FeatureMask;
+        uint64_t    ExtFeatureMask;
+    };
+
+
     class ArchData
     {
         LONG    mRefCount;
@@ -103,6 +111,8 @@ namespace Mago
         // Returns the mapped register ID, and -1 if no mapping is found.
         virtual int GetArchRegId( int debugRegId ) = 0;
         virtual int GetPointerSize() = 0;
+        virtual void GetThreadContextSpec( ArchThreadContextSpec& spec ) = 0;
+
         static HRESULT MakeArchData( UINT32 procType, UINT64 procFeatures, ArchData*& archData );
     };
 }

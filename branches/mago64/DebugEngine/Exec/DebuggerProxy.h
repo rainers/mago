@@ -72,9 +72,18 @@ namespace MagoCore
 
         HRESULT AsyncBreak( IProcess* process );
 
-        HRESULT GetThreadContext( IProcess* process, uint32_t threadId, void* context, uint32_t size );
+        HRESULT GetThreadContext( 
+            IProcess* process, 
+            uint32_t threadId, 
+            uint32_t features, 
+            uint64_t extFeatures, 
+            void* context, 
+            uint32_t size );
         HRESULT SetThreadContext( 
-            IProcess* process, uint32_t threadId, const void* context, uint32_t size );
+            IProcess* process, 
+            uint32_t threadId, 
+            const void* context, 
+            uint32_t size );
 
     private:
         static DWORD CALLBACK   DebugPollProc( void* param );

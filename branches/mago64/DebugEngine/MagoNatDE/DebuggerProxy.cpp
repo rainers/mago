@@ -280,16 +280,26 @@ namespace Mago
         ::Thread* execThread = ((LocalThread*) thread)->GetExecThread();
 
         HRESULT hr = S_OK;
-        CONTEXT context = { 0 };
+        ArchThreadContextSpec contextSpec;
+        UniquePtr<BYTE[]> context;
 
-        context.ContextFlags = CONTEXT_FULL 
-            | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
+        mArch->GetThreadContextSpec( contextSpec );
 
-        hr = mExecThread.GetThreadContext( execProc, execThread->GetId(), &context, sizeof context );
+        context.Attach( new BYTE[ contextSpec.Size ] );
+        if ( context.IsEmpty() )
+            return E_OUTOFMEMORY;
+
+        hr = mExecThread.GetThreadContext( 
+            execProc, 
+            execThread->GetId(), 
+            contextSpec.FeatureMask,
+            contextSpec.ExtFeatureMask,
+            context.Get(), 
+            contextSpec.Size );
         if ( FAILED( hr ) )
             return hr;
 
-        hr = mArch->BuildRegisterSet( &context, sizeof context, regSet );
+        hr = mArch->BuildRegisterSet( context.Get(), contextSpec.Size, regSet );
         if ( FAILED( hr ) )
             return hr;
 
