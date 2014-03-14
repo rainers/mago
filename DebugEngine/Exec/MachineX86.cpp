@@ -333,13 +333,23 @@ HRESULT MachineX86::SetThreadContextWithCache( HANDLE hThread, const void* conte
     return S_OK;
 }
 
-HRESULT MachineX86::GetThreadContextInternal( uint32_t threadId, void* context, uint32_t size )
+HRESULT MachineX86::GetThreadContextInternal( 
+    uint32_t threadId, 
+    uint32_t features, 
+    uint64_t extFeatures, 
+    void* contextBuf, 
+    uint32_t size )
 {
+    UNREFERENCED_PARAMETER( extFeatures );
+
     if ( size < sizeof( CONTEXT_X86 ) )
         return E_INVALIDARG;
 
     ThreadX86Base* threadX86 = GetStoppedThread();
     Thread* thread = threadX86->GetExecThread();
+    CONTEXT_X86* context = (CONTEXT_X86*) contextBuf;
+
+    context->ContextFlags = features;
 
     if ( threadId == thread->GetId() && mIsContextCached )
     {
@@ -355,7 +365,7 @@ HRESULT MachineX86::GetThreadContextInternal( uint32_t threadId, void* context, 
         goto Error;
     }
 
-    if ( !GetThreadContextX86( hThread, (CONTEXT_X86*) context ) )
+    if ( !GetThreadContextX86( hThread, context ) )
     {
         hr = GetLastHr();
         goto Error;

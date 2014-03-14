@@ -44,6 +44,7 @@ namespace Mago
         virtual bool GetRegisterGroup( uint32_t index, RegGroup& group );
         virtual int GetArchRegId( int debugRegId );
         virtual int GetPointerSize();
+        virtual void GetThreadContextSpec( ArchThreadContextSpec& spec );
     };
 
 

@@ -731,15 +731,12 @@ HRESULT MagoRemoteCmd_GetThreadContext(
     /* [in] */ HCTXCMD hContext,
     /* [in] */ unsigned int pid,
     /* [in] */ unsigned int tid,
-    /* [in] */ unsigned int mainFeatureMask,
+    /* [in] */ unsigned int featureMask,
     /* [in] */ unsigned __int64 extFeatureMask,
     /* [in] */ unsigned int size,
     /* [out] */ unsigned int *sizeRead,
     /* [out][length_is][size_is] */ byte *regBuffer)
 {
-    // TODO:
-    UNREFERENCED_PARAMETER( extFeatureMask );
-
     if ( hContext == NULL || sizeRead == NULL || regBuffer == NULL )
         return E_INVALIDARG;
 
@@ -750,11 +747,7 @@ HRESULT MagoRemoteCmd_GetThreadContext(
     if ( !context->FindProcess( pid, process.Ref() ) )
         return E_NOT_FOUND;
 
-    // TODO: pass the masks to ExecThread, which can set them specific to the machine
-    CONTEXT* contextX86 = (CONTEXT*) regBuffer;
-    contextX86->ContextFlags = mainFeatureMask;
-
-    hr = context->ExecThread.GetThreadContext( process.Get(), tid, regBuffer, size );
+    hr = context->ExecThread.GetThreadContext( process.Get(), tid, featureMask, extFeatureMask, regBuffer, size );
     if ( SUCCEEDED( hr ) )
         *sizeRead = size;
 

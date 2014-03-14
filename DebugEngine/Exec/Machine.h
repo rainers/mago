@@ -66,7 +66,12 @@ public:
     virtual HRESULT SetStepRange( bool stepIn, AddressRange range ) = 0;
     virtual HRESULT CancelStep() = 0;
 
-    virtual HRESULT GetThreadContext( uint32_t threadId, void* context, uint32_t size ) = 0;
+    virtual HRESULT GetThreadContext( 
+        uint32_t threadId, 
+        uint32_t features, 
+        uint64_t extFeatures, 
+        void* context, 
+        uint32_t size ) = 0;
     virtual HRESULT SetThreadContext( uint32_t threadId, const void* context, uint32_t size ) = 0;
 
     virtual ThreadControlProc GetWinSuspendThreadProc() = 0;

@@ -402,7 +402,12 @@ namespace MagoCore
     }
 
     HRESULT DebuggerProxy::GetThreadContext( 
-        IProcess* process, uint32_t threadId, void* context, uint32_t size )
+        IProcess* process, 
+        uint32_t threadId, 
+        uint32_t features, 
+        uint64_t extFeatures, 
+        void* context, 
+        uint32_t size )
     {
         _ASSERT( process != NULL );
         if ( process == NULL )
@@ -410,7 +415,7 @@ namespace MagoCore
 
         HRESULT hr = S_OK;
 
-        hr = mExec.GetThreadContext( process, threadId, context, size );
+        hr = mExec.GetThreadContext( process, threadId, features, extFeatures, context, size );
         if ( FAILED( hr ) )
             return hr;
 
@@ -418,7 +423,10 @@ namespace MagoCore
     }
 
     HRESULT DebuggerProxy::SetThreadContext( 
-        IProcess* process, uint32_t threadId, const void* context, uint32_t size )
+        IProcess* process, 
+        uint32_t threadId, 
+        const void* context, 
+        uint32_t size )
     {
         _ASSERT( process != NULL );
         if ( process == NULL )

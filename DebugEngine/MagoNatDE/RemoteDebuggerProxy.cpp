@@ -834,6 +834,37 @@ Error:
         return hr;
     }
 
+    HRESULT GetThreadContextNoException(
+        ICoreProcess* process, 
+        ICoreThread* thread, 
+        HCTXCMD hCtx, 
+        const ArchThreadContextSpec& spec, 
+        BYTE* contextBuf )
+    {
+        HRESULT hr = S_OK;
+
+        __try
+        {
+            uint32_t    sizeRead = 0;
+
+            hr = MagoRemoteCmd_GetThreadContext(
+                hCtx,
+                process->GetPid(),
+                thread->GetTid(),
+                spec.FeatureMask,
+                spec.ExtFeatureMask,
+                spec.Size,
+                &sizeRead,
+                (byte*) contextBuf );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
+
+        return hr;
+    }
+
     HRESULT RemoteDebuggerProxy::GetThreadContext( 
         ICoreProcess* process, ICoreThread* thread, IRegisterSet*& regSet )
     {
@@ -846,38 +877,22 @@ Error:
             || thread->GetProcessType() != CoreProcess_Remote )
             return E_INVALIDARG;
 
-        // TODO: get flags and context size from archData
-
         HRESULT hr = S_OK;
-        CONTEXT context = { 0 };
-        DWORD contextFlags = CONTEXT_FULL 
-            | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
+        ArchData* archData = process->GetArchData();
+        ArchThreadContextSpec contextSpec;
+        UniquePtr<BYTE[]> context;
 
-        __try
-        {
-            uint32_t    sizeRead = 0;
+        archData->GetThreadContextSpec( contextSpec );
 
-            hr = MagoRemoteCmd_GetThreadContext(
-                GetContextHandle(),
-                process->GetPid(),
-                thread->GetTid(),
-                contextFlags,
-                0,
-                sizeof context,
-                &sizeRead,
-                (byte*) &context );
-        }
-        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
-        {
-            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
-        }
+        context.Attach( new BYTE[ contextSpec.Size ] );
+        if ( context.IsEmpty() )
+            return E_OUTOFMEMORY;
 
+        hr = GetThreadContextNoException( process, thread, GetContextHandle(), contextSpec, context.Get() );
         if ( FAILED( hr ) )
             return hr;
 
-        ArchData* archData = process->GetArchData();
-
-        hr = archData->BuildRegisterSet( &context, sizeof context, regSet );
+        hr = archData->BuildRegisterSet( context.Get(), contextSpec.Size, regSet );
         if ( FAILED( hr ) )
             return hr;
 

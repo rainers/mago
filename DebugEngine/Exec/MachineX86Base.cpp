@@ -1636,7 +1636,12 @@ Error:
     return hr;
 }
 
-HRESULT MachineX86Base::GetThreadContext( uint32_t threadId, void* context, uint32_t size )
+HRESULT MachineX86Base::GetThreadContext( 
+    uint32_t threadId, 
+    uint32_t features, 
+    uint64_t extFeatures, 
+    void* context, 
+    uint32_t size )
 {
     _ASSERT( mhProcess != NULL );
     if ( mhProcess == NULL )
@@ -1648,7 +1653,7 @@ HRESULT MachineX86Base::GetThreadContext( uint32_t threadId, void* context, uint
     if ( context == NULL )
         return E_INVALIDARG;
 
-    return GetThreadContextInternal( threadId, context, size );
+    return GetThreadContextInternal( threadId, features, extFeatures, context, size );
 }
 
 HRESULT MachineX86Base::SetThreadContext( uint32_t threadId, const void* context, uint32_t size )

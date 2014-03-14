@@ -212,6 +212,13 @@ namespace
         return 4;
     }
 
+    void ArchDataX86::GetThreadContextSpec( ArchThreadContextSpec& spec )
+    {
+        spec.FeatureMask = CONTEXT_FULL | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
+        spec.ExtFeatureMask = 0;
+        spec.Size = sizeof( CONTEXT_X86 );
+    }
+
 
 namespace
 {
