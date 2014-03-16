@@ -10,19 +10,23 @@
 #include <MagoEED.h>
 
 
-struct BB;
+struct BB64;
+struct TypeInfo_Struct64;
+struct DArray64;
 
 
 namespace Mago
 {
     class IDebuggerProxy;
     class ICoreProcess;
+    struct Throwable64;
 
 
     class DRuntime
     {
         IDebuggerProxy*         mDebugger;
         RefPtr<ICoreProcess>    mCoreProc;
+        int                     mPtrSize;
 
     public:
         DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess );
@@ -39,18 +43,18 @@ namespace Mago
     private:
         HRESULT GetStructHash( 
             const MagoEE::DataObject& key, 
-            const BB& bb, 
+            const BB64& bb, 
             // To hash a struct, we need to read the key memory into a buffer.
             // Return it, because the caller needs it, too.
             HeapPtr& keyBuf,
-            uint32_t& hash );
+            uint64_t& hash );
 
         HRESULT GetArrayHash( 
             const MagoEE::DataObject& key, 
             // To hash an array, we need to read the key memory into a buffer.
             // Return it, because the caller needs it, too.
             HeapPtr& keyBuf,
-            uint32_t& hash );
+            uint64_t& hash );
 
         bool EqualArray(
             MagoEE::Type* elemType,
@@ -74,9 +78,17 @@ namespace Mago
             const void* keyBuf, 
             const void* nodeArrayBuf );
 
-        HRESULT GetHash( MagoEE::Type* type, const MagoEE::DataValue& value, uint32_t& hash );
+        HRESULT GetHash( MagoEE::Type* type, const MagoEE::DataValue& value, uint64_t& hash );
+        uint64_t DHashOf( const void* buffer, uint32_t length );
+        uint32_t AlignTSize( uint32_t size );
 
         HRESULT ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, void* buffer );
+
+        HRESULT ReadBB( Address64 addr, BB64& bb );
+        HRESULT ReadTypeInfoStruct( Address64 addr, TypeInfo_Struct64& ti );
+        HRESULT ReadAddress( Address64 baseAddr, uint64_t index, uint64_t& ptrValue );
+        HRESULT ReadDArray( Address64 addr, DArray64& darray );
+        HRESULT ReadThrowable( Address64 addr, Throwable64& throwable );
 
         DRuntime& operator=( const DRuntime& other );
         DRuntime( const DRuntime& other );

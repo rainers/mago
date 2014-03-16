@@ -161,7 +161,8 @@ EqualsFunc GetFloatingEqualsFunc( MagoEE::Type* type );
 bool EqualFloat( size_t typeSize, const Real10& left, const Real10& right );
 bool EqualValue( MagoEE::Type* type, const MagoEE::DataValue& left, const MagoEE::DataValue& right );
 
-uint32_t HashOf( const void* buffer, uint32_t length );
+uint32_t HashOf32( const void* buffer, uint32_t length );
+uint64_t HashOf64( const void* buffer, uint32_t length );
 
 
 struct HeapDeleter

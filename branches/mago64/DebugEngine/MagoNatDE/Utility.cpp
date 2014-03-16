@@ -618,7 +618,8 @@ static uint32_t Get16bits( const uint8_t* x )
     return *(uint16_t*) x;
 }
 
-uint32_t HashOf( const void* buffer, uint32_t length )
+template <class T>
+T HashOf( const void* buffer, T length )
 {
     // This is what druntime uses to hash most values longer than 32 bits
     /*
@@ -631,7 +632,7 @@ uint32_t HashOf( const void* buffer, uint32_t length )
 
     const uint8_t* data = (uint8_t*) buffer;
     int rem = 0;
-    uint32_t hash = 0;
+    T hash = 0;
 
     rem = length & 3;
     length >>= 2;
@@ -639,7 +640,7 @@ uint32_t HashOf( const void* buffer, uint32_t length )
     for ( ; length > 0; length-- )
     {
         hash += Get16bits( data );
-        uint32_t temp = (Get16bits( data + 2 ) << 11) ^ hash;
+        T temp = (Get16bits( data + 2 ) << 11) ^ hash;
         hash = (hash << 16) ^ temp;
         data += 2 * sizeof( uint16_t );
         hash += hash >> 11;
@@ -674,6 +675,16 @@ uint32_t HashOf( const void* buffer, uint32_t length )
     hash += hash >> 6;
 
     return hash;
+}
+
+uint32_t HashOf32( const void* buffer, uint32_t length )
+{
+    return HashOf<uint32_t>( buffer, length );
+}
+
+uint64_t HashOf64( const void* buffer, uint32_t length )
+{
+    return HashOf<uint64_t>( buffer, length );
 }
 
 
