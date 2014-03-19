@@ -184,6 +184,9 @@
     <ClCompile Include="RemoteEventRpc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ArchDataX64.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="MagoNatDE.def">
@@ -401,6 +404,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RemoteEventRpc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ArchDataX64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

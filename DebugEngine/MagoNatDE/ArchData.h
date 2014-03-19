@@ -14,7 +14,7 @@ namespace Mago
     struct Reg
     {
         const wchar_t*  Name;
-        uint8_t         FullReg;
+        uint16_t        FullReg;
         uint8_t         Length;
         uint8_t         Shift;
         uint32_t        Mask;
