@@ -118,7 +118,7 @@ namespace Mago
         if ( mPtrSize == 4 )
             return (size + sizeof( uint32_t ) - 1) & ~(sizeof( uint32_t ) - 1);
         else
-            return (size + sizeof( uint64_t ) - 1) & ~(sizeof( uint64_t ) - 1);
+            return (size + 16 - 1) & ~(16 - 1);
     }
 
     uint64_t DRuntime::DHashOf( const void* buffer, uint32_t length )

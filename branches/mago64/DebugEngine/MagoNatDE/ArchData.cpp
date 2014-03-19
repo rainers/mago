@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "ArchData.h"
 #include "ArchDataX86.h"
+#include "ArchDataX64.h"
 
 
 namespace Mago
@@ -35,6 +36,10 @@ namespace Mago
         {
         case IMAGE_FILE_MACHINE_I386:
             archData = new ArchDataX86( procFeatures );
+            break;
+
+        case IMAGE_FILE_MACHINE_AMD64:
+            archData = new ArchDataX64( procFeatures );
             break;
 
         default:

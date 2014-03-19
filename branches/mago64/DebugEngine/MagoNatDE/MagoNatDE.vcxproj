@@ -255,6 +255,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ArchData.cpp" />
+    <ClCompile Include="ArchDataX64.cpp" />
     <ClCompile Include="ArchDataX86.cpp" />
     <ClCompile Include="BoundBreakpoint.cpp" />
     <ClCompile Include="BPBinderCallback.cpp" />
@@ -389,6 +390,7 @@
     <Midl Include="MagoNatDE.idl" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ArchDataX64.h" />
     <ClInclude Include="ArchDataX86.h" />
     <ClInclude Include="ArchData.h" />
     <ClInclude Include="BoundBreakpoint.h" />
