@@ -14,6 +14,7 @@
 #include "MachineX86.h"
 #elif defined( _M_X64 )
 #include "MachineX86.h"
+#include "MachineX64.h"
 #endif
 
 
@@ -30,6 +31,10 @@ HRESULT MakeMachine( WORD machineType, IMachine*& machine )
     if ( machineType == IMAGE_FILE_MACHINE_I386 )
     {
         hr = MakeMachineX86( machine );
+    }
+    else if ( machineType == IMAGE_FILE_MACHINE_AMD64 )
+    {
+        hr = MakeMachineX64( machine );
     }
 #else
 #error Mago doesn't implement a core debugger for the current architecture.

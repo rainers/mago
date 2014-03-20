@@ -158,6 +158,10 @@
     <ClCompile Include="DecodeX86.cpp" />
     <ClCompile Include="Exec.cpp" />
     <ClCompile Include="Log.cpp" />
+    <ClCompile Include="MachineX64.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="MachineX86.cpp" />
     <ClCompile Include="MachineX86Base.cpp" />
     <ClCompile Include="MakeMachine.cpp" />
@@ -182,6 +186,7 @@
     <ClInclude Include="Iter.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="Machine.h" />
+    <ClInclude Include="MachineX64.h" />
     <ClInclude Include="MachineX86.h" />
     <ClInclude Include="MachineX86Base.h" />
     <ClInclude Include="MakeMachine.h" />
