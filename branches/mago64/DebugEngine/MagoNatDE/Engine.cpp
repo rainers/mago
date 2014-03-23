@@ -342,6 +342,40 @@ namespace Mago
         return S_OK;
     }
 
+    bool ReadFileHeader( const wchar_t* exe, IMAGE_FILE_HEADER& fileHeader )
+    {
+        FileHandlePtr       hFilePtr;
+        IMAGE_DOS_HEADER    dosHeader;
+        DWORD               nRead;
+        DWORD               nRet;
+
+        hFilePtr = CreateFile( 
+            exe, 
+            GENERIC_READ, 
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL );
+        if ( hFilePtr.IsEmpty() )
+            return false;
+
+        if ( !ReadFile( hFilePtr, &dosHeader, sizeof dosHeader, &nRead, NULL ) 
+            || nRead < sizeof dosHeader )
+            return false;
+
+        // Skip the NT signature
+        nRet = SetFilePointer( hFilePtr, dosHeader.e_lfanew + 4, NULL, FILE_BEGIN );
+        if ( nRet == INVALID_SET_FILE_POINTER )
+            return false;
+
+        if ( !ReadFile( hFilePtr, &fileHeader, sizeof fileHeader, &nRead, NULL )
+            || nRead < sizeof fileHeader )
+            return false;
+
+        return true;
+    }
+
     HRESULT Engine::StartDebuggerProxyForLaunch( 
         const wchar_t* pszMachine, 
         IDebugPort2* pPort, 
@@ -353,7 +387,21 @@ namespace Mago
         HRESULT hr = S_OK;
         bool    useInProcDebugger = true;
 
-        // TODO: figure out which one should be used based on the kind of EXE it is
+#if defined( _M_IX86 )
+        IMAGE_FILE_HEADER   fileHeader;
+
+        if ( !ReadFileHeader( pszExe, fileHeader ) )
+            return E_FAIL;
+
+        if ( fileHeader.Machine == IMAGE_FILE_MACHINE_I386 )
+            useInProcDebugger = true;
+        else if ( fileHeader.Machine == IMAGE_FILE_MACHINE_AMD64 )
+            useInProcDebugger = false;
+        else
+            return E_FAIL;
+#else
+#error Mago doesn't implement a debug engine for the current architecture.
+#endif
 
         hr = StartDebuggerProxy( useInProcDebugger, debugger );
         if ( FAILED( hr ) )
