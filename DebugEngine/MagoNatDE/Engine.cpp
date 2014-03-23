@@ -398,7 +398,7 @@ namespace Mago
         else if ( fileHeader.Machine == IMAGE_FILE_MACHINE_AMD64 )
             useInProcDebugger = false;
         else
-            return E_FAIL;
+            return E_UNSUPPORTED_BINARY;
 #else
 #error Mago doesn't implement a debug engine for the current architecture.
 #endif

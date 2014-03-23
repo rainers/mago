@@ -320,6 +320,7 @@ UINT64 GetProcessorFeatures()
 {
     UINT64 procFeatures = 0;
 
+#if defined( _M_IX86 ) || defined( _M_X64 )
     if ( IsProcessorFeaturePresent( PF_MMX_INSTRUCTIONS_AVAILABLE ) )
         procFeatures |= Mago::PF_X86_MMX;
 
@@ -337,6 +338,9 @@ UINT64 GetProcessorFeatures()
 
     if ( IsProcessorFeaturePresent( PF_XSAVE_ENABLED ) )
         procFeatures |= Mago::PF_X86_AVX;
+#else
+#error Mago doesn't implement a remote agent for the current architecture.
+#endif
 
     return procFeatures;
 }
