@@ -711,13 +711,13 @@ void StartStopSuite::TryOptions( bool newConsole )
     readOutOverlapped.hEvent = readOutEvent.Get();
     writeOverlapped.hEvent = writeEvent.Get();
 
-    TEST_ASSERT( !ReadFile( errFileRead.Get(), response, strlen( expectedArgsAndCurDir ), &bytesRead, &readErrOverlapped ) );
+    TEST_ASSERT( !ReadFile( errFileRead.Get(), response, (DWORD) strlen( expectedArgsAndCurDir ), &bytesRead, &readErrOverlapped ) );
     TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
 
-    TEST_ASSERT( !WriteFile( inFileWrite.Get(), requestedEnv, strlen( requestedEnv ), &bytesWritten, &writeOverlapped));
+    TEST_ASSERT( !WriteFile( inFileWrite.Get(), requestedEnv, (DWORD) strlen( requestedEnv ), &bytesWritten, &writeOverlapped));
     TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
 
-    TEST_ASSERT( !ReadFile( outFileRead.Get(), outResponse, strlen( expectedEnv ), &bytesRead, &readOutOverlapped ) );
+    TEST_ASSERT( !ReadFile( outFileRead.Get(), outResponse, (DWORD) strlen( expectedEnv ), &bytesRead, &readOutOverlapped ) );
     TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
 
     for ( ; !mCallback->GetProcessExited(); )
