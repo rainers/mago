@@ -107,7 +107,7 @@ namespace Mago
 
         UninitRpcServer();
 
-        return msg.wParam;
+        return (int) msg.wParam;
     }
 
     void NotifyAddSession()
