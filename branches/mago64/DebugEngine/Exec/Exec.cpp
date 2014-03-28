@@ -404,6 +404,7 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
 
             proc->AddThread( thread.Get() );
             proc->SetEntryPoint( (Address) debugEvent.u.CreateProcessInfo.lpStartAddress );
+            proc->SetImageBase( (Address) debugEvent.u.CreateProcessInfo.lpBaseOfImage );
             proc->SetStarted();
 
             machine->OnCreateThread( thread.Get() );
