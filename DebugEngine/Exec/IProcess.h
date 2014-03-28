@@ -39,6 +39,7 @@ public:
     virtual const wchar_t*  GetExePath() = 0;
     virtual Address         GetEntryPoint() = 0;
     virtual uint16_t        GetMachineType() = 0;
+    virtual Address         GetImageBase() = 0;
 
     virtual bool            IsStopped() = 0;
     virtual bool            IsDeleted() = 0;

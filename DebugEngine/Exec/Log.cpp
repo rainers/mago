@@ -32,8 +32,8 @@ void Log::LogDebugEvent( const DEBUG_EVENT& event )
         return;
 
     const char* eventName = gEventNames[event.dwDebugEventCode];
-    char        msg[80] = "";
-    char        part[80] = "";
+    char        msg[90] = "";
+    char        part[90] = "";
 
     _snprintf_s( msg, _TRUNCATE, "%s (%d) : PID=%d, TID=%d", 
         eventName, 
