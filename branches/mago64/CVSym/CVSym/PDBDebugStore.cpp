@@ -213,7 +213,7 @@ namespace MagoST
             VARIANT var;
             VariantInit( &var );
             HRESULT hr = pSymbol->get_value( &var );
-            if( !FAILED( hr ) )
+            if( hr == S_OK )
                 switch( var.vt )
                 {
                 case VT_I1: value.Tag = VarTag_Char;  value.Data.I8 = var.bVal; break;
@@ -845,38 +845,38 @@ namespace MagoST
             IDiaLineNumber* pLineNumber = NULL;
             ULONG fetched = 0;
             hr = pEnumLineNumbers->Next( 1, &pLineNumber, &fetched );
-            if( !FAILED( hr ) && fetched == 1 )
+            if ( hr != S_OK || fetched == 0 )
+                break;
+
+            DWORD off = 0, line = 0;
+            if( !FAILED( hr ) )
+                hr = pLineNumber->get_addressOffset( &off );
+            if( !FAILED( hr ) )
+                hr = pLineNumber->get_lineNumber( &line );
+            if( !FAILED( hr ) && lineIndex == 0 )
             {
-                DWORD off = 0, line = 0;
-                if( !FAILED( hr ) )
-                    hr = pLineNumber->get_addressOffset( &off );
-                if( !FAILED( hr ) )
-                    hr = pLineNumber->get_lineNumber( &line );
-                if( !FAILED( hr ) && lineIndex == 0 )
-                {
-                    segInfo.SegmentInstance = (WORD) line;
-                    segInfo.Start = off;
-                    if( ppCompiland )
-                        pLineNumber->get_compiland( ppCompiland );
-                    if( ppSourceFile )
-                        pLineNumber->get_sourceFile( ppSourceFile );
-                    hr = pLineNumber->get_addressSection( &section );
-                }
-                if( !FAILED( hr ) && lineIndex == lineNumbers - 1 )
-                {
-                    DWORD length = 1;
-                    hr = pLineNumber->get_length( &length );
-                    hr = pLineNumber->get_addressOffset( &segInfo.End );
-                    if ( length > 0 )
-                        segInfo.End += length - 1;
-                }
-
-                mLastSegInfoOffsets.get()[lineIndex] = off;
-                mLastSegInfoLineNumbers.get()[lineIndex] = (WORD) line;
-
-                lineIndex++;
-                pLineNumber->Release();
+                segInfo.SegmentInstance = (WORD) line;
+                segInfo.Start = off;
+                if( ppCompiland )
+                    pLineNumber->get_compiland( ppCompiland );
+                if( ppSourceFile )
+                    pLineNumber->get_sourceFile( ppSourceFile );
+                hr = pLineNumber->get_addressSection( &section );
             }
+            if( !FAILED( hr ) && lineIndex == lineNumbers - 1 )
+            {
+                DWORD length = 1;
+                hr = pLineNumber->get_length( &length );
+                hr = pLineNumber->get_addressOffset( &segInfo.End );
+                if ( length > 0 )
+                    segInfo.End += length - 1;
+            }
+
+            mLastSegInfoOffsets.get()[lineIndex] = off;
+            mLastSegInfoLineNumbers.get()[lineIndex] = (WORD) line;
+
+            lineIndex++;
+            pLineNumber->Release();
         }
         segInfo.SegmentIndex = (WORD) section;
         segInfo.LineCount = (WORD) lineIndex;
