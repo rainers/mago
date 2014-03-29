@@ -393,6 +393,7 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
         {
             RefPtr<Module>  mod;
             RefPtr<Thread>  thread;
+            ImageInfo       imageInfo = { 0 };
 
             hr = CreateModule( proc, debugEvent, mod );
             if ( FAILED( hr ) )
@@ -402,9 +403,15 @@ HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent
             if ( FAILED( hr ) )
                 goto Error;
 
+            GetLoadedImageInfo( 
+                debugEvent.u.CreateProcessInfo.hProcess, 
+                debugEvent.u.CreateProcessInfo.lpBaseOfImage, 
+                imageInfo );
+
             proc->AddThread( thread.Get() );
             proc->SetEntryPoint( (Address) debugEvent.u.CreateProcessInfo.lpStartAddress );
             proc->SetImageBase( (Address) debugEvent.u.CreateProcessInfo.lpBaseOfImage );
+            proc->SetImageSize( imageInfo.Size );
             proc->SetStarted();
 
             machine->OnCreateThread( thread.Get() );

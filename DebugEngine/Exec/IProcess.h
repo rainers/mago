@@ -40,6 +40,7 @@ public:
     virtual Address         GetEntryPoint() = 0;
     virtual uint16_t        GetMachineType() = 0;
     virtual Address         GetImageBase() = 0;
+    virtual uint32_t        GetImageSize() = 0;
 
     virtual bool            IsStopped() = 0;
     virtual bool            IsDeleted() = 0;
