@@ -39,6 +39,7 @@ private:
     IMachine*       mMachine;
     uint16_t        mMachineType;
     Address         mImageBase;
+    uint32_t        mSize;
 
     bool            mReachedLoaderBp;
     bool            mTerminating;
@@ -67,6 +68,7 @@ public:
     Address         GetEntryPoint();
     uint16_t        GetMachineType();
     Address         GetImageBase();
+    uint32_t        GetImageSize();
 
     bool            IsStopped();
     bool            IsDeleted();
@@ -95,6 +97,7 @@ public:
     void            SetEntryPoint( Address entryPoint );
     void            SetMachineType( uint16_t machineType );
     void            SetImageBase( Address address );
+    void            SetImageSize( uint32_t size );
     HANDLE          GetLaunchedSuspendedThread();
     void            SetLaunchedSuspendedThread( HANDLE hThread );
     void            SetStopped( bool value );

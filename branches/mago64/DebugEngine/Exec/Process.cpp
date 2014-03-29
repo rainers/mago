@@ -23,6 +23,7 @@ Process::Process( CreateMethod way, HANDLE hProcess, uint32_t id, const wchar_t*
     mEntryPoint( 0 ),
     mMachineType( 0 ),
     mImageBase( 0 ),
+    mSize( 0 ),
     mMachine( NULL ),
     mReachedLoaderBp( false ),
     mTerminating( false ),
@@ -130,6 +131,16 @@ Address Process::GetImageBase()
 void Process::SetImageBase( Address address )
 {
     mImageBase = address;
+}
+
+uint32_t Process::GetImageSize()
+{
+    return mSize;
+}
+
+void Process::SetImageSize( uint32_t size )
+{
+    mSize = size;
 }
 
 HANDLE Process::GetLaunchedSuspendedThread()

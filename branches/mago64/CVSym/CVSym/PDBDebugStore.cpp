@@ -828,6 +828,10 @@ namespace MagoST
     {
         HRESULT hr = S_OK;
         LONG lineNumbers = 0;
+        // TODO: No samples or documentation show that Reset needs to be called before the first 
+        //       call to Next. But sometimes, Next doesn't return all the elements here unless 
+        //       you call Reset first. Why is that?
+        hr = pEnumLineNumbers->Reset();
         if( !FAILED( hr ) )
             hr = pEnumLineNumbers->get_Count( &lineNumbers );
         if( !FAILED( hr ) )
