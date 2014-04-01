@@ -112,6 +112,12 @@ namespace Mago
         virtual int GetArchRegId( int debugRegId ) = 0;
         virtual int GetPointerSize() = 0;
         virtual void GetThreadContextSpec( ArchThreadContextSpec& spec ) = 0;
+        virtual int GetPDataSize() = 0;
+        virtual void GetPDataRange( 
+            Address64 imageBase, 
+            const void* pdata, 
+            Address64& begin, 
+            Address64& end ) = 0;
 
         static HRESULT MakeArchData( UINT32 procType, UINT64 procFeatures, ArchData*& archData );
     };

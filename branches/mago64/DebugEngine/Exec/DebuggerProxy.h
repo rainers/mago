@@ -85,6 +85,14 @@ namespace MagoCore
             const void* context, 
             uint32_t size );
 
+        HRESULT GetPData( 
+            IProcess* process, 
+            Address address, 
+            Address imageBase, 
+            uint32_t size, 
+            uint32_t& sizeRead, 
+            uint8_t* pdata );
+
     private:
         static DWORD CALLBACK   DebugPollProc( void* param );
 

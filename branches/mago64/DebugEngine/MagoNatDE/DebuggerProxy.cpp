@@ -336,6 +336,23 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT DebuggerProxy::GetPData( 
+        ICoreProcess* process, 
+        Address64 address, 
+        Address64 imageBase, 
+        uint32_t size, 
+        uint32_t& sizeRead, 
+        uint8_t* pdata )
+    {
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
+
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
+
+        return mExecThread.GetPData( 
+            execProc, (Address) address, (Address) imageBase, size, sizeRead, pdata );
+    }
+
 
     //------------------------------------------------------------------------
     // IEventCallback

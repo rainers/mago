@@ -219,6 +219,20 @@ namespace
         spec.Size = sizeof( CONTEXT_X86 );
     }
 
+    int ArchDataX86::GetPDataSize()
+    {
+        return 0;
+    }
+
+    void ArchDataX86::GetPDataRange( 
+        Address64 imageBase, 
+        const void* pdata, 
+        Address64& begin, 
+        Address64& end )
+    {
+        // Not supported
+    }
+
 
 namespace
 {

@@ -936,6 +936,43 @@ Error:
         return hr;
     }
 
+    HRESULT RemoteDebuggerProxy::GetPData( 
+        ICoreProcess* process, 
+        Address64 address, 
+        Address64 imageBase, 
+        uint32_t size, 
+        uint32_t& sizeRead, 
+        uint8_t* pdata )
+    {
+        _ASSERT( process != NULL );
+        _ASSERT( pdata != NULL );
+        if ( process == NULL || pdata == NULL )
+            return E_INVALIDARG;
+
+        if ( process->GetProcessType() != CoreProcess_Remote )
+            return E_INVALIDARG;
+
+        HRESULT         hr = S_OK;
+
+        __try
+        {
+            hr = MagoRemoteCmd_GetPData(
+                GetContextHandle(),
+                process->GetPid(),
+                address,
+                imageBase,
+                size,
+                &sizeRead,
+                pdata );
+        }
+        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+        {
+            hr = HRESULT_FROM_WIN32( RpcExceptionCode() );
+        }
+
+        return hr;
+    }
+
 
     const GUID& RemoteDebuggerProxy::GetSessionGuid()
     {

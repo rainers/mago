@@ -779,3 +779,28 @@ HRESULT MagoRemoteCmd_SetThreadContext(
 
     return hr;
 }
+
+HRESULT MagoRemoteCmd_GetPData( 
+    /* [in] */ HCTXCMD hContext,
+    /* [in] */ unsigned int pid,
+    /* [in] */ MagoRemote_Address address,
+    /* [in] */ MagoRemote_Address imageBase,
+    /* [in] */ unsigned int size,
+    /* [out] */ unsigned int *sizeRead,
+    /* [out][length_is][size_is] */ byte *pdataBuffer)
+{
+    if ( hContext == NULL || pdataBuffer == NULL )
+        return E_INVALIDARG;
+
+    HRESULT             hr = S_OK;
+    CmdContext*         context = (CmdContext*) hContext;
+    RefPtr<IProcess>    process;
+
+    if ( !context->FindProcess( pid, process.Ref() ) )
+        return E_NOT_FOUND;
+
+    hr = context->ExecThread.GetPData( 
+        process.Get(), (Address) address, (Address) imageBase, size, *sizeRead, pdataBuffer );
+
+    return hr;
+}

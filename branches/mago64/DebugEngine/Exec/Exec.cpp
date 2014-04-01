@@ -1483,6 +1483,117 @@ HRESULT Exec::SetThreadContext(
     return hr;
 }
 
+HRESULT Exec::GetPData( 
+    IProcess* process, 
+    Address address, 
+    Address imageBase, 
+    uint32_t size, 
+    uint32_t& sizeRead, 
+    uint8_t* pdata )
+{
+#if defined( _M_IX86 )
+    // Unreferenced parameters
+    process; address; imageBase; size; sizeRead; pdata;
+    return E_NOTIMPL;
+#elif defined( _M_X64 )
+    const int RecordSize = sizeof( IMAGE_RUNTIME_FUNCTION_ENTRY );
+
+    if ( process == NULL || pdata == NULL )
+        return E_INVALIDARG;
+    if ( size < RecordSize )
+        return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
+
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
+
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
+    _ASSERT( machine != NULL );
+
+    IMAGE_DOS_HEADER        dosHeader;
+    IMAGE_NT_HEADERS32      ntHeaders32;
+    DWORD                   dataDirCount = 0;
+    IMAGE_DATA_DIRECTORY*   dataDirs = NULL;
+    IMAGE_DATA_DIRECTORY*   pdataDir = NULL;
+    uint32_t                lenRead;
+    uint32_t                lenUnread;
+    Address                 pdataBase;
+    Address                 modBase = (Address) imageBase;
+    Address                 rva = (Address) address - modBase;
+    int                     nRec;
+    int                     iFirst;
+    int                     iLast;
+
+    hr = machine->ReadMemory( modBase, sizeof dosHeader, lenRead, lenUnread, (uint8_t*) &dosHeader );
+    if ( FAILED( hr ) )
+        return hr;
+
+    hr = machine->ReadMemory( modBase + dosHeader.e_lfanew, sizeof ntHeaders32, lenRead, lenUnread, (uint8_t*) &ntHeaders32 );
+    if ( FAILED( hr ) )
+        return hr;
+
+    if ( ntHeaders32.OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC )
+    {
+        dataDirCount = ntHeaders32.OptionalHeader.NumberOfRvaAndSizes;
+        dataDirs = ntHeaders32.OptionalHeader.DataDirectory;
+    }
+    else if ( ntHeaders32.OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC )
+    {
+        IMAGE_NT_HEADERS64* ntHeaders64 = (IMAGE_NT_HEADERS64*) &ntHeaders32;
+
+        dataDirCount = ntHeaders64->OptionalHeader.NumberOfRvaAndSizes;
+        dataDirs = ntHeaders64->OptionalHeader.DataDirectory;
+    }
+
+    pdataDir = &dataDirs[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
+
+    if ( pdataDir->Size == 0 || pdataDir->VirtualAddress == 0 || pdataDir->Size < RecordSize )
+        return S_FALSE;
+
+    pdataBase = modBase + pdataDir->VirtualAddress;
+
+    nRec = pdataDir->Size / RecordSize;
+    iFirst = 0;
+    iLast = nRec - 1;
+
+    IMAGE_RUNTIME_FUNCTION_ENTRY    midRec;
+
+    while ( iLast >= iFirst )
+    {
+        int iMid = (iLast + iFirst) / 2;
+
+        hr = machine->ReadMemory( 
+            pdataBase + iMid * RecordSize, RecordSize, lenRead, lenUnread, (uint8_t*) &midRec );
+        if ( FAILED( hr ) )
+            return hr;
+
+        if ( rva >= midRec.BeginAddress && rva <= midRec.EndAddress )
+        {
+            memcpy( pdata, &midRec, RecordSize );
+            sizeRead = RecordSize;
+            return S_OK;
+        }
+
+        if ( rva < midRec.BeginAddress )
+            iLast = iMid - 1;
+        else
+            iFirst = iMid + 1;
+    }
+
+    return S_FALSE;
+#else
+#error Customize this implementation by getting pdata size and comparing routines from IMachine.
+#endif
+}
+
 
 HRESULT Exec::CreateModule( Process* proc, const DEBUG_EVENT& event, RefPtr<Module>& mod )
 {
