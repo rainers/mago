@@ -219,6 +219,14 @@ public:
         const void* context, 
         uint32_t size );
 
+    HRESULT GetPData( 
+        IProcess* process, 
+        Address address, 
+        Address imageBase, 
+        uint32_t size, 
+        uint32_t& sizeRead, 
+        uint8_t* pdata );
+
 private:
     HRESULT     DispatchAndContinue( Process* proc, const DEBUG_EVENT& debugEvent );
     HRESULT     DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent );

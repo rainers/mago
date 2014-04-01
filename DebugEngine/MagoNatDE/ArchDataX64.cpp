@@ -210,6 +210,22 @@ namespace
         spec.Size = sizeof( CONTEXT_X64 );
     }
 
+    int ArchDataX64::GetPDataSize()
+    {
+        return sizeof( IMAGE_RUNTIME_FUNCTION_ENTRY );
+    }
+
+    void ArchDataX64::GetPDataRange( 
+        Address64 imageBase, 
+        const void* pdata, 
+        Address64& begin, 
+        Address64& end )
+    {
+        const IMAGE_RUNTIME_FUNCTION_ENTRY* funcEntry = (IMAGE_RUNTIME_FUNCTION_ENTRY*) pdata;
+        begin = imageBase + funcEntry->BeginAddress;
+        end = imageBase + funcEntry->EndAddress;
+    }
+
 
 namespace
 {

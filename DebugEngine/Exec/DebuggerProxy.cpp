@@ -441,6 +441,27 @@ namespace MagoCore
         return S_OK;
     }
 
+    HRESULT DebuggerProxy::GetPData( 
+        IProcess* process, 
+        Address address, 
+        Address imageBase, 
+        uint32_t size, 
+        uint32_t& sizeRead, 
+        uint8_t* pdata )
+    {
+        _ASSERT( process != NULL );
+        if ( process == NULL )
+            return E_INVALIDARG;
+
+        HRESULT         hr = S_OK;
+
+        hr = mExec.GetPData( process, address, imageBase, size, sizeRead, pdata );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
 
 //----------------------------------------------------------------------------
 //  Poll thread

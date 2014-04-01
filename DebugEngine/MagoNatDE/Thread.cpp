@@ -19,6 +19,74 @@
 
 namespace Mago
 {
+
+class PdataCache
+{
+    typedef AddressRange64 MapKey;
+
+    typedef bool (*RangePred)( const MapKey& left, const MapKey& right );
+    static bool RangeLess( const MapKey& left, const MapKey& right );
+
+    typedef std::vector<BYTE> PdataBuffer;
+    typedef std::map<MapKey, int, RangePred> PdataMap;
+
+    PdataBuffer mBuffer;
+    PdataMap    mMap;
+    int         mEntrySize;
+
+public:
+    PdataCache( int pdataSize );
+    void* Find( Address64 address );
+    void* Add( Address64 begin, Address64 end, void* pdata );
+};
+
+PdataCache::PdataCache( int pdataSize )
+    :   mMap( RangeLess ),
+        mEntrySize( pdataSize )
+{
+}
+
+bool PdataCache::RangeLess( const MapKey& left, const MapKey& right )
+{
+    return left.End < right.Begin;
+}
+
+void* PdataCache::Find( Address64 address )
+{
+    MapKey range = { address, address };
+
+    PdataMap::iterator it = mMap.find( range );
+    if ( it == mMap.end() )
+        return NULL;
+
+    return &mBuffer[it->second];
+}
+
+void* PdataCache::Add( Address64 begin, Address64 end, void* pdata )
+{
+    size_t origSize = mBuffer.size();
+    mBuffer.resize( mBuffer.size() + mEntrySize );
+
+    memcpy( &mBuffer[origSize], pdata, mEntrySize );
+
+    MapKey range = { begin, end };
+    mMap.insert( PdataMap::value_type( range, origSize ) );
+    return &mBuffer[origSize];
+}
+
+}
+
+
+namespace Mago
+{
+    struct WalkContext
+    {
+        Mago::Thread*       Thread;
+        PdataCache*         Cache;
+        UniquePtr<BYTE[]>   TempEntry;
+    };
+
+
     Thread::Thread()
         :   mDebugger( NULL ),
             mCurPC( 0 ),
@@ -188,6 +256,8 @@ namespace Mago
 
     HRESULT Thread::Step( ICoreProcess* coreProc, STEPKIND sk, STEPUNIT step, bool handleException )
     {
+        _RPT1( _CRT_WARN, "Thread::Step (%d)\n", mCoreThread->GetTid() );
+
         if ( sk == STEP_BACKWARDS )
             return E_NOTIMPL;
 
@@ -285,16 +355,28 @@ namespace Mago
         ArchData*           archData = NULL;
         StackWalker*        pWalker = NULL;
         UniquePtr<StackWalker> walker;
+        WalkContext         walkContext;
+        int                 pdataSize = 0;
+
+        archData = mProg->GetCoreProcess()->GetArchData();
+        pdataSize = archData->GetPDataSize();
+
+        PdataCache          pdataCache( pdataSize );
+
+        walkContext.Thread = this;
+        walkContext.Cache = &pdataCache;
+        walkContext.TempEntry.Attach( new BYTE[pdataSize] );
+
+        if ( walkContext.TempEntry.IsEmpty() )
+            return E_OUTOFMEMORY;
 
         hr = AddCallstackFrame( topRegSet, callstack );
         if ( FAILED( hr ) )
             return hr;
 
-        archData = mProg->GetCoreProcess()->GetArchData();
-
         hr = archData->BeginWalkStack( 
             topRegSet,
-            this,
+            &walkContext,
             ReadProcessMemory64,
             FunctionTableAccess64,
             GetModuleBase64,
@@ -348,7 +430,8 @@ namespace Mago
     )
     {
         _ASSERT( hProcess != NULL );
-        Thread* pThis = (Thread*) hProcess;
+        WalkContext*    walkContext = (WalkContext*) hProcess;
+        Thread*         pThis = walkContext->Thread;
 
         HRESULT     hr = S_OK;
         uint32_t    lenRead = 0;
@@ -377,7 +460,44 @@ namespace Mago
       DWORD64 addrBase
     )
     {
-        return NULL;
+        _ASSERT( hProcess != NULL );
+
+        HRESULT         hr = S_OK;
+        WalkContext*    walkContext = (WalkContext*) hProcess;
+        Thread*         pThis = walkContext->Thread;
+        ArchData*       archData = pThis->GetCoreProcess()->GetArchData();
+        uint32_t        size = 0;
+        int             pdataSize = archData->GetPDataSize();
+        void*           pdata = NULL;
+
+        if ( pdataSize == 0 )
+            return NULL;
+
+        pdata = walkContext->Cache->Find( addrBase );
+        if ( pdata != NULL )
+            return pdata;
+
+        RefPtr<Module>      mod;
+
+        if ( !pThis->mProg->FindModuleContainingAddress( (Address64) addrBase, mod ) )
+            return NULL;
+
+        IDebuggerProxy* debugger = pThis->GetDebuggerProxy();
+
+        hr = debugger->GetPData( 
+            pThis->GetCoreProcess(), addrBase, mod->GetAddress(), pdataSize, size, 
+            walkContext->TempEntry.Get() );
+        if ( hr != S_OK )
+            return NULL;
+
+        Address64   begin;
+        Address64   end;
+
+        pThis->GetCoreProcess()->GetArchData()->GetPDataRange( 
+            mod->GetAddress(), walkContext->TempEntry.Get(), begin, end );
+
+        pdata = walkContext->Cache->Add( begin, end, walkContext->TempEntry.Get() );
+        return pdata;
     }
 
     DWORD64 Thread::GetModuleBase64(
@@ -386,7 +506,8 @@ namespace Mago
     )
     {
         _ASSERT( hProcess != NULL );
-        Thread* pThis = (Thread*) hProcess;
+        WalkContext*    walkContext = (WalkContext*) hProcess;
+        Thread*         pThis = walkContext->Thread;
 
         RefPtr<Module>      mod;
 

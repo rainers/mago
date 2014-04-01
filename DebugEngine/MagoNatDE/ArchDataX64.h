@@ -45,6 +45,12 @@ namespace Mago
         virtual int GetArchRegId( int debugRegId );
         virtual int GetPointerSize();
         virtual void GetThreadContextSpec( ArchThreadContextSpec& spec );
+        virtual int GetPDataSize();
+        virtual void GetPDataRange( 
+            Address64 imageBase, 
+            const void* pdata, 
+            Address64& begin, 
+            Address64& end );
     };
 
 

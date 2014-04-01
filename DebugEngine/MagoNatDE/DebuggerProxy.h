@@ -78,6 +78,14 @@ namespace Mago
         HRESULT GetThreadContext( ICoreProcess* process, ICoreThread* thread, IRegisterSet*& regSet );
         HRESULT SetThreadContext( ICoreProcess* process, ICoreThread* thread, IRegisterSet* regSet );
 
+        HRESULT GetPData( 
+            ICoreProcess* process, 
+            Address64 address, 
+            Address64 imageBase, 
+            uint32_t size, 
+            uint32_t& sizeRead, 
+            uint8_t* pdata );
+
         // IEventCallback
 
         virtual void AddRef();

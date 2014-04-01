@@ -169,4 +169,15 @@ interface MagoRemoteCmd
         [in] unsigned int size,
         [size_is( size )]
         [in] byte* regBuffer );
+
+    HRESULT MagoRemoteCmd_GetPData( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid,
+        [in] MagoRemote_Address address, 
+        [in] MagoRemote_Address imageBase,
+        [in] unsigned int size, 
+        [out] unsigned int* sizeRead, 
+        [size_is( size )]
+        [length_is( *sizeRead )]
+        [out] byte* pdataBuffer );
 };
