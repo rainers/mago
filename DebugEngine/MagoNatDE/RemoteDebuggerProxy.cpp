@@ -152,13 +152,14 @@ Error:
         return S_OK;
     }
 
-    HRESULT OpenCmdInterface( RPC_BINDING_HANDLE hBinding, const GUID& sessionGuid, HCTXCMD& hContext )
+    HRESULT OpenCmdInterface( RPC_BINDING_HANDLE hBinding, const GUID& sessionGuid, HCTXCMD* hContext )
     {
         HRESULT hr = S_OK;
 
         __try
         {
-            hr = MagoRemoteCmd_Open( hBinding, &sessionGuid, &hContext );
+            hr = MagoRemoteCmd_Open( hBinding, &sessionGuid, TRUE, &hContext[0] );
+            hr = MagoRemoteCmd_Open( hBinding, &sessionGuid, FALSE, &hContext[1] );
         }
         __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
         {
@@ -168,7 +169,7 @@ Error:
         return hr;
     }
 
-    HRESULT StartClient( const wchar_t* sessionGuidStr, const GUID& sessionGuid, HCTXCMD& hContext )
+    HRESULT StartClient( const wchar_t* sessionGuidStr, const GUID& sessionGuid, HCTXCMD* hContext )
     {
         HRESULT             hr = S_OK;
         RPC_STATUS          rpcRet = RPC_S_OK;
@@ -207,15 +208,17 @@ Error:
         return S_OK;
     }
 
-    HRESULT StopClient( HCTXCMD& hContext )
+    HRESULT StopClient( HCTXCMD* hContext )
     {
         __try
         {
-            MagoRemoteCmd_Close( &hContext );
+            MagoRemoteCmd_Close( &hContext[0] );
+            MagoRemoteCmd_Close( &hContext[1] );
         }
         __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
         {
-            RpcSsDestroyClientContext( &hContext );
+            RpcSsDestroyClientContext( &hContext[0] );
+            RpcSsDestroyClientContext( &hContext[1] );
         }
 
         return S_OK;
@@ -229,8 +232,10 @@ Error:
     RemoteDebuggerProxy::RemoteDebuggerProxy()
         :   mRefCount( 0 ),
             mSessionGuid( GUID_NULL ),
-            mhContext( NULL )
+            mEventPhysicalTid( 0 )
     {
+        mhContext[0] = NULL;
+        mhContext[1] = NULL;
     }
 
     RemoteDebuggerProxy::~RemoteDebuggerProxy()
@@ -317,7 +322,22 @@ Error:
 
     HCTXCMD RemoteDebuggerProxy::GetContextHandle()
     {
-        return mhContext;
+        if ( mEventPhysicalTid == GetCurrentThreadId() )
+            return mhContext[0];
+
+        return mhContext[1];
+    }
+
+    void RemoteDebuggerProxy::SetEventLogicalThread( bool beginThread )
+    {
+        if ( beginThread )
+        {
+            mEventPhysicalTid = GetCurrentThreadId();
+        }
+        else
+        {
+            mEventPhysicalTid = 0;
+        }
     }
 
 

@@ -26,6 +26,7 @@ namespace Mago
         virtual void Release() = 0;
 
         virtual const GUID& GetSessionGuid() = 0;
+        virtual void SetEventLogicalThread( bool beginThread ) = 0;
 
         virtual void OnProcessStart( uint32_t pid ) = 0;
         virtual void OnProcessExit( uint32_t pid, DWORD exitCode ) = 0;

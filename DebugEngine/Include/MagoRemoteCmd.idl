@@ -59,6 +59,7 @@ interface MagoRemoteCmd
     HRESULT MagoRemoteCmd_Open( 
         [in] handle_t hBinding,
         [in] const GUID* sessionUuid,
+        [in] boolean newSession,
         [out] HCTXCMD* phContext );
 
     void MagoRemoteCmd_Close(

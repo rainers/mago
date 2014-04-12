@@ -96,7 +96,9 @@ void MagoRemoteEvent_OnProcessStart(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnProcessStart( pid );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 void MagoRemoteEvent_OnProcessExit( 
@@ -109,7 +111,9 @@ void MagoRemoteEvent_OnProcessExit(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnProcessExit( pid, exitCode );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 void MagoRemoteEvent_OnThreadStart( 
@@ -122,7 +126,9 @@ void MagoRemoteEvent_OnThreadStart(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnThreadStart( pid, threadInfo );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 void MagoRemoteEvent_OnThreadExit( 
@@ -136,7 +142,9 @@ void MagoRemoteEvent_OnThreadExit(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnThreadExit( pid, threadId, exitCode );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 void MagoRemoteEvent_OnModuleLoad( 
@@ -149,7 +157,9 @@ void MagoRemoteEvent_OnModuleLoad(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnModuleLoad( pid, modInfo );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 void MagoRemoteEvent_OnModuleUnload( 
@@ -162,7 +172,9 @@ void MagoRemoteEvent_OnModuleUnload(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnModuleUnload( pid, baseAddress );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 void MagoRemoteEvent_OnOutputString( 
@@ -175,7 +187,9 @@ void MagoRemoteEvent_OnOutputString(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnOutputString( pid, outputString );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 void MagoRemoteEvent_OnLoadComplete( 
@@ -188,7 +202,9 @@ void MagoRemoteEvent_OnLoadComplete(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnLoadComplete( pid, threadId );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 MagoRemote_RunMode MagoRemoteEvent_OnException( 
@@ -204,12 +220,14 @@ MagoRemote_RunMode MagoRemoteEvent_OnException(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     MagoRemote_RunMode mode = context->Callback->OnException( 
         pid, 
         threadId, 
         firstChance ? true : false, 
         recordCount, 
         exceptRecords );
+    context->Callback->SetEventLogicalThread( false );
 
     return mode;
 }
@@ -226,11 +244,13 @@ MagoRemote_RunMode MagoRemoteEvent_OnBreakpoint(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     MagoRemote_RunMode mode = context->Callback->OnBreakpoint( 
         pid, 
         threadId, 
         address, 
         embedded ? true : false );
+    context->Callback->SetEventLogicalThread( false );
 
     return mode;
 }
@@ -245,7 +265,9 @@ void MagoRemoteEvent_OnStepComplete(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnStepComplete( pid, threadId );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 void MagoRemoteEvent_OnAsyncBreak( 
@@ -258,7 +280,9 @@ void MagoRemoteEvent_OnAsyncBreak(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     context->Callback->OnAsyncBreakComplete( pid, threadId );
+    context->Callback->SetEventLogicalThread( false );
 }
 
 MagoRemote_ProbeRunMode MagoRemoteEvent_OnCallProbe( 
@@ -273,11 +297,13 @@ MagoRemote_ProbeRunMode MagoRemoteEvent_OnCallProbe(
 
     EventContext*   context = (EventContext*) hContext;
 
+    context->Callback->SetEventLogicalThread( true );
     MagoRemote_ProbeRunMode mode = context->Callback->OnCallProbe( 
         pid, 
         threadId, 
         address, 
         thunkRange );
+    context->Callback->SetEventLogicalThread( false );
 
     return mode;
 }

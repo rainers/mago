@@ -29,7 +29,8 @@ namespace Mago
         long                    mRefCount;
         RefPtr<EventCallback>   mCallback;
         GUID                    mSessionGuid;
-        HCTXCMD                 mhContext;
+        HCTXCMD                 mhContext[2];
+        DWORD                   mEventPhysicalTid;
 
     public:
         RemoteDebuggerProxy();
@@ -93,7 +94,8 @@ namespace Mago
 
         // IRemoteEventCallback
 
-        const GUID& GetSessionGuid();
+        virtual const GUID& GetSessionGuid();
+        virtual void SetEventLogicalThread( bool beginThread );
 
         virtual void OnProcessStart( uint32_t pid );
         virtual void OnProcessExit( uint32_t pid, DWORD exitCode );
