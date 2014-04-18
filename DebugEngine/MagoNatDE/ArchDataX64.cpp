@@ -20,7 +20,7 @@ namespace
     const int RegCount = 296;
     extern const RegisterDesc gRegDesc[RegCount];
 
-    const int DebugRegCount = 613;
+    const int DebugRegCount = 688;
     extern const uint16_t gRegMapX64[DebugRegCount];
 
     void GetX64RegisterGroups( const RegGroupInternal*& groups, uint32_t& count );
@@ -591,11 +591,67 @@ namespace
         RegX64_DS,
         RegX64_FS,
         RegX64_GS,
+        0,
         RegX64_FLAGS,
         RegX64_RIP,
         RegX64_EFLAGS,
 
+        // (unmapped)
+        0,
+        0,
+        0,
+        0,
+        0,
+
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+
         // Control registers
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
@@ -621,6 +677,24 @@ namespace
         0,
         0,
 
+        0,
+        0,
+        0,
+        0,
+
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
@@ -716,7 +790,18 @@ namespace
         RegX64_XMM6H,
         RegX64_XMM7H,
 
+        0,
+
         RegX64_MXCSR,   // XMM status register
+
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
 
         RegX64_EMM0L,   // XMM sub-registers (WNI integer)
         RegX64_EMM1L,
