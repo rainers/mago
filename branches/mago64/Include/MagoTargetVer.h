@@ -33,6 +33,18 @@
 // Specifies that the minimum required platform is Windows Server 2003/Windows XP SPx.
 // Change this to the appropriate value to target other versions of Windows.
 
+#ifdef _WIN64
+
+#ifndef WINVER                          
+#define WINVER _WIN32_WINNT_LONGHORN
+#endif
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT _WIN32_WINNT_LONGHORN
+#endif
+
+#else
+
 #ifndef WINVER                          
 #define WINVER _WIN32_WINNT_WS03
 #endif
@@ -40,6 +52,9 @@
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT _WIN32_WINNT_WS03
 #endif
+
+#endif  // _WIN64
+
 
 #ifndef _WIN32_WINDOWS          // Specifies that the minimum required platform is Windows 98.
 #define _WIN32_WINDOWS 0x0410 // Change this to the appropriate value to target Windows Me or later.
