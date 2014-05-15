@@ -210,15 +210,19 @@ Error:
 
     HRESULT StopClient( HCTXCMD* hContext )
     {
-        __try
+        for ( int i = 0; i < 2; i++ )
         {
-            MagoRemoteCmd_Close( &hContext[0] );
-            MagoRemoteCmd_Close( &hContext[1] );
-        }
-        __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
-        {
-            RpcSsDestroyClientContext( &hContext[0] );
-            RpcSsDestroyClientContext( &hContext[1] );
+            if ( hContext[i] == NULL )
+                continue;
+
+            __try
+            {
+                MagoRemoteCmd_Close( &hContext[i] );
+            }
+            __except ( CommonRpcExceptionFilter( RpcExceptionCode() ) )
+            {
+                RpcSsDestroyClientContext( &hContext[i] );
+            }
         }
 
         return S_OK;
@@ -312,12 +316,15 @@ Error:
 
     void RemoteDebuggerProxy::Shutdown()
     {
-        // When you close the client interface to the remote agent (Cmd), the agent closes its 
-        // client interface to the debug engine (Event). To allow that call back, stop the client 
-        // before stopping the server.
+        if ( mSessionGuid != GUID_NULL )
+        {
+            // When you close the client interface to the remote agent (Cmd), the agent closes its 
+            // client interface to the debug engine (Event). To allow that call back, stop the client 
+            // before stopping the server.
 
-        StopClient( mhContext );
-        StopServer();
+            StopClient( mhContext );
+            StopServer();
+        }
     }
 
     HCTXCMD RemoteDebuggerProxy::GetContextHandle()
