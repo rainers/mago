@@ -12,8 +12,9 @@
 #include "..\EED\EED.h"
 #include <oleauto.h>
 
-
-#if defined( MAGONATEE_EXPORTS )
+#if 1 // building into static library now
+#define EXPORT 
+#elif defined( MAGONATEE_EXPORTS )
 #define EXPORT __declspec( dllexport )
 #else
 #define EXPORT __declspec( dllimport )

@@ -426,8 +426,6 @@
     <ClInclude Include="InstCache.h" />
     <ClInclude Include="IRemoteEventCallback.h" />
     <ClInclude Include="LocalProcess.h" />
-    <ClInclude Include="MagoRemoteCmd_i.h" />
-    <ClInclude Include="MagoRemoteEvent_i.h" />
     <ClInclude Include="MemoryBytes.h" />
     <ClInclude Include="Module.h" />
     <ClInclude Include="PendingBreakpoint.h" />
@@ -456,6 +454,9 @@
     <ProjectReference Include="..\..\CVSym\CVSTI\CVSTI.vcxproj">
       <Project>{18e6fa8b-62c6-42d7-964b-4c34c797075b}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\..\CVSym\CVSym\CVSym.vcxproj">
+      <Project>{d4de19ae-33ef-4b61-bffe-784582bc68c1}</Project>
     </ProjectReference>
     <ProjectReference Include="..\..\EED\gdtoa\gdtoa.vcxproj">
       <Project>{40804c2d-4af3-4e82-a1e8-018ff56b2bba}</Project>

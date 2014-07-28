@@ -400,12 +400,6 @@
     <ClInclude Include="ArchDataX64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MagoRemoteCmd_i.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MagoRemoteEvent_i.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MagoNatDE.rc">

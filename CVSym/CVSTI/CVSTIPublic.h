@@ -8,7 +8,9 @@
 #pragma once
 
 
-#if defined( CVSTI_EXPORTS )
+#if 1 // building into static library now
+#define EXPORT 
+#elif defined( CVSTI_EXPORTS )
 #define EXPORT __declspec( dllexport )
 #else
 #define EXPORT __declspec( dllimport )
