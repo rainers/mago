@@ -11,6 +11,7 @@
 #include "Type.h"
 #include "UniAlpha.h"
 
+#include <algorithm>
 
 namespace MagoEE
 {

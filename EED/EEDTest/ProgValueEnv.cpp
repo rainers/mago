@@ -1279,7 +1279,9 @@ HRESULT ProgramValueEnv::GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, Ma
     case CV_REG_STAT:   value.UInt64Value = context.FloatSave.StatusWord;   kind = MagoEE::DataValueKind_UInt64;  break;
     case CV_REG_TAG:    value.UInt64Value = context.FloatSave.TagWord;      kind = MagoEE::DataValueKind_UInt64;  break;
     case CV_REG_FPIP:   value.UInt64Value = 0;             kind = MagoEE::DataValueKind_UInt64;  break;
+#if _WIN64
     case CV_REG_FPCS:   value.UInt64Value = context.FloatSave.Cr0NpxState;  kind = MagoEE::DataValueKind_UInt64;  break;
+#endif
     case CV_REG_FPDO:   value.UInt64Value = context.FloatSave.DataOffset;   kind = MagoEE::DataValueKind_UInt64;  break;
     case CV_REG_FPDS:   value.UInt64Value = context.FloatSave.DataSelector; kind = MagoEE::DataValueKind_UInt64;  break;
     case CV_REG_ISEM:   value.UInt64Value = 0;             kind = MagoEE::DataValueKind_UInt64;  break;
