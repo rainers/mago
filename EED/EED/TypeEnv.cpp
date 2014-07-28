@@ -117,7 +117,7 @@ namespace MagoEE
     HRESULT TypeEnv::NewDArray( Type* elem, Type*& type )
     {
         // TODO: don't allocate these every time
-        RefPtr<Type>    lenType = GetType( Tuns32 );
+        RefPtr<Type>    lenType = GetType( mPtrSize == 8 ? Tuns64 : Tuns32 );
         RefPtr<Type>    ptrType = new TypePointer( elem, mPtrSize );
 
         type = new TypeDArray( elem, lenType, ptrType );

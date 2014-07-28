@@ -84,15 +84,33 @@ namespace MagoST
 
         virtual bool GetType( TypeIndex& index )
         {
-            DWORD type = 0;
+            DWORD type = ~0U;
             IDiaSymbol* pSymbol = NULL;
             if( !FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
             {
                 pSymbol->get_typeId( &type );
+                if( type == ~0 )
+                {
+                    DWORD tag = SymTagNull;
+                    pSymbol->get_symTag( &tag );
+                    switch( tag )
+                    {
+                    case SymTagUDT:
+                    case SymTagEnum:
+                    case SymTagFunctionType:
+                    case SymTagPointerType:
+                    case SymTagArrayType:
+                    case SymTagBaseType:
+                    case SymTagTypedef:
+                    case SymTagBaseClass:
+                        type = mId;
+                        break;
+                    }
+                }
                 pSymbol->Release();
             }
             index = type;
-            return type != 0;
+            return type != ~0;
         }
 
         virtual bool GetName( SymString& name )
@@ -291,7 +309,11 @@ namespace MagoST
 
         virtual bool GetCallConv( uint8_t& callConv ) { UNREF_PARAM( callConv ); return false; }
         virtual bool GetParamCount( uint16_t& count ) { UNREF_PARAM( count ); return false; }
-        virtual bool GetParamList( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
+        virtual bool GetParamList( TypeIndex& index )
+        {
+            index = mId; // type index the same as the symbol ID?
+            return true;
+        }
 
         virtual bool GetClass( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
         virtual bool GetThis( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
@@ -301,8 +323,20 @@ namespace MagoST
         virtual bool GetOemSymbolId( uint32_t& oemSymId ) { UNREF_PARAM( oemSymId ); return false; }
         virtual bool GetTypes( std::vector<TypeIndex>& indexes )
         {
-            UNREF_PARAM( indexes );
-            return false;
+            IDiaSymbol* pSymbol = NULL;
+            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+                return false;
+
+            DWORD count;
+            HRESULT hr = pSymbol->get_count( (DWORD*) &count );
+            if( !FAILED( hr ) )
+            {
+                indexes.resize( count );
+                if( count > 0 )
+                    hr = pSymbol->get_typeIds( count, &count, indexes.data() );
+            }
+            pSymbol->Release();
+            return hr == S_OK;
         }
 
         virtual bool GetAttribute( uint16_t& attr ) { UNREF_PARAM( attr ); return false; }
@@ -501,7 +535,7 @@ namespace MagoST
             MultiByteToWideChar( CP_UTF8, 0, nameChars, nameLen, wname.get (), len);
             wname.get()[len] = L'\0';
 
-            HRESULT hr = mGlobal->findChildren( SymTagFunction, wname.get (), nsCaseSensitive, &pEnumSymbols );
+            HRESULT hr = mGlobal->findChildren( SymTagNull, wname.get (), nsCaseSensitive, &pEnumSymbols );
             
             IDiaSymbol* pSymbol = NULL;
             if ( !FAILED( hr ) )

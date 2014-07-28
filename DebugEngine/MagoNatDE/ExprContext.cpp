@@ -821,6 +821,7 @@ namespace Mago
         MagoST::SymInfoData         infoData = { 0 };
         MagoST::ISymbolInfo*        symInfo = NULL;
         RefPtr<MagoST::ISession>    session;
+        MagoST::TypeIndex           typeIndex;
 
         if ( !mModule->GetSymbolSession( session ) )
             return E_NOT_FOUND;
@@ -843,7 +844,21 @@ namespace Mago
             break;
 
         default:
-            return E_FAIL;
+            // try type declarations
+            if( symInfo->GetType( typeIndex ) )
+            {
+                RefPtr<MagoEE::Type> type;
+                hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
+                if( !FAILED( hr ) && type )
+                    decl = type->GetDeclaration();
+                if( !decl )
+                    hr = E_FAIL;
+                else
+                    decl->AddRef();
+            }
+            else
+                hr = E_FAIL;
+            break;
         }
 
         return hr;
@@ -981,7 +996,8 @@ namespace Mago
 
         if ( (pstrName2.GetName() != NULL)
             && (pstrName1.GetLength() == pstrName2.GetLength()) 
-            && (strncmp( pstrName1.GetName(), pstrName2.GetName(), pstrName1.GetLength() ) == 0) )
+            && (strncmp( pstrName1.GetName(), pstrName2.GetName(), pstrName1.GetLength() ) == 0) 
+            && refType->GetDeclaration() )
         {
             // the typedef has the same name as the type, 
             // so let's use the referenced type directly, as if there's no typedef
@@ -1307,6 +1323,64 @@ namespace Mago
         decl = new TypeCVDecl( this, typeHandle, infoData, symInfo );
         if ( decl == NULL )
             return E_OUTOFMEMORY;
+
+        SymString name;
+        if( !symInfo->GetName( name ) )
+            return E_INVALIDARG;
+
+        bool isArray = false;
+        if( name.GetLength() == 6 )
+            isArray = ( strncmp( name.GetName(), "dArray", 6 ) == 0 || strncmp( name.GetName(), "string", 6 ) == 0 );
+        else if( name.GetLength() == 7 )
+            isArray = ( strncmp( name.GetName(), "wstring", 7 ) == 0 || strncmp( name.GetName(), "dstring", 7 ) == 0 );
+        if( !isArray && name.GetLength() > 2 )
+            isArray = strcmp( name.GetName() + name.GetLength() - 2, "[]" ) == 0;
+
+        if( isArray )
+        {
+            MagoEE::Declaration* ptrdecl = NULL;
+            HRESULT hr = decl->FindObject( L"ptr", ptrdecl );
+            if( FAILED( hr ) )
+                return hr;
+            MagoEE::Type* ptrtype = NULL;
+            hr = E_INVALIDARG;
+            if( ptrdecl != NULL && ptrdecl->GetType( ptrtype ) && ptrtype != NULL )
+            {
+                MagoEE::ITypeNext* nexttype = ptrtype->AsTypeNext();
+                if( nexttype != NULL )
+                    hr = mTypeEnv->NewDArray( nexttype->GetNext(), type );
+            }
+
+            if( ptrtype )
+                ptrtype->Release();
+            if( ptrdecl )
+                ptrdecl->Release();
+            return hr;
+        }
+        
+        if( name.GetLength() == 9 && strncmp( name.GetName(), "dDelegate", 9 ) == 0 )
+        {
+            MagoEE::Declaration* ptrdecl = NULL;
+            HRESULT hr = decl->FindObject( L"funcptr", ptrdecl );
+            if( FAILED( hr ) )
+                return hr;
+            MagoEE::Type* ptrtype = NULL;
+            hr = E_INVALIDARG;
+            if( ptrdecl != NULL && ptrdecl->GetType( ptrtype ) && ptrtype != NULL )
+            {
+                hr = mTypeEnv->NewDelegate( ptrtype, type );
+            }
+            if( ptrtype )
+                ptrtype->Release();
+            if( ptrdecl )
+                ptrdecl->Release();
+            return hr;
+        }
+
+        if( name.GetLength() == 11 && strncmp( name.GetName(), "dAssocArray", 11 ) == 0 )
+        {
+            // no type information yet in debug info, just plain void pointer
+        }
 
         if ( !decl->GetType( type ) )
             return E_NOT_FOUND;
