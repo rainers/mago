@@ -23,4 +23,26 @@ struct MappedDeleter
     }
 };
 
-typedef UniquePtrBase<void*, NULL, MappedDeleter> MappedPtr;
+struct MappedPtr : UniquePtrBase<void*, NULL, MappedDeleter>
+{
+     MappedPtr()
+         : UniquePtrBase()
+     {
+     }
+
+     explicit MappedPtr( void* ptr )
+         : UniquePtrBase( ptr )
+     {
+     }
+
+     ~MappedPtr()
+     {
+         Delete();
+     }
+
+     MappedPtr& operator=( void* ptr )
+     {
+         Attach( ptr );
+         return *this;
+     }
+};
