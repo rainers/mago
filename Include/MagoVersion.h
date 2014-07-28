@@ -8,8 +8,8 @@
 #pragma once
 
 
-#define MAGO_VERSION_MAJOR      0
-#define MAGO_VERSION_MINOR      9
+#define MAGO_VERSION_MAJOR      1
+#define MAGO_VERSION_MINOR      0
 
 #ifndef MAGO_VERSION_BUILD
 #define MAGO_VERSION_BUILD      0
