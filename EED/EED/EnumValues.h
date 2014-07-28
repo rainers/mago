@@ -119,6 +119,11 @@ namespace MagoEE
             std::wstring& name,
             std::wstring& fullName );
 
+        bool NameStaticMember( 
+            Declaration* decl, 
+            std::wstring& name,
+            std::wstring& fullName );
+
         bool NameRegularMember( 
             Declaration* decl, 
             std::wstring& name,
