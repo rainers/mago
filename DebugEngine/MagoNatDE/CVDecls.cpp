@@ -140,6 +140,16 @@ namespace Mago
         return kind == DataIsMember;
     }
 
+    bool CVDecl::IsStaticField()
+    {
+        MagoST::DataKind   kind = MagoST::DataIsUnknown;
+
+        if ( !mSymInfo->GetDataKind( kind ) )
+            return false;
+
+        return kind == DataIsStaticMember;
+    }
+
     bool CVDecl::IsVar()
     {
         MagoST::DataKind   kind = MagoST::DataIsUnknown;
@@ -994,6 +1004,11 @@ namespace Mago
     }
 
     bool ClassRefDecl::IsField()
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::IsStaticField()
     {
         return false;
     }

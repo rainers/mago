@@ -52,6 +52,7 @@ namespace Mago
         virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
 
         virtual bool IsField();
+        virtual bool IsStaticField();
         virtual bool IsVar();
         virtual bool IsConstant();
         virtual bool IsType();
@@ -198,6 +199,7 @@ namespace Mago
         virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
 
         virtual bool IsField();
+        virtual bool IsStaticField();
         virtual bool IsVar();
         virtual bool IsConstant();
         virtual bool IsType();
