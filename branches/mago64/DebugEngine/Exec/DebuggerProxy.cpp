@@ -11,7 +11,10 @@
 #include "EventCallback.h"
 #include "Thread.h"
 #include <ObjBase.h>
+#include <process.h>
 
+
+typedef unsigned ( __stdcall *CrtThreadProc )( void * );
 
 // these values can be tweaked, as long as we're responsive and don't spin
 const DWORD EventTimeoutMillis = 50;
@@ -95,10 +98,10 @@ namespace MagoCore
 
         HandlePtr   hThread;
 
-        hThread = CreateThread(
+        hThread = (HANDLE) _beginthreadex(
             NULL,
             0,
-            DebugPollProc,
+            (CrtThreadProc) DebugPollProc,
             this,
             0,
             NULL );
