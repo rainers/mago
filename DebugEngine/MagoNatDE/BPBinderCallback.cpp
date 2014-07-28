@@ -17,6 +17,8 @@
 #include "CodeContext.h"
 #include "Program.h"
 #include "Module.h"
+#include "ICoreProcess.h"
+#include "ArchData.h"
 
 
 namespace Mago
@@ -24,18 +26,15 @@ namespace Mago
     BPBinderCallback::BPBinderCallback( 
         BPBinder* binder,
         PendingBreakpoint* pendingBP, 
-        BPDocumentContext* docContext, 
-        DebuggerProxy* debugger )
+        BPDocumentContext* docContext )
         :   mBinder( binder ),
             mPendingBP( pendingBP ),
             mDocContext( docContext ),
-            mDebugger( debugger ),
             mBoundBPCount( 0 ),
             mErrorBPCount( 0 )
     {
         _ASSERT( binder != NULL );
         _ASSERT( pendingBP != NULL );
-        _ASSERT( debugger != NULL );
 
         HRESULT         hr = S_OK;
 
@@ -250,6 +249,7 @@ namespace Mago
         CComPtr<IDebugCodeContext2>     codeContext;
         BpResolutionLocation            resLoc;
         RefPtr<BoundBreakpoint>         boundBP;
+        ArchData*                       archData = NULL;
 
         hr = MakeCComObject( code );
         if ( FAILED( hr ) )
@@ -257,7 +257,9 @@ namespace Mago
 
         // TODO: maybe we should be able to customize the code context with things like function and module
 
-        hr = code->Init( (Address) address, mod, mDocContextInterface );
+        archData = mCurProg->GetCoreProcess()->GetArchData();
+
+        hr = code->Init( (Address64) address, mod, mDocContextInterface, archData->GetPointerSize() );
         if ( FAILED( hr ) )
             return;
 
@@ -276,7 +278,8 @@ namespace Mago
         if ( FAILED( hr ) )
             return;
 
-        hr = res->QueryInterface( __uuidof( IDebugBreakpointResolution2 ), (void**) &breakpointResolution );
+        hr = res->QueryInterface( 
+            __uuidof( IDebugBreakpointResolution2 ), (void**) &breakpointResolution );
         _ASSERT( hr == S_OK );
 
         hr = MakeCComObject( boundBP );
@@ -284,7 +287,8 @@ namespace Mago
             return;
 
         const DWORD Id = mPendingBP->GetNextBPId();
-        boundBP->Init( Id, (Address) address, mPendingBP, breakpointResolution, mCurProg.Get(), mDebugger );
+        boundBP->Init( 
+            Id, (Address64) address, mPendingBP, breakpointResolution, mCurProg.Get() );
 
         binding->BoundBPs.push_back( boundBP );
     }

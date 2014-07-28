@@ -29,10 +29,7 @@
 #include <map>
 #include <vector>
 #include <limits>
-
-// Boost
-#include <boost/scoped_array.hpp>
-#include <boost/type_traits/remove_pointer.hpp>
+#include <type_traits>
 
 // Windows
 #include <windows.h>

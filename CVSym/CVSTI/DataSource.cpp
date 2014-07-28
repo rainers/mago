@@ -56,6 +56,8 @@ namespace MagoST
         const wchar_t* searchPath,
         ILoadCallback* callback )
     {
+        UNREFERENCED_PARAMETER( searchPath );
+
         HRESULT hr = S_OK;
         auto_ptr<ImageDebugContainer>   container( new ImageDebugContainer() );
         RefPtr<IAddressMap> addrMap;

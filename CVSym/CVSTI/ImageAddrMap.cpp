@@ -82,14 +82,14 @@ namespace MagoST
     HRESULT ImageAddrMap::LoadFromSections( uint16_t count, const IMAGE_SECTION_HEADER* secHeaders )
     {
         _ASSERT( secHeaders != NULL );
-        _ASSERT( mSections.get() == NULL );
+        _ASSERT( mSections.Get() == NULL );
         _ASSERT( count != USHRT_MAX );
 
         if ( count == USHRT_MAX )
             return E_INVALIDARG;
 
-        mSections.reset( new Section[ count ] );
-        if ( mSections.get() == NULL )
+        mSections.Attach( new Section[ count ] );
+        if ( mSections.Get() == NULL )
             return E_OUTOFMEMORY;
 
         mSecCount = count;

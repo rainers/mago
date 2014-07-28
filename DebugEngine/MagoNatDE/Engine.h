@@ -12,6 +12,7 @@
 #include "resource.h"       // main symbols
 #include "MagoNatDE_i.h"
 #include "DebuggerProxy.h"
+#include "RemoteDebuggerProxy.h"
 #include "ExceptionTable.h"
 
 
@@ -22,7 +23,7 @@ namespace Mago
 
     // Engine
 
-    class ATL_NO_VTABLE Engine :
+    class Engine :
         public CComObjectRootEx<CComMultiThreadModel>,
         public CComCoClass<Engine, &CLSID_MagoNativeEngine>,
         public IDebugEngine2,
@@ -32,6 +33,7 @@ namespace Mago
         typedef std::map< DWORD, RefPtr<PendingBreakpoint> >    BPMap;
 
         DebuggerProxy       mDebugger;
+        RefPtr<RemoteDebuggerProxy> mRemoteDebugger;
         bool                mPollThreadStarted;
         bool                mSentEngineCreate;
         ProgramMap          mProgs;
@@ -39,6 +41,7 @@ namespace Mago
         DWORD               mLastBPId;
         DWORD               mLastModId;
         CComPtr<IDebugEventCallback2>   mCallback;
+        Guard               mBindBPGuard;
         Guard               mPendingBPGuard;
         Guard               mExceptionGuard;
         EngineExceptionTable    mExceptionInfos;
@@ -130,15 +133,29 @@ namespace Mago
         HRESULT BindPendingBPsToModule( Module* mod, Program* prog );
         HRESULT UnbindPendingBPsFromModule( Module* mod, Program* prog );
 
+        void BeginBindBP();
+        void EndBindBP();
+
     private:
         HRESULT EnsurePollThreadRunning();
         void ShutdownIfNeeded();
 
+        HRESULT StartDebuggerProxy( 
+            bool useInProcDebugger,
+            IDebuggerProxy*& debugger );
+        HRESULT StartDebuggerProxyForLaunch( 
+            const wchar_t* pszMachine, 
+            IDebugPort2* pPort, 
+            const wchar_t* pszExe, 
+            const wchar_t* pszOptions, 
+            DWORD dwLaunchFlags,
+            IDebuggerProxy*& debugger );
         HRESULT LaunchSuspendedInternal( 
-           IDebugPort2*          pPort,
-           LaunchInfo&           launchParams,
-           IDebugEventCallback2* pCallback,
-           IDebugProcess2**      ppDebugProcess
+            IDebuggerProxy*       debugger,
+            IDebugPort2*          pPort,
+            LaunchInfo&           launchParams,
+            IDebugEventCallback2* pCallback,
+            IDebugProcess2**      ppDebugProcess
         );
         HRESULT ResumeProcessInternal( IDebugProcess2* pProcess );
 

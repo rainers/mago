@@ -33,13 +33,11 @@ using namespace MagoST;
 class EventCallback : public EventCallbackBase
 {
     bool        mBPHit;
-    BPCookie    mBPCookie;
     uint32_t    mLastThreadId;
 
 public:
     EventCallback()
         :   mBPHit( false ),
-            mBPCookie( 0 ),
             mLastThreadId( 0 )
     {
     }
@@ -49,22 +47,20 @@ public:
         return mLastThreadId;
     }
 
-    bool TakeBPHit( BPCookie& cookie )
+    bool TakeBPHit()
     {
         if ( !mBPHit )
             return false;
 
-        cookie = mBPCookie;
         mBPHit = false;
         return true;
     }
 
-    bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+    RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
         mLastThreadId = threadId;
         mBPHit = true;
-        mBPCookie = iter->GetCurrent();
-        return false;
+        return RunMode_Break;
     }
 };
 
@@ -74,7 +70,6 @@ ProgramValueEnv::ProgramValueEnv( const wchar_t* progPath, uint32_t stopRva, Mag
     mStopRva( stopRva ),
     mTypeEnv( typeEnv ),
     mExec( NULL ),
-    mMachine( NULL ),
     mProc( NULL ),
     mThreadId( 0 ),
     mSymSession( NULL ),
@@ -97,8 +92,6 @@ ProgramValueEnv::~ProgramValueEnv()
         mSymSession->Release();
     if ( mProc != NULL )
         mProc->Release();
-    if ( mMachine != NULL )
-        mMachine->Release();
     if ( mExec != NULL )
         delete mExec;
 }
@@ -106,23 +99,17 @@ ProgramValueEnv::~ProgramValueEnv()
 HRESULT ProgramValueEnv::StartProgram()
 {
     HRESULT hr = S_OK;
-    RefPtr<IMachine>        mac;
     RefPtr<EventCallback>   callback;
     RefPtr<IProcess>        proc;
     LaunchInfo              launchInfo = { 0 };
-    const BPCookie          Cookie = 1;
     RefPtr<IModule>         procMod;
-
-    hr = MakeMachineX86( mac.Ref() );
-    if ( FAILED( hr ) )
-        return hr;
 
     auto_ptr<Exec>  exec( new Exec() );
 
     callback = new EventCallback();
     callback->SetExec( exec.get() );
 
-    hr = exec->Init( mac, callback );
+    hr = exec->Init( callback );
     if ( FAILED( hr ) )
         return hr;
 
@@ -137,9 +124,7 @@ HRESULT ProgramValueEnv::StartProgram()
 
     for ( ; ; )
     {
-        BPCookie    cookie = 0;
-
-        hr = exec->WaitForDebug( INFINITE );
+        hr = exec->WaitForEvent( INFINITE );
         if ( FAILED( hr ) )
             return hr;
 
@@ -147,27 +132,30 @@ HRESULT ProgramValueEnv::StartProgram()
         if ( FAILED( hr ) )
             return hr;
 
-        if ( !loaded && callback->GetLoadCompleted() )
+        if ( proc->IsStopped() )
         {
-            loaded = true;
+            if ( !loaded && callback->GetLoadCompleted() )
+            {
+                loaded = true;
 
-            procMod = callback->GetProcessModule();
-            Address         va = procMod->GetImageBase() + mStopRva;
+                procMod = callback->GetProcessModule();
+                Address         va = procMod->GetImageBase() + mStopRva;
 
-            hr = exec->SetBreakpoint( proc, va, Cookie );
+                hr = exec->SetBreakpoint( proc, va );
+                if ( FAILED( hr ) )
+                    return hr;
+            }
+
+            if ( callback->TakeBPHit() )
+            {
+                mThreadId = callback->GetLastThreadId();
+                break;
+            }
+
+            hr = exec->Continue( proc, false );
             if ( FAILED( hr ) )
                 return hr;
         }
-
-        if ( callback->TakeBPHit( cookie ) && (cookie == Cookie) )
-        {
-            mThreadId = callback->GetLastThreadId();
-            break;
-        }
-
-        hr = exec->ContinueDebug( false );
-        if ( FAILED( hr ) )
-            return hr;
     }
 
     // the process is now where we want it, so load its symbols
@@ -187,7 +175,7 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
 {
     HRESULT hr = S_OK;
     int     nzChars = 0;
-    scoped_array<char>  nameChars;
+    UniquePtr<char[]>  nameChars;
     SymHandle   childSH;
     DWORD   flags = 0;
 
@@ -201,23 +189,23 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
     if ( nzChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
 
-    nameChars.reset( new char[ nzChars ] );
-    if ( nameChars.get() == NULL )
+    nameChars.Attach( new char[ nzChars ] );
+    if ( nameChars.Get() == NULL )
         return E_OUTOFMEMORY;
 
-    nzChars = WideCharToMultiByte( CP_UTF8, flags, name, -1, nameChars.get(), nzChars, NULL, NULL );
+    nzChars = WideCharToMultiByte( CP_UTF8, flags, name, -1, nameChars.Get(), nzChars, NULL, NULL );
     if ( nzChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
 
     // take away one for the terminator
-    hr = mSymSession->FindChildSymbol( mBlockSH, nameChars.get(), nzChars-1, childSH );
+    hr = mSymSession->FindChildSymbol( mBlockSH, nameChars.Get(), nzChars-1, childSH );
     if ( hr != S_OK )
     {
         EnumNamedSymbolsData    enumData = { 0 };
 
         for ( int i = 0; i < SymHeap_Count; i++ )
         {
-            hr = mSymSession->FindFirstSymbol( (SymbolHeapId) i, nameChars.get(), nzChars-1, enumData );
+            hr = mSymSession->FindFirstSymbol( (SymbolHeapId) i, nameChars.Get(), nzChars-1, enumData );
             if ( hr == S_OK )
                 break;
         }
@@ -404,8 +392,8 @@ boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Declaration* decl 
 
             tlsPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
 
-            SIZE_T  lenRead = 0;
-            SIZE_T  lenUnreadable = 0;
+            uint32_t    lenRead = 0;
+            uint32_t    lenUnreadable = 0;
 
             hr = mExec->ReadMemory( mProc, tlsPtrAddr, 4, lenRead, lenUnreadable, (uint8_t*) &tlsArrayAddr );
             if ( FAILED( hr ) )
@@ -453,8 +441,8 @@ boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Address address, T
 
     uint8_t     targetBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
     size_t      targetSize = type->GetSize();
-    SIZE_T      lenRead = 0;
-    SIZE_T      lenUnreadable = 0;
+    uint32_t    lenRead = 0;
+    uint32_t    lenUnreadable = 0;
 
     hr = mExec->ReadMemory( mProc, (Address) address, targetSize, lenRead, lenUnreadable, targetBuf );
     if ( FAILED( hr ) )

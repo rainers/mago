@@ -13,7 +13,6 @@
 
 
 class Exec;
-class IMachine;
 class IProcess;
 struct IDiaSession;
 struct IDiaSymbol;
@@ -31,7 +30,6 @@ class ProgramValueEnv : public IValueEnv, public IScope
     uint32_t                    mStopRva;
     RefPtr<MagoEE::ITypeEnv>    mTypeEnv;
     Exec*                       mExec;
-    IMachine*                   mMachine;
     IProcess*                   mProc;
     uint32_t                    mThreadId;
 #if 0

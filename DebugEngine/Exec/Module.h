@@ -20,7 +20,7 @@ class Module : public IModule
     uint32_t        mDebugInfoSize;
     uint32_t        mSize;
     uint16_t        mMachine;
-    std::wstring    mExePath;
+    std::wstring    mPath;
 
     bool            mDeleted;
 
@@ -29,7 +29,7 @@ public:
         Address imageBase, 
         uint32_t size, 
         uint16_t machine, 
-        const wchar_t* exePath, 
+        const wchar_t* path, 
         uint32_t debugInfoFileOffset, 
         uint32_t debugInfoSize );
     ~Module();
@@ -42,10 +42,13 @@ public:
     uint32_t        GetDebugInfoSize();
     uint32_t        GetSize();
     uint16_t        GetMachine();
-    const wchar_t*  GetExePath();
+    const wchar_t*  GetPath();
     Address         GetPreferredImageBase();
     void            SetPreferredImageBase( Address address );
 
     bool            IsDeleted();
+
+    // internal
     void            SetDeleted();
+    bool            Contains( Address addr );
 };

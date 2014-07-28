@@ -43,10 +43,6 @@ void EventSuite::setup()
     mExec = new Exec();
     mCallback = new EventCallbackBase();
 
-    HRESULT hr = MakeMachineX86( mMachine );
-    if ( FAILED( hr ) )
-        throw "MakeMachineX86 failed.";
-
     mCallback->AddRef();
 }
 
@@ -62,12 +58,6 @@ void EventSuite::tear_down()
     {
         mCallback->Release();
         mCallback = NULL;
-    }
-
-    if ( mMachine != NULL )
-    {
-        mMachine->Release();
-        mMachine = NULL;
     }
 }
 
@@ -94,7 +84,7 @@ void EventSuite::RunDebuggee( RefPtr<IProcess>& process )
 {
     Exec    exec;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo      info = { 0 };
     wchar_t         cmdLine[ MAX_PATH ] = L"";
@@ -116,7 +106,7 @@ void EventSuite::RunDebuggee( RefPtr<IProcess>& process )
 
     for ( int i = 0; !mCallback->GetProcessExited(); i++ )
     {
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -125,7 +115,8 @@ void EventSuite::RunDebuggee( RefPtr<IProcess>& process )
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( true ) ) );
+        if ( process->IsStopped() )
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, true ) ) );
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );
@@ -159,7 +150,7 @@ void EventSuite::AssertModuleLoads( IProcess* process )
 
         if ( node->Code == IEventCallback::Event_ModuleUnload )
         {
-            if ( wcsstr( ((ModuleUnloadEventNode*) node)->Module->GetExePath(), L"ws2_32.dll" ) != NULL )
+            if ( wcsstr( ((ModuleUnloadEventNode*) node)->Module->GetPath(), L"ws2_32.dll" ) != NULL )
             {
                 if ( dllLoad1 && !dllUnload && !dllLoad2 )
                     dllUnload = true;
@@ -179,21 +170,20 @@ void EventSuite::AssertModuleLoads( IProcess* process )
 
         do
         {
-            pRet = _wfullpath( &fullPathBuf[0], modNode->Module->GetExePath(), fullPathBuf.size() );
+            pRet = _wfullpath( &fullPathBuf[0], modNode->Module->GetPath(), fullPathBuf.size() );
             if ( pRet == NULL )
             {
                 fullPathBuf.resize( fullPathBuf.size() * 2 );
             }
         } while ( pRet == NULL );
 
-        TEST_ASSERT( _wcsicmp( &fullPathBuf[0], modNode->Module->GetExePath() ) == 0 );
-        TEST_ASSERT( GetFileAttributes( modNode->Module->GetExePath() ) != INVALID_FILE_ATTRIBUTES );
+        TEST_ASSERT( _wcsicmp( &fullPathBuf[0], modNode->Module->GetPath() ) == 0 );
+        TEST_ASSERT( GetFileAttributes( modNode->Module->GetPath() ) != INVALID_FILE_ATTRIBUTES );
 
         // TODO: test size?
-        // TODO: test machine?
 
-        size_t          exePathLen = wcslen( modNode->Module->GetExePath() );
-        const wchar_t*  lastWack = wcsrchr( modNode->Module->GetExePath(), L'\\' );
+        size_t          exePathLen = wcslen( modNode->Module->GetPath() );
+        const wchar_t*  lastWack = wcsrchr( modNode->Module->GetPath(), L'\\' );
 
         TEST_ASSERT_MSG( lastWack != NULL, "There was no backslash." );
 
@@ -223,7 +213,7 @@ void EventSuite::AssertModuleLoads( IProcess* process )
         {
             TEST_ASSERT( !procImageLoaded );
             TEST_ASSERT( loadOrder == 1 );
-            TEST_ASSERT( _wcsicmp( modNode->Module->GetExePath(), process->GetExePath() ) == 0 );
+            TEST_ASSERT( _wcsicmp( modNode->Module->GetPath(), process->GetExePath() ) == 0 );
             procImageLoaded = true;
         }
     }
@@ -323,7 +313,7 @@ void EventSuite::TryHandlingException( bool firstTimeHandled, bool expectedChanc
     Exec    exec;
     State   state = State_Init;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo      info = { 0 };
     wchar_t         cmdLine[ MAX_PATH ] = L"";
@@ -347,7 +337,7 @@ void EventSuite::TryHandlingException( bool firstTimeHandled, bool expectedChanc
     {
         bool    handled = true;
 
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -356,57 +346,62 @@ void EventSuite::TryHandlingException( bool firstTimeHandled, bool expectedChanc
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-        if ( (mCallback->GetLastEvent().get() != NULL) 
-            && (mCallback->GetLastEvent()->Code == ExecEvent_Exception) )
+        if ( process->IsStopped() )
         {
-            ExceptionEventNode* node = (ExceptionEventNode*) mCallback->GetLastEvent().get();
-
             CONTEXT_X86     context = { 0 };
             RefPtr<Thread>  thread;
 
             TEST_ASSERT_RETURN( process->FindThread( mCallback->GetLastThreadId(), thread.Ref() ) );
-            context.ContextFlags = CONTEXT_X86_FULL;
-            TEST_ASSERT_RETURN( GetThreadContextX86( thread->GetHandle(), &context ) );
+            TEST_ASSERT_RETURN( 
+                exec.GetThreadContext( process, thread->GetId(), CONTEXT_X86_FULL, 0, &context, sizeof context ) == S_OK );
 
-            if ( node->Exception.ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO )
+            if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_Exception) )
             {
-                if ( state == State_Init )
-                {
-                    TEST_ASSERT( node->FirstChance );
-                    state = State_FirstHandled;
-                    handled = firstTimeHandled;
-                }
-                else if ( state == State_FirstHandled )
-                {
-                    TEST_ASSERT( node->FirstChance == expectedChanceSecondTime );
-                    state = State_SecondHandled;
+                ExceptionEventNode* node = (ExceptionEventNode*) mCallback->GetLastEvent().get();
 
-                    context.Ebx = 455;
-                    TEST_ASSERT_RETURN( context.Eax != 237 );
-                    TEST_ASSERT_RETURN( SetThreadContextX86( thread->GetHandle(), &context ) );
+                if ( node->Exception.ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO )
+                {
+                    if ( state == State_Init )
+                    {
+                        TEST_ASSERT( node->FirstChance );
+                        state = State_FirstHandled;
+                        handled = firstTimeHandled;
+                    }
+                    else if ( state == State_FirstHandled )
+                    {
+                        TEST_ASSERT( node->FirstChance == expectedChanceSecondTime );
+                        state = State_SecondHandled;
+
+                        context.Ebx = 455;
+                        TEST_ASSERT_RETURN( context.Eax != 237 );
+                        TEST_ASSERT_RETURN( 
+                            exec.SetThreadContext( 
+                                process, thread->GetId(), &context, sizeof context ) == S_OK );
+                    }
+                    else
+                    {
+                        TEST_FAIL( "Too many Integer divides by zero." );
+                        exec.Terminate( process.Get() );
+                    }
                 }
                 else
                 {
-                    TEST_FAIL( "Too many Integer divides by zero." );
+                    TEST_ASSERT( node->FirstChance );
+                    TEST_FAIL( "Unexpected exception." );
                     exec.Terminate( process.Get() );
                 }
             }
-            else if ( (node->Exception.ExceptionCode == EXCEPTION_SINGLE_STEP_X86)
+            else if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_StepComplete)
                 && (state == State_SecondHandled) )
             {
-                TEST_ASSERT( node->FirstChance );
                 state = State_Done;
                 TEST_ASSERT( context.Eax == 237 );
             }
-            else
-            {
-                TEST_ASSERT( node->FirstChance );
-                TEST_FAIL( "Unexpected exception." );
-                exec.Terminate( process.Get() );
-            }
-        }
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( handled ) ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, handled ) ) );
+        }
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );
@@ -427,7 +422,7 @@ void EventSuite::TestExceptionNotHandledFirstChanceCaught()
     Exec    exec;
     State   state = State_Init;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo      info = { 0 };
     wchar_t         cmdLine[ MAX_PATH ] = L"";
@@ -451,7 +446,7 @@ void EventSuite::TestExceptionNotHandledFirstChanceCaught()
     {
         bool    handled = true;
 
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
@@ -460,27 +455,36 @@ void EventSuite::TestExceptionNotHandledFirstChanceCaught()
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
 
-        if ( (mCallback->GetLastEvent().get() != NULL) 
-            && (mCallback->GetLastEvent()->Code == ExecEvent_Exception) )
+        if ( process->IsStopped() )
         {
-            ExceptionEventNode* node = (ExceptionEventNode*) mCallback->GetLastEvent().get();
-
-            TEST_ASSERT( node->FirstChance );
-
-            if ( node->Exception.ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO )
+            if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_Exception) )
             {
-                if ( state == State_Init )
+                ExceptionEventNode* node = (ExceptionEventNode*) mCallback->GetLastEvent().get();
+
+                TEST_ASSERT( node->FirstChance );
+
+                if ( node->Exception.ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO )
                 {
-                    state = State_FirstNotHandled;
-                    handled = false;
+                    if ( state == State_Init )
+                    {
+                        state = State_FirstNotHandled;
+                        handled = false;
+                    }
+                    else
+                    {
+                        TEST_FAIL( "Too many Integer divides by zero." );
+                        exec.Terminate( process.Get() );
+                    }
                 }
                 else
                 {
-                    TEST_FAIL( "Too many Integer divides by zero." );
+                    TEST_FAIL( "Unexpected exception." );
                     exec.Terminate( process.Get() );
                 }
             }
-            else if ( (node->Exception.ExceptionCode == EXCEPTION_BREAKPOINT_X86)
+            else if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_Breakpoint)
                 && (state == State_FirstNotHandled) )
             {
                 state = State_Done;
@@ -493,14 +497,9 @@ void EventSuite::TestExceptionNotHandledFirstChanceCaught()
                 TEST_ASSERT_RETURN( GetThreadContextX86( thread->GetHandle(), &context ) );
                 TEST_ASSERT( context.Eax == 1877514773 );
             }
-            else
-            {
-                TEST_FAIL( "Unexpected exception." );
-                exec.Terminate( process.Get() );
-            }
-        }
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( handled ) ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, handled ) ) );
+        }
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );
@@ -522,7 +521,7 @@ void EventSuite::TestExceptionNotHandledAllChances()
     Exec    exec;
     State   state = State_Init;
 
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mMachine, mCallback ) ) );
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
 
     LaunchInfo      info = { 0 };
     wchar_t         cmdLine[ MAX_PATH ] = L"";
@@ -544,13 +543,25 @@ void EventSuite::TestExceptionNotHandledAllChances()
 
     for ( int i = 0; !mCallback->GetProcessExited(); i++ )
     {
-        bool    handled = true;
+        bool        handled = true;
+        uint32_t    timeoutMillis = DefaultTimeoutMillis;
 
-        HRESULT hr = exec.WaitForDebug( DefaultTimeoutMillis );
+        // it can take more than half a second to get the ProcessExit event 
+        // after an unhandled exception
+        if ( state == State_SecondNotHandled )
+            timeoutMillis = 5 * 1000;
+
+        HRESULT hr = exec.WaitForEvent( timeoutMillis );
 
         // this should happen after process exit
         if ( hr == E_TIMEOUT )
+        {
+            // Timing out is still an error, but it's only expected sometimes 
+            // after SecondNotHandled, if the timeout to wait for the process
+            // to end is still not enough. See where the timeout is set above.
+            TEST_ASSERT( state == State_SecondNotHandled );
             break;
+        }
 
         TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
         TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
@@ -561,39 +572,42 @@ void EventSuite::TestExceptionNotHandledAllChances()
             state = State_Done;
         }
 
-        if ( (mCallback->GetLastEvent().get() != NULL) 
-            && (mCallback->GetLastEvent()->Code == ExecEvent_Exception) )
+        if ( process->IsStopped() )
         {
-            ExceptionEventNode* node = (ExceptionEventNode*) mCallback->GetLastEvent().get();
-
-            if ( node->Exception.ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO )
+            if ( (mCallback->GetLastEvent().get() != NULL) 
+                && (mCallback->GetLastEvent()->Code == ExecEvent_Exception) )
             {
-                if ( state == State_Init )
+                ExceptionEventNode* node = (ExceptionEventNode*) mCallback->GetLastEvent().get();
+
+                if ( node->Exception.ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO )
                 {
-                    TEST_ASSERT( node->FirstChance );
-                    state = State_FirstNotHandled;
-                    handled = false;
-                }
-                else if ( state == State_FirstNotHandled )
-                {
-                    TEST_ASSERT( !node->FirstChance );
-                    state = State_SecondNotHandled;
-                    handled = false;
+                    if ( state == State_Init )
+                    {
+                        TEST_ASSERT( node->FirstChance );
+                        state = State_FirstNotHandled;
+                        handled = false;
+                    }
+                    else if ( state == State_FirstNotHandled )
+                    {
+                        TEST_ASSERT( !node->FirstChance );
+                        state = State_SecondNotHandled;
+                        handled = false;
+                    }
+                    else
+                    {
+                        TEST_FAIL( "Too many Integer divides by zero." );
+                        exec.Terminate( process.Get() );
+                    }
                 }
                 else
                 {
-                    TEST_FAIL( "Too many Integer divides by zero." );
+                    TEST_FAIL( "Unexpected exception." );
                     exec.Terminate( process.Get() );
                 }
             }
-            else
-            {
-                TEST_FAIL( "Unexpected exception." );
-                exec.Terminate( process.Get() );
-            }
-        }
 
-        TEST_ASSERT_RETURN( SUCCEEDED( exec.ContinueDebug( handled ) ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, handled ) ) );
+        }
     }
 
     TEST_ASSERT( mCallback->GetLoadCompleted() );

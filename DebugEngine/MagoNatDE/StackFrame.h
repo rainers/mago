@@ -22,7 +22,7 @@ namespace Mago
         struct LineInfo
         {
             CComBSTR        Filename;
-            Address         Address;
+            Address64       Address;
             TEXT_POSITION   LineBegin;
             TEXT_POSITION   LineEnd;
             CComBSTR        LangName;
@@ -32,7 +32,8 @@ namespace Mago
         RefPtr<IRegisterSet>            mRegSet;
         RefPtr<Thread>                  mThread;
         RefPtr<Module>                  mModule;
-        Address                         mPC;
+        Address64                       mPC;
+        int                             mPtrSize;
 
         MagoST::SymHandle               mFuncSH;
         MagoST::SymHandle               mBlockSH;
@@ -94,10 +95,11 @@ namespace Mago
 
     public:
         void Init(
-            Address pc,
+            Address64 pc,
             IRegisterSet* regSet,
             Thread* thread,
-            Module* module );
+            Module* module,
+            int ptrSize );
 
     private:
         HRESULT GetLineInfo( LineInfo& info );

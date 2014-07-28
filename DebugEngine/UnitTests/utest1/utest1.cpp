@@ -12,8 +12,6 @@
 #include "..\..\Exec\Types.h"
 #include "..\..\Exec\Exec.h"
 #include "..\..\Exec\EventCallback.h"
-#include "..\..\Exec\Machine.h"
-#include "..\..\Exec\MakeMachineX86.h"
 #include "..\..\Exec\IProcess.h"
 #include "..\..\Exec\IModule.h"
 #include "..\..\Exec\Enumerator.h"
@@ -92,9 +90,9 @@ public:
         }
 
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
-            printf( "  %p %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetExePath() );
+            printf( "  %p %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetPath() );
         else
-            printf( "  %08I64x %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetExePath() );
+            printf( "  %08I64x %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetPath() );
 
         if ( mMod == NULL )
         {
@@ -138,28 +136,21 @@ public:
 #endif
     }
 
-    virtual bool OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    virtual RunMode OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  %p %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
         else
             printf( "  %08I64x %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
-        return false;
+        return RunMode_Break;
     }
 
-    virtual bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator< BPCookie >* iter )
+    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
         if ( sizeof( Address ) == sizeof( uintptr_t ) )
             printf( "  breakpoint at %p\n", address );
         else
             printf( "  breakpoint at %08I64x\n", address );
-
-        while ( iter->MoveNext() )
-        {
-            BPCookie    cookie = iter->GetCurrent();
-
-            printf( "    %I64x\n", cookie );
-        }
 
         mHitBp = true;
 
@@ -170,7 +161,7 @@ public:
         //mExec->RemoveBreakpoint( process, baseAddr + 0x00011395, (void*) 129 );
         //mExec->SetBreakpoint( process, baseAddr + 0x00011395, (void*) 129 );
 
-        return false;
+        return RunMode_Break;
     }
 
     virtual void OnStepComplete( IProcess* process, uint32_t threadId )
@@ -187,9 +178,10 @@ public:
         printf( "  *** ERROR: %08x while %d\n", hrErr, event );
     }
 
-    virtual bool CanStepInFunction( IProcess* process, Address address )
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
     {
-        return false;
+        return ProbeRunMode_Run;
     }
 };
 
@@ -212,7 +204,6 @@ int _tmain( int argc, _TCHAR* argv[] )
     PROCESS_INFORMATION procInfo = { 0 };
     DEBUG_EVENT         event = { 0 };
     _EventCallback   callback;
-    IMachine*       machine = NULL;
     Exec        exec;
     HRESULT     hr = S_OK;
     LaunchInfo  info = { 0 };
@@ -226,11 +217,7 @@ int _tmain( int argc, _TCHAR* argv[] )
 
     callback.SetExec( &exec );
 
-    hr = MakeMachineX86( machine );
-    if ( FAILED( hr ) )
-        goto Error;
-
-    hr = exec.Init( machine, &callback );
+    hr = exec.Init( &callback );
     if ( FAILED( hr ) )
         goto Error;
     
@@ -277,7 +264,7 @@ int _tmain( int argc, _TCHAR* argv[] )
 
     for ( int i = 0; /* doesn't end */ ; i++ )
     {
-        hr = exec.WaitForDebug( 1000 );
+        hr = exec.WaitForEvent( 1000 );
         if ( FAILED( hr ) )
             goto Error;
 
@@ -286,39 +273,43 @@ int _tmain( int argc, _TCHAR* argv[] )
             goto Error;
 
 #if 1
-        if ( (hr == S_FALSE) && callback.GetHitBp() )
+        if ( proc->IsStopped() )
         {
-            stepCount++;
+            if ( callback.GetHitBp() )
+            {
+                stepCount++;
 
-            //11728
-            IModule*    mod = NULL;
-            UINT_PTR    baseAddr = 0;
+                //11728
+                IModule*    mod = NULL;
+                UINT_PTR    baseAddr = 0;
 
-            callback.GetModule( mod );
-            baseAddr = (UINT_PTR) mod->GetImageBase();
-            mod->Release();
+                callback.GetModule( mod );
+                baseAddr = (UINT_PTR) mod->GetImageBase();
+                mod->Release();
 
-            //hr = exec.StepOut( proc, (void*) (baseAddr + 0x00011728) );
-            //hr = exec.StepInstruction( proc, true );
+                //hr = exec.StepOut( proc, (void*) (baseAddr + 0x00011728) );
+                //hr = exec.StepInstruction( proc, true );
 
-            if ( stepCount > 1 )
-                hr = exec.StepInstruction( proc, true, false );
+                if ( stepCount > 1 )
+                    hr = exec.StepInstruction( proc, true, true );
+                else
+                {
+                    //113A5
+                    AddressRange    range = { baseAddr + 0x0001137A, baseAddr + 0x000113A5 };
+                    hr = exec.StepRange( proc, false, range, true );
+                }
+
+                if ( FAILED( hr ) )
+                    goto Error;
+            }
             else
             {
-                //113A5
-                AddressRange    range = { baseAddr + 0x0001137A, baseAddr + 0x000113A5 };
-                hr = exec.StepRange( proc, false, false, &range, 1 );
+                hr = exec.Continue( proc, true );
+                if ( FAILED( hr ) )
+                    goto Error;
             }
-
-            if ( FAILED( hr ) )
-                goto Error;
         }
 #endif
-        {
-            hr = exec.ContinueDebug( true );
-            if ( FAILED( hr ) )
-                goto Error;
-        }
 
 #if 1
         if ( i == 0 )
@@ -333,7 +324,7 @@ int _tmain( int argc, _TCHAR* argv[] )
             // 1137A, 11395
 
             //exec.SetBreakpoint( proc, baseAddr + 0x0001138C, 255 );
-            exec.SetBreakpoint( proc, baseAddr + 0x0001137A, 257 );
+            exec.SetBreakpoint( proc, baseAddr + 0x0001137A );
             //exec.SetBreakpoint( proc, baseAddr + 0x00011395, 129 );
 
             mod->Release();
@@ -360,9 +351,6 @@ Error:
 
     if ( proc != NULL )
         proc->Release();
-
-    if ( machine != NULL )
-        machine->Release();
 
     return 0;
 }

@@ -10,8 +10,6 @@
 class IProcess;
 class Thread;
 class IModule;
-template <class T>
-class Enumerator;
 
 
 class IEventCallback
@@ -44,17 +42,12 @@ public:
     virtual void OnOutputString( IProcess* process, const wchar_t* outputString ) = 0;
     virtual void OnLoadComplete( IProcess* process, DWORD threadId ) = 0;
 
-    // Returns true to continue onto run mode, false to stay in break mode.
-    virtual bool OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec ) = 0;
-    virtual bool OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter ) = 0;
+    virtual RunMode OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec ) = 0;
+    virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded ) = 0;
     virtual void OnStepComplete( IProcess* process, uint32_t threadId ) = 0;
     virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId ) = 0;
     virtual void OnError( IProcess* process, HRESULT hrErr, EventCode event ) = 0;
 
-    // This function is convenient here, but might not be so good in cases 
-    // where Exec and its user are on different machines.
-    // In that case, we would need an asynchronous event like the rest above
-    // and a function exposed by Exec to respond and complete the request.
-
-    virtual bool CanStepInFunction( IProcess* process, Address address ) = 0;
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange ) = 0;
 };

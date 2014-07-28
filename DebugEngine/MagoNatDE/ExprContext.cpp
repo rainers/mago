@@ -11,9 +11,13 @@
 #include "Module.h"
 #include "Thread.h"
 #include "CVDecls.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 #include "RegisterSet.h"
 #include "winternl2.h"
+#include "ArchDataX86.h"
+#include "DRuntime.h"
+#include "Program.h"
+#include "ICoreProcess.h"
 #include <MagoCVConst.h>
 
 #include <algorithm>
@@ -29,42 +33,6 @@ using namespace MagoST;
 #define DMD_OEM_DARRAY      1
 #define DMD_OEM_AARRAY      2
 #define DMD_OEM_DELEGATE    3
-
-
-struct aaA
-{
-    uint32_t    next;
-    uint32_t    hash;
-    // key
-    // value
-};
-
-struct BB
-{
-    uint32_t    bLength;
-    uint32_t    bAddr;
-    uint32_t    nodes;
-    uint32_t    keyti;
-};
-
-struct TypeInfo_Struct
-{
-    uint32_t    vptr;
-    uint32_t    monitor;
-    uint32_t    nameLength;
-    uint32_t    namePtr;
-    uint32_t    m_initLength;
-    uint32_t    m_initPtr;
-    uint32_t    xtoHash;
-    uint32_t    xopEquals;
-    uint32_t    xopCmp;
-    uint32_t    xtoString;
-    uint32_t    m_flags;
-    uint32_t    xgetMembers;
-    uint32_t    xdtor;
-    uint32_t    xpostblit;
-    uint32_t    m_align;
-};
 
 
 namespace Mago
@@ -300,52 +268,64 @@ namespace Mago
         case LocIsTLS:
             {
                 uint32_t        offset = 0;
-                DWORD           tebAddr = 0;
-                DWORD           tlsArrayPtrAddr = 0;
-                DWORD           tlsArrayAddr = 0;
-                DWORD           tlsBufAddr = 0;
-                DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
+                Address64       tebAddr = 0;
+                Address64       tlsArrayPtrAddr = 0;
+                Address64       tlsArrayAddr = 0;
+                Address64       tlsBufAddr = 0;
+                IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
+                ICoreProcess*   coreProc = mThread->GetCoreProcess();
+                ArchData*       archData = coreProc->GetArchData();
+                uint32_t        ptrSize = archData->GetPointerSize();
 
                 if ( !sym->GetAddressOffset( offset ) )
                     return E_FAIL;
 
-                // TODO: rename to GetTebBase
-                tebAddr = mThread->GetCoreThread()->GetTlsBase();
+                tebAddr = mThread->GetCoreThread()->GetTebBase();
 
-                tlsArrayPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
+                if ( ptrSize == sizeof( UINT64 ) )
+                    tlsArrayPtrAddr = tebAddr + offsetof( TEB64, ThreadLocalStoragePointer );
+                else
+                    tlsArrayPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
 
-                SIZE_T  lenRead = 0;
-                SIZE_T  lenUnreadable = 0;
+                uint32_t    lenRead = 0;
+                uint32_t    lenUnreadable = 0;
 
+#if !defined( _M_IX86 )
+#error Mago doesn't implement a debugger engine for the current architecture.
+#endif
+                // read the pointer straight into a long address, even if the pointer is short
                 hr = debuggerProxy->ReadMemory( 
                     mThread->GetCoreProcess(), 
                     tlsArrayPtrAddr, 
-                    4, 
+                    ptrSize, 
                     lenRead, 
                     lenUnreadable, 
                     (uint8_t*) &tlsArrayAddr );
                 if ( FAILED( hr ) )
                     return hr;
-                if ( lenRead < 4 )
+                if ( lenRead < ptrSize )
                     return E_FAIL;
 
                 if ( (tlsArrayAddr == 0) || (tlsArrayAddr == tlsArrayPtrAddr) )
                 {
                     // go to the reserved slots in the TEB
-                    tlsArrayAddr = tebAddr + offsetof( TEB32, TlsSlots );
+                    if ( ptrSize == sizeof( UINT64 ) )
+                        tlsArrayAddr = tebAddr + offsetof( TEB64, TlsSlots );
+                    else
+                        tlsArrayAddr = tebAddr + offsetof( TEB32, TlsSlots );
                 }
 
                 // assuming TLS slot 0
                 hr = debuggerProxy->ReadMemory( 
                     mThread->GetCoreProcess(), 
                     tlsArrayAddr, 
-                    4, 
+                    ptrSize, 
                     lenRead, 
                     lenUnreadable, 
                     (uint8_t*) &tlsBufAddr );
                 if ( FAILED( hr ) )
                     return hr;
-                if ( lenRead < 4 )
+                if ( lenRead < ptrSize )
                     return E_FAIL;
 
                 addr = tlsBufAddr + offset;
@@ -433,9 +413,9 @@ namespace Mago
         HRESULT         hr = S_OK;
         uint8_t         targetBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
         size_t          targetSize = type->GetSize();
-        SIZE_T          lenRead = 0;
-        SIZE_T          lenUnreadable = 0;
-        DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
+        uint32_t        lenRead = 0;
+        uint32_t        lenUnreadable = 0;
+        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
         // no value to get for complex/aggregate types
         if ( !type->IsScalar() 
@@ -450,7 +430,7 @@ namespace Mago
 
         hr = debuggerProxy->ReadMemory( 
             mThread->GetCoreProcess(), 
-            (Address) addr, 
+            (Address64) addr, 
             targetSize, 
             lenRead, 
             lenUnreadable, 
@@ -463,505 +443,15 @@ namespace Mago
         return FromRawValue( targetBuf, type, value );
     }
 
-    HRESULT ExprContext::FromRawValue( const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value )
-    {
-        _ASSERT( srcBuf != NULL );
-        _ASSERT( type != NULL );
-
-        size_t size = type->GetSize();
-
-        if ( type->IsPointer() )
-        {
-            value.Addr = ReadInt( srcBuf, 0, size, false );
-        }
-        else if ( type->IsIntegral() )
-        {
-            value.UInt64Value = ReadInt( srcBuf, 0, size, type->IsSigned() );
-        }
-        else if ( type->IsReal() || type->IsImaginary() )
-        {
-            value.Float80Value = ReadFloat( srcBuf, 0, type );
-        }
-        else if ( type->IsComplex() )
-        {
-            const size_t    PartSize = type->GetSize() / 2;
-
-            value.Complex80Value.RealPart = ReadFloat( srcBuf, 0, type );
-            value.Complex80Value.ImaginaryPart = ReadFloat( srcBuf, PartSize, type );
-        }
-        else if ( type->IsDArray() )
-        {
-            const size_t LengthSize = type->AsTypeDArray()->GetLengthType()->GetSize();
-            const size_t AddressSize = type->AsTypeDArray()->GetPointerType()->GetSize();
-
-            value.Array.Length = (MagoEE::dlength_t) ReadInt( srcBuf, 0, LengthSize, false );
-            value.Array.Addr = ReadInt( srcBuf, LengthSize, AddressSize, false );
-        }
-        else if ( type->IsAArray() )
-        {
-            value.Addr = ReadInt( srcBuf, 0, size, false );
-        }
-        else if ( type->IsDelegate() )
-        {
-            const size_t AddressSize = mTypeEnv->GetVoidPointerType()->GetSize();
-
-            value.Delegate.ContextAddr = (MagoEE::dlength_t) ReadInt( srcBuf, 0, AddressSize, false );
-            value.Delegate.FuncAddr = ReadInt( srcBuf, AddressSize, AddressSize, false );
-        }
-        else
-            return E_FAIL;
-
-        return S_OK;
-    }
-
-    uint32_t AlignTSize( uint32_t size )
-    {
-        return (size + sizeof( uint32_t ) - 1) & ~(sizeof( uint32_t ) - 1);
-    }
-
-    HRESULT ExprContext::GetHash( MagoEE::Type* type, const MagoEE::DataValue& value, uint32_t& hash )
-    {
-        _ASSERT( type != NULL );
-
-        if ( type->IsPointer() )
-        {
-            hash = (uint32_t) value.Addr;
-        }
-        else if ( type->IsIntegral() && (type->GetSize() <= sizeof( uint32_t )) )
-        {
-            hash = (uint32_t) value.UInt64Value;
-        }
-        else if ( type->GetBackingTy() == MagoEE::Tfloat32 || type->GetBackingTy() == MagoEE::Timaginary32 )
-        {
-            float f = value.Float80Value.ToFloat();
-            hash = *(uint32_t*) &f;
-        }
-        else if ( type->IsIntegral() && (type->GetSize() > sizeof( uint32_t )) )
-        {
-            hash = HashOf( &value.UInt64Value, sizeof value.UInt64Value );
-        }
-        else if ( type->GetBackingTy() == MagoEE::Tfloat64 || type->GetBackingTy() == MagoEE::Timaginary64 )
-        {
-            double d = value.Float80Value.ToDouble();
-            hash = HashOf( &d, sizeof d );
-        }
-        else if ( type->GetBackingTy() == MagoEE::Tfloat80 || type->GetBackingTy() == MagoEE::Timaginary80 )
-        {
-            hash = HashOf( &value.Float80Value, sizeof value.Float80Value );
-        }
-        else if ( type->GetBackingTy() == MagoEE::Tcomplex32 )
-        {
-            float c[2] = { value.Complex80Value.RealPart.ToFloat(), value.Complex80Value.ImaginaryPart.ToFloat() };
-            hash = HashOf( c, sizeof c );
-        }
-        else if ( type->GetBackingTy() == MagoEE::Tcomplex64 )
-        {
-            double c[2] = { value.Complex80Value.RealPart.ToDouble(), value.Complex80Value.ImaginaryPart.ToDouble() };
-            hash = HashOf( c, sizeof c );
-        }
-        else if ( type->GetBackingTy() == MagoEE::Tcomplex80 )
-        {
-            hash = HashOf( &value.Complex80Value, sizeof value.Complex80Value );
-        }
-        else if ( type->IsDelegate() )
-        {
-            uint32_t delPtrs[2] = { (uint32_t) value.Delegate.ContextAddr, (uint32_t) value.Delegate.FuncAddr };
-            hash = HashOf( delPtrs, sizeof delPtrs );
-        }
-        else
-            return E_FAIL;
-
-        return S_OK;
-    }
-
-    HRESULT ExprContext::GetStructHash( 
-        const MagoEE::DataObject& key, 
-        const BB& bb, 
-        HeapPtr& keyBuf, 
-        uint32_t& hash )
-    {
-        _ASSERT( keyBuf.IsEmpty() );
-
-        HRESULT hr = S_OK;
-        TypeInfo_Struct tiStruct;
-
-        if ( (key.Addr == 0) || (bb.keyti == 0) )
-            return E_FAIL;
-
-        hr = ReadMemory( bb.keyti, sizeof tiStruct, &tiStruct );
-        if ( FAILED( hr ) )
-            return hr;
-
-        // if the user defined hash and compare functions,
-        // then we can't do the standard hash and compare
-        if ( (tiStruct.xtoHash != 0) || (tiStruct.xopCmp != 0) )
-            return E_FAIL;
-
-        keyBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, key._Type->GetSize() );
-        if ( keyBuf.IsEmpty() )
-            return E_OUTOFMEMORY;
-
-        hr = ReadMemory( key.Addr, key._Type->GetSize(), keyBuf );
-        if ( FAILED( hr ) )
-            return hr;
-
-        // TODO: we only need to hash upto init().length, but we can't get that 
-        //       from the CV debug info. So, hope that the size is the same
-        hash = HashOf( keyBuf, key._Type->GetSize() );
-        return S_OK;
-    }
-
-    HRESULT ExprContext::GetArrayHash( 
-        const MagoEE::DataObject& key, 
-        HeapPtr& keyBuf, 
-        uint32_t& hash )
-    {
-        _ASSERT( keyBuf.IsEmpty() );
-        _ASSERT( key._Type->IsSArray() || key._Type->IsDArray() );
-
-        HRESULT         hr = S_OK;
-        MagoEE::Address addr = 0;
-        uint32_t        size = 0;
-        RefPtr<MagoEE::Type> elemType;
-        const uint8_t*  buf = NULL;
-
-        elemType = key._Type->AsTypeNext()->GetNext();
-
-        if ( key._Type->IsDArray() && (key.Value.Array.LiteralString != NULL) )
-        {
-            switch ( key.Value.Array.LiteralString->Kind )
-            {
-            case MagoEE::StringKind_Byte:
-                buf = (uint8_t*) ((MagoEE::ByteString*) key.Value.Array.LiteralString)->Str;
-                break;
-            case MagoEE::StringKind_Utf16:
-                buf = (uint8_t*) ((MagoEE::Utf16String*) key.Value.Array.LiteralString)->Str;
-                break;
-            case MagoEE::StringKind_Utf32:
-                buf = (uint8_t*) ((MagoEE::Utf32String*) key.Value.Array.LiteralString)->Str;
-                break;
-            default:
-                _ASSERT( false );
-                return E_UNEXPECTED;
-            }
-
-            size = key.Value.Array.LiteralString->Length * elemType->GetSize();
-        }
-        else
-        {
-            if ( key._Type->IsSArray() )
-            {
-                addr = key.Addr;
-                size = key._Type->GetSize();
-            }
-            else
-            {
-                addr = key.Value.Array.Addr;
-                size = (uint32_t) key.Value.Array.Length * elemType->GetSize();
-            }
-
-            if ( addr == 0 )
-                return E_FAIL;
-
-            keyBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, size );
-            if ( keyBuf.IsEmpty() )
-                return E_OUTOFMEMORY;
-
-            hr = ReadMemory( addr, size, keyBuf );
-            if ( FAILED( hr ) )
-                return hr;
-
-            buf = keyBuf;
-        }
-
-        if ( key._Type->IsSArray() )
-        {
-            uint32_t    length = key._Type->AsTypeSArray()->GetLength();
-            uint32_t    elemSize = elemType->GetSize();
-
-            // TODO: for structs, we only need to hash upto init().length, but we can't 
-            //       get that from the CV debug info. So, hope that the size is the same
-            uint32_t    initSize = elemType->GetSize();
-
-            hash = 0;
-
-            for ( uint32_t i = 0; i < length; i++ )
-            {
-                uint32_t    offset = i * elemSize;
-                uint32_t    elemHash = 0;
-
-                if ( elemType->AsTypeStruct() != NULL )
-                {
-                    elemHash = HashOf( buf + offset, initSize );
-                }
-                else
-                {
-                    MagoEE::DataValue elem = { 0 };
-
-                    hr = FromRawValue( buf + offset, elemType, elem );
-                    if ( FAILED( hr ) )
-                        return hr;
-
-                    hr = GetHash( elemType, elem, elemHash );
-                    if ( FAILED( hr ) )
-                        return hr;
-                }
-
-                hash += elemHash;
-            }
-        }
-        else
-        {
-            if ( elemType->IsBasic() && elemType->IsChar() && (elemType->GetSize() == 1) )
-            {
-                hash = 0;
-
-                for ( uint32_t i = 0; i < key.Value.Array.Length; i++ )
-                {
-                    hash = hash * 11 + buf[i];
-                }
-            }
-            // TODO: There's a bug in druntime, where the length in elements is used as the size in bytes to hash
-            //       merge the non-basic case into the basic one when it's fixed
-            else if ( elemType->IsBasic() )
-            {
-                hash = HashOf( buf, size );
-            }
-            else
-            {
-                hash = HashOf( buf, (uint32_t) key.Value.Array.Length );
-            }
-        }
-
-        return S_OK;
-    }
-
-    bool ExprContext::EqualArray(
-        MagoEE::Type* elemType,
-        uint32_t length,
-        const void* keyBuf, 
-        const void* nodeArrayBuf )
-    {
-        // key and nodeKey array lengths match, because they're the same type
-        uint32_t        size = length * elemType->GetSize();
-
-        if ( elemType->IsIntegral() 
-            || elemType->IsPointer() 
-            || elemType->IsDelegate() )
-        {
-            return memcmp( keyBuf, nodeArrayBuf, size ) == 0;
-        }
-        else if ( elemType->IsFloatingPoint() )
-        {
-            uint32_t    elemSize = elemType->GetSize();
-            EqualsFunc  equals = GetFloatingEqualsFunc( elemType );
-
-            if ( equals == NULL )
-                return false;
-
-            for ( uint32_t i = 0; i < length; i++ )
-            {
-                uint32_t    offset = i * elemSize;
-                if ( !equals( (uint8_t*) keyBuf + offset, (uint8_t*) nodeArrayBuf + offset ) )
-                    return false;
-            }
-
-            return true;
-        }
-        else if ( elemType->AsTypeStruct() != NULL )
-        {
-            // TODO: you have to compare each element
-            //       with structs, only compare upto init().length
-            return memcmp( keyBuf, nodeArrayBuf, size ) == 0;
-        }
-
-        return false;
-    }
-
-    bool ExprContext::EqualSArray(
-        const MagoEE::DataObject& key, 
-        const void* keyBuf, 
-        const void* nodeArrayBuf )
-    {
-        _ASSERT( key._Type->IsSArray() );
-
-        MagoEE::Type*   elemType = key._Type->AsTypeSArray()->GetElement();
-        uint32_t        length = key._Type->AsTypeSArray()->GetLength();
-
-        return EqualArray( elemType, length, keyBuf, nodeArrayBuf );
-    }
-
-    bool ExprContext::EqualDArray( 
-        const MagoEE::DataObject& key, 
-        const void* keyBuf, 
-        HeapPtr& inout_nodeArrayBuf, 
-        const MagoEE::DataValue& nodeKey )
-    {
-        _ASSERT( key._Type->IsDArray() );
-
-        HRESULT         hr = S_OK;
-        MagoEE::Type*   elemType = key._Type->AsTypeDArray()->GetElement();
-        uint32_t        size = (uint32_t) nodeKey.Array.Length * elemType->GetSize();
-        const void*     buf = keyBuf;
-
-        if ( nodeKey.Array.Length != key.Value.Array.Length )
-            return false;
-
-        if ( inout_nodeArrayBuf.IsEmpty() )
-        {
-            inout_nodeArrayBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, size );
-            if ( inout_nodeArrayBuf.IsEmpty() )
-                return false;
-        }
-
-        hr = ReadMemory( nodeKey.Array.Addr, size, inout_nodeArrayBuf );
-        if ( FAILED( hr ) )
-            return false;
-
-        if ( key.Value.Array.LiteralString != NULL )
-        {
-            switch ( key.Value.Array.LiteralString->Kind )
-            {
-            case MagoEE::StringKind_Byte:
-                buf = (uint8_t*) ((MagoEE::ByteString*) key.Value.Array.LiteralString)->Str;
-                break;
-            case MagoEE::StringKind_Utf16:
-                buf = (uint8_t*) ((MagoEE::Utf16String*) key.Value.Array.LiteralString)->Str;
-                break;
-            case MagoEE::StringKind_Utf32:
-                buf = (uint8_t*) ((MagoEE::Utf32String*) key.Value.Array.LiteralString)->Str;
-                break;
-            default:
-                _ASSERT( false );
-                return false;
-            }
-        }
-
-        return EqualArray( elemType, (uint32_t) nodeKey.Array.Length, buf, inout_nodeArrayBuf );
-    }
-
-    bool ExprContext::EqualStruct(
-        const MagoEE::DataObject& key, 
-        const void* keyBuf, 
-        const void* nodeArrayBuf )
-    {
-        // we would also check and run TypeInfo_Struct.xopCmp, if we supported func eval
-        // TODO: actually, you have to compare upto init().length
-        return memcmp( keyBuf, nodeArrayBuf, key._Type->GetSize() ) == 0;
-    }
-
     HRESULT ExprContext::GetValue(
         MagoEE::Address aArrayAddr, 
         const MagoEE::DataObject& key, 
         MagoEE::Address& valueAddr )
     {
-        const int MAX_AA_SEARCH_NODES = 1000000;
+        Program* prog = mThread->GetProgram();
+        DRuntime* druntime = prog->GetDRuntime();
 
-        HRESULT     hr = S_OK;
-        BB          bb = { 0 };
-        uint8_t     aaaBuf[ sizeof( aaA ) + sizeof( MagoEE::DataValue ) ] = { 0 };
-        aaA*        aaa = (aaA*) aaaBuf;
-        uint32_t    hash = 0;
-        HeapPtr     keyBuf;
-
-        hr = ReadMemory( aArrayAddr, sizeof bb, &bb );
-        if ( FAILED( hr ) )
-            return hr;
-
-        if ( (bb.bAddr == 0) || (bb.bLength == 0) )
-            return E_FAIL;
-
-        if ( key._Type->AsTypeStruct() != NULL )
-        {
-            hr = GetStructHash( key, bb, keyBuf, hash );
-            if ( FAILED( hr ) )
-                return hr;
-        }
-        else if ( key._Type->IsSArray() || key._Type->IsDArray() )
-        {
-            hr = GetArrayHash( key, keyBuf, hash );
-            if ( FAILED( hr ) )
-                return hr;
-        }
-        else
-        {
-            hr = GetHash( key._Type, key.Value, hash );
-            if ( FAILED( hr ) )
-                return hr;
-        }
-
-        uint32_t    bucketIndex = hash % bb.bLength;
-        uint32_t    aaAAddr = 0;
-        uint32_t    lenToRead = sizeof( aaA ) + key._Type->GetSize();
-        uint32_t    lenBeforeValue = sizeof( aaA ) + AlignTSize( key._Type->GetSize() );
-        HeapPtr     nodeBuf;
-        HeapPtr     nodeArrayBuf;
-
-        if ( lenToRead > sizeof aaaBuf )
-        {
-            nodeBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, lenToRead );
-            if ( nodeBuf.IsEmpty() )
-                return E_OUTOFMEMORY;
-
-            aaa = (aaA*) nodeBuf.Get();
-        }
-
-        hr = ReadMemory( bb.bAddr + (bucketIndex * sizeof aaAAddr), sizeof aaAAddr, &aaAAddr );
-        if ( FAILED( hr ) )
-            return hr;
-
-        valueAddr = 0;
-
-        for ( int i = 0; (i < MAX_AA_SEARCH_NODES) && (aaAAddr != 0); i++ )
-        {
-            MagoEE::DataValue nodeKey = { 0 };
-            bool    found = false;
-
-            hr = ReadMemory( aaAAddr, lenToRead, aaa );
-            if ( FAILED( hr ) )
-                return hr;
-
-            if ( aaa->hash == hash )
-            {
-                if ( key._Type->AsTypeStruct() != NULL )
-                {
-                    found = EqualStruct( key, keyBuf, aaa + 1 );
-                }
-                else if ( key._Type->IsSArray() )
-                {
-                    found = EqualSArray( key, keyBuf, aaa + 1 );
-                }
-                else if ( key._Type->IsDArray() )
-                {
-                    hr = FromRawValue( aaa + 1, key._Type, nodeKey );
-                    if ( FAILED( hr ) )
-                        return hr;
-
-                    found = EqualDArray( key, keyBuf, nodeArrayBuf, nodeKey );
-                }
-                else
-                {
-                    hr = FromRawValue( aaa + 1, key._Type, nodeKey );
-                    if ( FAILED( hr ) )
-                        return hr;
-
-                    found = EqualValue( key._Type, key.Value, nodeKey );
-                }
-            }
-
-            if ( found )
-            {
-                valueAddr = aaAAddr + lenBeforeValue;
-                break;
-            }
-
-            aaAAddr = aaa->next;
-        }
-
-        if ( valueAddr == 0 )
-            return E_NOT_FOUND;
-
-        return S_OK;
+        return druntime->GetValue( aArrayAddr, key, valueAddr );
     }
 
     HRESULT ExprContext::SetValue( 
@@ -1028,8 +518,8 @@ namespace Mago
         HRESULT         hr = S_OK;
         uint8_t         sourceBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
         size_t          sourceSize = type->GetSize();
-        SIZE_T          lenWritten = 0;
-        DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
+        uint32_t        lenWritten = 0;
+        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
         // no value to set for complex/aggregate types
         if ( !type->IsScalar() 
@@ -1110,7 +600,7 @@ namespace Mago
 
         hr = debuggerProxy->WriteMemory( 
             mThread->GetCoreProcess(), 
-            (Address) addr, 
+            (Address64) addr, 
             sourceSize, 
             lenWritten, 
             sourceBuf );
@@ -1129,14 +619,14 @@ namespace Mago
         uint8_t* buffer )
     {
         HRESULT         hr = S_OK;
-        SIZE_T          len = sizeToRead;
-        SIZE_T          lenRead = 0;
-        SIZE_T          lenUnreadable = 0;
-        DebuggerProxy*  debuggerProxy = mThread->GetDebuggerProxy();
+        uint32_t        len = sizeToRead;
+        uint32_t        lenRead = 0;
+        uint32_t        lenUnreadable = 0;
+        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
         hr = debuggerProxy->ReadMemory(
             mThread->GetCoreProcess(),
-            (Address) addr,
+            (Address64) addr,
             len,
             lenRead,
             lenUnreadable,
@@ -1149,20 +639,6 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, void* buffer )
-    {
-        HRESULT     hr = S_OK;
-        uint32_t    sizeRead = 0;
-
-        hr = ReadMemory( addr, sizeToRead, sizeRead, (uint8_t*) buffer );
-        if ( FAILED( hr ) )
-            return hr;
-        if ( sizeRead < sizeToRead )
-            return HRESULT_FROM_WIN32( ERROR_PARTIAL_COPY );
-
-        return S_OK;
-    }
-
 
     ////////////////////////////////////////////////////////////////////////////// 
 
@@ -1171,7 +647,7 @@ namespace Mago
         Thread* thread,
         MagoST::SymHandle funcSH, 
         MagoST::SymHandle blockSH,
-        Address pc,
+        Address64 pc,
         IRegisterSet* regSet )
     {
         _ASSERT( regSet != NULL );
@@ -1188,8 +664,9 @@ namespace Mago
         // we have to be able to evaluate expressions even if there aren't symbols
 
         HRESULT hr = S_OK;
+        ArchData*   archData = mThread->GetCoreProcess()->GetArchData();
 
-        hr = MagoEE::EED::MakeTypeEnv( mTypeEnv.Ref() );
+        hr = MagoEE::EED::MakeTypeEnv( archData->GetPointerSize(), mTypeEnv.Ref() );
         if ( FAILED( hr ) )
             return hr;
 
@@ -1198,6 +675,11 @@ namespace Mago
             return hr;
 
         return S_OK;
+    }
+
+    Thread* ExprContext::GetThread()
+    {
+        return mThread.Get();
     }
 
 
@@ -1927,287 +1409,6 @@ namespace Mago
     }
 
 
-    static const uint8_t gRegMapX86[] = 
-    {
-        RegX86_NONE,
-        RegX86_AL,
-        RegX86_CL,
-        RegX86_DL,
-        RegX86_BL,
-        RegX86_AH,
-        RegX86_CH,
-        RegX86_DH,
-        RegX86_BH,
-        RegX86_AX,
-        RegX86_CX,
-        RegX86_DX,
-        RegX86_BX,
-        RegX86_SP,
-        RegX86_BP,
-        RegX86_SI,
-        RegX86_DI,
-        RegX86_EAX,
-        RegX86_ECX,
-        RegX86_EDX,
-        RegX86_EBX,
-        RegX86_ESP,
-        RegX86_EBP,
-        RegX86_ESI,
-        RegX86_EDI,
-        RegX86_ES,
-        RegX86_CS,
-        RegX86_SS,
-        RegX86_DS,
-        RegX86_FS,
-        RegX86_GS,
-        RegX86_IP,
-        RegX86_FLAGS,
-        RegX86_EIP,
-        RegX86_EFLAGS,
-
-        0,
-        0,
-        0,
-        0,
-        0,
-
-        0, //RegX86_TEMP,
-        0, //RegX86_TEMPH,
-        0, //RegX86_QUOTE,
-        0, //RegX86_PCDR3,
-        0, //RegX86_PCDR4,
-        0, //RegX86_PCDR5,
-        0, //RegX86_PCDR6,
-        0, //RegX86_PCDR7,
-
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-
-        0, //RegX86_CR0,
-        0, //RegX86_CR1,
-        0, //RegX86_CR2,
-        0, //RegX86_CR3,
-        0, //RegX86_CR4,
-
-        0,
-        0,
-        0,
-        0,
-        0,
-
-        RegX86_DR0,
-        RegX86_DR1,
-        RegX86_DR2,
-        RegX86_DR3,
-        0, //RegX86_DR4,
-        0, //RegX86_DR5,
-        RegX86_DR6,
-        RegX86_DR7,
-
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-
-        0, //RegX86_GDTR,
-        0, //RegX86_GDTL,
-        0, //RegX86_IDTR,
-        0, //RegX86_IDTL,
-        0, //RegX86_LDTR,
-        0, //RegX86_TR,
-
-        0, //RegX86_PSEUDO1,
-        0, //RegX86_PSEUDO2,
-        0, //RegX86_PSEUDO3,
-        0, //RegX86_PSEUDO4,
-        0, //RegX86_PSEUDO5,
-        0, //RegX86_PSEUDO6,
-        0, //RegX86_PSEUDO7,
-        0, //RegX86_PSEUDO8,
-        0, //RegX86_PSEUDO9,
-
-        0,
-        0,
-        0,
-
-        RegX86_ST0,
-        RegX86_ST1,
-        RegX86_ST2,
-        RegX86_ST3,
-        RegX86_ST4,
-        RegX86_ST5,
-        RegX86_ST6,
-        RegX86_ST7,
-        RegX86_CTRL,
-        RegX86_STAT,
-        RegX86_TAG,
-        RegX86_FPIP,
-        RegX86_FPCS,
-        RegX86_FPDO,
-        RegX86_FPDS,
-        0,
-        RegX86_FPEIP,
-        RegX86_FPEDO,
-
-        RegX86_MM0,
-        RegX86_MM1,
-        RegX86_MM2,
-        RegX86_MM3,
-        RegX86_MM4,
-        RegX86_MM5,
-        RegX86_MM6,
-        RegX86_MM7,
-
-        RegX86_XMM0,
-        RegX86_XMM1,
-        RegX86_XMM2,
-        RegX86_XMM3,
-        RegX86_XMM4,
-        RegX86_XMM5,
-        RegX86_XMM6,
-        RegX86_XMM7,
-
-        RegX86_XMM00,
-        RegX86_XMM01,
-        RegX86_XMM02,
-        RegX86_XMM03,
-        RegX86_XMM10,
-        RegX86_XMM11,
-        RegX86_XMM12,
-        RegX86_XMM13,
-        RegX86_XMM20,
-        RegX86_XMM21,
-        RegX86_XMM22,
-        RegX86_XMM23,
-        RegX86_XMM30,
-        RegX86_XMM31,
-        RegX86_XMM32,
-        RegX86_XMM33,
-        RegX86_XMM40,
-        RegX86_XMM41,
-        RegX86_XMM42,
-        RegX86_XMM43,
-        RegX86_XMM50,
-        RegX86_XMM51,
-        RegX86_XMM52,
-        RegX86_XMM53,
-        RegX86_XMM60,
-        RegX86_XMM61,
-        RegX86_XMM62,
-        RegX86_XMM63,
-        RegX86_XMM70,
-        RegX86_XMM71,
-        RegX86_XMM72,
-        RegX86_XMM73,
-
-        RegX86_XMM0L,
-        RegX86_XMM1L,
-        RegX86_XMM2L,
-        RegX86_XMM3L,
-        RegX86_XMM4L,
-        RegX86_XMM5L,
-        RegX86_XMM6L,
-        RegX86_XMM7L,
-
-        RegX86_XMM0H,
-        RegX86_XMM1H,
-        RegX86_XMM2H,
-        RegX86_XMM3H,
-        RegX86_XMM4H,
-        RegX86_XMM5H,
-        RegX86_XMM6H,
-        RegX86_XMM7H,
-
-        0,
-
-        RegX86_MXCSR,
-
-        0, //EDXEAX
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-
-        RegX86_EMM0L,
-        RegX86_EMM1L,
-        RegX86_EMM2L,
-        RegX86_EMM3L,
-        RegX86_EMM4L,
-        RegX86_EMM5L,
-        RegX86_EMM6L,
-        RegX86_EMM7L,
-
-        RegX86_EMM0H,
-        RegX86_EMM1H,
-        RegX86_EMM2H,
-        RegX86_EMM3H,
-        RegX86_EMM4H,
-        RegX86_EMM5H,
-        RegX86_EMM6H,
-        RegX86_EMM7H,
-
-        RegX86_MM00,
-        RegX86_MM01,
-        RegX86_MM10,
-        RegX86_MM11,
-        RegX86_MM20,
-        RegX86_MM21,
-        RegX86_MM30,
-        RegX86_MM31,
-        RegX86_MM40,
-        RegX86_MM41,
-        RegX86_MM50,
-        RegX86_MM51,
-        RegX86_MM60,
-        RegX86_MM61,
-        RegX86_MM70,
-        RegX86_MM71,
-    };
-
-    C_ASSERT( _countof( gRegMapX86 ) == 252 );
-
-
     HRESULT ExprContext::GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value )
     {
         HRESULT         hr = S_OK;
@@ -2231,10 +1432,15 @@ namespace Mago
         }
         else
         {
-            if ( reg >= _countof( gRegMapX86 ) )
-                return E_FAIL;
+            ArchData*           archData = NULL;
 
-            hr = mRegSet->GetValue( gRegMapX86[reg], regVal );
+            archData = mThread->GetCoreProcess()->GetArchData();
+
+            int archRegId = archData->GetArchRegId( reg );
+            if ( archRegId < 0 )
+                return E_NOT_FOUND;
+
+            hr = mRegSet->GetValue( archRegId, regVal );
             if ( FAILED( hr ) )
                 return hr;
 

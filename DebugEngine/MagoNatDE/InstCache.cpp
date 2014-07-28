@@ -8,22 +8,23 @@
 #include "Common.h"
 #include "InstCache.h"
 #include "Program.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
+#include "ICoreProcess.h"
 
 
 namespace Mago
 {
-    ::Address InstBlock::Align( ::Address addr )
+    Address64 InstBlock::Align( Address64 addr )
     {
         return (addr / BlockSize) * BlockSize;
     }
 
-    ::Address InstBlock::GetLimit()
+    Address64 InstBlock::GetLimit()
     {
         return Address + BlockSize;
     }
 
-    bool InstBlock::Contains( ::Address addr )
+    bool InstBlock::Contains( Address64 addr )
     {
         return (addr >= Address) && ((addr - Address) < BlockSize);
     }
@@ -34,12 +35,19 @@ namespace Mago
     //------------------------------------------------------------------------
 
 
-    InstReader::InstReader( uint32_t blockCount, InstBlock** blocks, Address startAddr, Address endAddr )
+    InstReader::InstReader( 
+        uint32_t blockCount, 
+        InstBlock** blocks, 
+        Address64 startAddr,
+        Address64 endAddr,
+        Address64 anchorAddr,
+        int ptrSize )
         :   mBlockCount( blockCount ),
             mBlocks( blocks ),
             mStartAddr( startAddr ),
             mEndAddr( endAddr ),
-            mCurAddr( startAddr )
+            mCurAddr( startAddr ),
+            mAnchorAddr( anchorAddr )
     {
         _ASSERT( (blockCount > 0) && (blockCount <= 2) );
         _ASSERT( blocks != NULL );
@@ -50,15 +58,34 @@ namespace Mago
         _ASSERT( blocks[0]->Contains( startAddr ) );
         _ASSERT( blocks[blockCount - 1]->Contains( endAddr ) 
             ||  (blocks[blockCount - 1]->GetLimit() == endAddr) );
+        _ASSERT( ptrSize == 4 || ptrSize == 8 );
 
         ud_init( &mDisasm );
-        ud_set_mode( &mDisasm, 32 );
+        ud_set_mode( &mDisasm, (uint8_t) (ptrSize * 8) );
         ud_set_syntax( &mDisasm, UD_SYN_INTEL );
     }
 
     const ud_t* InstReader::GetDisasmData()
     {
         return &mDisasm;
+    }
+
+    // If the last disassembled instruction crosses the anchor, then the last 
+    // instruction is set to invalid and its length is trimmed up to the anchor.
+    // Returns the number of bytes disassembled.
+
+    uint32_t InstReader::TruncateBeforeAnchor()
+    {
+        uint32_t instLen = ud_insn_len( &mDisasm );
+        Address64 limit = mCurAddr + instLen;
+
+        if ( mCurAddr < mAnchorAddr && limit > mAnchorAddr )
+        {
+            mDisasm.mnemonic = UD_Iinvalid;
+            instLen = (uint32_t) (mAnchorAddr - mCurAddr);
+        }
+
+        return instLen;
     }
 
     uint32_t InstReader::Decode()
@@ -71,6 +98,7 @@ namespace Mago
         ud_set_input_buffer( &mDisasm, instBuf, instBufLen );
 
         instLen = ud_decode( &mDisasm );
+        instLen = TruncateBeforeAnchor();
         mCurAddr += instLen;
 
         return instLen;
@@ -86,12 +114,13 @@ namespace Mago
         ud_set_input_buffer( &mDisasm, instBuf, instBufLen );
 
         instLen = ud_disassemble( &mDisasm );
+        instLen = TruncateBeforeAnchor();
         mCurAddr += instLen;
 
         return instLen;
     }
 
-    uint32_t InstReader::Disassemble( Address curPC )
+    uint32_t InstReader::Disassemble( Address64 curPC )
     {
         ud_set_pc( &mDisasm, curPC );
 
@@ -114,7 +143,7 @@ namespace Mago
         return true;
     }
 
-    void InstReader::SetPC( Address pc )
+    void InstReader::SetPC( Address64 pc )
     {
         ud_set_pc( &mDisasm, pc );
     }
@@ -127,8 +156,8 @@ namespace Mago
             return NULL;
         }
 
-        uint32_t    maxInstLen = mEndAddr - mCurAddr;
-        uint32_t    virtPos = mCurAddr - mBlocks[0]->Address;
+        uint32_t    maxInstLen = (uint32_t) (mEndAddr - mCurAddr);
+        uint32_t    virtPos = (uint32_t) (mCurAddr - mBlocks[0]->Address);
         uint32_t    pos = virtPos % InstBlock::BlockSize;
         BYTE*       buf = NULL;
 
@@ -145,7 +174,7 @@ namespace Mago
         }
         else
         {
-            size_t  sizeOnLeft = mBlocks[0]->GetLimit() - mCurAddr;
+            size_t  sizeOnLeft = (size_t) (mBlocks[0]->GetLimit() - mCurAddr);
             size_t  sizeOnRight = maxInstLen - sizeOnLeft;
 
             memcpy( &mInstBuf[0], &mBlocks[0]->Inst[pos], sizeOnLeft );
@@ -165,11 +194,13 @@ namespace Mago
 
 
     InstCache::InstCache()
-        :   mDebugger( NULL )
+        :   mDebugger( NULL ),
+            mAnchorAddr( 0 ),
+            mPtrSize( 0 )
     {
     }
 
-    HRESULT InstCache::Init( Program* program, DebuggerProxy* debugger )
+    HRESULT InstCache::Init( Program* program, IDebuggerProxy* debugger, int ptrSize )
     {
         _ASSERT( program != NULL );
         _ASSERT( debugger != NULL );
@@ -185,19 +216,25 @@ namespace Mago
             mBlockCache[i]->State = BlockState_Invalid;
         }
 
+        mPtrSize = ptrSize;
         mProg = program;
         mDebugger = debugger;
 
         return S_OK;
     }
 
-    HRESULT InstCache::LoadBlocks( Address addr, int instAway, int& instAwayAvail )
+    void InstCache::SetAnchor( Address64 anchorAddr )
     {
-        Address anchorBase = InstBlock::Align( addr );
-        Address leftBase = anchorBase - InstBlock::BlockSize;
-        Address rightBase = anchorBase + InstBlock::BlockSize;
-        Address rightLimit = rightBase + InstBlock::BlockSize;
-        Address sideBase = 0;
+        mAnchorAddr = anchorAddr;
+    }
+
+    HRESULT InstCache::LoadBlocks( Address64 addr, int instAway, int& instAwayAvail )
+    {
+        Address64 anchorBase = InstBlock::Align( addr );
+        Address64 leftBase = anchorBase - InstBlock::BlockSize;
+        Address64 rightBase = anchorBase + InstBlock::BlockSize;
+        Address64 rightLimit = rightBase + InstBlock::BlockSize;
+        Address64 sideBase = 0;
 
         bool    anchorFound = false;
         bool    sideFound = false;
@@ -233,8 +270,8 @@ namespace Mago
 
         // calculate the maximum number of instructions we can get
 
-        Address baseOnLeft = anchorBase;
-        Address limitOnRight = rightBase;
+        Address64 baseOnLeft = anchorBase;
+        Address64 limitOnRight = rightBase;
 
         if ( sideFound || (sideBase != 0) )
         {
@@ -267,7 +304,7 @@ namespace Mago
 
     // Builds the instruction map for the blocks around the given address.
 
-    void InstCache::MapInstData( Address anchorAddr )
+    void InstCache::MapInstData( Address64 anchorAddr )
     {
         InstBlock*  anchorBlock = GetBlockContaining( anchorAddr );
         InstBlock*  leftBlock = GetBlockContaining( anchorAddr - InstBlock::BlockSize );
@@ -335,28 +372,29 @@ namespace Mago
         }
     }
 
-    void InstCache::MapInstData( uint32_t blockCount, InstBlock** blocks, Address startAddr, Address endAddr )
+    void InstCache::MapInstData( 
+        uint32_t blockCount, InstBlock** blocks, Address64 startAddr, Address64 endAddr )
     {
         // TODO: assert params
 
-        InstReader  reader( blockCount, blocks, startAddr, endAddr );
+        InstReader  reader( blockCount, blocks, startAddr, endAddr, mAnchorAddr, mPtrSize );
         uint32_t    instLen = 0;
-        uint32_t    virtPos = startAddr - blocks[0]->Address;
+        uint32_t    virtPos = (uint32_t) (startAddr - blocks[0]->Address);
 
         if ( blockCount == 1 )
         {
-            uint32_t    size = endAddr - startAddr;
+            uint32_t    size = (uint32_t) (endAddr - startAddr);
 
             memset( &blocks[0]->Map[virtPos], 0, size );
         }
         else
         {
             _ASSERT( blockCount == 2 );
-            uint32_t    size = blocks[1]->Address - startAddr;
+            uint32_t    size = (uint32_t) (blocks[1]->Address - startAddr);
 
             memset( &blocks[0]->Map[virtPos], 0, size );
 
-            size = endAddr - blocks[1]->Address;
+            size = (uint32_t) (endAddr - blocks[1]->Address);
 
             memset( &blocks[1]->Map[0], 0, size );
         }
@@ -396,8 +434,8 @@ namespace Mago
     }
 
     void InstCache::FindBlocks( 
-        Address anchorBase, 
-        Address sideBase, 
+        Address64 anchorBase, 
+        Address64 sideBase, 
         bool& anchorFound, 
         bool& sideFound, 
         int& anchorIndex,
@@ -447,7 +485,7 @@ namespace Mago
         // else, both were found, and the indexes were set already
     }
 
-    int InstCache::GetBlockIndexContaining( Address addr )
+    int InstCache::GetBlockIndexContaining( Address64 addr )
     {
         for ( int i = 0; i < _countof( mBlockCache ); i++ )
         {
@@ -458,7 +496,7 @@ namespace Mago
         return -1;
     }
 
-    InstBlock* InstCache::GetBlockContaining( Address addr )
+    InstBlock* InstCache::GetBlockContaining( Address64 addr )
     {
         int i = GetBlockIndexContaining( addr );
         _ASSERT( i < (int) _countof( mBlockCache ) );
@@ -469,15 +507,15 @@ namespace Mago
         return mBlockCache[i].get();
     }
 
-    HRESULT InstCache::ReadInstData( Address baseAddr, int cacheIndex )
+    HRESULT InstCache::ReadInstData( Address64 baseAddr, int cacheIndex )
     {
         _ASSERT( (cacheIndex >= 0) && (cacheIndex < _countof( mBlockCache )) );
         _ASSERT( InstBlock::Align( baseAddr ) == baseAddr );
 
-        HRESULT             hr = S_OK;
-        RefPtr<IProcess>    proc;
-        SIZE_T              lenRead = 0;
-        SIZE_T              lenUnreadable = 0;
+        HRESULT                 hr = S_OK;
+        RefPtr<ICoreProcess>    proc;
+        uint32_t                lenRead = 0;
+        uint32_t                lenUnreadable = 0;
 
         mBlockCache[cacheIndex]->Address = baseAddr;
         mBlockCache[cacheIndex]->State = BlockState_Invalid;

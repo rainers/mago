@@ -16,17 +16,18 @@ namespace Mago
     [uuid("D3EC4955-6944-411D-92DD-FEEC3C41AA7C")]
     interface IMagoMemoryContext : IUnknown
     {
-        STDMETHOD( GetAddress )( Address& address ) = 0;
+        STDMETHOD( GetAddress )( Address64& address ) = 0;
     };
 
 
-    class ATL_NO_VTABLE CodeContext : 
+    class CodeContext : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugCodeContext2,
         public IMagoMemoryContext
     {
-        Address         mAddr;
+        Address64       mAddr;
         RefPtr<Module>  mModule;
+        int             mPtrSize;
 
         MagoST::SymHandle   mFuncSH;
         MagoST::SymHandle   mBlockSH;
@@ -77,16 +78,18 @@ namespace Mago
         //////////////////////////////////////////////////////////// 
         // IMagoCodeContext 
 
-        STDMETHOD( GetAddress )( Address& addr );
+        STDMETHOD( GetAddress )( Address64& addr );
 
     public:
         static HRESULT MakeCodeContext( 
-            Address newAddr, 
+            Address64 newAddr, 
             Module* mod,
             IDebugDocumentContext2* docContext, 
-            IDebugMemoryContext2** ppMemCxt );
+            IDebugMemoryContext2** ppMemCxt,
+            int ptrSize );
 
-        HRESULT Init( Address addr, Module* mod, IDebugDocumentContext2* docContext );
+        HRESULT Init( 
+            Address64 addr, Module* mod, IDebugDocumentContext2* docContext, int ptrSize );
 
     private:
         HRESULT FindFunction();

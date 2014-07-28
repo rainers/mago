@@ -1,0 +1,184 @@
+/*
+   Copyright (c) 2013 Aldo J. Nunez
+
+   Licensed under the Apache License, Version 2.0.
+   See the LICENSE text file for details.
+*/
+
+// MagoRemoteCmd.idl : IDL source for MagoNatDE IPC
+//
+
+import "oaidl.idl";
+import "ocidl.idl";
+import "MagoRemoteCommon.idl";
+
+
+[
+    uuid(2497A4C6-7F4C-4383-9642-9BCAE283D1C3),
+    version(1.0)
+]
+interface MagoRemoteCmd
+{
+    typedef enum MagoRemote_ProcCreate
+    {
+        MagoRemote_ProcCreate_Launch,
+        MagoRemote_ProcCreate_Attach
+    } MagoRemote_ProcCreate;
+
+    typedef struct MagoRemote_ProcInfo
+    {
+        [string]
+        wchar_t*                ExePath;
+        unsigned __int64        MachineFeatures;
+        unsigned int            Pid;
+        unsigned short          MachineType;
+    } MagoRemote_ProcInfo;
+
+    typedef enum MagoRemote_ProcFlags
+    {
+        MagoRemote_PFlags_None          = 0,
+        MagoRemote_PFlags_NewConsole    = 1,
+        MagoRemote_PFlags_Suspend       = 2,
+    } MagoRemote_ProcFlags;
+
+    typedef struct MagoRemote_LaunchInfo
+    {
+        [string] const wchar_t* Exe;
+        [string] const wchar_t* CommandLine;
+        [string] const wchar_t* Dir;
+        unsigned short          Flags;
+        unsigned short          EnvBstrSize;
+        [size_is( EnvBstrSize )]
+        const wchar_t*          EnvBstr;
+    } MagoRemote_LaunchInfo;
+
+
+
+    typedef [context_handle] void* HCTXCMD;
+
+    HRESULT MagoRemoteCmd_Open( 
+        [in] handle_t hBinding,
+        [in] const GUID* sessionUuid,
+        [in] boolean newSession,
+        [out] HCTXCMD* phContext );
+
+    void MagoRemoteCmd_Close(
+        [in, out] HCTXCMD* phContext );
+
+
+
+    HRESULT MagoRemoteCmd_Launch( 
+        [in] HCTXCMD hContext, 
+        [in] MagoRemote_LaunchInfo* launchInfo, 
+        [out] MagoRemote_ProcInfo* procInfo );
+
+    HRESULT MagoRemoteCmd_Attach( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [out] MagoRemote_ProcInfo* procInfo );
+
+    HRESULT MagoRemoteCmd_Terminate( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid );
+
+    HRESULT MagoRemoteCmd_Detach( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid );
+
+    HRESULT MagoRemoteCmd_ResumeProcess( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid );
+
+    HRESULT MagoRemoteCmd_ReadMemory( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] MagoRemote_Address address,
+        [in] unsigned int length, 
+        [out] unsigned int* lengthRead, 
+        [out] unsigned int* lengthUnreadable, 
+        [size_is( length )]
+        [out] byte* buffer );
+
+    HRESULT MagoRemoteCmd_WriteMemory( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] MagoRemote_Address address,
+        [in] unsigned int length, 
+        [out] unsigned int* lengthWritten, 
+        [size_is( length )]
+        [in] byte* buffer );
+
+    HRESULT MagoRemoteCmd_SetBreakpoint( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] MagoRemote_Address address );
+
+    HRESULT MagoRemoteCmd_RemoveBreakpoint( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] MagoRemote_Address address );
+
+    HRESULT MagoRemoteCmd_StepOut( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] MagoRemote_Address targetAddr, 
+        [in] boolean handleException );
+
+    HRESULT MagoRemoteCmd_StepInstruction( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] boolean stepIn, 
+        [in] boolean handleException );
+
+    HRESULT MagoRemoteCmd_StepRange( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] boolean stepIn, 
+        [in] MagoRemote_AddressRange range, 
+        [in] boolean handleException );
+
+    HRESULT MagoRemoteCmd_Continue( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] boolean handleException );
+
+    HRESULT MagoRemoteCmd_Execute( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] boolean handleException );
+
+    HRESULT MagoRemoteCmd_AsyncBreak( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid );
+
+    HRESULT MagoRemoteCmd_GetThreadContext( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] unsigned int tid, 
+        [in] unsigned int mainFeatureMask,
+        [in] unsigned __int64 extFeatureMask,
+        [in] unsigned int size,
+        [out] unsigned int* sizeRead,
+        [size_is( size )]
+        [length_is( *sizeRead )]
+        [out] byte* regBuffer );
+
+    HRESULT MagoRemoteCmd_SetThreadContext( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid, 
+        [in] unsigned int tid, 
+        [in] unsigned int size,
+        [size_is( size )]
+        [in] byte* regBuffer );
+
+    HRESULT MagoRemoteCmd_GetPData( 
+        [in] HCTXCMD hContext, 
+        [in] unsigned int pid,
+        [in] MagoRemote_Address address, 
+        [in] MagoRemote_Address imageBase,
+        [in] unsigned int size, 
+        [out] unsigned int* sizeRead, 
+        [size_is( size )]
+        [length_is( *sizeRead )]
+        [out] byte* pdataBuffer );
+};

@@ -14,6 +14,9 @@
 #include "PendingBreakpoint.h"
 #include "ComEnumWithCount.h"
 #include "BpResolutionLocation.h"
+#include "DRuntime.h"
+#include "ICoreProcess.h"
+
 
 using namespace std;
 
@@ -42,17 +45,20 @@ namespace Mago
     HRESULT Engine::FinalConstruct()
     {
         HRESULT                 hr = S_OK;
-        RefPtr<IMachine>        machine;
-        RefPtr<IEventCallback>  callback( new EventCallback( this ) );
+        RefPtr<EventCallback>   callback( new EventCallback( this ) );
 
         if ( callback.Get() == NULL )
             return E_OUTOFMEMORY;
 
-        hr = MakeMachineX86( machine.Ref() );
+        mRemoteDebugger = new RemoteDebuggerProxy();
+        if ( mRemoteDebugger.Get() == NULL )
+            return E_OUTOFMEMORY;
+
+        hr = mDebugger.Init( callback.Get() );
         if ( FAILED( hr ) )
             return hr;
 
-        hr = mDebugger.Init( machine.Get(), callback.Get() );
+        hr = mRemoteDebugger->Init( callback.Get() );
         if ( FAILED( hr ) )
             return hr;
 
@@ -170,6 +176,7 @@ namespace Mago
         DWORD       id = 0;
 
         RefPtr<Program>     prog;
+        IDebuggerProxy*     debugger = NULL;
 
         if ( celtPrograms != 1 )
             return E_UNEXPECTED;
@@ -183,7 +190,17 @@ namespace Mago
 
         prog->SetPortSettings( rgpPrograms[0] );
         prog->SetCallback( pCallback );
-        prog->SetDebuggerProxy( &mDebugger );
+        debugger = prog->GetDebuggerProxy();
+
+        // this was already set during launch
+        ICoreProcess* coreProc = prog->GetCoreProcess();
+        _ASSERT( coreProc != NULL );
+
+        UniquePtr<DRuntime> druntime( new DRuntime( debugger, coreProc ) );
+        if ( druntime.Get() == NULL )
+            return E_OUTOFMEMORY;
+
+        prog->SetDRuntime( druntime );
 
         CComPtr<IDebugEngine2>      engine;
         CComPtr<IDebugProgram2>     prog2;
@@ -223,7 +240,7 @@ namespace Mago
 
         if ( dwReason == ATTACH_REASON_LAUNCH )
         {
-            hr = mDebugger.ResumeProcess( prog->GetCoreProcess() );
+            hr = debugger->ResumeLaunchedProcess( prog->GetCoreProcess() );
             if ( FAILED( hr ) )
                 return hr;
         }
@@ -274,7 +291,7 @@ namespace Mago
 
         const DWORD Id = GetNextBPId();
 
-        pendBP->Init( Id, this, pBPRequest, mCallback, &mDebugger );
+        pendBP->Init( Id, this, pBPRequest, mCallback );
 
         hr = pendBP->QueryInterface( __uuidof( IDebugPendingBreakpoint2 ), (void**) &ad7PendBP );
         if ( FAILED( hr ) )
@@ -298,6 +315,100 @@ namespace Mago
 
     ////////////////////////////////////////////////////////////////////////////// 
     // IDebugEngineLaunch2 methods 
+
+    HRESULT Engine::StartDebuggerProxy( 
+        bool useInProcDebugger,
+        IDebuggerProxy*& debugger )
+    {
+        HRESULT hr = S_OK;
+
+        if ( useInProcDebugger )
+        {
+            hr = EnsurePollThreadRunning();
+            if ( FAILED( hr ) )
+                return hr;
+
+            debugger = &mDebugger;
+        }
+        else
+        {
+            hr = mRemoteDebugger->Start();
+            if ( FAILED( hr ) )
+                return hr;
+
+            debugger = mRemoteDebugger;
+        }
+
+        return S_OK;
+    }
+
+    bool ReadFileHeader( const wchar_t* exe, IMAGE_FILE_HEADER& fileHeader )
+    {
+        FileHandlePtr       hFilePtr;
+        IMAGE_DOS_HEADER    dosHeader;
+        DWORD               nRead;
+        DWORD               nRet;
+
+        hFilePtr = CreateFile( 
+            exe, 
+            GENERIC_READ, 
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL );
+        if ( hFilePtr.IsEmpty() )
+            return false;
+
+        if ( !ReadFile( hFilePtr, &dosHeader, sizeof dosHeader, &nRead, NULL ) 
+            || nRead < sizeof dosHeader )
+            return false;
+
+        // Skip the NT signature
+        nRet = SetFilePointer( hFilePtr, dosHeader.e_lfanew + 4, NULL, FILE_BEGIN );
+        if ( nRet == INVALID_SET_FILE_POINTER )
+            return false;
+
+        if ( !ReadFile( hFilePtr, &fileHeader, sizeof fileHeader, &nRead, NULL )
+            || nRead < sizeof fileHeader )
+            return false;
+
+        return true;
+    }
+
+    HRESULT Engine::StartDebuggerProxyForLaunch( 
+        const wchar_t* pszMachine, 
+        IDebugPort2* pPort, 
+        const wchar_t* pszExe, 
+        const wchar_t* pszOptions, 
+        DWORD dwLaunchFlags,
+        IDebuggerProxy*& debugger )
+    {
+        HRESULT hr = S_OK;
+        bool    useInProcDebugger = true;
+
+#if defined( _M_IX86 )
+        IMAGE_FILE_HEADER   fileHeader;
+
+        if ( !ReadFileHeader( pszExe, fileHeader ) )
+            return E_FAIL;
+
+        if ( fileHeader.Machine == IMAGE_FILE_MACHINE_I386 )
+            useInProcDebugger = true;
+        else if ( fileHeader.Machine == IMAGE_FILE_MACHINE_AMD64 )
+            useInProcDebugger = false;
+        else
+            return E_UNSUPPORTED_BINARY;
+#else
+#error Mago doesn't implement a debug engine for the current architecture.
+#endif
+
+        hr = StartDebuggerProxy( useInProcDebugger, debugger );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
 
     HRESULT Engine::LaunchSuspended( 
        LPCOLESTR             pszMachine,
@@ -346,11 +457,20 @@ namespace Mago
         info.StdError = (HANDLE) hStdError;
         info.Suspend = true;
 
-        hr = EnsurePollThreadRunning();
+        IDebuggerProxy* debugger = NULL;
+
+        hr = StartDebuggerProxyForLaunch( 
+            pszMachine, 
+            pPort, 
+            pszExe, 
+            pszOptions, 
+            dwLaunchFlags,
+            debugger );
         if ( FAILED( hr ) )
             return hr;
 
         hr = LaunchSuspendedInternal(
+            debugger,
             pPort,
             info,
             pCallback,
@@ -362,23 +482,26 @@ namespace Mago
     }
 
     HRESULT Engine::LaunchSuspendedInternal( 
-       IDebugPort2*          pPort,
-       LaunchInfo&           launchParams,
-       IDebugEventCallback2* pCallback,
-       IDebugProcess2**      ppDebugProcess
+        IDebuggerProxy*       debugger,
+        IDebugPort2*          pPort,
+        LaunchInfo&           launchParams,
+        IDebugEventCallback2* pCallback,
+        IDebugProcess2**      ppDebugProcess
         )
     {
-        HRESULT             hr = S_OK;
-        RefPtr<IProcess>    proc;
-        RefPtr<Program>     prog;
-        AD_PROCESS_ID       fullProcId = { 0 };
+        _ASSERT( debugger != NULL );
 
-        hr = mDebugger.Launch( &launchParams, proc.Ref() );
+        HRESULT                 hr = S_OK;
+        RefPtr<ICoreProcess>    proc;
+        RefPtr<Program>         prog;
+        AD_PROCESS_ID           fullProcId = { 0 };
+
+        hr = debugger->Launch( &launchParams, proc.Ref() );
         if ( FAILED( hr ) )
             return hr;
 
         fullProcId.ProcessIdType = AD_PROCESS_ID_SYSTEM;
-        fullProcId.ProcessId.dwProcessId = proc->GetId();
+        fullProcId.ProcessId.dwProcessId = proc->GetPid();
 
         hr = pPort->GetProcess( fullProcId, ppDebugProcess );
         if ( FAILED( hr ) )
@@ -391,15 +514,16 @@ namespace Mago
         prog->SetEngine( this );
         prog->SetProcess( *ppDebugProcess );
         prog->SetCoreProcess( proc.Get() );
+        prog->SetDebuggerProxy( debugger );
 
-        mProgs.insert( ProgramMap::value_type( proc->GetId(), prog ) );
+        mProgs.insert( ProgramMap::value_type( proc->GetPid(), prog ) );
 
 Error:
         if ( FAILED( hr ) )
         {
             if ( proc.Get() != NULL )
             {
-                mDebugger.TerminateNewProcess( proc.Get() );
+                debugger->Terminate( proc.Get() );
             }
         }
 
@@ -429,6 +553,7 @@ Error:
         CComPtr<IDebugPort2>        port;
         CComPtr<IDebugDefaultPort2> defaultPort;
         CComPtr<IDebugPortNotify2>  portNotify;
+        IDebuggerProxy*             debugger = NULL;
 
         hr = ::GetProcessId( pProcess, id );
         if ( FAILED( hr ) )
@@ -436,6 +561,8 @@ Error:
 
         if ( !FindProgram( id, prog ) )
             return E_NOT_FOUND;
+
+        debugger = prog->GetDebuggerProxy();
 
         hr = pProcess->GetPort( &port );
         if ( FAILED( hr ) )
@@ -472,7 +599,7 @@ Error:
         {
             if ( prog.Get() != NULL )
             {
-                mDebugger.TerminateNewProcess( prog->GetCoreProcess() );
+                debugger->Terminate( prog->GetCoreProcess() );
                 DeleteProgram( prog.Get() );
             }
         }
@@ -512,6 +639,7 @@ Error:
         DWORD           id = 0;
 
         RefPtr<Program>             prog;
+        IDebuggerProxy*             debugger = NULL;
 
         hr = ::GetProcessId( pProcess, id );
         if ( FAILED( hr ) )
@@ -520,7 +648,9 @@ Error:
         if ( !FindProgram( id, prog ) )
             return S_OK; // E_NOT_FOUND;
 
-        hr = mDebugger.Terminate( prog->GetCoreProcess() );
+        debugger = prog->GetDebuggerProxy();
+
+        hr = debugger->Terminate( prog->GetCoreProcess() );
         return S_OK; // hr
     }
 
@@ -552,6 +682,7 @@ Error:
             return;
 
         mDebugger.Shutdown();
+        mRemoteDebugger->Shutdown();
         // TODO: this should probably be guarded, too
 
         for ( BPMap::iterator it = mBPs.begin();
@@ -577,7 +708,7 @@ Error:
 
     void Engine::DeleteProgram( Program* prog )
     {
-        mProgs.erase( prog->GetCoreProcess()->GetId() );
+        mProgs.erase( prog->GetCoreProcess()->GetPid() );
 
         prog->Dispose();
     }
@@ -614,6 +745,16 @@ Error:
             if ( !callback->AcceptProgram( it->second.Get() ) )
                 break;
         }
+    }
+
+    void Engine::BeginBindBP()
+    {
+        mBindBPGuard.Enter();
+    }
+
+    void Engine::EndBindBP()
+    {
+        mBindBPGuard.Leave();
     }
 
     HRESULT Engine::BindPendingBPsToModule( Module* mod, Program* prog )

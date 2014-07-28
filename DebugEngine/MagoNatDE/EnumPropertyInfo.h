@@ -43,7 +43,7 @@ namespace Mago
     class ExprContext;
 
 
-    class ATL_NO_VTABLE EnumDebugPropertyInfo2 : 
+    class EnumDebugPropertyInfo2 : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IEnumDebugPropertyInfo2
     {

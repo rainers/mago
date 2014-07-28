@@ -7,77 +7,113 @@
 
 #pragma once
 
+#include "IDebuggerProxy.h"
+#include "..\Exec\DebuggerProxy.h"
+
+
 namespace Mago
 {
-    struct CommandFunctor;
+    class ArchData;
+    class IRegisterSet;
+    class EventCallback;
+    class ICoreProcess;
+    class ICoreThread;
 
 
-    class DebuggerProxy
+    class DebuggerProxy : public IDebuggerProxy, public IEventCallback
     {
-        Exec            mExec;
-        HANDLE          mhThread;
-        DWORD           mWorkerTid;
-        IMachine*       mMachine;
-        IEventCallback* mCallback;
-        HANDLE          mhReadyEvent;
-        HANDLE          mhCommandEvent;
-        HANDLE          mhResultEvent;
-        CommandFunctor* mCurCommand;
-        volatile bool   mShutdown;
-        Guard           mCommandGuard;
+        MagoCore::DebuggerProxy mExecThread;
+        RefPtr<ArchData>        mArch;
+        RefPtr<EventCallback>   mCallback;
 
     public:
         DebuggerProxy();
         ~DebuggerProxy();
 
-        HRESULT Init( IMachine* machine, IEventCallback* callback );
+        HRESULT Init( EventCallback* callback );
         HRESULT Start();
         void    Shutdown();
 
-        HRESULT InvokeCommand( CommandFunctor& cmd );
+        // IDebuggerProxy
 
-        HRESULT Launch( LaunchInfo* launchInfo, IProcess*& process );
-        HRESULT Attach( uint32_t id, IProcess*& process );
+        HRESULT Launch( LaunchInfo* launchInfo, ICoreProcess*& process );
+        HRESULT Attach( uint32_t id, ICoreProcess*& process );
 
-        HRESULT Terminate( IProcess* process );
-        HRESULT Detach( IProcess* process );
+        HRESULT Terminate( ICoreProcess* process );
+        HRESULT Detach( ICoreProcess* process );
 
-        HRESULT ResumeProcess( IProcess* process );
-        HRESULT TerminateNewProcess( IProcess* process );
+        HRESULT ResumeLaunchedProcess( ICoreProcess* process );
 
         HRESULT ReadMemory( 
-            IProcess* process, 
-            Address address,
-            SIZE_T length, 
-            SIZE_T& lengthRead, 
-            SIZE_T& lengthUnreadable, 
+            ICoreProcess* process, 
+            Address64 address,
+            uint32_t length, 
+            uint32_t& lengthRead, 
+            uint32_t& lengthUnreadable, 
             uint8_t* buffer );
 
         HRESULT WriteMemory( 
-            IProcess* process, 
-            Address address,
-            SIZE_T length, 
-            SIZE_T& lengthWritten, 
+            ICoreProcess* process, 
+            Address64 address,
+            uint32_t length, 
+            uint32_t& lengthWritten, 
             uint8_t* buffer );
 
-        HRESULT SetBreakpoint( IProcess* process, Address address, BPCookie cookie );
-        HRESULT RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie );
+        HRESULT SetBreakpoint( ICoreProcess* process, Address64 address );
+        HRESULT RemoveBreakpoint( ICoreProcess* process, Address64 address );
 
-        HRESULT StepOut( IProcess* process, Address targetAddr, bool handleException );
-        HRESULT StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException );
-        HRESULT StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount, bool handleException );
+        HRESULT StepOut( ICoreProcess* process, Address64 targetAddr, bool handleException );
+        HRESULT StepInstruction( ICoreProcess* process, bool stepIn, bool handleException );
+        HRESULT StepRange( 
+            ICoreProcess* process, 
+            bool stepIn, 
+            AddressRange64 range, 
+            bool handleException );
 
-        HRESULT Continue( IProcess* process, bool handleException );
-        HRESULT Execute( IProcess* process, bool handleException );
+        HRESULT Continue( ICoreProcess* process, bool handleException );
+        HRESULT Execute( ICoreProcess* process, bool handleException );
 
-        HRESULT AsyncBreak( IProcess* process );
+        HRESULT AsyncBreak( ICoreProcess* process );
+
+        HRESULT GetThreadContext( ICoreProcess* process, ICoreThread* thread, IRegisterSet*& regSet );
+        HRESULT SetThreadContext( ICoreProcess* process, ICoreThread* thread, IRegisterSet* regSet );
+
+        HRESULT GetPData( 
+            ICoreProcess* process, 
+            Address64 address, 
+            Address64 imageBase, 
+            uint32_t size, 
+            uint32_t& sizeRead, 
+            uint8_t* pdata );
+
+        // IEventCallback
+
+        virtual void AddRef();
+        virtual void Release();
+
+        virtual void OnProcessStart( IProcess* process );
+        virtual void OnProcessExit( IProcess* process, DWORD exitCode );
+        virtual void OnThreadStart( IProcess* process, ::Thread* thread );
+        virtual void OnThreadExit( IProcess* process, DWORD threadId, DWORD exitCode );
+        virtual void OnModuleLoad( IProcess* process, IModule* module );
+        virtual void OnModuleUnload( IProcess* process, Address baseAddr );
+        virtual void OnOutputString( IProcess* process, const wchar_t* outputString );
+        virtual void OnLoadComplete( IProcess* process, DWORD threadId );
+
+        virtual RunMode OnException( 
+            IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec );
+
+        virtual RunMode OnBreakpoint( 
+            IProcess* process, uint32_t threadId, Address address, bool embedded );
+
+        virtual void OnStepComplete( IProcess* process, uint32_t threadId );
+        virtual void OnAsyncBreakComplete( IProcess* process, uint32_t threadId );
+        virtual void OnError( IProcess* process, HRESULT hrErr, EventCode event );
+
+        virtual ProbeRunMode OnCallProbe( 
+            IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange );
 
     private:
-        static DWORD CALLBACK   DebugPollProc( void* param );
-
-        HRESULT PollLoop();
-        void    SetReadyThread();
-        HRESULT CheckMessage();
-        HRESULT ProcessCommand( CommandFunctor* cmd );
+        HRESULT CacheSystemInfo();
     };
 }

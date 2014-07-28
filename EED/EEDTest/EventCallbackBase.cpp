@@ -99,14 +99,14 @@ void EventCallbackBase::OnLoadComplete( IProcess* process, DWORD threadId )
     mLoadCompleted = true;
 }
 
-bool EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+RunMode EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
 {
-    return false;
+    return RunMode_Break;
 }
 
-bool EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
 {
-    return false;
+    return RunMode_Break;
 }
 
 void EventCallbackBase::OnStepComplete( IProcess* process, uint32_t threadId )
@@ -121,9 +121,10 @@ void EventCallbackBase::OnError( IProcess* process, HRESULT hrErr, EventCode eve
 {
 }
 
-bool EventCallbackBase::CanStepInFunction( IProcess* process, Address address )
+ProbeRunMode EventCallbackBase::OnCallProbe( 
+    IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
 {
-    return false;
+    return ProbeRunMode_Run;
 }
 
 void EventCallbackBase::PrintCallstacksX86( IProcess* process )

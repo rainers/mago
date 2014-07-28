@@ -25,9 +25,6 @@
 #include <vector>
 #include <limits>
 
-// Boost
-#include <boost/scoped_array.hpp>
-
 // Windows
 #include <windows.h>
 

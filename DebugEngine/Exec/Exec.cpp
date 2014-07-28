@@ -13,6 +13,7 @@
 #include "PathResolver.h"
 #include "EventCallback.h"
 #include "Machine.h"
+#include "MakeMachine.h"
 #include <Psapi.h>
 
 using namespace std;
@@ -21,6 +22,31 @@ using namespace std;
 class ProcessMap : public std::map< uint32_t, RefPtr< Process > >
 {
 };
+
+class ProbeCallback : public IProbeCallback
+{
+    IEventCallback* mCallback;
+    Process*        mProcess;
+
+public:
+    ProbeCallback( IEventCallback* callback, Process* process )
+        :   mCallback( callback ),
+            mProcess( process )
+    {
+        _ASSERT( callback != NULL );
+        _ASSERT( process != NULL );
+    }
+
+    virtual ProbeRunMode OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
+    {
+        mProcess->Unlock();
+        ProbeRunMode mode = mCallback->OnCallProbe( process, threadId, address, thunkRange );
+        mProcess->Lock();
+        return mode;
+    }
+};
+
 
 // indexed by Win32 Debug API Event Code (for ex: EXCEPTION_DEBUG_EVENT)
 const IEventCallback::EventCode     gEventMap[] = 
@@ -43,33 +69,39 @@ const uint32_t  AbnormalTerminateCode = _UI32_MAX;
 
 Exec::Exec()
 :   mTid( 0 ),
-    mMachine( NULL ),
     mCallback( NULL ),
     mPathBuf( NULL ),
     mPathBufLen( 0 ),
     mProcMap( NULL ),
-    mResolver( NULL )
+    mResolver( NULL ),
+    mIsDispatching( false ),
+    mIsShutdown( false )
 {
     memset( &mLastEvent, 0, sizeof mLastEvent );
 }
 
 Exec::~Exec()
 {
-    Shutdown();
+    if ( mTid == 0 || mTid == GetCurrentThreadId() )
+        Shutdown();
 
     delete [] mPathBuf;
     delete mProcMap;
     delete mResolver;
+
+    if ( mCallback != NULL )
+    {
+        mCallback->Release();
+        mCallback = NULL;
+    }
 }
 
 
-HRESULT Exec::Init( IMachine* machine, IEventCallback* callback )
+HRESULT Exec::Init( IEventCallback* callback )
 {
     // already initialized?
     if ( mTid != 0 )
         return E_ALREADY_INIT;
-    if ( machine == NULL )
-        return E_INVALIDARG;
     if ( callback == NULL )
         return E_INVALIDARG;
 
@@ -92,10 +124,8 @@ HRESULT Exec::Init( IMachine* machine, IEventCallback* callback )
         return E_OUTOFMEMORY;
     mPathBufLen = MAX_PATH;
 
-    machine->AddRef();
     callback->AddRef();
 
-    mMachine = machine;
     mCallback = callback;
     mProcMap = map.release();
     mResolver = resolver.release();
@@ -106,40 +136,41 @@ HRESULT Exec::Init( IMachine* machine, IEventCallback* callback )
     return S_OK;
 }
 
-void Exec::Shutdown()
+HRESULT Exec::Shutdown()
 {
+    _ASSERT( mTid == 0 || mTid == GetCurrentThreadId() );
+    if ( mTid != 0 && mTid != GetCurrentThreadId() )
+        return E_WRONG_THREAD;
+    if ( mIsDispatching )
+        return E_WRONG_STATE;
+    if ( mIsShutdown )
+        return S_OK;
+
+    mIsShutdown = true;
+
     if ( mProcMap != NULL )
     {
-        _ASSERT( (mProcMap->size() == 0) || (mTid == 0) || (mTid == GetCurrentThreadId()) );
-
-        // finish up any graceful exits
-        while ( mLastEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT )
-        {
-            Process*    proc = FindProcess( mLastEvent.dwProcessId );
-            if ( proc != NULL )
-                proc->SetTerminating();
-
-            ContinueDebugEvent( mLastEvent.dwProcessId, mLastEvent.dwThreadId, DBG_CONTINUE );
-            CleanupLastDebugEvent();
-            WaitForDebugEvent( &mLastEvent, 0 );
-        }
-
         for ( ProcessMap::iterator it = mProcMap->begin();
             it != mProcMap->end();
             it++ )
         {
             Process*    proc = it->second.Get();
 
-            if ( !proc->IsTerminating() )
+            ProcessGuard guard( proc );
+
+            if ( !proc->IsDeleted() )
             {
+                // TODO: if detaching: lock process and detach its machine, then detach process
+
                 // we still have process running, 
                 // so treat it as if we're shutting down our own app
                 TerminateProcess( proc->GetHandle(), AbnormalTerminateCode );
-                // TODO: since we're terminating the process, we might not need this
-                ResumeSuspendedProcess( proc );
 
                 // we're still debugging, so stop, so the debuggee can really close
                 DebugActiveProcessStop( proc->GetId() );
+
+                proc->SetDeleted();
+                proc->SetMachine( NULL );
             }
         }
 
@@ -148,25 +179,22 @@ void Exec::Shutdown()
 
     CleanupLastDebugEvent();
 
-    if ( mMachine != NULL )
-    {
-        mMachine->Release();
-        mMachine = NULL;
-    }
+    // it would be nice to release the callback here
 
-    if ( mCallback != NULL )
-    {
-        mCallback->Release();
-        mCallback = NULL;
-    }
+    return S_OK;
 }
 
 
-HRESULT Exec::WaitForDebug( uint32_t millisTimeout )
+HRESULT Exec::WaitForEvent( uint32_t millisTimeout )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
         return E_WRONG_THREAD;
+    _ASSERT( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT );
+    if ( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT )
+        return E_UNEXPECTED;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
     // if we haven't continued since the last wait, we'll just return E_TIMEOUT
 
     HRESULT hr = S_OK;
@@ -183,57 +211,96 @@ Error:
     return hr;
 }
 
-HRESULT Exec::ContinueDebug( bool handleException )
+HRESULT Exec::ContinueInternal( Process* proc, bool handleException )
 {
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
-    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
-    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
-        return E_UNEXPECTED;
+    _ASSERT( proc != NULL );
+    _ASSERT( proc->IsStopped() );
 
     HRESULT hr = S_OK;
     BOOL    bRet = FALSE;
-    DWORD   status = handleException ? DBG_CONTINUE : DBG_EXCEPTION_NOT_HANDLED;
+    DWORD   status = DBG_CONTINUE;
+    ShortDebugEvent lastEvent = proc->GetLastEvent();
 
-    Process*    proc = FindProcess( mLastEvent.dwProcessId );
-    if ( (proc != NULL) && !proc->IsTerminating() )
+    // always treat the SS exception as a step complete
+    // always treat the BP exception as a user BP, instead of an exception
+
+    if ( (lastEvent.EventCode == EXCEPTION_DEBUG_EVENT) 
+        && (lastEvent.ExceptionCode != EXCEPTION_BREAKPOINT)
+        && (lastEvent.ExceptionCode != EXCEPTION_SINGLE_STEP) )
+        status = handleException ? DBG_CONTINUE : DBG_EXCEPTION_NOT_HANDLED;
+
+    if ( !proc->IsDeleted() && !proc->IsTerminating() )
     {
         IMachine*   machine = proc->GetMachine();
         _ASSERT( machine != NULL );
 
         hr = machine->OnContinue();
-
         if ( FAILED( hr ) )
             goto Error;
     }
 
-    // always treat the SS exception as a step complete
-    // always treat the BP exception as a user BP, instead of an exception
-
-    if ( mLastEvent.dwDebugEventCode == EXCEPTION_DEBUG_EVENT 
-        && ((mLastEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT)
-        || (mLastEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_SINGLE_STEP)) )
-        status = DBG_CONTINUE;
-
-    bRet = ::ContinueDebugEvent( mLastEvent.dwProcessId, mLastEvent.dwThreadId, status );
+    bRet = ::ContinueDebugEvent( proc->GetId(), lastEvent.ThreadId, status );
     _ASSERT( bRet );
     if ( !bRet )
     {
         hr = GetLastHr();
         goto Error;
     }
-    
-    CleanupLastDebugEvent();
 
-    if ( proc != NULL )
-        proc->SetStopped( false );
+    proc->SetStopped( false );
+    proc->ClearLastEvent();
 
 Error:
     return hr;
 }
 
-    // returns S_OK: continue; S_FALSE: don't continue
+HRESULT Exec::ContinueNoLock( Process* proc, bool handleException )
+{
+    _ASSERT( proc != NULL );
+    _ASSERT( proc->IsStopped() );
+
+    HRESULT     hr = S_OK;
+
+    if ( !proc->IsDeleted() && !proc->IsTerminating() )
+    {
+        IMachine*   machine = proc->GetMachine();
+        _ASSERT( machine != NULL );
+
+        hr = machine->SetContinue();
+        if ( FAILED( hr ) )
+            goto Error;
+    }
+
+    hr = ContinueInternal( proc, handleException );
+
+Error:
+    return hr;
+}
+
+HRESULT Exec::Continue( IProcess* process, bool handleException )
+{
+    _ASSERT( mTid == GetCurrentThreadId() );
+    if ( mTid != GetCurrentThreadId() )
+        return E_WRONG_THREAD;
+    _ASSERT( process != NULL );
+    if ( process == NULL )
+        return E_INVALIDARG;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
+
+    HRESULT     hr = S_OK;
+    Process*    proc = (Process*) process;
+
+    ProcessGuard guard( proc );
+
+    if ( !process->IsStopped() )
+        return E_WRONG_STATE;
+
+    hr = ContinueNoLock( proc, handleException );
+
+    return hr;
+}
+
 HRESULT Exec::DispatchEvent()
 {
     _ASSERT( mTid == GetCurrentThreadId() );
@@ -242,9 +309,11 @@ HRESULT Exec::DispatchEvent()
     _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
     if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
         return E_UNEXPECTED;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    Process*    proc = NULL;
+    HRESULT         hr = S_OK;
+    RefPtr<Process> proc;
 
     Log::LogDebugEvent( mLastEvent );
 
@@ -256,89 +325,142 @@ HRESULT Exec::DispatchEvent()
         goto Error;
     }
 
-    proc->SetStopped( true );
-
-    IMachine*   machine = proc->GetMachine();
-    _ASSERT( (mLastEvent.dwDebugEventCode == CREATE_PROCESS_DEBUG_EVENT) || (machine != NULL) );
-
-    if ( machine != NULL )
     {
-        machine->OnStopped( mLastEvent.dwThreadId );
+        ProcessGuard guard( proc );
+
+        // hand off the event
+        proc->SetLastEvent( mLastEvent );
+        proc->SetStopped( true );
+
+        hr = DispatchAndContinue( proc, mLastEvent );
     }
 
-    switch ( mLastEvent.dwDebugEventCode )
+Error:
+    // if there was an error, leave the debuggee in break mode
+    CleanupLastDebugEvent();
+    return hr;
+}
+
+HRESULT Exec::DispatchAndContinue( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    HRESULT hr = S_OK;
+
+    hr = DispatchProcessEvent( proc, debugEvent );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    if ( hr == S_OK )
+    {
+        hr = ContinueNoLock( proc, false );
+    }
+    else
+    {
+        // leave the debuggee in break mode
+        hr = S_OK;
+    }
+
+Error:
+    return hr;
+}
+
+    // returns S_OK: continue; S_FALSE: don't continue
+HRESULT Exec::DispatchProcessEvent( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    _ASSERT( proc != NULL );
+
+    HRESULT         hr = S_OK;
+    // because of the lock, hold onto the process, 
+    // even if EXIT_PROCESS event would have destroyed it
+    RefPtr<Process> procRef = proc;
+    IMachine*       machine = proc->GetMachine();
+
+    // we shouldn't handle any stopping events after Terminate
+    if ( proc->IsDeleted()
+        || (proc->IsTerminating() && debugEvent.dwDebugEventCode != EXIT_PROCESS_DEBUG_EVENT) )
+    {
+        // continue
+        hr = S_OK;
+        goto Error;
+    }
+    _ASSERT( machine != NULL );
+
+    machine->OnStopped( debugEvent.dwThreadId );
+    mIsDispatching = true;
+
+    switch ( debugEvent.dwDebugEventCode )
     {
     case CREATE_PROCESS_DEBUG_EVENT:
         {
             RefPtr<Module>  mod;
             RefPtr<Thread>  thread;
+            ImageInfo       imageInfo = { 0 };
 
-            hr = CreateModule( proc, mLastEvent, mod );
+            hr = CreateModule( proc, debugEvent, mod );
             if ( FAILED( hr ) )
                 goto Error;
 
-            hr = CreateThread( proc, mLastEvent, thread );
+            hr = CreateThread( proc, debugEvent, thread );
             if ( FAILED( hr ) )
                 goto Error;
+
+            GetLoadedImageInfo( 
+                debugEvent.u.CreateProcessInfo.hProcess, 
+                debugEvent.u.CreateProcessInfo.lpBaseOfImage, 
+                imageInfo );
 
             proc->AddThread( thread.Get() );
-            proc->SetEntryPoint( (Address) mLastEvent.u.CreateProcessInfo.lpStartAddress );
+            proc->SetEntryPoint( (Address) debugEvent.u.CreateProcessInfo.lpStartAddress );
+            proc->SetImageBase( (Address) debugEvent.u.CreateProcessInfo.lpBaseOfImage );
+            proc->SetImageSize( imageInfo.Size );
+            proc->SetStarted();
 
-            // TODO: here we can customize the machine (ask for the right one based on module)
-            mMachine->SetProcess( proc->GetHandle(), proc->GetId(), proc );
-            mMachine->SetCallback( mCallback );
-            proc->SetMachine( mMachine );
-
-            mMachine->OnStopped( mLastEvent.dwThreadId );
-            mMachine->OnCreateThread( thread.Get() );
+            machine->OnCreateThread( thread.Get() );
 
             if ( mCallback != NULL )
             {
+                proc->Unlock();
                 mCallback->OnProcessStart( proc );
                 mCallback->OnModuleLoad( proc, mod.Get() );
                 mCallback->OnThreadStart( proc, thread.Get() );
+                proc->Lock();
             }
         }
         break;
 
     case CREATE_THREAD_DEBUG_EVENT:
         {
-            RefPtr<Thread>  thread;
-
-            hr = CreateThread( proc, mLastEvent, thread );
-            if ( FAILED( hr ) )
-                goto Error;
-
-            proc->AddThread( thread.Get() );
-
-            machine->OnCreateThread( thread.Get() );
-
-            if ( mCallback != NULL )
-            {
-                mCallback->OnThreadStart( proc, thread.Get() );
-            }
+            hr = HandleCreateThread( proc, debugEvent );
         }
         break;
 
     case EXIT_THREAD_DEBUG_EVENT:
         {
             if ( mCallback != NULL )
-                mCallback->OnThreadExit( proc, mLastEvent.dwThreadId, mLastEvent.u.ExitThread.dwExitCode );
+            {
+                proc->Unlock();
+                mCallback->OnThreadExit( proc, debugEvent.dwThreadId, debugEvent.u.ExitThread.dwExitCode );
+                proc->Lock();
+            }
 
-            proc->DeleteThread( mLastEvent.dwThreadId );
+            proc->DeleteThread( debugEvent.dwThreadId );
 
-            machine->OnExitThread( mLastEvent.dwThreadId );
+            hr = machine->OnExitThread( debugEvent.dwThreadId );
         }
         break;
 
     case EXIT_PROCESS_DEBUG_EVENT:
         {
             proc->SetDeleted();
+            proc->SetMachine( NULL );
 
-            if ( mCallback != NULL )
-                mCallback->OnProcessExit( proc, mLastEvent.u.ExitProcess.dwExitCode );
+            if ( proc->IsStarted() && mCallback != NULL )
+            {
+                proc->Unlock();
+                mCallback->OnProcessExit( proc, debugEvent.u.ExitProcess.dwExitCode );
+                proc->Lock();
+            }
 
-            mProcMap->erase( mLastEvent.dwProcessId );
+            mProcMap->erase( debugEvent.dwProcessId );
         }
         break;
 
@@ -346,13 +468,20 @@ HRESULT Exec::DispatchEvent()
         {
             RefPtr<Module>  mod;
 
-            hr = CreateModule( proc, mLastEvent, mod );
+            hr = CreateModule( proc, debugEvent, mod );
             if ( FAILED( hr ) )
                 goto Error;
 
+            if ( proc->GetOSModule() == NULL )
+            {
+                proc->SetOSModule( mod );
+            }
+
             if ( mCallback != NULL )
             {
+                proc->Unlock();
                 mCallback->OnModuleLoad( proc, mod.Get() );
+                proc->Lock();
             }
         }
         break;
@@ -360,58 +489,23 @@ HRESULT Exec::DispatchEvent()
     case UNLOAD_DLL_DEBUG_EVENT:
         {
             if ( mCallback != NULL )
-                mCallback->OnModuleUnload( proc, (Address) mLastEvent.u.UnloadDll.lpBaseOfDll );
+            {
+                proc->Unlock();
+                mCallback->OnModuleUnload( proc, (Address) debugEvent.u.UnloadDll.lpBaseOfDll );
+                proc->Lock();
+            }
         }
         break;
 
     case EXCEPTION_DEBUG_EVENT:
         {
-            // we shouldn't handle any stopping events after Terminate
-            if ( proc->IsTerminating() )
-                break;
-
-            // it doesn't matter if we launched or attached
-            if ( !proc->ReachedLoaderBp() )
-            {
-                proc->SetReachedLoaderBp();
-
-                if ( mCallback != NULL )
-                    mCallback->OnLoadComplete( proc, mLastEvent.dwThreadId );
-
-                hr = S_FALSE;
-            }
-            else
-            {
-                MachineResult    result = MacRes_NotHandled;
-                    
-                hr = machine->OnException( mLastEvent.dwThreadId, &mLastEvent.u.Exception, result );
-                if ( FAILED( hr ) )
-                    goto Error;
-
-                if ( result == MacRes_NotHandled )
-                {
-                    hr = S_FALSE;
-                    if ( mCallback != NULL )
-                    {
-                        if ( mCallback->OnException( 
-                            proc, 
-                            mLastEvent.dwThreadId,
-                            (mLastEvent.u.Exception.dwFirstChance > 0),
-                            &mLastEvent.u.Exception.ExceptionRecord ) )
-                            hr = S_OK;
-                    }
-                }
-                else if ( result == MacRes_HandledStopped )
-                {
-                    hr = S_FALSE;
-                }
-            }
+            hr = HandleException( proc, debugEvent );
         }
         break;
 
     case OUTPUT_DEBUG_STRING_EVENT:
         {
-            hr = HandleOutputString( proc );
+            hr = HandleOutputString( proc, debugEvent );
         }
         break;
 
@@ -422,33 +516,190 @@ HRESULT Exec::DispatchEvent()
 Error:
     if ( FAILED( hr ) )
     {
-        _ASSERT( mLastEvent.dwDebugEventCode < _countof( gEventMap ) );
-        IEventCallback::EventCode   code = gEventMap[ mLastEvent.dwDebugEventCode ];
+        _ASSERT( debugEvent.dwDebugEventCode < _countof( gEventMap ) );
+        IEventCallback::EventCode   code = gEventMap[ debugEvent.dwDebugEventCode ];
 
         if ( mCallback != NULL )
+        {
+            proc->Unlock();
             mCallback->OnError( proc, hr, code );
+            proc->Lock();
+        }
     }
+
+    mIsDispatching = false;
 
     return hr;
 }
 
-HRESULT Exec::HandleOutputString( Process* proc )
+HRESULT Exec::HandleCreateThread( Process* proc, const DEBUG_EVENT& debugEvent )
 {
     HRESULT         hr = S_OK;
-    const uint16_t  TotalLen = mLastEvent.u.DebugString.nDebugStringLength;
+    IMachine*       machine = proc->GetMachine();
+    RefPtr<Thread>  thread;
+
+    hr = CreateThread( proc, debugEvent, thread );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    proc->AddThread( thread.Get() );
+
+    hr = machine->OnCreateThread( thread.Get() );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    if ( proc->GetSuspendCount() > 0 )
+    {
+        // if all threads are meant to be suspended, then include this one
+        ThreadControlProc controlProc = machine->GetWinSuspendThreadProc();
+        HANDLE hThread = debugEvent.u.CreateThread.hThread;
+
+        for ( int i = 0; i < proc->GetSuspendCount(); i++ )
+        {
+            DWORD suspendCount = controlProc( hThread );
+            if ( suspendCount == (DWORD) -1 )
+            {
+                hr = GetLastHr();
+                goto Error;
+            }
+        }
+    }
+
+    if ( mCallback != NULL )
+    {
+        proc->Unlock();
+        mCallback->OnThreadStart( proc, thread.Get() );
+        proc->Lock();
+    }
+
+Error:
+    return hr;
+}
+
+bool Exec::FoundLoaderBp( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    if ( !proc->ReachedLoaderBp() )
+    {
+        if ( debugEvent.u.Exception.ExceptionRecord.ExceptionCode == STATUS_BREAKPOINT )
+        {
+            Address exceptAddr = (Address) debugEvent.u.Exception.ExceptionRecord.ExceptionAddress;
+            Module* osMod = proc->GetOSModule();
+
+            if ( osMod != NULL && osMod->Contains( exceptAddr ) )
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    HRESULT hr = S_OK;
+    IMachine* machine = proc->GetMachine();
+
+    // it doesn't matter if we launched or attached
+    if ( FoundLoaderBp( proc, debugEvent ) )
+    {
+        proc->SetReachedLoaderBp();
+
+        if ( mCallback != NULL )
+        {
+            proc->Unlock();
+            mCallback->OnLoadComplete( proc, debugEvent.dwThreadId );
+            proc->Lock();
+        }
+
+        hr = S_FALSE;
+    }
+    else
+    {
+        MachineResult   result = MacRes_NotHandled;
+        ProbeCallback   probeCallback( mCallback, proc );
+                    
+        machine->SetCallback( &probeCallback );
+        hr = machine->OnException( debugEvent.dwThreadId, &debugEvent.u.Exception, result );
+        machine->SetCallback( NULL );
+        if ( FAILED( hr ) )
+            goto Error;
+
+        if ( result == MacRes_PendingCallbackBP 
+            || result == MacRes_PendingCallbackEmbeddedBP )
+        {
+            Address         addr = 0;
+            bool            embedded = (result == MacRes_PendingCallbackEmbeddedBP);
+
+            machine->GetPendingCallbackBP( addr );
+
+            proc->Unlock();
+            RunMode mode = mCallback->OnBreakpoint( proc, debugEvent.dwThreadId, addr, embedded );
+            proc->Lock();
+            if ( mode == RunMode_Run )
+                result = MacRes_HandledContinue;
+            else if ( mode == RunMode_Wait )
+                result = MacRes_HandledStopped;
+            else // Break
+            {
+                result = MacRes_HandledStopped;
+                hr = machine->CancelStep();
+                if ( FAILED( hr ) )
+                    goto Error;
+            }
+        }
+        else if ( result == MacRes_PendingCallbackStep 
+            || result == MacRes_PendingCallbackEmbeddedStep )
+        {
+            proc->Unlock();
+            mCallback->OnStepComplete( proc, debugEvent.dwThreadId );
+            proc->Lock();
+            result = MacRes_HandledStopped;
+        }
+
+        if ( result == MacRes_NotHandled )
+        {
+            hr = S_FALSE;
+            if ( mCallback != NULL )
+            {
+                proc->Unlock();
+                if ( mCallback->OnException( 
+                    proc, 
+                    debugEvent.dwThreadId,
+                    (debugEvent.u.Exception.dwFirstChance > 0),
+                    &debugEvent.u.Exception.ExceptionRecord ) == RunMode_Run )
+                    hr = S_OK;
+                proc->Lock();
+            }
+        }
+        else if ( result == MacRes_HandledStopped )
+        {
+            hr = S_FALSE;
+        }
+        // else, MacRes_HandledContinue, hr == S_OK
+    }
+
+Error:
+    return hr;
+}
+
+HRESULT Exec::HandleOutputString( Process* proc, const DEBUG_EVENT& debugEvent )
+{
+    HRESULT         hr = S_OK;
+    const uint16_t  TotalLen = debugEvent.u.DebugString.nDebugStringLength;
     SIZE_T          bytesRead = 0;
     BOOL            bRet = FALSE;
-    boost::scoped_array< wchar_t >  wstr( new wchar_t[ TotalLen ] );
+    UniquePtr<wchar_t[]>    wstr( new wchar_t[ TotalLen ] );
     
-    if ( wstr.get() == NULL )
+    if ( wstr.Get() == NULL )
         return E_OUTOFMEMORY;
 
-    if ( mLastEvent.u.DebugString.fUnicode )
+    if ( debugEvent.u.DebugString.fUnicode )
     {
         bRet = ::ReadProcessMemory( 
             proc->GetHandle(), 
-            mLastEvent.u.DebugString.lpDebugStringData, 
-            wstr.get(), 
+            debugEvent.u.DebugString.lpDebugStringData, 
+            wstr.Get(), 
             TotalLen * sizeof( wchar_t ), 
             &bytesRead );
         wstr[ TotalLen - 1 ] = L'\0';
@@ -458,7 +709,7 @@ HRESULT Exec::HandleOutputString( Process* proc )
     }
     else
     {
-        boost::scoped_array< char >     astr( new char[ TotalLen ] );
+        UniquePtr<char[]>   astr( new char[ TotalLen ] );
         int     countRet = 0;
 
         if ( astr == NULL )
@@ -466,8 +717,8 @@ HRESULT Exec::HandleOutputString( Process* proc )
 
         bRet = ::ReadProcessMemory( 
             proc->GetHandle(), 
-            mLastEvent.u.DebugString.lpDebugStringData, 
-            astr.get(), 
+            debugEvent.u.DebugString.lpDebugStringData, 
+            astr.Get(), 
             TotalLen * sizeof( char ), 
             &bytesRead );
         astr[ TotalLen - 1 ] = '\0';
@@ -478,9 +729,9 @@ HRESULT Exec::HandleOutputString( Process* proc )
         countRet = MultiByteToWideChar(
             CP_ACP,
             MB_ERR_INVALID_CHARS | MB_USEGLYPHCHARS,
-            astr.get(),
+            astr.Get(),
             -1,
-            wstr.get(),
+            wstr.Get(),
             TotalLen );
 
         if ( countRet == 0 )
@@ -489,7 +740,9 @@ HRESULT Exec::HandleOutputString( Process* proc )
 
     if ( mCallback != NULL )
     {
-        mCallback->OnOutputString( proc, wstr.get() );
+        proc->Unlock();
+        mCallback->OnOutputString( proc, wstr.Get() );
+        proc->Lock();
     }
 
     return hr;
@@ -520,7 +773,6 @@ void Exec::CleanupLastDebugEvent()
     memset( &mLastEvent, 0, sizeof mLastEvent );
 }
 
-
 HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
@@ -529,6 +781,8 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     _ASSERT( launchInfo != NULL );
     if ( launchInfo == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
     HRESULT             hr = S_OK;
     wchar_t*            cmdLine = NULL;
@@ -539,6 +793,9 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     DWORD               flags = DEBUG_ONLY_THIS_PROCESS | CREATE_UNICODE_ENVIRONMENT | CREATE_DEFAULT_ERROR_MODE;
     HandlePtr           hProcPtr;
     HandlePtr           hThreadPtr;
+    ImageInfo           imageInfo = { 0 };
+    RefPtr<IMachine>    machine;
+    RefPtr<Process>     proc;
 
     startupInfo.dwFlags = STARTF_USESHOWWINDOW;
     startupInfo.wShowWindow = SW_SHOW;
@@ -563,6 +820,14 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
         hr = E_UNEXPECTED;
         goto Error;
     }
+
+    hr = GetImageInfo( mPathBuf, imageInfo );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = MakeMachine( imageInfo.MachineType, machine.Ref() );
+    if ( FAILED( hr ) )
+        goto Error;
 
     cmdLine = _wcsdup( launchInfo->CommandLine );
     if ( cmdLine == NULL )
@@ -591,24 +856,26 @@ HRESULT Exec::Launch( LaunchInfo* launchInfo, IProcess*& process )
     hThreadPtr.Attach( procInfo.hThread );
     hProcPtr.Attach( procInfo.hProcess );
 
+    proc = new Process( Create_Launch, procInfo.hProcess, procInfo.dwProcessId, mPathBuf );
+    if ( proc.Get() == NULL )
     {
-        RefPtr<Process> proc = new Process( Create_Launch, procInfo.hProcess, procInfo.dwProcessId, mPathBuf );
-
-        if ( proc.Get() == NULL )
-        {
-            hr = E_OUTOFMEMORY;
-            goto Error;
-        }
-
-        hProcPtr.Detach();
-
-        mProcMap->insert( ProcessMap::value_type( procInfo.dwProcessId, proc ) );
-
-        process = proc.Detach();
+        hr = E_OUTOFMEMORY;
+        goto Error;
     }
 
+    hProcPtr.Detach();
+
+    mProcMap->insert( ProcessMap::value_type( procInfo.dwProcessId, proc ) );
+
+    machine->SetProcess( proc->GetHandle(), proc.Get() );
+    proc->SetMachine( machine.Get() );
+
+    proc->SetMachineType( imageInfo.MachineType );
+
     if ( launchInfo->Suspend )
-        process->SetLaunchedSuspendedThread( hThreadPtr.Detach() );
+        proc->SetLaunchedSuspendedThread( hThreadPtr.Detach() );
+
+    process = proc.Detach();
 
 Error:
     if ( FAILED( hr ) )
@@ -617,9 +884,6 @@ Error:
         {
             TerminateProcess( hProcPtr.Get(), AbnormalTerminateCode );
             DebugActiveProcessStop( procInfo.dwProcessId );
-
-            if ( launchInfo->Suspend && !hThreadPtr.IsEmpty() )
-                ResumeThread( hThreadPtr.Get() );
         }
     }
 
@@ -634,11 +898,16 @@ HRESULT Exec::Attach( uint32_t id, IProcess*& process )
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
         return E_WRONG_THREAD;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
-    HRESULT         hr = S_OK;
-    BOOL            bRet = FALSE;
-    HandlePtr       hProcPtr;
-    wstring         filename;
+    HRESULT             hr = S_OK;
+    BOOL                bRet = FALSE;
+    HandlePtr           hProcPtr;
+    wstring             filename;
+    RefPtr<Process>     proc;
+    RefPtr<IMachine>    machine;
+    ImageInfo           imageInfo;
 
     hProcPtr = OpenProcess( PROCESS_ALL_ACCESS, FALSE, id );
     if ( hProcPtr.Get() == NULL )
@@ -647,9 +916,17 @@ HRESULT Exec::Attach( uint32_t id, IProcess*& process )
         goto Error;
     }
 
-    hr = mResolver->GetModulePath( hProcPtr.Get(), NULL, filename );
+    hr = mResolver->GetProcessModulePath( hProcPtr.Get(), filename );
     if ( FAILED( hr ) )
         // getting ERROR_PARTIAL_COPY here usually means we won't be able to attach
+        goto Error;
+
+    hr = GetProcessImageInfo( hProcPtr.Get(), imageInfo );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = MakeMachine( imageInfo.MachineType, machine.Ref() );
+    if ( FAILED( hr ) )
         goto Error;
 
     bRet = DebugActiveProcess( id );
@@ -659,21 +936,23 @@ HRESULT Exec::Attach( uint32_t id, IProcess*& process )
         goto Error;
     }
 
+    proc = new Process( Create_Attach, hProcPtr.Get(), id, filename.c_str() );
+    if ( proc.Get() == NULL )
     {
-        RefPtr<Process> proc = new Process( Create_Attach, hProcPtr.Get(), id, filename.c_str() );
-
-        if ( proc.Get() == NULL )
-        {
-            hr = E_OUTOFMEMORY;
-            goto Error;
-        }
-
-        hProcPtr.Detach();
-
-        mProcMap->insert( ProcessMap::value_type( id, proc ) );
-
-        process = proc.Detach();
+        hr = E_OUTOFMEMORY;
+        goto Error;
     }
+
+    hProcPtr.Detach();
+
+    mProcMap->insert( ProcessMap::value_type( id, proc ) );
+
+    machine->SetProcess( proc->GetHandle(), proc.Get() );
+    proc->SetMachine( machine.Get() );
+
+    proc->SetMachineType( imageInfo.MachineType );
+
+    process = proc.Detach();
 
 Error:
     if ( FAILED( hr ) )
@@ -684,7 +963,7 @@ Error:
     return hr;
 }
 
-HRESULT Exec::ResumeProcess( IProcess* process )
+HRESULT Exec::ResumeLaunchedProcess( IProcess* process )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
@@ -692,6 +971,16 @@ HRESULT Exec::ResumeProcess( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
+
+    Process* proc = (Process*) process;
+
+    // lock the process, in case someone uses it when they shouldn't
+    ProcessGuard guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
 
     ResumeSuspendedProcess( process );
 
@@ -700,32 +989,12 @@ HRESULT Exec::ResumeProcess( IProcess* process )
 
 void Exec::ResumeSuspendedProcess( IProcess* process )
 {
-    if ( process->GetLaunchedSuspendedThread() != NULL )
+    Process* proc = (Process*) process;
+    if ( proc->GetLaunchedSuspendedThread() != NULL )
     {
-        ResumeThread( process->GetLaunchedSuspendedThread() );
-        process->SetLaunchedSuspendedThread( NULL );
+        ResumeThread( proc->GetLaunchedSuspendedThread() );
+        proc->SetLaunchedSuspendedThread( NULL );
     }
-}
-
-HRESULT Exec::TerminateNewProcess( IProcess* process )
-{
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
-    _ASSERT( process != NULL );
-    if ( process == NULL )
-        return E_INVALIDARG;
-
-    process->SetTerminating();
-
-    TerminateProcess( process->GetHandle(), NormalTerminateCode );
-    DebugActiveProcessStop( process->GetId() );
-    // TODO: since we're terminating the process, we might not need this
-    ResumeSuspendedProcess( process );
-
-    mProcMap->erase( process->GetId() );
-
-    return S_OK;
 }
 
 HRESULT Exec::Terminate( IProcess* process )
@@ -736,11 +1005,19 @@ HRESULT Exec::Terminate( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
-    HRESULT hr = S_OK;
-    BOOL    bRet = FALSE;
+    HRESULT     hr = S_OK;
+    BOOL        bRet = FALSE;
+    Process*    proc = (Process*) process;
 
-    process->SetTerminating();
+    ProcessGuard guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+
+    proc->SetTerminating();
 
     bRet = TerminateProcess( process->GetHandle(), NormalTerminateCode );
     _ASSERT( bRet );
@@ -749,13 +1026,25 @@ HRESULT Exec::Terminate( IProcess* process )
         hr = GetLastHr();
     }
 
-    if ( process->IsStopped() )
+    if ( proc->IsStarted() )
     {
-        ContinueDebug( true );
+        if ( process->IsStopped() )
+        {
+            ContinueInternal( proc, true );
+        }
+    }
+    else
+    {
+        bRet = DebugActiveProcessStop( proc->GetId() );
+
+        proc->SetDeleted();
+        proc->SetMachine( NULL );
+
+        mProcMap->erase( process->GetId() );
     }
 
-    // TODO: since we're terminating the process, we might not need this
-    ResumeSuspendedProcess( process );
+    // the process will end even if all threads are suspended
+    // we only have to detach or keep pumping its events
 
     return hr;
 }
@@ -768,25 +1057,55 @@ HRESULT Exec::Detach( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
-    HRESULT hr = S_OK;
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
 
-#if 0
-    // TODO: any cleanup that needs to be done
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+
+    IMachine* machine = proc->GetMachine();
+    _ASSERT( machine != NULL );
+
+    machine->Detach();
+
+    // do the least needed to shut down
+    proc->SetTerminating();
+
+    if ( proc->IsStopped() )
+    {
+        // Throw out exceptions that are used for debugging, so that the 
+        // debuggee isn't stuck with them, and likely crash.
+        // Let the debuggee handle all other exceptions and events.
+
+        ShortDebugEvent lastEvent = proc->GetLastEvent();
+
+        if ( (lastEvent.EventCode == EXCEPTION_DEBUG_EVENT) 
+            && (lastEvent.ExceptionCode == EXCEPTION_BREAKPOINT
+            || lastEvent.ExceptionCode == EXCEPTION_SINGLE_STEP) )
+        {
+            ContinueInternal( proc, true );
+        }
+    }
 
     DebugActiveProcessStop( process->GetId() );
-
     ResumeSuspendedProcess( process );
 
-    process->SetDeleted();
+    proc->SetDeleted();
+    proc->SetMachine( NULL );
 
-    if ( mCallback != NULL )
-        mCallback->OnProcessExit( process, 0 );
+    if ( proc->IsStarted() && mCallback != NULL )
+    {
+        proc->Unlock();
+        mCallback->OnProcessExit( proc, 0 );
+        proc->Lock();
+    }
 
     mProcMap->erase( process->GetId() );
-#else
-    hr = E_NOTIMPL;
-#endif
 
     return hr;
 }
@@ -796,23 +1115,29 @@ HRESULT Exec::Detach( IProcess* process )
 HRESULT Exec::ReadMemory( 
     IProcess* process, 
     Address address, 
-    SIZE_T length, 
-    SIZE_T& lengthRead, 
-    SIZE_T& lengthUnreadable, 
+    uint32_t length, 
+    uint32_t& lengthRead, 
+    uint32_t& lengthUnreadable, 
     uint8_t* buffer )
 {
-    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
-    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
-        return E_UNEXPECTED;
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
 
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+
+    IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
-    hr = machine->ReadMemory( (MachineAddress) address, length, lengthRead, lengthUnreadable, buffer );
+
+    hr = machine->ReadMemory( (Address) address, length, lengthRead, lengthUnreadable, buffer );
 
     return hr;
 }
@@ -821,70 +1146,119 @@ HRESULT Exec::ReadMemory(
 HRESULT Exec::WriteMemory( 
     IProcess* process, 
     Address address, 
-    SIZE_T length, 
-    SIZE_T& lengthWritten, 
+    uint32_t length, 
+    uint32_t& lengthWritten, 
     uint8_t* buffer )
 {
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
-    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
-    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
-        return E_UNEXPECTED;
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
 
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
-    hr = machine->WriteMemory( (MachineAddress) address, length, lengthWritten, buffer );
+
+    hr = machine->WriteMemory( (Address) address, length, lengthWritten, buffer );
 
     return hr;
 }
 
 
     // not tied to the wait/continue state
-HRESULT Exec::SetBreakpoint( IProcess* process, Address address, BPCookie cookie )
+HRESULT Exec::SetBreakpoint( IProcess* process, Address address )
 {
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
 
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+
+    IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
-    hr = machine->SetBreakpoint( (MachineAddress) address, cookie );
+    bool        suspend = !proc->IsStopped() && !machine->IsBreakpointActive( address );
 
+    if ( suspend )
+    {
+        hr = SuspendProcess( proc, machine->GetWinSuspendThreadProc() );
+        if ( FAILED( hr ) )
+            goto Error;
+    }
+
+    hr = machine->SetBreakpoint( address );
+
+    if ( suspend )
+    {
+        HRESULT hrResume = ResumeProcess( proc, machine->GetWinSuspendThreadProc() );
+        if ( SUCCEEDED( hr ) )
+            hr = hrResume;
+    }
+
+Error:
     return hr;
 }
 
     // not tied to the wait/continue state
-HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie )
+HRESULT Exec::RemoveBreakpoint( IProcess* process, Address address )
 {
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
 
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+
+    IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
-    hr = machine->RemoveBreakpoint( (MachineAddress) address, cookie );
+    bool        suspend = !proc->IsStopped() && !machine->IsBreakpointActive( address );
 
+    if ( suspend )
+    {
+        hr = SuspendProcess( proc, machine->GetWinSuspendThreadProc() );
+        if ( FAILED( hr ) )
+            goto Error;
+    }
+
+    hr = machine->RemoveBreakpoint( address );
+
+    if ( suspend )
+    {
+        HRESULT hrResume = ResumeProcess( proc, machine->GetWinSuspendThreadProc() );
+        if ( SUCCEEDED( hr ) )
+            hr = hrResume;
+    }
+
+Error:
     return hr;
 }
 
 
-HRESULT Exec::StepOut( IProcess* process, Address address )
+HRESULT Exec::StepOut( IProcess* process, Address address, bool handleException )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
@@ -892,39 +1266,27 @@ HRESULT Exec::StepOut( IProcess* process, Address address )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
-    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
-    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
-        return E_UNEXPECTED;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
 
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
+
     hr = machine->SetStepOut( address );
     if ( FAILED( hr ) )
         goto Error;
 
-Error:
-    return hr;
-}
-
-HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool sourceMode )
-{
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
-    _ASSERT( process != NULL );
-    if ( process == NULL )
-        return E_INVALIDARG;
-    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
-    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
-        return E_UNEXPECTED;
-
-    HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
-
-    _ASSERT( machine != NULL );
-    hr = machine->SetStepInstruction( stepIn, sourceMode );
+    hr = ContinueInternal( proc, handleException );
     if ( FAILED( hr ) )
         goto Error;
 
@@ -932,7 +1294,7 @@ Error:
     return hr;
 }
 
-HRESULT Exec::StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount )
+HRESULT Exec::StepInstruction( IProcess* process, bool stepIn, bool handleException )
 {
     _ASSERT( mTid == GetCurrentThreadId() );
     if ( mTid != GetCurrentThreadId() )
@@ -940,15 +1302,64 @@ HRESULT Exec::StepRange( IProcess* process, bool stepIn, bool sourceMode, Addres
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
-    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
-    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
-        return E_UNEXPECTED;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
 
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
-    hr = machine->SetStepRange( stepIn, sourceMode, ranges, rangeCount );
+
+    hr = machine->SetStepInstruction( stepIn );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = ContinueInternal( proc, handleException );
+    if ( FAILED( hr ) )
+        goto Error;
+
+Error:
+    return hr;
+}
+
+HRESULT Exec::StepRange( 
+    IProcess* process, bool stepIn, AddressRange range, bool handleException )
+{
+    _ASSERT( mTid == GetCurrentThreadId() );
+    if ( mTid != GetCurrentThreadId() )
+        return E_WRONG_THREAD;
+    _ASSERT( process != NULL );
+    if ( process == NULL )
+        return E_INVALIDARG;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
+
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
+
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
+    _ASSERT( machine != NULL );
+
+    hr = machine->SetStepRange( stepIn, range );
+    if ( FAILED( hr ) )
+        goto Error;
+
+    hr = ContinueInternal( proc, handleException );
     if ( FAILED( hr ) )
         goto Error;
 
@@ -964,14 +1375,22 @@ HRESULT Exec::CancelStep( IProcess* process )
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
-    _ASSERT( mLastEvent.dwDebugEventCode != NO_DEBUG_EVENT );
-    if ( mLastEvent.dwDebugEventCode == NO_DEBUG_EVENT )
-        return E_UNEXPECTED;
+    if ( mIsShutdown || mIsDispatching )
+        return E_WRONG_STATE;
 
-    HRESULT     hr = S_OK;
-    IMachine*   machine = process->GetMachine();
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
 
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
     _ASSERT( machine != NULL );
+
     hr = machine->CancelStep();
 
     return hr;
@@ -979,20 +1398,200 @@ HRESULT Exec::CancelStep( IProcess* process )
 
 HRESULT Exec::AsyncBreak( IProcess* process )
 {
-    _ASSERT( mTid == GetCurrentThreadId() );
-    if ( mTid != GetCurrentThreadId() )
-        return E_WRONG_THREAD;
     _ASSERT( process != NULL );
     if ( process == NULL )
         return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
 
-    BOOL    bRet = FALSE;
+    BOOL            bRet = FALSE;
+    Process*        proc = (Process*) process;
+
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( proc->IsStopped() )
+        return E_WRONG_STATE;
 
     bRet = DebugBreakProcess( process->GetHandle() );
     if ( !bRet )
         return GetLastHr();
 
     return S_OK;
+}
+
+HRESULT Exec::GetThreadContext( 
+    IProcess* process, 
+    uint32_t threadId, 
+    uint32_t features, 
+    uint64_t extFeatures, 
+    void* context, 
+    uint32_t size )
+{
+    _ASSERT( process != NULL );
+    if ( process == NULL )
+        return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
+
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
+
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
+    _ASSERT( machine != NULL );
+
+    hr = machine->GetThreadContext( threadId, features, extFeatures, context, size );
+
+    return hr;
+}
+
+HRESULT Exec::SetThreadContext( 
+    IProcess* process, 
+    uint32_t threadId, 
+    const void* context, 
+    uint32_t size)
+{
+    _ASSERT( process != NULL );
+    if ( process == NULL )
+        return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
+
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
+
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
+    _ASSERT( machine != NULL );
+
+    hr = machine->SetThreadContext( threadId, context, size );
+
+    return hr;
+}
+
+HRESULT Exec::GetPData( 
+    IProcess* process, 
+    Address address, 
+    Address imageBase, 
+    uint32_t size, 
+    uint32_t& sizeRead, 
+    uint8_t* pdata )
+{
+#if defined( _M_IX86 )
+    // Unreferenced parameters
+    process; address; imageBase; size; sizeRead; pdata;
+    return E_NOTIMPL;
+#elif defined( _M_X64 )
+    const int RecordSize = sizeof( IMAGE_RUNTIME_FUNCTION_ENTRY );
+
+    if ( process == NULL || pdata == NULL )
+        return E_INVALIDARG;
+    if ( size < RecordSize )
+        return E_INVALIDARG;
+    if ( mIsShutdown )
+        return E_WRONG_STATE;
+
+    HRESULT         hr = S_OK;
+    Process*        proc = (Process*) process;
+
+    ProcessGuard    guard( proc );
+
+    if ( proc->IsDeleted() || proc->IsTerminating() )
+        return E_PROCESS_ENDED;
+    if ( !proc->IsStopped() )
+        return E_WRONG_STATE;
+
+    IMachine*   machine = proc->GetMachine();
+    _ASSERT( machine != NULL );
+
+    IMAGE_DOS_HEADER        dosHeader;
+    IMAGE_NT_HEADERS32      ntHeaders32;
+    DWORD                   dataDirCount = 0;
+    IMAGE_DATA_DIRECTORY*   dataDirs = NULL;
+    IMAGE_DATA_DIRECTORY*   pdataDir = NULL;
+    uint32_t                lenRead;
+    uint32_t                lenUnread;
+    Address                 pdataBase;
+    Address                 modBase = (Address) imageBase;
+    Address                 rva = (Address) address - modBase;
+    int                     nRec;
+    int                     iFirst;
+    int                     iLast;
+
+    hr = machine->ReadMemory( modBase, sizeof dosHeader, lenRead, lenUnread, (uint8_t*) &dosHeader );
+    if ( FAILED( hr ) )
+        return hr;
+
+    hr = machine->ReadMemory( modBase + dosHeader.e_lfanew, sizeof ntHeaders32, lenRead, lenUnread, (uint8_t*) &ntHeaders32 );
+    if ( FAILED( hr ) )
+        return hr;
+
+    if ( ntHeaders32.OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC )
+    {
+        dataDirCount = ntHeaders32.OptionalHeader.NumberOfRvaAndSizes;
+        dataDirs = ntHeaders32.OptionalHeader.DataDirectory;
+    }
+    else if ( ntHeaders32.OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC )
+    {
+        IMAGE_NT_HEADERS64* ntHeaders64 = (IMAGE_NT_HEADERS64*) &ntHeaders32;
+
+        dataDirCount = ntHeaders64->OptionalHeader.NumberOfRvaAndSizes;
+        dataDirs = ntHeaders64->OptionalHeader.DataDirectory;
+    }
+
+    pdataDir = &dataDirs[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
+
+    if ( pdataDir->Size == 0 || pdataDir->VirtualAddress == 0 || pdataDir->Size < RecordSize )
+        return S_FALSE;
+
+    pdataBase = modBase + pdataDir->VirtualAddress;
+
+    nRec = pdataDir->Size / RecordSize;
+    iFirst = 0;
+    iLast = nRec - 1;
+
+    IMAGE_RUNTIME_FUNCTION_ENTRY    midRec;
+
+    while ( iLast >= iFirst )
+    {
+        int iMid = (iLast + iFirst) / 2;
+
+        hr = machine->ReadMemory( 
+            pdataBase + iMid * RecordSize, RecordSize, lenRead, lenUnread, (uint8_t*) &midRec );
+        if ( FAILED( hr ) )
+            return hr;
+
+        if ( rva >= midRec.BeginAddress && rva <= midRec.EndAddress )
+        {
+            memcpy( pdata, &midRec, RecordSize );
+            sizeRead = RecordSize;
+            return S_OK;
+        }
+
+        if ( rva < midRec.BeginAddress )
+            iLast = iMid - 1;
+        else
+            iFirst = iMid + 1;
+    }
+
+    return S_FALSE;
+#else
+#error Customize this implementation by getting pdata size and comparing routines from IMachine.
+#endif
 }
 
 
@@ -1005,6 +1604,7 @@ HRESULT Exec::CreateModule( Process* proc, const DEBUG_EVENT& event, RefPtr<Modu
     RefPtr<Module>              newMod;
     const LOAD_DLL_DEBUG_INFO*  loadInfo = &event.u.LoadDll;
     LOAD_DLL_DEBUG_INFO         fakeLoadInfo = { 0 };
+    ImageInfo                   imageInfo = { 0 };
 
     if ( event.dwDebugEventCode == CREATE_PROCESS_DEBUG_EVENT )
     {
@@ -1027,18 +1627,14 @@ HRESULT Exec::CreateModule( Process* proc, const DEBUG_EVENT& event, RefPtr<Modu
     if ( FAILED( hr ) )
         goto Error;
 
-    uint16_t    machine = 0;
-    uint32_t    size = 0;
-    Address     prefImageBase = 0;
-    
-    hr = GetImageInfoFromPEHeader( proc->GetHandle(), loadInfo->lpBaseOfDll, machine, size, prefImageBase );
+    hr = GetLoadedImageInfo( proc->GetHandle(), loadInfo->lpBaseOfDll, imageInfo );
     if ( FAILED( hr ) )
         goto Error;
 
     newMod = new Module( 
         (Address) loadInfo->lpBaseOfDll,
-        size,
-        machine,
+        imageInfo.Size,
+        imageInfo.MachineType,
         path.c_str(),
         loadInfo->dwDebugInfoFileOffset,
         loadInfo->nDebugInfoSize );
@@ -1049,7 +1645,7 @@ HRESULT Exec::CreateModule( Process* proc, const DEBUG_EVENT& event, RefPtr<Modu
     }
 
     mod = newMod;
-    mod->SetPreferredImageBase( prefImageBase );
+    mod->SetPreferredImageBase( imageInfo.PrefImageBase );
 
 Error:
     return hr;

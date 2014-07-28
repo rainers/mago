@@ -623,13 +623,14 @@ Done:
     RefPtr<Type>        Parser::ParseBasicType2( Type* type )
     {
         RefPtr<Type>    type2 = type;
+        int             ptrSize = mTypeEnv->GetVoidPointerType()->GetSize();
 
         for ( ; ; )
         {
             switch ( GetTokenCode() )
             {
             case TOKmul:
-                type2 = new TypePointer( type2.Get() );
+                type2 = new TypePointer( type2.Get(), ptrSize );
                 NextToken();
                 break;
 
@@ -733,11 +734,11 @@ Done:
                     funcType->SetTrust( trust );
                     if ( tokCode == TOKdelegate )
                     {
-                        RefPtr<TypePointer> ptrType = new TypePointer( funcType );
+                        RefPtr<TypePointer> ptrType = new TypePointer( funcType, ptrSize );
                         type2 = new TypeDelegate( ptrType );
                     }
                     else
-                        type2 = new TypePointer( funcType.Get() );  // pointer to function
+                        type2 = new TypePointer( funcType.Get(), ptrSize );  // pointer to function
                 }
                 break;
 

@@ -16,7 +16,7 @@ namespace Mago
 
 
     class Program;
-    class DebuggerProxy;
+    class IDebuggerProxy;
 
 
     enum BlockState
@@ -37,15 +37,15 @@ namespace Mago
     {
         static const uint32_t  BlockSize = 4096;
 
-        Address     Address;
+        Address64   Address;
         BlockState  State;
         BYTE        Inst[ BlockSize ];
         BYTE        Map[ BlockSize ];
 
-        ::Address GetLimit();
-        bool Contains( ::Address addr );
+        Address64 GetLimit();
+        bool Contains( Address64 addr );
 
-        static ::Address Align( ::Address addr );
+        static Address64 Align( Address64 addr );
     };
 
 
@@ -54,40 +54,46 @@ namespace Mago
         ud_t            mDisasm;
         uint32_t        mBlockCount;
         InstBlock**     mBlocks;
-        Address         mStartAddr;
-        Address         mEndAddr;
-        Address         mCurAddr;
+        Address64       mStartAddr;
+        Address64       mEndAddr;
+        Address64       mCurAddr;
+        Address64       mAnchorAddr;
         BYTE            mInstBuf[ MaxInstructionSize ];
 
     public:
-        InstReader( uint32_t blockCount, InstBlock** blocks, Address startAddr, Address endAddr );
+        InstReader( uint32_t blockCount, InstBlock** blocks, Address64 startAddr, Address64 endAddr, 
+            Address64 anchorAddr, int ptrSize );
 
         const ud_t* GetDisasmData();
         uint32_t Decode();
         uint32_t Disassemble();
-        uint32_t Disassemble( Address curPC );
+        uint32_t Disassemble( Address64 curPC );
         bool ReadByte( BYTE& dataByte );
-        void SetPC( Address pc );
+        void SetPC( Address64 pc );
 
     private:
         BYTE* GetInstBuffer( uint32_t& length );
+        uint32_t TruncateBeforeAnchor();
     };
 
 
     class InstCache
     {
         RefPtr<Program>             mProg;
-        DebuggerProxy*              mDebugger;
+        IDebuggerProxy*             mDebugger;
+        Address64                   mAnchorAddr;
         std::auto_ptr<InstBlock>    mBlockCache[2];
+        uint32_t                    mPtrSize;
 
     public:
         InstCache();
 
-        HRESULT Init( Program* program, DebuggerProxy* debugger );
+        HRESULT Init( Program* program, IDebuggerProxy* debugger, int ptrSize );
+        void SetAnchor( Address64 anchorAddr );
 
-        HRESULT LoadBlocks( Address addr, int instAway, int& instAwayAvail );
+        HRESULT LoadBlocks( Address64 addr, int instAway, int& instAwayAvail );
 
-        InstBlock* GetBlockContaining( Address addr );
+        InstBlock* GetBlockContaining( Address64 addr );
 
     private:
         // Looks in the cache for an anchor block and a side block right next to it.
@@ -100,8 +106,8 @@ namespace Mago
         // block should be put, if it wasn't found.
 
         void FindBlocks( 
-            Address anchorBase, 
-            Address sideBase, 
+            Address64 anchorBase, 
+            Address64 sideBase, 
             bool& anchorFound, 
             bool& sideFound, 
             int& anchorIndex,
@@ -110,14 +116,14 @@ namespace Mago
         // Returns the cache index of the block containing the given address, 
         // or -1 if not found.
 
-        int GetBlockIndexContaining( Address addr );
+        int GetBlockIndexContaining( Address64 addr );
 
         // Reads a block of instruction data into the given cache index.
         // On success, it marks the block as loaded, otherwise as invalid.
 
-        HRESULT ReadInstData( Address baseAddr, int cacheIndex );
+        HRESULT ReadInstData( Address64 baseAddr, int cacheIndex );
 
-        void MapInstData( Address anchorAddr );
-        void MapInstData( uint32_t blockCount, InstBlock** blocks, Address startAddr, Address endAddr );
+        void MapInstData( Address64 anchorAddr );
+        void MapInstData( uint32_t blockCount, InstBlock** blocks, Address64 startAddr, Address64 endAddr );
     };
 }

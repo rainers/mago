@@ -15,7 +15,8 @@ namespace Mago
     // CodeContext
 
     CodeContext::CodeContext()
-        :   mAddr( 0 )
+        :   mAddr( 0 ),
+            mPtrSize( 0 )
     {
         memset( &mFuncSH, 0, sizeof mFuncSH );
         memset( &mBlockSH, 0, sizeof mBlockSH );
@@ -78,15 +79,9 @@ namespace Mago
 
         if ( (dwFields & CIF_ADDRESS) != 0 )
         {
-            // TODO: maybe we should have a central place for formatting
+            wchar_t addrStr[MaxAddrStringLength + 1] = L"";
 
-            const size_t    HexDigitCount = sizeof mAddr * 2;   // 2 chars a byte in hex
-            wchar_t addrStr[HexDigitCount + 2 + 1] = L"";
-
-            if ( sizeof mAddr > sizeof( int ) )
-                swprintf_s( addrStr, L"0x%016I64x", mAddr );
-            else
-                swprintf_s( addrStr, L"0x%08x", mAddr );
+            FormatAddress( addrStr, _countof( addrStr ), mAddr, mPtrSize, true );
 
             pInfo->bstrAddress = SysAllocString( addrStr );
 
@@ -112,10 +107,10 @@ namespace Mago
         if ( ppMemCxt == NULL )
             return E_INVALIDARG;
 
-        // just truncate the offset
-        Address newAddr = mAddr + (Address) dwCount;
+        // just truncate the offset in the new context
+        Address64 newAddr = mAddr + (Address64) dwCount;
 
-        return MakeCodeContext( newAddr, mModule, mDocContext, ppMemCxt );
+        return MakeCodeContext( newAddr, mModule, mDocContext, ppMemCxt, mPtrSize );
     }
 
     HRESULT CodeContext::Subtract(
@@ -125,10 +120,10 @@ namespace Mago
         if ( ppMemCxt == NULL )
             return E_INVALIDARG;
 
-        // just truncate the offset
-        Address newAddr = mAddr - (Address) dwCount;
+        // just truncate the offset in the new context
+        Address64 newAddr = mAddr - (Address64) dwCount;
 
-        return MakeCodeContext( newAddr, mModule, mDocContext, ppMemCxt );
+        return MakeCodeContext( newAddr, mModule, mDocContext, ppMemCxt, mPtrSize );
     }
 
     HRESULT CodeContext::Compare(
@@ -149,7 +144,7 @@ namespace Mago
         for ( int i = 0; i < (int) dwMemoryContextSetLen; i++ )
         {
             CComPtr<IMagoMemoryContext> magoCode;
-            Address     otherAddr = 0;
+            Address64   otherAddr = 0;
             bool        result = false;
 
             hr = rgpMemoryContextSet[i]->QueryInterface( __uuidof( IMagoMemoryContext ), (void**) &magoCode );
@@ -231,7 +226,7 @@ namespace Mago
     ////////////////////////////////////////////////////////////////////////////// 
     // IMagoCodeContext
 
-    HRESULT CodeContext::GetAddress( Address& addr )
+    HRESULT CodeContext::GetAddress( Address64& addr )
     {
         addr = mAddr;
         return S_OK;
@@ -241,10 +236,11 @@ namespace Mago
     //----------------------------------------------------------------------------
 
     HRESULT CodeContext::MakeCodeContext( 
-        Address newAddr, 
+        Address64 newAddr, 
         Module* mod, 
         IDebugDocumentContext2* docContext, 
-        IDebugMemoryContext2** ppMemCxt )
+        IDebugMemoryContext2** ppMemCxt,
+        int ptrSize )
     {
         if ( ppMemCxt == NULL )
             return E_INVALIDARG;
@@ -256,7 +252,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = newContext->Init( newAddr, mod, docContext );
+        hr = newContext->Init( newAddr, mod, docContext, ptrSize );
         if ( FAILED( hr ) )
             return hr;
 
@@ -265,11 +261,16 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT CodeContext::Init( Address addr, Module* mod, IDebugDocumentContext2* docContext )
+    HRESULT CodeContext::Init( 
+        Address64 addr, Module* mod, IDebugDocumentContext2* docContext, int ptrSize )
     {
+        if ( ptrSize < sizeof( UINT64 ) )
+            addr &= 0xFFFFFFFF;
+
         mAddr = addr;
         mModule = mod;
         mDocContext = docContext;
+        mPtrSize = ptrSize;
         return S_OK;
     }
 

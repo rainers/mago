@@ -10,17 +10,18 @@
 
 namespace Mago
 {
-    class DebuggerProxy;
+    class IDebuggerProxy;
+    class ICoreProcess;
 
 
-    class ATL_NO_VTABLE MemoryBytes : 
+    class MemoryBytes : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugMemoryBytes2
     {
-        Address             mAddr;
-        uint64_t            mSize;
-        DebuggerProxy*      mDebugger;
-        RefPtr<IProcess>    mProc;
+        Address64               mAddr;
+        uint64_t                mSize;
+        IDebuggerProxy*         mDebugger;
+        RefPtr<ICoreProcess>    mProc;
 
     public:
         MemoryBytes();
@@ -49,6 +50,6 @@ namespace Mago
             UINT64* pqwSize );
 
     public:
-        void Init( Address addr, uint64_t size, DebuggerProxy* debugger, IProcess* proc );
+        void Init( Address64 addr, uint64_t size, IDebuggerProxy* debugger, ICoreProcess* proc );
     };
 }

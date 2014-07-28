@@ -309,7 +309,7 @@ namespace MagoEE
         int (*Utf8ToX)( const char* utf8Str, int utf8Len, TChar* utfXStr, int utfXLen ), 
         StringKind kind, 
         TString& newUtfStr, 
-        boost::scoped_array<TChar>& strBuf )
+        UniquePtr<TChar[]>& strBuf )
     {
         _ASSERT( utf8Str != NULL );
 
@@ -330,7 +330,7 @@ namespace MagoEE
         len2 = Utf8ToX( utf8Str, utf8Length, utfXStr, len );
         _ASSERT( (len2 > 0) && (len2 == len) );
 
-        strBuf.reset( utfXStr );
+        strBuf.Attach( utfXStr );
 
         newUtfStr.Kind = kind;
         newUtfStr.Length = len;

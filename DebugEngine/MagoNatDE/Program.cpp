@@ -7,7 +7,7 @@
 
 #include "Common.h"
 #include "Program.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
 #include "Thread.h"
 #include "Module.h"
 #include "ComEnumWithCount.h"
@@ -18,6 +18,10 @@
 #include "MemoryBytes.h"
 #include "CodeContext.h"
 #include "DisassemblyStream.h"
+#include "DRuntime.h"
+#include "ArchData.h"
+#include "ICoreProcess.h"
+#include <algorithm>
 
 
 typedef CComEnumWithCount< 
@@ -55,7 +59,8 @@ namespace Mago
         mPassExceptionToDebuggee( true ),
         mCanPassExceptionToDebuggee( true ),
         mDebugger( NULL ),
-        mNextModLoadIndex( 0 )
+        mNextModLoadIndex( 0 ),
+        mEntryPoint( 0 )
     {
     }
 
@@ -140,6 +145,11 @@ namespace Mago
         TEXT_POSITION           startPos = { 0 };
         TEXT_POSITION           endPos = { 0 };
         std::list<AddressBinding>   bindings;
+        ArchData*               archData = NULL;
+        uint32_t                ptrSize = 0;
+
+        archData = mCoreProc->GetArchData();
+        ptrSize = archData->GetPointerSize();
 
         hr = pDocPos->GetFileName( &bstrFileName );
         if ( FAILED( hr ) )
@@ -190,7 +200,7 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = codeContext->Init( (Address) it->Addr, it->Mod, NULL );
+            hr = codeContext->Init( (Address64) it->Addr, it->Mod, NULL, ptrSize );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -287,7 +297,7 @@ namespace Mago
             return E_FAIL;
 
         HRESULT hr = S_OK;
-        Address addr = mProgMod->GetAddress();
+        Address64   addr = mProgMod->GetAddress();
         DWORD   size = mProgMod->GetSize();
         RefPtr<MemoryBytes> memBytes;
 
@@ -305,13 +315,11 @@ namespace Mago
                                            IDebugCodeContext2* pCodeContext, 
                                            IDebugDisassemblyStream2** ppDisassemblyStream )
     {
-        OutputDebugStringA( "Program::GetDisassemblyStream\n" );
-
         if ( (pCodeContext == NULL) || (ppDisassemblyStream == NULL) )
             return E_INVALIDARG;
 
         HRESULT hr = S_OK;
-        Address addr = 0;
+        Address64                       addr = 0;
         RefPtr<DisassemblyStream>       stream;
         RefPtr<Module>                  mod;
         CComQIPtr<IMagoMemoryContext>   magoMem = pCodeContext;
@@ -320,6 +328,8 @@ namespace Mago
             return E_INVALIDARG;
 
         magoMem->GetAddress( addr );
+
+        _RPT2( _CRT_WARN, "Program::GetDisassemblyStream: addr=%08X scope=%X\n", addr, dwScope );
 
         if ( !FindModuleContainingAddress( addr, mod ) )
             return HRESULT_FROM_WIN32( ERROR_MOD_NOT_FOUND );
@@ -430,6 +440,7 @@ namespace Mago
 
         mModMap.clear();
 
+        mProgThread.Release();
         mProgMod.Release();
         mEngine.Release();
     }
@@ -439,18 +450,18 @@ namespace Mago
         mEngine = engine;
     }
 
-    IProcess*   Program::GetCoreProcess()
+    ICoreProcess*   Program::GetCoreProcess()
     {
         return mCoreProc.Get();
     }
 
-    void        Program::GetCoreProcess( IProcess*& proc )
+    void        Program::GetCoreProcess( ICoreProcess*& proc )
     {
         proc = mCoreProc.Get();
         proc->AddRef();
     }
 
-    void Program::SetCoreProcess( IProcess* proc )
+    void Program::SetCoreProcess( ICoreProcess* proc )
     {
         mCoreProc = proc;
     }
@@ -480,9 +491,25 @@ namespace Mago
         _ASSERT( hr == S_OK );
     }
 
-    void Program::SetDebuggerProxy( DebuggerProxy* debugger )
+    IDebuggerProxy* Program::GetDebuggerProxy()
+    {
+        return mDebugger;
+    }
+
+    void Program::SetDebuggerProxy( IDebuggerProxy* debugger )
     {
         mDebugger = debugger;
+    }
+
+    DRuntime* Program::GetDRuntime()
+    {
+        return mDRuntime.Get();
+    }
+
+    void Program::SetDRuntime( UniquePtr<DRuntime>& druntime )
+    {
+        mDRuntime.Attach( NULL );
+        mDRuntime.Swap( druntime );
     }
 
     bool Program::GetAttached()
@@ -506,7 +533,7 @@ namespace Mago
         return mCanPassExceptionToDebuggee;
     }
 
-    void Program::NotifyException( bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    void Program::NotifyException( bool firstChance, const EXCEPTION_RECORD64* exceptRec )
     {
         if ( exceptRec->ExceptionCode == EXCEPTION_BREAKPOINT )
         {
@@ -520,7 +547,7 @@ namespace Mago
         }
     }
 
-    HRESULT Program::CreateThread( ::Thread* coreThread, RefPtr<Thread>& thread )
+    HRESULT Program::CreateThread( ICoreThread* coreThread, RefPtr<Thread>& thread )
     {
         HRESULT hr = S_OK;
 
@@ -541,6 +568,9 @@ namespace Mago
         thread->GetThreadId( &id );
         if ( id == 0 )
             return E_FAIL;
+
+        if ( mProgThread == NULL )
+            mProgThread = thread;
 
         ThreadMap::iterator it = mThreadMap.find( id );
 
@@ -569,10 +599,18 @@ namespace Mago
     void Program::DeleteThread( Thread* thread )
     {
         GuardedArea guard( mThreadGuard );
-        mThreadMap.erase( thread->GetCoreThread()->GetId() );
+        mThreadMap.erase( thread->GetCoreThread()->GetTid() );
     }
 
-    HRESULT Program::CreateModule( ::IModule* coreModule, RefPtr<Module>& mod )
+    Address64 Program::FindEntryPoint()
+    {
+        if ( mProgThread == NULL )
+            return 0;
+
+        return mProgThread->GetCoreThread()->GetStartAddr();
+    }
+
+    HRESULT Program::CreateModule( ICoreModule* coreModule, RefPtr<Module>& mod )
     {
         HRESULT hr = S_OK;
 
@@ -589,7 +627,7 @@ namespace Mago
     HRESULT Program::AddModule( Module* mod )
     {
         GuardedArea guard( mModGuard );
-        Address addr = 0;
+        Address64 addr = 0;
 
         addr = mod->GetAddress();
         if ( addr == 0 )
@@ -612,7 +650,7 @@ namespace Mago
         return S_OK;
     }
 
-    bool    Program::FindModule( Address addr, RefPtr<Module>& mod )
+    bool    Program::FindModule( Address64 addr, RefPtr<Module>& mod )
     {
         GuardedArea guard( mModGuard );
         ModuleMap::iterator it = mModMap.find( addr );
@@ -624,7 +662,7 @@ namespace Mago
         return true;
     }
 
-    bool    Program::FindModuleContainingAddress( Address address, RefPtr<Module>& refMod )
+    bool    Program::FindModuleContainingAddress( Address64 address, RefPtr<Module>& refMod )
     {
         GuardedArea guard( mModGuard );
 
@@ -633,8 +671,8 @@ namespace Mago
             it++ )
         {
             Module*         mod = it->second.Get();
-            Address         base = mod->GetAddress();
-            Address         limit = base + mod->GetSize();
+            Address64       base = mod->GetAddress();
+            Address64       limit = base + mod->GetSize();
 
             if ( (base <= address) && (limit > address) )
             {
@@ -671,13 +709,140 @@ namespace Mago
     }
 
 
-    HRESULT Program::SetInternalBreakpoint( Address address, BPCookie cookie )
+    HRESULT Program::SetInternalBreakpoint( Address64 address, BPCookie cookie )
     {
-        return mDebugger->SetBreakpoint( mCoreProc, address, cookie );
+        HRESULT hr = S_OK;
+
+        {
+            GuardedArea guard( mBPGuard );
+
+            BPMap::iterator itVec = mBPMap.find( address );
+
+            if ( itVec != mBPMap.end() )
+            {
+                // There's at least one cookie for this address already.
+                // So, add this one if needed, and leave, because the BP is already set.
+                CookieVec& vec = itVec->second;
+                CookieVec::iterator itCookie = std::find( vec.begin(), vec.end(), cookie );
+                if ( itCookie == vec.end() )
+                    vec.push_back( cookie );
+
+                return S_OK;
+            }
+        }
+
+        // You can deadlock with the event callback, if you set a BP while the BP table is locked.
+        hr = mDebugger->SetBreakpoint( mCoreProc, address );
+        if ( FAILED( hr ) )
+            return hr;
+
+        // check everything again, in case anything changed since the last time we locked the table
+        {
+            GuardedArea guard( mBPGuard );
+
+            BPMap::iterator itVec = mBPMap.find( address );
+
+            if ( itVec == mBPMap.end() )
+            {
+                std::pair<BPMap::iterator, bool> pair =
+                    mBPMap.insert( BPMap::value_type( address, std::vector<BPCookie>() ) );
+
+                itVec = pair.first;
+                itVec->second.push_back( cookie );
+            }
+            else
+            {
+                CookieVec& vec = itVec->second;
+                CookieVec::iterator itCookie = std::find( vec.begin(), vec.end(), cookie );
+                if ( itCookie == vec.end() )
+                    vec.push_back( cookie );
+            }
+        }
+
+        return S_OK;
     }
 
-    HRESULT Program::RemoveInternalBreakpoint( Address address, BPCookie cookie )
+    HRESULT Program::RemoveInternalBreakpoint( Address64 address, BPCookie cookie )
     {
-        return mDebugger->RemoveBreakpoint( mCoreProc, address, cookie );
+        HRESULT hr = S_OK;
+
+        {
+            GuardedArea guard( mBPGuard );
+
+            BPMap::iterator itVec = mBPMap.find( address );
+            if ( itVec == mBPMap.end() )
+                return S_OK;
+
+            CookieVec& vec = itVec->second;
+            CookieVec::iterator itCookie = std::find( vec.begin(), vec.end(), cookie );
+            if ( itCookie == vec.end() )
+                return S_OK;
+
+            // Clear the BP only when all cookies are gone. There are others, so remove this one only.
+            if ( vec.size() > 1 )
+            {
+                vec.erase( itCookie );
+                return S_OK;
+            }
+        }
+
+        // You can deadlock with the event callback, if you clear a BP while the BP table is locked.
+        hr = mDebugger->RemoveBreakpoint( mCoreProc, address );
+        if ( FAILED( hr ) )
+            return hr;
+
+        // check everything again, in case anything changed since the last time we locked the table
+        {
+            GuardedArea guard( mBPGuard );
+
+            BPMap::iterator itVec = mBPMap.find( address );
+            if ( itVec == mBPMap.end() )
+                return S_OK;
+
+            CookieVec& vec = itVec->second;
+            CookieVec::iterator itCookie = std::find( vec.begin(), vec.end(), cookie );
+            if ( itCookie == vec.end() )
+                return S_OK;
+
+            vec.erase( itCookie );
+
+            if ( vec.size() == 0 )
+            {
+                mBPMap.erase( itVec );
+            }
+        }
+
+        return S_OK;
+    }
+
+    HRESULT Program::EnumBPCookies( Address64 address, std::vector< BPCookie >& iter )
+    {
+        GuardedArea guard( mBPGuard );
+
+        iter.clear();
+
+        BPMap::iterator itVec = mBPMap.find( address );
+        if ( itVec == mBPMap.end() )
+            return S_OK;
+
+        CookieVec& vec = itVec->second;
+        iter.reserve( vec.size() );
+
+        for ( CookieVec::iterator it = vec.begin(); it != vec.end(); it++ )
+        {
+            iter.push_back( *it );
+        }
+
+        return S_OK;
+    }
+
+    Address64 Program::GetEntryPoint()
+    {
+        return mEntryPoint;
+    }
+
+    void Program::SetEntryPoint( Address64 address )
+    {
+        mEntryPoint = address;
     }
 }

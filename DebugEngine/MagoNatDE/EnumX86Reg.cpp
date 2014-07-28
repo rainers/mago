@@ -8,7 +8,8 @@
 #include "Common.h"
 #include "EnumX86Reg.h"
 #include "RegProperty.h"
-#include "RegisterSet.h"
+#include "ArchDataX86.h"
+#include <MagoDECommon.h>
 
 
 namespace Mago
@@ -152,32 +153,21 @@ namespace Mago
         { L"XMM7DH", RegX86_XMM7H, 0, 0, 0 },
     };
 
-    static const RegGroup   gX86RegGroups[] = 
+    static const RegGroupInternal  gX86RegGroups[] = 
     {
         { IDS_REGGROUP_CPU, gX86CpuRegList, _countof( gX86CpuRegList ), 0 },
         { IDS_REGGROUP_CPU_SEGMENTS, gX86SegmentsRegList, _countof( gX86SegmentsRegList ), 0 },
         { IDS_REGGROUP_FLOATING_POINT, gX86FloatingRegList, _countof( gX86FloatingRegList ), 0 },
         { IDS_REGGROUP_FLAGS, gX86FlagsRegList, _countof( gX86FlagsRegList ), 0 },
-        { IDS_REGGROUP_MMX, gX86MMXRegList, _countof( gX86MMXRegList ), PF_MMX_INSTRUCTIONS_AVAILABLE },
-        { IDS_REGGROUP_SSE, gX86SSERegList, _countof( gX86SSERegList ), PF_XMMI_INSTRUCTIONS_AVAILABLE },
-        { IDS_REGGROUP_SSE2, gX86SSE2RegList, _countof( gX86SSE2RegList ), PF_XMMI64_INSTRUCTIONS_AVAILABLE },
+        { IDS_REGGROUP_MMX, gX86MMXRegList, _countof( gX86MMXRegList ), PF_X86_MMX },
+        { IDS_REGGROUP_SSE, gX86SSERegList, _countof( gX86SSERegList ), PF_X86_SSE },
+        { IDS_REGGROUP_SSE2, gX86SSE2RegList, _countof( gX86SSE2RegList ), PF_X86_SSE2 },
     };
 
 
-    HRESULT EnumX86Registers( 
-        IRegisterSet* regSet, 
-        DEBUGPROP_INFO_FLAGS fields,
-        DWORD radix,
-        IEnumDebugPropertyInfo2** enumerator )
+    void GetX86RegisterGroups( const RegGroupInternal*& groups, uint32_t& count )
     {
-        OutputDebugStringA( "EnumX86Registers\n" );
-
-        return EnumRegisters( 
-            gX86RegGroups,
-            _countof( gX86RegGroups ),
-            regSet,
-            fields,
-            radix,
-            enumerator );
+        groups = gX86RegGroups;
+        count = _countof( gX86RegGroups );
     }
 }

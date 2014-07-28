@@ -10,7 +10,7 @@
 
 namespace Mago
 {
-    class ATL_NO_VTABLE ErrorProperty : 
+    class ErrorProperty : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProperty2
     {

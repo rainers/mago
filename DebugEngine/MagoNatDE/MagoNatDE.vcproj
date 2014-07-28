@@ -43,7 +43,7 @@
 			<Tool
 				Name="VCMIDLTool"
 				PreprocessorDefinitions="_DEBUG"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="$(ProjectDir)..\Include"
 				MkTypLibCompatible="false"
 				TargetEnvironment="1"
 				GenerateStublessProxies="true"
@@ -57,8 +57,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\..\EED\Real&quot;;&quot;$(ProjectDir)..\..\EED\gdtoa&quot;;&quot;$(ProjectDir)..\..\CVSym\Include&quot;;&quot;$(ProjectDir)..\..\EED\Include&quot;;&quot;$(ProjectDir)..\..\Include&quot;;&quot;$(ProjectDir)..\..\udis86&quot;"
-				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG;_USRDLL"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\..\Include&quot;;&quot;$(ProjectDir)..\Include&quot;;&quot;$(ProjectDir)..\..\EED\Real&quot;;&quot;$(ProjectDir)..\..\EED\gdtoa&quot;;&quot;$(ProjectDir)..\..\CVSym\Include&quot;;&quot;$(ProjectDir)..\..\EED\Include&quot;;&quot;$(ProjectDir)..\..\udis86&quot;"
+				PreprocessorDefinitions="RPC_USE_NATIVE_WCHAR;WIN32;_WINDOWS;_DEBUG;_USRDLL"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -84,7 +84,7 @@
 				Name="VCLinkerTool"
 				RegisterOutput="false"
 				IgnoreImportLibrary="true"
-				AdditionalDependencies="Exec.lib dbgmetric.lib ad2de.lib CVSTI.lib MagoNatEE.lib dbghelp.lib Real.lib gdtoa.lib udis86.lib"
+				AdditionalDependencies="rpcrt4.lib Exec.lib dbgmetric.lib ad2de.lib CVSTI.lib MagoNatEE.lib dbghelp.lib Real.lib gdtoa.lib udis86.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(ProjectDir)..\..\CVSym\$(ConfigurationName)&quot;;&quot;$(ProjectDir)..\..\EED\$(ConfigurationName)&quot;;&quot;$(OutDir)&quot;"
 				ModuleDefinitionFile=".\MagoNatDE.def"
@@ -233,7 +233,7 @@
 			<Tool
 				Name="VCMIDLTool"
 				PreprocessorDefinitions="NDEBUG"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="$(ProjectDir)..\Include"
 				MkTypLibCompatible="false"
 				TargetEnvironment="1"
 				GenerateStublessProxies="true"
@@ -247,8 +247,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\..\EED\Real&quot;;&quot;$(ProjectDir)..\..\EED\gdtoa&quot;;&quot;$(ProjectDir)..\..\CVSym\Include&quot;;&quot;$(ProjectDir)..\..\EED\Include&quot;;&quot;$(ProjectDir)..\..\Include&quot;;&quot;$(ProjectDir)..\..\udis86&quot;"
-				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;_USRDLL"
+				AdditionalIncludeDirectories="&quot;$(ProjectDir)..\..\Include&quot;;&quot;$(ProjectDir)..\Include&quot;;&quot;$(ProjectDir)..\..\EED\Real&quot;;&quot;$(ProjectDir)..\..\EED\gdtoa&quot;;&quot;$(ProjectDir)..\..\CVSym\Include&quot;;&quot;$(ProjectDir)..\..\EED\Include&quot;;&quot;$(ProjectDir)..\..\udis86&quot;"
+				PreprocessorDefinitions="RPC_USE_NATIVE_WCHAR;WIN32;_WINDOWS;NDEBUG;_USRDLL"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="Common.h"
@@ -272,7 +272,7 @@
 				Name="VCLinkerTool"
 				RegisterOutput="false"
 				IgnoreImportLibrary="true"
-				AdditionalDependencies="Exec.lib dbgmetric.lib ad2de.lib CVSTI.lib MagoNatEE.lib dbghelp.lib Real.lib gdtoa.lib udis86.lib"
+				AdditionalDependencies="rpcrt4.lib Exec.lib dbgmetric.lib ad2de.lib CVSTI.lib MagoNatEE.lib dbghelp.lib Real.lib gdtoa.lib udis86.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(ProjectDir)..\..\CVSym\$(ConfigurationName)&quot;;&quot;$(ProjectDir)..\..\EED\$(ConfigurationName)&quot;;&quot;$(OutDir)&quot;"
 				ModuleDefinitionFile=".\MagoNatDE.def"
@@ -409,6 +409,14 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\ArchData.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ArchDataX86.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\BoundBreakpoint.cpp"
 				>
 			</File>
@@ -537,6 +545,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\DRuntime.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Engine.cpp"
 				>
 			</File>
@@ -597,6 +609,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\LocalProcess.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\MagoNatDE.cpp"
 				>
 			</File>
@@ -607,6 +623,84 @@
 			<File
 				RelativePath=".\MagoNatDE.idl"
 				>
+			</File>
+			<File
+				RelativePath="..\Include\MagoRemoteCmd.idl"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCMIDLTool"
+						AdditionalOptions="/client stub /server none"
+						GenerateTypeLibrary="false"
+						HeaderFileName="MagoRemoteCmd_i.h"
+						ProxyFileName=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCMIDLTool"
+						AdditionalOptions="/client stub /server none"
+						GenerateTypeLibrary="false"
+						HeaderFileName="MagoRemoteCmd_i.h"
+						ProxyFileName=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\Include\MagoRemoteCommon.idl"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCMIDLTool"
+						AdditionalOptions="/client none /server none"
+						GenerateTypeLibrary="false"
+						HeaderFileName="MagoRemoteCommon.h"
+						ProxyFileName=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCMIDLTool"
+						AdditionalOptions="/client none /server none"
+						GenerateTypeLibrary="false"
+						HeaderFileName="MagoRemoteCommon.h"
+						ProxyFileName=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\Include\MagoRemoteEvent.idl"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCMIDLTool"
+						AdditionalOptions="/client none /server stub"
+						GenerateTypeLibrary="false"
+						HeaderFileName="MagoRemoteEvent_i.h"
+						ProxyFileName=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCMIDLTool"
+						AdditionalOptions="/client none /server stub"
+						GenerateTypeLibrary="false"
+						HeaderFileName="MagoRemoteEvent_i.h"
+						ProxyFileName=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\MemoryBytes.cpp"
@@ -641,6 +735,22 @@
 				>
 			</File>
 			<File
+				RelativePath=".\RemoteDebuggerProxy.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\RemoteEventRpc.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\RemoteProcess.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\RpcUtil.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\SingleDocumentContext.cpp"
 				>
 			</File>
@@ -656,12 +766,24 @@
 				RelativePath=".\Utility.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\WinStackWalker.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\ArchData.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ArchDataX86.h"
+				>
+			</File>
 			<File
 				RelativePath=".\BoundBreakpoint.h"
 				>
@@ -692,10 +814,6 @@
 			</File>
 			<File
 				RelativePath=".\ComEnumWithCount.h"
-				>
-			</File>
-			<File
-				RelativePath=".\CommandFunctor.h"
 				>
 			</File>
 			<File
@@ -736,6 +854,10 @@
 			</File>
 			<File
 				RelativePath=".\DocumentContext.h"
+				>
+			</File>
+			<File
+				RelativePath=".\DRuntime.h"
 				>
 			</File>
 			<File
@@ -795,7 +917,23 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ICoreProcess.h"
+				>
+			</File>
+			<File
+				RelativePath=".\IDebuggerProxy.h"
+				>
+			</File>
+			<File
 				RelativePath=".\InstCache.h"
+				>
+			</File>
+			<File
+				RelativePath=".\IRemoteEventCallback.h"
+				>
+			</File>
+			<File
+				RelativePath=".\LocalProcess.h"
 				>
 			</File>
 			<File
@@ -831,7 +969,23 @@
 				>
 			</File>
 			<File
+				RelativePath=".\RemoteDebuggerProxy.h"
+				>
+			</File>
+			<File
+				RelativePath=".\RemoteEventRpc.h"
+				>
+			</File>
+			<File
+				RelativePath=".\RemoteProcess.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Resource.h"
+				>
+			</File>
+			<File
+				RelativePath=".\RpcUtil.h"
 				>
 			</File>
 			<File
@@ -852,6 +1006,10 @@
 			</File>
 			<File
 				RelativePath=".\Utility.h"
+				>
+			</File>
+			<File
+				RelativePath=".\WinStackWalker.h"
 				>
 			</File>
 			<File
@@ -925,7 +1083,63 @@
 				RelativePath=".\MagoNatDE_i.h"
 				>
 			</File>
+			<File
+				RelativePath=".\MagoRemoteCmd_c.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\MagoRemoteCmd_i.h"
+				>
+			</File>
+			<File
+				RelativePath=".\MagoRemoteEvent_i.h"
+				>
+			</File>
+			<File
+				RelativePath=".\MagoRemoteEvent_s.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
+		<File
+			RelativePath="..\Include\MagoRemoteCmd.acf"
+			>
+		</File>
+		<File
+			RelativePath="..\Include\MagoRemoteEvent.acf"
+			>
+		</File>
 		<File
 			RelativePath=".\ReadMe.txt"
 			>

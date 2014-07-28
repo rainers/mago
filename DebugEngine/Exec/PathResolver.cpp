@@ -130,6 +130,46 @@ Error:
     return hr;
 }
 
+HRESULT PathResolver::GetProcessModulePath( HANDLE hProcess, std::wstring& path )
+{
+    HRESULT hr = S_OK;
+
+    for ( ; ; )
+    {
+        DWORD   nRet = 0;
+
+        // returns a device path
+        nRet = GetProcessImageFileName( hProcess, &mScratchPath[0], (DWORD) mScratchPath.size() );
+        if ( nRet == 0 )
+        {
+            DWORD err = GetLastError();
+            if ( err == ERROR_INSUFFICIENT_BUFFER )
+            {
+                if ( !ExpandScratchPath() )
+                {
+                    hr = E_INSUFFICIENT_BUFFER;
+                    goto Error;
+                }
+            }
+            else
+            {
+                // getting ERROR_PARTIAL_COPY here usually means we won't be able to attach
+                hr = HRESULT_FROM_WIN32( err );
+                goto Error;
+            }
+        }
+        else
+        {
+            std::wstring devPath = &mScratchPath[0];
+            hr = ResolveDeviceName( devPath, NULL, path );
+            break;
+        }
+    }
+
+Error:
+    return hr;
+}
+
 HRESULT PathResolver::GetMappedDeviceName( HANDLE hProcess, void* baseAddr )
 {
     HRESULT hr = S_OK;

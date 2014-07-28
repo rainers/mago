@@ -46,9 +46,6 @@ using namespace ATL;
 #include <list>
 #include <limits>
 
-// Boost
-#include <boost/scoped_array.hpp>
-
 // VS Debug
 #include <msdbg.h>
 
@@ -61,9 +58,7 @@ using namespace ATL;
 #include "..\Exec\Enumerator.h"
 #include "..\Exec\Error.h"
 #include "..\Exec\Exec.h"
-#include "..\Exec\Machine.h"
 #include "..\Exec\EventCallback.h"
-#include "..\Exec\MakeMachineX86.h"
 #include "..\Exec\IProcess.h"
 #include "..\Exec\Thread.h"
 #include "..\Exec\IModule.h"

@@ -7,8 +7,10 @@
 
 #pragma once
 
+#include "IProcess.h"
 
-namespace Mago
+
+namespace MagoCore
 {
     struct CommandFunctor
     {
@@ -25,6 +27,9 @@ namespace Mago
                 OutHResult( E_FAIL )
         {
         }
+
+    private:
+        ExecCommandFunctor& operator=( const ExecCommandFunctor& );
     };
 
     struct LaunchParams : public ExecCommandFunctor
@@ -95,11 +100,11 @@ namespace Mago
         }
     };
 
-    struct ResumeProcessParams : public ExecCommandFunctor
+    struct ResumeLaunchedProcessParams : public ExecCommandFunctor
     {
         IProcess*       Process;
 
-        ResumeProcessParams( Exec& exec )
+        ResumeLaunchedProcessParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL )
         {
@@ -107,23 +112,7 @@ namespace Mago
 
         virtual void    Run()
         {
-            OutHResult = Core.ResumeProcess( Process );
-        }
-    };
-
-    struct TerminateNewProcessParams : public ExecCommandFunctor
-    {
-        IProcess*       Process;
-
-        TerminateNewProcessParams( Exec& exec )
-            :   ExecCommandFunctor( exec ),
-                Process( NULL )
-        {
-        }
-
-        virtual void    Run()
-        {
-            OutHResult = Core.TerminateNewProcess( Process );
+            OutHResult = Core.ResumeLaunchedProcess( Process );
         }
     };
 
@@ -132,9 +121,9 @@ namespace Mago
         IProcess*       Process;
         Address         Address;
         uint8_t*        Buffer;
-        SIZE_T          Length;
-        SIZE_T          OutLengthRead;
-        SIZE_T          OutLengthUnreadable;
+        uint32_t        Length;
+        uint32_t        OutLengthRead;
+        uint32_t        OutLengthUnreadable;
 
         ReadMemoryParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
@@ -156,8 +145,8 @@ namespace Mago
         IProcess*       Process;
         Address         Address;
         uint8_t*        Buffer;
-        SIZE_T          Length;
-        SIZE_T          OutLengthWritten;
+        uint32_t        Length;
+        uint32_t        OutLengthWritten;
 
         WriteMemoryParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
@@ -178,19 +167,17 @@ namespace Mago
     {
         IProcess*       Process;
         Address         Address;
-        BPCookie        Cookie;
 
         SetBreakpointParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
-                Address( 0 ),
-                Cookie( 0 )
+                Address( 0 )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.SetBreakpoint( Process, Address, Cookie );
+            OutHResult = Core.SetBreakpoint( Process, Address );
         }
     };
 
@@ -198,19 +185,17 @@ namespace Mago
     {
         IProcess*       Process;
         Address         Address;
-        BPCookie        Cookie;
 
         RemoveBreakpointParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
-                Address( 0 ),
-                Cookie( 0 )
+                Address( 0 )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.RemoveBreakpoint( Process, Address, Cookie );
+            OutHResult = Core.RemoveBreakpoint( Process, Address );
         }
     };
 
@@ -230,10 +215,7 @@ namespace Mago
 
         virtual void    Run()
         {
-            OutHResult = Core.StepOut( Process, TargetAddress );
-
-            if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.ContinueDebug( HandleException );
+            OutHResult = Core.StepOut( Process, TargetAddress, HandleException );
         }
     };
 
@@ -241,24 +223,19 @@ namespace Mago
     {
         IProcess*       Process;
         bool            StepIn;
-        bool            SourceMode;
         bool            HandleException;
 
         StepInstructionParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
                 StepIn( false ),
-                SourceMode( false ),
                 HandleException( false )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.StepInstruction( Process, StepIn, SourceMode );
-
-            if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.ContinueDebug( HandleException );
+            OutHResult = Core.StepInstruction( Process, StepIn, HandleException );
         }
     };
 
@@ -266,28 +243,20 @@ namespace Mago
     {
         IProcess*       Process;
         bool            StepIn;
-        bool            SourceMode;
-        AddressRange*   Ranges;
-        int             RangeCount;
+        AddressRange    Range;
         bool            HandleException;
 
         StepRangeParams( Exec& exec )
             :   ExecCommandFunctor( exec ),
                 Process( NULL ),
                 StepIn( false ),
-                SourceMode( false ),
-                Ranges( NULL ),
-                RangeCount( 0 ),
                 HandleException( false )
         {
         }
 
         virtual void    Run()
         {
-            OutHResult = Core.StepRange( Process, StepIn, SourceMode, Ranges, RangeCount );
-
-            if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.ContinueDebug( HandleException );
+            OutHResult = Core.StepRange( Process, StepIn, Range, HandleException );
         }
     };
 
@@ -305,7 +274,7 @@ namespace Mago
 
         virtual void    Run()
         {
-            OutHResult = Core.ContinueDebug( HandleException );
+            OutHResult = Core.Continue( Process, HandleException );
         }
     };
 
@@ -326,7 +295,7 @@ namespace Mago
             OutHResult = Core.CancelStep( Process );
 
             if ( SUCCEEDED( OutHResult ) )
-                OutHResult = Core.ContinueDebug( HandleException );
+                OutHResult = Core.Continue( Process, HandleException );
         }
     };
 

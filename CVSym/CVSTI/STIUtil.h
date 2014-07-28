@@ -13,9 +13,9 @@ inline HRESULT GetLastHr()
     return HRESULT_FROM_WIN32( GetLastError() );
 }
 
-struct MappedCloser
+struct MappedDeleter
 {
-    void operator()( void* p )
+    static void Delete( void* p )
     {
         BOOL bRet = UnmapViewOfFile( p );
         UNREFERENCED_PARAMETER( bRet );
@@ -23,4 +23,26 @@ struct MappedCloser
     }
 };
 
-typedef HandlePtrBase2<void*, NULL, MappedCloser> MappedPtr;
+struct MappedPtr : UniquePtrBase<void*, NULL, MappedDeleter>
+{
+     MappedPtr()
+         : UniquePtrBase()
+     {
+     }
+
+     explicit MappedPtr( void* ptr )
+         : UniquePtrBase( ptr )
+     {
+     }
+
+     ~MappedPtr()
+     {
+         Delete();
+     }
+
+     MappedPtr& operator=( void* ptr )
+     {
+         Attach( ptr );
+         return *this;
+     }
+};

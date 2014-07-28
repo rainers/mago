@@ -14,17 +14,17 @@
 namespace Mago
 {
     class Program;
-    class DebuggerProxy;
+    class IDebuggerProxy;
 
 
-    class ATL_NO_VTABLE DisassemblyStream : 
+    class DisassemblyStream : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugDisassemblyStream2
     {
         DISASSEMBLY_STREAM_SCOPE    mScope;
 
-        Address             mAnchorAddr;
-        Address             mReadAddr;
+        Address64           mAnchorAddr;
+        Address64           mReadAddr;
         uint32_t            mInvalidInstLenAtReadPtr;
 
         InstCache           mInstCache;
@@ -39,6 +39,7 @@ namespace Mago
         bool                mStartOfRead;
 
         RefPtr<Program>     mProg;
+        int                 mPtrSize;
 
     public:
         DisassemblyStream();
@@ -89,9 +90,9 @@ namespace Mago
     public:
         HRESULT Init( 
             DISASSEMBLY_STREAM_SCOPE disasmScope, 
-            Address address, 
+            Address64 address, 
             Program* program, 
-            DebuggerProxy* debugger );
+            IDebuggerProxy* debugger );
 
     private:
         HRESULT SeekOffset( INT64 iInstructions );
@@ -109,7 +110,7 @@ namespace Mago
             DisassemblyData* pDisassembly );
 
         bool GetDocContext( 
-            Address address, 
+            Address64 address, 
             Module* mod, 
             IDebugDocumentContext2** docContext );
     };

@@ -55,9 +55,11 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\PropSheets\MagoDbg_3rdParty_Release.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\PropSheets\MagoDbg_3rdParty_Debug.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -152,21 +154,28 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="DebuggerProxy.cpp" />
     <ClCompile Include="DecodeX86.cpp" />
     <ClCompile Include="Exec.cpp" />
     <ClCompile Include="Log.cpp" />
+    <ClCompile Include="MachineX64.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="MachineX86.cpp" />
     <ClCompile Include="MachineX86Base.cpp" />
+    <ClCompile Include="MakeMachine.cpp" />
     <ClCompile Include="Module.cpp" />
     <ClCompile Include="PathResolver.cpp" />
     <ClCompile Include="Process.cpp" />
-    <ClCompile Include="Steppers.cpp" />
     <ClCompile Include="Thread.cpp" />
     <ClCompile Include="ThreadX86.cpp" />
     <ClCompile Include="Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CommandFunctor.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="DebuggerProxy.h" />
     <ClInclude Include="DecodeX86.h" />
     <ClInclude Include="Enumerator.h" />
     <ClInclude Include="Error.h" />
@@ -177,13 +186,13 @@
     <ClInclude Include="Iter.h" />
     <ClInclude Include="Log.h" />
     <ClInclude Include="Machine.h" />
+    <ClInclude Include="MachineX64.h" />
     <ClInclude Include="MachineX86.h" />
     <ClInclude Include="MachineX86Base.h" />
-    <ClInclude Include="MakeMachineX86.h" />
+    <ClInclude Include="MakeMachine.h" />
     <ClInclude Include="Module.h" />
     <ClInclude Include="PathResolver.h" />
     <ClInclude Include="Process.h" />
-    <ClInclude Include="Stepper.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Thread.h" />
     <ClInclude Include="ThreadX86.h" />

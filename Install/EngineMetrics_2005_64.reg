@@ -1,6 +1,7 @@
 Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\8.0\AD7Metrics\Engine\{97348AC0-2B6B-4B99-A245-4C7E2C09D403}]
+"AlwaysLoadLocal"=dword:00000001
 "CLSID"="{97348AC0-2B6B-4B99-A245-4C7E2C09D403}"
 "Name"="Mago Native"
 "ENC"=dword:00000000

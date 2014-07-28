@@ -172,8 +172,8 @@ namespace Mago
             // will return 0 on error, which is a good invalid address
             uint64_t addr = _wcstoui64( reqInfo.bpLocation.bpLocation.bplocCodeAddress.bstrAddress, NULL, 0 );
 
-            if ( addr <= std::numeric_limits<Address>::max() )
-                mAddress = (Address) addr;
+            if ( addr <= std::numeric_limits<Address64>::max() )
+                mAddress = (Address64) addr;
         }
         else
         {

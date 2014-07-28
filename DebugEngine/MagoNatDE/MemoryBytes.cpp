@@ -8,7 +8,8 @@
 #include "Common.h"
 #include "MemoryBytes.h"
 #include "CodeContext.h"
-#include "DebuggerProxy.h"
+#include "IDebuggerProxy.h"
+#include "ICoreProcess.h"
 
 
 namespace Mago
@@ -40,10 +41,10 @@ namespace Mago
         if ( (rgbMemory == NULL) || (pdwRead == NULL) )
             return E_INVALIDARG;
 
-        HRESULT hr = S_OK;
-        Address addr = 0;
-        SIZE_T  lenRead = 0;
-        SIZE_T  lenUnreadable = 0;
+        HRESULT     hr = S_OK;
+        Address64   addr = 0;
+        uint32_t    lenRead = 0;
+        uint32_t    lenUnreadable = 0;
         CComQIPtr<IMagoMemoryContext>   memCxt = pStartContext;
 
         if ( memCxt == NULL )
@@ -79,9 +80,9 @@ namespace Mago
         if ( rgbMemory == NULL )
             return E_INVALIDARG;
 
-        HRESULT hr = S_OK;
-        Address addr = 0;
-        SIZE_T  lenWritten = 0;
+        HRESULT     hr = S_OK;
+        Address64   addr = 0;
+        uint32_t    lenWritten = 0;
         CComQIPtr<IMagoMemoryContext>   memCxt = pStartContext;
 
         if ( memCxt == NULL )
@@ -115,7 +116,7 @@ namespace Mago
     //////////////////////////////////////////////////////////// 
     // MemoryBytes
 
-    void MemoryBytes::Init( Address addr, uint64_t size, DebuggerProxy* debugger, IProcess* proc )
+    void MemoryBytes::Init( Address64 addr, uint64_t size, IDebuggerProxy* debugger, ICoreProcess* proc )
     {
         _ASSERT( debugger != NULL );
         _ASSERT( proc != NULL );

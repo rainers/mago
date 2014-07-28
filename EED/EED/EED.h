@@ -61,7 +61,7 @@ namespace MagoEE
     HRESULT Init();
     void Uninit();
 
-    HRESULT MakeTypeEnv( ITypeEnv*& typeEnv );
+    HRESULT MakeTypeEnv( int ptrSize, ITypeEnv*& typeEnv );
     HRESULT MakeNameTable( NameTable*& nameTable );
     HRESULT ParseText( const wchar_t* text, ITypeEnv* typeEnv, NameTable* strTable, IEEDParsedExpr*& expr );
 

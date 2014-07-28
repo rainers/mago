@@ -9,11 +9,24 @@
 
 
 typedef uintptr_t   Address;
-typedef uintptr_t   MachineAddress;
-typedef uint64_t    BPCookie;
 
 struct AddressRange
 {
     Address     Begin;
     Address     End;
+};
+
+enum RunMode
+{
+    RunMode_Run,
+    RunMode_Break,
+    RunMode_Wait,
+};
+
+enum ProbeRunMode
+{
+    ProbeRunMode_Run,
+    ProbeRunMode_Break,
+    ProbeRunMode_Wait,
+    ProbeRunMode_WalkThunk,
 };

@@ -17,7 +17,7 @@ namespace Mago
 
     // Relies on a pending breakpoint for enumerating code contexts.
 
-    class ATL_NO_VTABLE BPDocumentContext : 
+    class BPDocumentContext : 
         public DocumentContext,
         public CComObjectRootEx<CComMultiThreadModel>
     {

@@ -15,7 +15,7 @@ namespace Mago
     class ExprContext;
 
 
-    class ATL_NO_VTABLE Property : 
+    class Property : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProperty3
     {
@@ -23,6 +23,7 @@ namespace Mago
         CComBSTR            mFullExprText;
         MagoEE::EvalResult  mObjVal;
         RefPtr<ExprContext> mExprContext;
+        int                 mPtrSize;
 
     public:
         Property();

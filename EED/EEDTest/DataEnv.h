@@ -13,7 +13,7 @@
 
 class DataEnv : public IValueEnv, public IDataEnv
 {
-    boost::scoped_array<uint8_t>    mBuf;
+    UniquePtr<uint8_t[]>            mBuf;
     size_t                          mBufSize;
     size_t                          mAllocSize;
 

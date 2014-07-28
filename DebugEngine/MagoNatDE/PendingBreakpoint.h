@@ -14,7 +14,6 @@ namespace Mago
     class BPDocumentContext;
     class BoundBreakpoint;
     class ErrorBreakpoint;
-    class DebuggerProxy;
 
 
     struct ModuleBinding
@@ -26,7 +25,7 @@ namespace Mago
     };
 
 
-    class ATL_NO_VTABLE PendingBreakpoint : 
+    class PendingBreakpoint : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugPendingBreakpoint2
     {
@@ -35,12 +34,12 @@ namespace Mago
         DWORD                                   mId;
         PENDING_BP_STATE_INFO                   mState;
         bool                                    mDeleted;
+        bool                                    mSentEvent;
         CComPtr<IDebugBreakpointRequest2>       mBPRequest;
         CComPtr<IDebugEventCallback2>           mCallback;
         RefPtr<Engine>                          mEngine;
         RefPtr<BPDocumentContext>               mDocContext;    // optional
         BindingMap                              mBindings;
-        DebuggerProxy*                          mDebugger;
         DWORD                                   mLastBPId;
         Guard                                   mBoundBPGuard;
 
@@ -76,8 +75,7 @@ namespace Mago
             DWORD id,
             Engine* engine,
             IDebugBreakpointRequest2* pBPRequest,
-            IDebugEventCallback2* pCallback, 
-            DebuggerProxy* debugger );
+            IDebugEventCallback2* pCallback );
         void    Dispose();
         DWORD   GetId();
         void    OnBoundBPDelete( BoundBreakpoint* boundBP );

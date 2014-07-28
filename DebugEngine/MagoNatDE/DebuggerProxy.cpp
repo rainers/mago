@@ -7,550 +7,463 @@
 
 #include "Common.h"
 #include "DebuggerProxy.h"
-#include "CommandFunctor.h"
-
-
-// these values can be tweaked, as long as we're responsive and don't spin
-const DWORD EventTimeoutMillis = 50;
-const DWORD CommandTimeoutMillis = 0;
+#include "ArchDataX86.h"
+#include "RegisterSet.h"
+#include "..\Exec\DebuggerProxy.h"
+#include "EventCallback.h"
+#include "LocalProcess.h"
 
 
 namespace Mago
 {
     DebuggerProxy::DebuggerProxy()
-        :   mhThread( NULL ),
-            mWorkerTid( 0 ),
-            mMachine( NULL ),
-            mCallback( NULL ),
-            mhReadyEvent( NULL ),
-            mhCommandEvent( NULL ),
-            mhResultEvent( NULL ),
-            mCurCommand( NULL ),
-            mShutdown( false )
     {
     }
 
     DebuggerProxy::~DebuggerProxy()
     {
-        // TODO: use smart pointers
-
         Shutdown();
-
-        if ( mhThread != NULL )
-            CloseHandle( mhThread );
-
-        if ( mhReadyEvent != NULL )
-            CloseHandle( mhReadyEvent );
-
-        if ( mhCommandEvent != NULL )
-            CloseHandle( mhCommandEvent );
-
-        if ( mhResultEvent != NULL )
-            CloseHandle( mhResultEvent );
     }
 
-    HRESULT DebuggerProxy::Init( IMachine* machine, IEventCallback* callback )
+    HRESULT DebuggerProxy::Init( EventCallback* callback )
     {
-        _ASSERT( machine != NULL );
         _ASSERT( callback != NULL );
-        if ( (machine == NULL) || (callback == NULL ) )
+        if ( (callback == NULL) )
             return E_INVALIDARG;
-        if ( (mMachine != NULL) || (mCallback != NULL ) )
-            return E_ALREADY_INIT;
 
-        HandlePtr   hReadyEvent;
-        HandlePtr   hCommandEvent;
-        HandlePtr   hResultEvent;
-
-        hReadyEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
-        if ( hReadyEvent.IsEmpty() )
-            return GetLastHr();
-
-        hCommandEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
-        if ( hCommandEvent.IsEmpty() )
-            return GetLastHr();
-
-        hResultEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
-        if ( hResultEvent.IsEmpty() )
-            return GetLastHr();
-
-        mhReadyEvent = hReadyEvent.Detach();
-        mhCommandEvent = hCommandEvent.Detach();
-        mhResultEvent = hResultEvent.Detach();
-
-        mMachine = machine;
-        mMachine->AddRef();
+        HRESULT     hr = S_OK;
 
         mCallback = callback;
-        mCallback->AddRef();
+
+        hr = CacheSystemInfo();
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = mExecThread.Init( this );
+        if ( FAILED( hr ) )
+            return hr;
 
         return S_OK;
     }
 
     HRESULT DebuggerProxy::Start()
     {
-        _ASSERT( mMachine != NULL );
-        _ASSERT( mCallback != NULL );
-        if ( (mMachine == NULL) || (mCallback == NULL ) )
-            return E_UNEXPECTED;
-        if ( mhThread != NULL )
-            return E_UNEXPECTED;
-
-        HandlePtr   hThread;
-
-        hThread = CreateThread(
-            NULL,
-            0,
-            DebugPollProc,
-            this,
-            0,
-            NULL );
-        if ( hThread.IsEmpty() )
-            return GetLastHr();
-
-        HANDLE      waitObjs[2] = { mhReadyEvent, hThread.Get() };
-        DWORD       waitRet = 0;
-
-        // TODO: on error, thread will be shutdown from Shutdown method
-
-        waitRet = WaitForMultipleObjects( _countof( waitObjs ), waitObjs, FALSE, INFINITE );
-        if ( waitRet == WAIT_FAILED )
-            return GetLastHr();
-
-        if ( waitRet == WAIT_OBJECT_0 + 1 )
-        {
-            DWORD   exitCode = (DWORD) E_FAIL;
-
-            // the thread ended because of an error, let's get the return exit code
-            GetExitCodeThread( hThread.Get(), &exitCode );
-
-            return (HRESULT) exitCode;
-        }
-        _ASSERT( waitRet == WAIT_OBJECT_0 );
-
-        mhThread = hThread.Detach();
-
-        return S_OK;
+        return mExecThread.Start();
     }
 
     void DebuggerProxy::Shutdown()
     {
-        // TODO: is this enough?
-
-        mShutdown = true;
-
-        if ( mhThread != NULL )
-        {
-            // there are no infinite waits on the poll thread, so it'll detect shutdown signal
-            WaitForSingleObject( mhThread, INFINITE );
-        }
-
-        if ( mMachine != NULL )
-        {
-            mMachine->Release();
-            mMachine = NULL;
-        }
-
-        if ( mCallback != NULL )
-        {
-            mCallback->Release();
-            mCallback = NULL;
-        }
-
-        mExec.Shutdown();
+        mExecThread.Shutdown();
     }
 
-
-    HRESULT DebuggerProxy::InvokeCommand( CommandFunctor& cmd )
+    HRESULT DebuggerProxy::CacheSystemInfo()
     {
-        if ( mWorkerTid == GetCurrentThreadId() )
-        {
-            // since we're on the poll thread, we can run the command directly
-            cmd.Run();
-        }
-        else
-        {
-            GuardedArea area( mCommandGuard );
-
-            mCurCommand = &cmd;
-
-            ResetEvent( mhResultEvent );
-            SetEvent( mhCommandEvent );
-
-            DWORD   waitRet = 0;
-            HANDLE  handles[2] = { mhResultEvent, mhThread };
-
-            waitRet = WaitForMultipleObjects( _countof( handles ), handles, FALSE, INFINITE );
-            mCurCommand = NULL;
-            if ( waitRet == WAIT_FAILED )
-                return GetLastHr();
-
-            if ( waitRet == WAIT_OBJECT_0 + 1 )
-                return CO_E_REMOTE_COMMUNICATION_FAILURE;
-        }
+        mArch = new ArchDataX86();
+        if ( mArch.Get() == NULL )
+            return E_OUTOFMEMORY;
 
         return S_OK;
     }
+
 
 //----------------------------------------------------------------------------
 // Commands
 //----------------------------------------------------------------------------
 
-    HRESULT DebuggerProxy::Launch( LaunchInfo* launchInfo, IProcess*& process )
+    HRESULT DebuggerProxy::Launch( LaunchInfo* launchInfo, ICoreProcess*& process )
     {
-        HRESULT         hr = S_OK;
-        LaunchParams    params( mExec );
+        HRESULT                 hr = S_OK;
+        RefPtr<IProcess>        execProc;
+        RefPtr<LocalProcess>    coreProc;
 
-        params.Settings = launchInfo;
+        coreProc = new LocalProcess( mArch );
+        if ( coreProc.Get() == NULL )
+            return E_OUTOFMEMORY;
 
-        hr = InvokeCommand( params );
+        hr = mExecThread.Launch( launchInfo, execProc.Ref() );
         if ( FAILED( hr ) )
             return hr;
 
-        if ( SUCCEEDED( params.OutHResult ) )
-            process = params.OutProcess.Detach();
+        coreProc->Init( execProc );
+        process = coreProc.Detach();
 
-        return params.OutHResult;
+        return S_OK;
     }
 
-    HRESULT DebuggerProxy::Attach( uint32_t id, IProcess*& process )
+    HRESULT DebuggerProxy::Attach( uint32_t id, ICoreProcess*& process )
     {
-        HRESULT         hr = S_OK;
-        AttachParams    params( mExec );
+        HRESULT                 hr = S_OK;
+        RefPtr<IProcess>        execProc;
+        RefPtr<LocalProcess>    coreProc;
 
-        params.ProcessId = id;
+        coreProc = new LocalProcess( mArch );
+        if ( coreProc.Get() == NULL )
+            return E_OUTOFMEMORY;
 
-        hr = InvokeCommand( params );
+        hr = mExecThread.Attach( id, execProc.Ref() );
         if ( FAILED( hr ) )
             return hr;
 
-        if ( SUCCEEDED( params.OutHResult ) )
-            process = params.OutProcess.Detach();
+        coreProc->Init( execProc );
+        process = coreProc.Detach();
 
-        return params.OutHResult;
+        return S_OK;
     }
 
-    HRESULT DebuggerProxy::Terminate( IProcess* process )
+    HRESULT DebuggerProxy::Terminate( ICoreProcess* process )
     {
-        HRESULT         hr = S_OK;
-        TerminateParams params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.Terminate( execProc );
     }
 
-    HRESULT DebuggerProxy::Detach( IProcess* process )
+    HRESULT DebuggerProxy::Detach( ICoreProcess* process )
     {
-        HRESULT         hr = S_OK;
-        DetachParams    params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.Detach( execProc );
     }
 
-    HRESULT DebuggerProxy::ResumeProcess( IProcess* process )
+    HRESULT DebuggerProxy::ResumeLaunchedProcess( ICoreProcess* process )
     {
-        HRESULT             hr = S_OK;
-        ResumeProcessParams params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
-    }
-
-    HRESULT DebuggerProxy::TerminateNewProcess( IProcess* process )
-    {
-        HRESULT                     hr = S_OK;
-        TerminateNewProcessParams   params( mExec );
-
-        params.Process = process;
-
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.ResumeLaunchedProcess( execProc );
     }
 
     HRESULT DebuggerProxy::ReadMemory( 
-        IProcess* process, 
-        Address address,
-        SIZE_T length, 
-        SIZE_T& lengthRead, 
-        SIZE_T& lengthUnreadable, 
+        ICoreProcess* process, 
+        Address64 address,
+        uint32_t length, 
+        uint32_t& lengthRead, 
+        uint32_t& lengthUnreadable, 
         uint8_t* buffer )
     {
-        // call it directly for performance (it gets called a lot for stack walking)
-        // we're allowed to, since this function is now free threaded
-        return mExec.ReadMemory( process, address, length, lengthRead, lengthUnreadable, buffer );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
+
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
+
+        return mExecThread.ReadMemory( 
+            execProc, 
+            (Address) address, 
+            length, 
+            lengthRead, 
+            lengthUnreadable, 
+            buffer );
     }
 
     HRESULT DebuggerProxy::WriteMemory( 
-        IProcess* process, 
-        Address address,
-        SIZE_T length, 
-        SIZE_T& lengthWritten, 
+        ICoreProcess* process, 
+        Address64 address,
+        uint32_t length, 
+        uint32_t& lengthWritten, 
         uint8_t* buffer )
     {
-        HRESULT             hr = S_OK;
-        WriteMemoryParams   params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
-        params.Address = address;
-        params.Length = length;
-        params.Buffer = buffer;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        if ( SUCCEEDED( params.OutHResult ) )
-            lengthWritten = params.OutLengthWritten;
-
-        return params.OutHResult;
+        return mExecThread.WriteMemory( 
+            execProc, 
+            (Address) address, 
+            length, 
+            lengthWritten, 
+            buffer );
     }
 
-    HRESULT DebuggerProxy::SetBreakpoint( IProcess* process, Address address, BPCookie cookie )
+    HRESULT DebuggerProxy::SetBreakpoint( ICoreProcess* process, Address64 address )
     {
-        HRESULT             hr = S_OK;
-        SetBreakpointParams params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
-        params.Address = address;
-        params.Cookie = cookie;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.SetBreakpoint( execProc, (Address) address );
     }
 
-    HRESULT DebuggerProxy::RemoveBreakpoint( IProcess* process, Address address, BPCookie cookie )
+    HRESULT DebuggerProxy::RemoveBreakpoint( ICoreProcess* process, Address64 address )
     {
-        HRESULT                 hr = S_OK;
-        RemoveBreakpointParams  params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
-        params.Address = address;
-        params.Cookie = cookie;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.RemoveBreakpoint( execProc, (Address) address );
     }
 
-    HRESULT DebuggerProxy::StepOut( IProcess* process, Address targetAddr, bool handleException )
+    HRESULT DebuggerProxy::StepOut( ICoreProcess* process, Address64 targetAddr, bool handleException )
     {
-        HRESULT                 hr = S_OK;
-        StepOutParams           params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
-        params.TargetAddress = targetAddr;
-        params.HandleException = handleException;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.StepOut( execProc, (Address) targetAddr, handleException );
     }
 
-    HRESULT DebuggerProxy::StepInstruction( IProcess* process, bool stepIn, bool sourceMode, bool handleException )
+    HRESULT DebuggerProxy::StepInstruction( ICoreProcess* process, bool stepIn, bool handleException )
     {
-        HRESULT                 hr = S_OK;
-        StepInstructionParams   params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
-        params.StepIn = stepIn;
-        params.SourceMode = sourceMode;
-        params.HandleException = handleException;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.StepInstruction( execProc, stepIn, handleException );
     }
 
-    HRESULT DebuggerProxy::StepRange( IProcess* process, bool stepIn, bool sourceMode, AddressRange* ranges, int rangeCount, bool handleException )
+    HRESULT DebuggerProxy::StepRange( 
+        ICoreProcess* process, bool stepIn, AddressRange64 range, bool handleException )
     {
-        HRESULT         hr = S_OK;
-        StepRangeParams params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
-        params.StepIn = stepIn;
-        params.SourceMode = sourceMode;
-        params.Ranges = ranges;
-        params.RangeCount = rangeCount;
-        params.HandleException = handleException;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
+        AddressRange        range32 = { (Address) range.Begin, (Address) range.End };
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.StepRange( execProc, stepIn, range32, handleException );
     }
 
-    HRESULT DebuggerProxy::Continue( IProcess* process, bool handleException )
+    HRESULT DebuggerProxy::Continue( ICoreProcess* process, bool handleException )
     {
-        HRESULT         hr = S_OK;
-        ContinueParams  params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
-        params.HandleException = handleException;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.Continue( execProc, handleException );
     }
 
-    HRESULT DebuggerProxy::Execute( IProcess* process, bool handleException )
+    HRESULT DebuggerProxy::Execute( ICoreProcess* process, bool handleException )
     {
-        HRESULT         hr = S_OK;
-        ExecuteParams   params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
-        params.HandleException = handleException;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.Execute( execProc, handleException );
     }
 
-    HRESULT DebuggerProxy::AsyncBreak( IProcess* process )
+    HRESULT DebuggerProxy::AsyncBreak( ICoreProcess* process )
     {
-        HRESULT             hr = S_OK;
-        AsyncBreakParams    params( mExec );
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        params.Process = process;
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
 
-        hr = InvokeCommand( params );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return params.OutHResult;
+        return mExecThread.AsyncBreak( execProc );
     }
 
-
-//----------------------------------------------------------------------------
-//  Poll thread
-//----------------------------------------------------------------------------
-
-    DWORD    DebuggerProxy::DebugPollProc( void* param )
+    HRESULT DebuggerProxy::GetThreadContext( 
+        ICoreProcess* process, ICoreThread* thread, IRegisterSet*& regSet )
     {
-        _ASSERT( param != NULL );
+        _ASSERT( process != NULL );
+        _ASSERT( thread != NULL );
+        if ( process == NULL || thread == NULL )
+            return E_INVALIDARG;
 
-        DebuggerProxy*    pThis = (DebuggerProxy*) param;
+        if ( process->GetProcessType() != CoreProcess_Local
+            || thread->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
 
-        CoInitializeEx( NULL, COINIT_MULTITHREADED );
-        HRESULT hr = pThis->PollLoop();
-        CoUninitialize();
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
+        ::Thread* execThread = ((LocalThread*) thread)->GetExecThread();
 
-        return hr;
-    }
-
-    HRESULT DebuggerProxy::PollLoop()
-    {
         HRESULT hr = S_OK;
+        ArchThreadContextSpec contextSpec;
+        UniquePtr<BYTE[]> context;
 
-        hr = mExec.Init( mMachine, mCallback );
+        mArch->GetThreadContextSpec( contextSpec );
+
+        context.Attach( new BYTE[ contextSpec.Size ] );
+        if ( context.IsEmpty() )
+            return E_OUTOFMEMORY;
+
+        hr = mExecThread.GetThreadContext( 
+            execProc, 
+            execThread->GetId(), 
+            contextSpec.FeatureMask,
+            contextSpec.ExtFeatureMask,
+            context.Get(), 
+            contextSpec.Size );
         if ( FAILED( hr ) )
             return hr;
 
-        SetReadyThread();
+        hr = mArch->BuildRegisterSet( context.Get(), contextSpec.Size, regSet );
+        if ( FAILED( hr ) )
+            return hr;
 
-        while ( !mShutdown )
+        return S_OK;
+    }
+
+    HRESULT DebuggerProxy::SetThreadContext( 
+        ICoreProcess* process, ICoreThread* thread, IRegisterSet* regSet )
+    {
+        _ASSERT( process != NULL );
+        _ASSERT( thread != NULL );
+        _ASSERT( regSet != NULL );
+        if ( process == NULL || thread == NULL || regSet == NULL )
+            return E_INVALIDARG;
+
+        if ( process->GetProcessType() != CoreProcess_Local
+            || thread->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
+
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
+        ::Thread* execThread = ((LocalThread*) thread)->GetExecThread();
+
+        HRESULT         hr = S_OK;
+        const void*     contextBuf = NULL;
+        uint32_t        contextSize = 0;
+
+        if ( !regSet->GetThreadContext( contextBuf, contextSize ) )
+            return E_FAIL;
+
+        hr = mExecThread.SetThreadContext( execProc, execThread->GetId(), contextBuf, contextSize );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
+    HRESULT DebuggerProxy::GetPData( 
+        ICoreProcess* process, 
+        Address64 address, 
+        Address64 imageBase, 
+        uint32_t size, 
+        uint32_t& sizeRead, 
+        uint8_t* pdata )
+    {
+        if ( process->GetProcessType() != CoreProcess_Local )
+            return E_FAIL;
+
+        IProcess* execProc = ((LocalProcess*) process)->GetExecProcess();
+
+        return mExecThread.GetPData( 
+            execProc, (Address) address, (Address) imageBase, size, sizeRead, pdata );
+    }
+
+
+    //------------------------------------------------------------------------
+    // IEventCallback
+    //------------------------------------------------------------------------
+
+    void DebuggerProxy::AddRef()
+    {
+        // There's nothing to do, because this will be allocated as part of the engine.
+    }
+
+    void DebuggerProxy::Release()
+    {
+        // There's nothing to do, because this will be allocated as part of the engine.
+    }
+
+    void DebuggerProxy::OnProcessStart( IProcess* process )
+    {
+        mCallback->OnProcessStart( process->GetId() );
+    }
+
+    void DebuggerProxy::OnProcessExit( IProcess* process, DWORD exitCode )
+    {
+        mCallback->OnProcessExit( process->GetId(), exitCode );
+    }
+
+    void DebuggerProxy::OnThreadStart( IProcess* process, ::Thread* thread )
+    {
+        RefPtr<LocalThread> coreThread;
+
+        coreThread = new LocalThread( thread );
+
+        mCallback->OnThreadStart( process->GetId(), coreThread );
+    }
+
+    void DebuggerProxy::OnThreadExit( IProcess* process, DWORD threadId, DWORD exitCode )
+    {
+        mCallback->OnThreadExit( process->GetId(), threadId, exitCode );
+    }
+
+    void DebuggerProxy::OnModuleLoad( IProcess* process, IModule* module )
+    {
+        RefPtr<LocalModule> coreModule;
+
+        coreModule = new LocalModule( module );
+
+        mCallback->OnModuleLoad( process->GetId(), coreModule );
+    }
+
+    void DebuggerProxy::OnModuleUnload( IProcess* process, Address baseAddr )
+    {
+        mCallback->OnModuleUnload( process->GetId(), baseAddr );
+    }
+
+    void DebuggerProxy::OnOutputString( IProcess* process, const wchar_t* outputString )
+    {
+        mCallback->OnOutputString( process->GetId(), outputString );
+    }
+
+    void DebuggerProxy::OnLoadComplete( IProcess* process, DWORD threadId )
+    {
+        mCallback->OnLoadComplete( process->GetId(), threadId );
+    }
+
+    RunMode DebuggerProxy::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    {
+        EXCEPTION_RECORD64 exceptRec64;
+
+        exceptRec64.ExceptionCode = exceptRec->ExceptionCode;
+        exceptRec64.ExceptionAddress = (DWORD64) exceptRec->ExceptionAddress;
+        exceptRec64.ExceptionFlags = exceptRec->ExceptionFlags;
+        exceptRec64.NumberParameters = exceptRec->NumberParameters;
+        exceptRec64.ExceptionRecord = 0;
+
+        for ( DWORD i = 0; i < exceptRec->NumberParameters; i++ )
         {
-            hr = mExec.WaitForDebug( EventTimeoutMillis );
-            if ( FAILED( hr ) )
-            {
-                if ( hr == E_HANDLE )
-                {
-                    // no debuggee has started yet
-                    Sleep( EventTimeoutMillis );
-                }
-                else if ( hr != E_TIMEOUT )
-                    break;
-            }
-            else
-            {
-                hr = mExec.DispatchEvent();
-                if ( hr == S_OK )
-                    // If there was an exception, then we generally want to pass it on.
-                    // Exec will handle any special cases, if needed.
-                    hr = mExec.ContinueDebug( false );
-                if ( FAILED( hr ) )
-                    break;
-            }
-
-            hr = CheckMessage();
-            if ( FAILED( hr ) )
-                break;
+            exceptRec64.ExceptionInformation[i] = exceptRec->ExceptionInformation[i];
         }
 
-        OutputDebugStringA( "Poll loop shutting down.\n" );
-        return hr;
+        return mCallback->OnException( process->GetId(), threadId, firstChance, &exceptRec64 );
     }
 
-    void    DebuggerProxy::SetReadyThread()
+    RunMode DebuggerProxy::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
-        _ASSERT( mhReadyEvent != NULL );
-
-        mWorkerTid = GetCurrentThreadId();
-        SetEvent( mhReadyEvent );
+        return mCallback->OnBreakpoint( process->GetId(), threadId, address, embedded );
     }
 
-    HRESULT DebuggerProxy::CheckMessage()
+    void DebuggerProxy::OnStepComplete( IProcess* process, uint32_t threadId )
     {
-        HRESULT hr = S_OK;
-        DWORD   waitRet = 0;
-
-        waitRet = WaitForSingleObject( mhCommandEvent, CommandTimeoutMillis );
-        if ( waitRet == WAIT_FAILED )
-            return GetLastHr();
-
-        if ( waitRet == WAIT_TIMEOUT )
-            return S_OK;
-
-        hr = ProcessCommand( mCurCommand );
-        if ( FAILED( hr ) )
-            return hr;
-
-        ResetEvent( mhCommandEvent );
-        SetEvent( mhResultEvent );
-
-        return S_OK;
+        mCallback->OnStepComplete( process->GetId(), threadId );
     }
 
-    HRESULT DebuggerProxy::ProcessCommand( CommandFunctor* cmd )
+    void DebuggerProxy::OnAsyncBreakComplete( IProcess* process, uint32_t threadId )
     {
-        _ASSERT( cmd != NULL );
-        if ( cmd == NULL )
-            return E_POINTER;
+        mCallback->OnAsyncBreakComplete( process->GetId(), threadId );
+    }
 
-        cmd->Run();
+    void DebuggerProxy::OnError( IProcess* process, HRESULT hrErr, EventCode event )
+    {
+        mCallback->OnError( process->GetId(), hrErr, event );
+    }
 
-        return S_OK;
+    ProbeRunMode DebuggerProxy::OnCallProbe( 
+        IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
+    {
+        AddressRange64 thunkRange64 = { 0 };
+
+        ProbeRunMode mode = mCallback->OnCallProbe( process->GetId(), threadId, address, thunkRange64 );
+
+        thunkRange.Begin = (Address) thunkRange64.Begin;
+        thunkRange.End = (Address) thunkRange64.End;
+
+        return mode;
     }
 }

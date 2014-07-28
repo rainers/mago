@@ -15,6 +15,8 @@
 #include "PendingBreakpoint.h"
 #include "BoundBreakpoint.h"
 #include "ComEnumWithCount.h"
+#include "ICoreProcess.h"
+#include <MagoCVConst.h>
 
 
 typedef CComEnumWithCount< 
@@ -26,15 +28,14 @@ typedef CComEnumWithCount<
 > EnumDebugBoundBreakpoints;
 
 
-const BPCookie EntryPointCookie = 1;
-
-
 namespace Mago
 {
+    const BPCookie EntryPointCookie = 1;
+
+
     EventCallback::EventCallback( Engine* engine )
         :   mRefCount( 0 ),
-            mEngine( engine ),
-            mEntryPoint( 0 )
+            mEngine( engine )
     {
     }
 
@@ -83,12 +84,12 @@ namespace Mago
     }
 
 
-    void EventCallback::OnProcessStart( IProcess* process )
+    void EventCallback::OnProcessStart( DWORD uniquePid )
     {
         OutputDebugStringA( "EventCallback::OnProcessStart\n" );
     }
 
-    void EventCallback::OnProcessExit( IProcess* process, DWORD exitCode )
+    void EventCallback::OnProcessExit( DWORD uniquePid, DWORD exitCode )
     {
         OutputDebugStringA( "EventCallback::OnProcessExit\n" );
 
@@ -96,7 +97,7 @@ namespace Mago
         RefPtr<ProgramDestroyEvent> event;
         RefPtr<Program>             prog;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         mEngine->DeleteProgram( prog.Get() );
@@ -110,7 +111,7 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnThreadStart( IProcess* process, ::Thread* coreThread )
+    void EventCallback::OnThreadStart( DWORD uniquePid, ICoreThread* coreThread )
     {
         OutputDebugStringA( "EventCallback::OnThreadStart\n" );
 
@@ -119,7 +120,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         hr = prog->CreateThread( coreThread, thread );
@@ -137,7 +138,7 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnThreadExit( IProcess* process, DWORD threadId, DWORD exitCode )
+    void EventCallback::OnThreadExit( DWORD uniquePid, DWORD threadId, DWORD exitCode )
     {
         OutputDebugStringA( "EventCallback::OnThreadExit\n" );
 
@@ -146,7 +147,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         if ( !prog->FindThread( threadId, thread ) )
@@ -163,7 +164,21 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnModuleLoad( IProcess* process, IModule* coreModule )
+    void EventCallback::OnModuleLoad( DWORD uniquePid, ICoreModule* module )
+    {
+        mEngine->BeginBindBP();
+        OnModuleLoadInternal( uniquePid, module );
+        mEngine->EndBindBP();
+    }
+
+    void EventCallback::OnModuleUnload( DWORD uniquePid, Address64 baseAddr )
+    {
+        mEngine->BeginBindBP();
+        OnModuleUnloadInternal( uniquePid, baseAddr );
+        mEngine->EndBindBP();
+    }
+
+    void EventCallback::OnModuleLoadInternal( DWORD uniquePid, ICoreModule* coreModule )
     {
         OutputDebugStringA( "EventCallback::OnModuleLoad\n" );
 
@@ -173,7 +188,7 @@ namespace Mago
         RefPtr<Module>              mod;
         CComPtr<IDebugModule2>      mod2;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         hr = prog->CreateModule( coreModule, mod );
@@ -228,7 +243,7 @@ namespace Mago
         hr = SendEvent( symEvent.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnModuleUnload( IProcess* process, Address baseAddr )
+    void EventCallback::OnModuleUnloadInternal( DWORD uniquePid, Address64 baseAddr )
     {
         OutputDebugStringA( "EventCallback::OnModuleUnload\n" );
 
@@ -238,7 +253,7 @@ namespace Mago
         RefPtr<Module>              mod;
         CComPtr<IDebugModule2>      mod2;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         if ( !prog->FindModule( baseAddr, mod ) )
@@ -262,7 +277,7 @@ namespace Mago
         SendEvent( event.Get(), prog.Get(), NULL );
     }
 
-    void EventCallback::OnOutputString( IProcess* process, const wchar_t* outputString )
+    void EventCallback::OnOutputString( DWORD uniquePid, const wchar_t* outputString )
     {
         OutputDebugStringA( "EventCallback::OnOutputString\n" );
 
@@ -270,7 +285,7 @@ namespace Mago
         RefPtr<OutputStringEvent>   event;
         RefPtr<Program>             prog;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         hr = MakeCComObject( event );
@@ -284,7 +299,7 @@ namespace Mago
 
     // find the entry point that the user defined in their program
 
-    bool FindUserEntryPoint( Module* mainMod, Address& entryPoint )
+    bool FindUserEntryPoint( Module* mainMod, Address64& entryPoint )
     {
         HRESULT hr = S_OK;
         RefPtr<MagoST::ISession> session;
@@ -322,11 +337,11 @@ namespace Mago
         if ( addr == 0 )
             return false;
 
-        entryPoint = (Address) addr;
+        entryPoint = (Address64) addr;
         return true;
     }
 
-    void EventCallback::OnLoadComplete( IProcess* process, DWORD threadId )
+    void EventCallback::OnLoadComplete( DWORD uniquePid, DWORD threadId )
     {
         OutputDebugStringA( "EventCallback::OnLoadComplete\n" );
 
@@ -335,7 +350,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         if ( !prog->FindThread( threadId, thread ) )
@@ -347,29 +362,30 @@ namespace Mago
 
         hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
 
-        IProcess*   coreProc = prog->GetCoreProcess();
+        Address64 entryPoint = prog->FindEntryPoint();
 
-        mEntryPoint = coreProc->GetEntryPoint();
-
-        if ( mEntryPoint != 0 )
+        if ( entryPoint != 0 )
         {
             RefPtr<Module> mod;
 
-            if ( prog->FindModuleContainingAddress( mEntryPoint, mod ) )
+            if ( prog->FindModuleContainingAddress( entryPoint, mod ) )
             {
-                Address userEntryPoint = 0;
+                Address64 userEntryPoint = 0;
                 if ( FindUserEntryPoint( mod, userEntryPoint ) )
-                    mEntryPoint = userEntryPoint;
+                    entryPoint = userEntryPoint;
             }
 
-            hr = prog->SetInternalBreakpoint( mEntryPoint, EntryPointCookie );
+            hr = prog->SetInternalBreakpoint( entryPoint, EntryPointCookie );
             // if we couldn't set the BP, then don't expect it later
             if ( FAILED( hr ) )
-                mEntryPoint = 0;
+                entryPoint = 0;
+
+            prog->SetEntryPoint( entryPoint );
         }
     }
 
-    bool EventCallback::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+    RunMode EventCallback::OnException( 
+        DWORD uniquePid, DWORD threadId, bool firstChance, const EXCEPTION_RECORD64* exceptRec )
     {
         const DWORD DefaultState = EXCEPTION_STOP_SECOND_CHANCE;
 
@@ -380,17 +396,17 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return false;
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
+            return RunMode_Break;
 
         if ( !prog->FindThread( threadId, thread ) )
-            return false;
+            return RunMode_Break;
 
         prog->NotifyException( firstChance, exceptRec );
 
         hr = MakeCComObject( event );
         if ( FAILED( hr ) )
-            return false;
+            return RunMode_Break;
 
         event->Init( prog.Get(), firstChance, exceptRec, prog->CanPassExceptionToDebuggee() );
 
@@ -422,7 +438,7 @@ namespace Mago
              ( !firstChance && ( state & EXCEPTION_STOP_SECOND_CHANCE ) ) )
         {
             hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
-            return false;
+            return RunMode_Break;
         }
         else
         {
@@ -431,125 +447,134 @@ namespace Mago
 
             hr = MakeCComObject( msgEvent );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             hr = event->GetExceptionDescription( &desc );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             desc.Append( L"\n" );
 
             msgEvent->Init( MT_REASON_EXCEPTION, desc );
 
             hr = SendEvent( msgEvent.Get(), prog.Get(), thread.Get() );
-            return true; // wants to continue
+            return RunMode_Run;
         }
     }
 
-    bool EventCallback::OnBreakpointInternal( Program* prog, Thread* thread, Address address, Enumerator< BPCookie >* iter )
+    RunMode EventCallback::OnBreakpointInternal( 
+        Program* prog, Thread* thread, Address64 address, bool embedded )
     {
         HRESULT     hr = S_OK;
-        int         stoppingBPs = 0;
 
-        while ( iter->MoveNext() )
-        {
-            if ( iter->GetCurrent() != EntryPointCookie )
-            {
-                stoppingBPs++;
-            }
-        }
-
-        iter->Reset();
-
-        if ( stoppingBPs > 0 )
-        {
-            RefPtr<BreakpointEvent>     event;
-            CComPtr<IEnumDebugBoundBreakpoints2>    enumBPs;
-
-            hr = MakeCComObject( event );
-            if ( FAILED( hr ) )
-                return true;
-
-            InterfaceArray<IDebugBoundBreakpoint2>  array( stoppingBPs );
-
-            if ( array.Get() == NULL )
-                return true;
-
-            int i = 0;
-            while ( iter->MoveNext() )
-            {
-                if ( iter->GetCurrent() != EntryPointCookie )
-                {
-                    IDebugBoundBreakpoint2* bp = (IDebugBoundBreakpoint2*) iter->GetCurrent();
-
-                    _ASSERT( i < stoppingBPs );
-                    array[i] = bp;
-                    array[i]->AddRef();
-                    i++;
-                }
-            }
-
-            hr = MakeEnumWithCount<EnumDebugBoundBreakpoints>( array, &enumBPs );
-            if ( FAILED( hr ) )
-                return true;
-
-            event->Init( enumBPs );
-
-            hr = SendEvent( event, prog, thread );
-            if ( FAILED( hr ) )
-                return true;
-
-            return false;
-        }
-        else if ( iter->GetCount() == 0 )
+        if ( embedded )
         {
             RefPtr<EmbeddedBreakpointEvent> event;
 
             hr = MakeCComObject( event );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
             event->Init( prog );
 
             hr = SendEvent( event, prog, thread );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
-            return false;
+            return RunMode_Break;
         }
-        else if ( (mEntryPoint != 0) && (address == mEntryPoint) )
+        else
         {
-            RefPtr<EntryPointEvent> entryPointEvent;
+            std::vector< BPCookie > iter;
+            int         stoppingBPs = 0;
 
-            hr = MakeCComObject( entryPointEvent );
+            hr = prog->EnumBPCookies( address, iter );
             if ( FAILED( hr ) )
-                return true;
+                return RunMode_Run;
 
-            hr = SendEvent( entryPointEvent, prog, thread );
-            if ( FAILED( hr ) )
-                return true;
+            for ( std::vector< BPCookie >::iterator it = iter.begin(); it != iter.end(); it++ )
+            {
+                if ( *it != EntryPointCookie )
+                {
+                    stoppingBPs++;
+                }
+            }
 
-            return false;
+            if ( stoppingBPs > 0 )
+            {
+                RefPtr<BreakpointEvent>     event;
+                CComPtr<IEnumDebugBoundBreakpoints2>    enumBPs;
+
+                hr = MakeCComObject( event );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                InterfaceArray<IDebugBoundBreakpoint2>  array( stoppingBPs );
+
+                if ( array.Get() == NULL )
+                    return RunMode_Run;
+
+                int i = 0;
+                for ( std::vector< BPCookie >::iterator it = iter.begin(); it != iter.end(); it++ )
+                {
+                    if ( *it != EntryPointCookie )
+                    {
+                        IDebugBoundBreakpoint2* bp = (IDebugBoundBreakpoint2*) *it;
+
+                        _ASSERT( i < stoppingBPs );
+                        array[i] = bp;
+                        array[i]->AddRef();
+                        i++;
+                    }
+                }
+
+                hr = MakeEnumWithCount<EnumDebugBoundBreakpoints>( array, &enumBPs );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                event->Init( enumBPs );
+
+                hr = SendEvent( event, prog, thread );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                return RunMode_Break;
+            }
+            else if ( (prog->GetEntryPoint() != 0) && (address == prog->GetEntryPoint()) )
+            {
+                RefPtr<EntryPointEvent> entryPointEvent;
+
+                hr = MakeCComObject( entryPointEvent );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                hr = SendEvent( entryPointEvent, prog, thread );
+                if ( FAILED( hr ) )
+                    return RunMode_Run;
+
+                return RunMode_Break;
+            }
         }
 
-        return true;
+        return RunMode_Run;
     }
 
-    bool EventCallback::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+    RunMode EventCallback::OnBreakpoint( 
+        DWORD uniquePid, uint32_t threadId, Address64 address, bool embedded )
     {
         OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
 
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
-        bool        stopped = false;
+        RunMode                     runMode = RunMode_Break;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return true;
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
+            return RunMode_Run;
 
         if ( !prog->FindThread( threadId, thread ) )
-            return true;
+            return RunMode_Run;
 
-        stopped = !OnBreakpointInternal( prog, thread, address, iter );
+        runMode = OnBreakpointInternal( prog, thread, address, embedded );
 
         // If we stopped because of a regular BP before reaching the entry point, 
         // then we shouldn't stop at the entry point
@@ -557,17 +582,18 @@ namespace Mago
         // Test if we're at the entrypoint, in addition to whether we stopped, because 
         // we could have decided to keep going even though we're at the entry point
 
-        if ( (mEntryPoint != 0) && (stopped || (address == mEntryPoint)) )
-        {
-            prog->RemoveInternalBreakpoint( mEntryPoint, EntryPointCookie );
+        Address64 entryPoint = prog->GetEntryPoint();
 
-            mEntryPoint = 0;
+        if ( (entryPoint != 0) && ((runMode == RunMode_Break) || (address == entryPoint)) )
+        {
+            prog->RemoveInternalBreakpoint( entryPoint, EntryPointCookie );
+            prog->SetEntryPoint( 0 );
         }
 
-        return !stopped;
+        return runMode;
     }
 
-    void EventCallback::OnStepComplete( IProcess* process, uint32_t threadId )
+    void EventCallback::OnStepComplete( DWORD uniquePid, uint32_t threadId )
     {
         OutputDebugStringA( "EventCallback::OnStepComplete\n" );
 
@@ -576,7 +602,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
 
         if ( !prog->FindThread( threadId, thread ) )
@@ -589,42 +615,86 @@ namespace Mago
         hr = SendEvent( event.Get(), prog.Get(), thread.Get() );
     }
 
-    void EventCallback::OnAsyncBreakComplete( IProcess* process, uint32_t threadId )
+    void EventCallback::OnAsyncBreakComplete( DWORD uniquePid, uint32_t threadId )
     {
     }
 
-    void EventCallback::OnError( IProcess* process, HRESULT hrErr, EventCode event )
+    void EventCallback::OnError( DWORD uniquePid, HRESULT hrErr, IEventCallback::EventCode event )
     {
     }
 
-    bool EventCallback::CanStepInFunction( IProcess* process, Address address )
+    ProbeRunMode EventCallback::OnCallProbe( 
+        DWORD uniquePid, uint32_t threadId, Address64 address, AddressRange64& thunkRange )
     {
-        OutputDebugStringA( "EventCallback::CanStepInFunction\n" );
+        OutputDebugStringA( "EventCallback::OnCallProbe\n" );
 
         RefPtr<Program>             prog;
         RefPtr<Module>              mod;
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mEngine->FindProgram( process->GetId(), prog ) )
-            return false;
+        if ( !mEngine->FindProgram( uniquePid, prog ) )
+            return ProbeRunMode_Run;
 
         if ( !prog->FindModuleContainingAddress( address, mod ) )
-            return false;
+            return ProbeRunMode_Run;
 
         if ( !mod->GetSymbolSession( session ) )
-            return false;
+            return ProbeRunMode_Run;
 
         uint16_t    sec = 0;
         uint32_t    offset = 0;
         sec = session->GetSecOffsetFromVA( address, offset );
         if ( sec == 0 )
-            return false;
+            return ProbeRunMode_Run;
 
         MagoST::LineNumber  line = { 0 };
 
         if ( !session->FindLine( sec, offset, line ) )
-            return false;
+        {
+            if ( FindThunk( session, sec, offset, thunkRange ) )
+                return ProbeRunMode_WalkThunk;
 
-        return true;
+            return ProbeRunMode_Run;
+        }
+
+        return ProbeRunMode_Break;
+    }
+
+    bool EventCallback::FindThunk( 
+        MagoST::ISession* session, uint16_t section, uint32_t offset, AddressRange64& thunkRange )
+    {
+        HRESULT hr = S_OK;
+        MagoST::SymHandle symHandle;
+
+        hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, section, offset, symHandle );
+        if ( hr != S_OK )
+        {
+            hr = session->FindOuterSymbolByAddr( 
+                MagoST::SymHeap_StaticSymbols, section, offset, symHandle );
+        }
+        if ( hr == S_OK )
+        {
+            MagoST::SymInfoData infoData;
+            MagoST::ISymbolInfo* symInfo = NULL;
+
+            hr = session->GetSymbolInfo( symHandle, infoData, symInfo );
+            if ( hr == S_OK )
+            {
+                if ( symInfo->GetSymTag() == MagoST::SymTagThunk )
+                {
+                    uint32_t length = 0;
+                    symInfo->GetAddressOffset( offset );
+                    symInfo->GetAddressSegment( section );
+                    symInfo->GetLength( length );
+
+                    uint64_t addr = session->GetVAFromSecOffset( section, offset );
+                    thunkRange.Begin = (Address64) addr;
+                    thunkRange.End = (Address64) addr + length - 1;
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

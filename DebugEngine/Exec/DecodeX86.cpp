@@ -156,6 +156,9 @@ InstructionType GetInstructionTypeAndSize( uint8_t* mem, int memLen, CpuSizeMode
 
     remSize = memLen - prefixSize;
 
+    // now that we've considered prefixes, change the base to where the opcode begins
+    mem = &mem[prefixSize];
+
     switch ( mem[0] )
     {
     case 0xCC:
@@ -249,7 +252,7 @@ InstructionType GetInstructionTypeAndSize( uint8_t* mem, int memLen, CpuSizeMode
             instSize = 2;
 
         if ( instSize > 0 )
-            type = Inst_Call;
+            type = Inst_Syscall;
         break;
 
     default:
@@ -279,7 +282,7 @@ InstructionType GetInstructionTypeAndSize( uint8_t* mem, int memLen, CpuSizeMode
     if ( instSize > memLen )
         return Inst_None;
 
-    size = instSize;
+    size = instSize + prefixSize;
 
     return type;
 }

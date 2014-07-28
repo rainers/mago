@@ -196,7 +196,7 @@ void EventCallbackBase::OnThreadExit( IProcess* process, DWORD threadId, DWORD e
 void EventCallbackBase::OnModuleLoad( IProcess* process, IModule* module )
 {
     if ( mVerbose )
-        printf( "  %p %ls\n", (uintptr_t) module->GetImageBase(), module->GetExePath() );
+        printf( "  %p %ls\n", (uintptr_t) module->GetImageBase(), module->GetPath() );
 
     mLastThreadId = 0;
     mModules.insert( ModuleMap::value_type( module->GetImageBase(), module ) );
@@ -261,7 +261,7 @@ void EventCallbackBase::OnLoadComplete( IProcess* process, DWORD threadId )
     }
 }
 
-bool EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
+RunMode EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
 {
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
@@ -272,10 +272,10 @@ bool EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool fir
         node->Exception = *exceptRec;
         TrackEvent( node );
     }
-    return false;
+    return RunMode_Break;
 }
 
-bool EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, Enumerator<BPCookie>* iter )
+RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
 {
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
@@ -284,14 +284,9 @@ bool EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, Addr
         node->ThreadId = threadId;
         node->Address = address;
         
-        while ( iter->MoveNext() )
-        {
-            node->Cookies.push_back( iter->GetCurrent() );
-        }
-        
         TrackEvent( node );
     }
-    return false;
+    return RunMode_Break;
 }
 
 void EventCallbackBase::OnStepComplete( IProcess* process, uint32_t threadId )
@@ -329,9 +324,10 @@ void EventCallbackBase::OnError( IProcess* process, HRESULT hrErr, EventCode eve
     }
 }
 
-bool EventCallbackBase::CanStepInFunction( IProcess* process, Address address )
+ProbeRunMode EventCallbackBase::OnCallProbe( 
+    IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange )
 {
-    return mCanStepInFuncRetVal;
+    return mCanStepInFuncRetVal ? ProbeRunMode_Break : ProbeRunMode_Run;
 }
 
 void EventCallbackBase::PrintCallstacksX86( IProcess* process )

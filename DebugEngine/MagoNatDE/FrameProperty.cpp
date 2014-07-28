@@ -11,6 +11,11 @@
 #include "EnumPropertyInfo.h"
 #include "EnumX86Reg.h"
 #include "RegisterSet.h"
+#include "ArchData.h"
+#include "Thread.h"
+#include "IDebuggerProxy.h"
+#include "RegProperty.h"
+#include "ICoreProcess.h"
 #include <MagoEED.h>
 
 
@@ -267,6 +272,28 @@ namespace Mago
     {
         return E_NOTIMPL;
     }
+
+    HRESULT EnumRegisters(
+        Thread* thread,
+        IRegisterSet* regSet,
+        DEBUGPROP_INFO_FLAGS dwFields,
+        DWORD dwRadix,
+        IEnumDebugPropertyInfo2** ppEnum )
+    {
+        _ASSERT( thread != NULL );
+
+        ArchData*           archData = NULL;
+
+        archData = thread->GetCoreProcess()->GetArchData();
+
+        return EnumRegisters(
+            archData,
+            regSet,
+            thread,
+            dwFields,
+            dwRadix,
+            ppEnum );
+    }
     
     HRESULT FrameProperty::EnumChildren( 
         DEBUGPROP_INFO_FLAGS dwFields,
@@ -286,7 +313,8 @@ namespace Mago
         }
         else if ( guidFilter == guidFilterRegisters )
         {
-            return EnumX86Registers(
+            return EnumRegisters(
+                mExprContext->GetThread(),
                 mRegSet,
                 dwFields,
                 dwRadix,

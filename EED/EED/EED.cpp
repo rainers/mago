@@ -136,9 +136,9 @@ namespace MagoEE
         FreePropTables();
     }
 
-    HRESULT MakeTypeEnv( ITypeEnv*& typeEnv )
+    HRESULT MakeTypeEnv( int ptrSize, ITypeEnv*& typeEnv )
     {
-        RefPtr<TypeEnv> env = new TypeEnv();
+        RefPtr<TypeEnv> env = new TypeEnv( ptrSize );
 
         if ( env == NULL )
             return E_OUTOFMEMORY;
