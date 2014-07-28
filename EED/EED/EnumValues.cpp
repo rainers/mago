@@ -390,6 +390,11 @@ namespace MagoEE
             if ( !NameBaseClass( decl, name, fullName ) )
                 return E_FAIL;
         }
+        else if( decl->IsStaticField() )
+        {
+            if ( !NameStaticMember( decl, name, fullName ) )
+                return E_FAIL;
+        }
         else
         {
             if ( !NameRegularMember( decl, name, fullName ) )
@@ -441,6 +446,21 @@ namespace MagoEE
 
         fullName.append( mParentExprText );
         fullName.append( L")" );
+
+        return true;
+    }
+
+    bool EEDEnumStruct::NameStaticMember( 
+            Declaration* decl, 
+            std::wstring& name,
+            std::wstring& fullName )
+    {
+        name.append( decl->GetName() );
+
+        if( mParentVal._Type )
+            mParentVal._Type->ToString( fullName );
+        fullName.append( L"." );
+        fullName.append( name );
 
         return true;
     }

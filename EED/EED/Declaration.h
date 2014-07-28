@@ -37,6 +37,7 @@ namespace MagoEE
         virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset ) = 0;
 
         virtual bool IsField() = 0;
+        virtual bool IsStaticField() = 0;
         virtual bool IsVar() = 0;
         virtual bool IsConstant() = 0;
         virtual bool IsType() = 0;
