@@ -20,11 +20,15 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     {
     case DLL_PROCESS_ATTACH:
         DisableThreadLibraryCalls( hModule );
+        MagoEE::Init();
+        break;
+
+    case DLL_PROCESS_DETACH:
+        MagoEE::Uninit();
         break;
 
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
         break;
     }
 

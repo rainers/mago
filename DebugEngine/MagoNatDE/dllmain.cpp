@@ -13,6 +13,11 @@
 #include "dllmain.h"
 #include "dbgmetric_alt.h"
 
+#define LEAK_CHECK (defined _DEBUG)
+#if LEAK_CHECK
+#include <crtdbg.h>
+#endif
+
 const bool              UserSpecific = false;
 static const wchar_t    RegistrationRoot[] = L"Software\\Microsoft\\VisualStudio\\9.0";
 
@@ -21,6 +26,9 @@ CMagoNatDEModule _AtlModule;
 // DLL Entry Point
 extern "C" BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
 {
+#if LEAK_CHECK
+    _CrtSetDbgFlag ( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
+#endif
     hInstance;
     return _AtlModule.DllMain(dwReason, lpReserved); 
 }

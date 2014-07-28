@@ -21,7 +21,7 @@ namespace Mago
     class EventCallback
     {
         long                    mRefCount;
-        RefPtr<Engine>          mEngine;
+        Engine*                 mEngine; // not RefPtr<Engine> to avoid circular reference counts
 
     public:
         EventCallback( Engine* engine );
