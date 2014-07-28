@@ -14,7 +14,7 @@ namespace Mago
     class ICoreProcess;
 
 
-    class ATL_NO_VTABLE MemoryBytes : 
+    class MemoryBytes : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugMemoryBytes2
     {

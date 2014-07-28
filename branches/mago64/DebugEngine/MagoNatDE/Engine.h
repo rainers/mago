@@ -23,7 +23,7 @@ namespace Mago
 
     // Engine
 
-    class ATL_NO_VTABLE Engine :
+    class Engine :
         public CComObjectRootEx<CComMultiThreadModel>,
         public CComCoClass<Engine, &CLSID_MagoNativeEngine>,
         public IDebugEngine2,

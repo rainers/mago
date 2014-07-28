@@ -72,7 +72,7 @@ private:
 // based on atlcom.h, adding GetCount method
 
 template <class Base, const IID* piid, class T, class Copy>
-class ATL_NO_VTABLE CComEnumWithCountImpl : public Base
+class CComEnumWithCountImpl : public Base
 {
 public:
     CComEnumWithCountImpl() {m_begin = m_end = m_iter = NULL; m_dwFlags = 0;}
@@ -231,7 +231,7 @@ HRESULT CComEnumWithCountImpl<Base, piid, T, Copy>::Init(T* begin, T* end, IUnkn
 
 
 template <class Base, const IID* piid, class T, class Copy, class ThreadModel = CComObjectThreadModel>
-class ATL_NO_VTABLE CComEnumWithCount :
+class CComEnumWithCount :
     public CComEnumWithCountImpl<Base, piid, T, Copy>,
     public CComObjectRootEx< ThreadModel >
 {

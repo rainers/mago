@@ -14,7 +14,7 @@ namespace Mago
     class IRegisterSet;
 
 
-    class ATL_NO_VTABLE FrameProperty : 
+    class FrameProperty : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProperty2
     {

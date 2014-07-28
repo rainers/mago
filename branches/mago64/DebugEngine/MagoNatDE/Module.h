@@ -13,7 +13,7 @@ namespace Mago
     class ICoreModule;
 
 
-    class ATL_NO_VTABLE Module : 
+    class Module : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugModule3
     {

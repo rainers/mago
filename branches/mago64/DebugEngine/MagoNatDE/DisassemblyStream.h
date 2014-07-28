@@ -17,7 +17,7 @@ namespace Mago
     class IDebuggerProxy;
 
 
-    class ATL_NO_VTABLE DisassemblyStream : 
+    class DisassemblyStream : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugDisassemblyStream2
     {

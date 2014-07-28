@@ -12,7 +12,7 @@
 
 namespace Mago
 {
-    class ATL_NO_VTABLE ErrorBreakpointResolution : 
+    class ErrorBreakpointResolution : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugErrorBreakpointResolution2
     {
