@@ -142,9 +142,6 @@
     <ClCompile Include="Utility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MagoNatDE_i.c">
-      <Filter>Generated Files</Filter>
-    </ClCompile>
     <ClCompile Include="DocTracker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -172,12 +169,6 @@
     <ClCompile Include="RemoteDebuggerProxy.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MagoRemoteCmd_c.c">
-      <Filter>Generated Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MagoRemoteEvent_s.c">
-      <Filter>Generated Files</Filter>
-    </ClCompile>
     <ClCompile Include="RpcUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -186,6 +177,15 @@
     </ClCompile>
     <ClCompile Include="ArchDataX64.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MagoNatDE.idl.c">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\MagoRemoteCmd.idl.c">
+      <Filter>Generated Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\MagoRemoteEvent.idl.c">
+      <Filter>Generated Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -355,9 +355,6 @@
     <ClInclude Include="winternl2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MagoNatDE_i.h">
-      <Filter>Generated Files</Filter>
-    </ClInclude>
     <ClInclude Include="DocTracker.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -391,12 +388,6 @@
     <ClInclude Include="RemoteDebuggerProxy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MagoRemoteCmd_i.h">
-      <Filter>Generated Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MagoRemoteEvent_i.h">
-      <Filter>Generated Files</Filter>
-    </ClInclude>
     <ClInclude Include="RpcUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -407,6 +398,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ArchDataX64.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MagoRemoteCmd_i.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MagoRemoteEvent_i.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

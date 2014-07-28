@@ -7,6 +7,7 @@
 
 #include "Common.h"
 #include "BinUtil.h"
+#include <limits.h>
 
 
 IMAGE_SECTION_HEADER* FindSection( DWORD virtAddr, WORD secCount, IMAGE_SECTION_HEADER* secHeaders )

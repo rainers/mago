@@ -11,6 +11,7 @@
 #include "IDebuggerProxy.h"
 #include "ICoreProcess.h"
 
+#include <algorithm>
 
 namespace Mago
 {
