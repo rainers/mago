@@ -18,7 +18,7 @@ namespace Mago
     class ICoreThread;
 
 
-    class ATL_NO_VTABLE Thread : 
+    class Thread : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugThread2
     {

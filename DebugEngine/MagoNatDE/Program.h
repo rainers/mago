@@ -22,7 +22,7 @@ namespace Mago
     typedef uint64_t    BPCookie;
 
 
-    class ATL_NO_VTABLE Program : 
+    class Program : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProgram2
     {

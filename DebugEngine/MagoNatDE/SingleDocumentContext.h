@@ -12,7 +12,7 @@
 
 namespace Mago
 {
-    class ATL_NO_VTABLE SingleDocumentContext : 
+    class SingleDocumentContext : 
         public DocumentContext,
         public CComObjectRootEx<CComMultiThreadModel>
     {

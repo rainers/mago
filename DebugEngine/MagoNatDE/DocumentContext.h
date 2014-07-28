@@ -10,7 +10,7 @@
 
 namespace Mago
 {
-    class ATL_NO_VTABLE DocumentContext : 
+    class DocumentContext : 
         public IDebugDocumentContext2
     {
     protected:

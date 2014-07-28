@@ -21,7 +21,7 @@ namespace Mago
     };
 
     template <class T, enum_EVENTATTRIBUTES TAttr = EVENT_ASYNCHRONOUS>
-    class ATL_NO_VTABLE EventImpl : 
+    class EventImpl : 
         public EventBase, 
         public IDebugEvent2,
         public T,

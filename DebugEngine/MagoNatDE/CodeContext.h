@@ -20,7 +20,7 @@ namespace Mago
     };
 
 
-    class ATL_NO_VTABLE CodeContext : 
+    class CodeContext : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugCodeContext2,
         public IMagoMemoryContext

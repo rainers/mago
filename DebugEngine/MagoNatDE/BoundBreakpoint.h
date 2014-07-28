@@ -14,7 +14,7 @@ namespace Mago
     class Program;
 
 
-    class ATL_NO_VTABLE BoundBreakpoint : 
+    class BoundBreakpoint : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugBoundBreakpoint2
     {

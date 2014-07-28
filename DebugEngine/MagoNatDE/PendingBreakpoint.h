@@ -25,7 +25,7 @@ namespace Mago
     };
 
 
-    class ATL_NO_VTABLE PendingBreakpoint : 
+    class PendingBreakpoint : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugPendingBreakpoint2
     {

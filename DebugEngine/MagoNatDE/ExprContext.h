@@ -16,7 +16,7 @@ namespace Mago
     class IRegisterSet;
 
 
-    class ATL_NO_VTABLE ExprContext : 
+    class ExprContext : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugExpressionContext2,
         public MagoEE::IValueBinder

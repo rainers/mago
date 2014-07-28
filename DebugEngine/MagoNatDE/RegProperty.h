@@ -26,7 +26,7 @@ namespace Mago
         IEnumDebugPropertyInfo2** enumerator );
 
 
-    class ATL_NO_VTABLE RegGroupProperty : 
+    class RegGroupProperty : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProperty2
     {
@@ -104,7 +104,7 @@ namespace Mago
     };
 
 
-    class ATL_NO_VTABLE RegisterProperty : 
+    class RegisterProperty : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProperty2
     {

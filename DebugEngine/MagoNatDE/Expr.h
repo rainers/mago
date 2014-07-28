@@ -19,7 +19,7 @@ namespace Mago
     class ExprContext;
 
 
-    class ATL_NO_VTABLE Expr : 
+    class Expr : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugExpression2
     {

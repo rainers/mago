@@ -10,7 +10,7 @@
 
 namespace Mago
 {
-    class ATL_NO_VTABLE ProgramNode : 
+    class ProgramNode : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProgramNode2
     {
