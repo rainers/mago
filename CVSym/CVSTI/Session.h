@@ -101,11 +101,5 @@ namespace MagoST
         virtual bool FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber );
         virtual bool FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber );
         virtual bool FindNextLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber );
-
-    private:
-        void SetLineNumberFromSegment( uint16_t compIx, uint16_t fileIx, const FileSegmentInfo& segInfo, uint16_t lineIndex, LineNumber& lineNumber );
-
-        template <class TElem>
-        bool BinarySearch( TElem targetKey, TElem* array, int arrayLen, int& indexFound );
     };
 }

@@ -451,6 +451,9 @@
     <ResourceCompile Include="MagoNatDE.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\CVSym\BinImage\BinImage.vcxproj">
+      <Project>{50220f87-0f20-49b1-b111-a25e1a6c98d9}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\..\CVSym\CVSTI\CVSTI.vcxproj">
       <Project>{18e6fa8b-62c6-42d7-964b-4c34c797075b}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>

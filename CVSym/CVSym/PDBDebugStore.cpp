@@ -361,6 +361,7 @@ namespace MagoST
         :   mSource( NULL ),
             mSession( NULL ),
             mGlobal( NULL ),
+            mFindLineEnumLineNumbers( NULL ),
             mInit( false ),
             mCompilandCount( -1 )
     {
@@ -445,6 +446,8 @@ namespace MagoST
         if( !mInit )
             return;
 
+        releaseFindLineEnumLineNumbers();
+
         if ( mGlobal ) 
         {
             mGlobal->Release();
@@ -465,6 +468,16 @@ namespace MagoST
 
         CoUninitialize();
         mInit = false;
+    }
+
+    void PDBDebugStore::releaseFindLineEnumLineNumbers()
+    {
+        if( mFindLineEnumLineNumbers )
+        {
+            mFindLineEnumLineNumbers->Release();
+            mFindLineEnumLineNumbers = 0;
+        }
+        
     }
 
     HRESULT PDBDebugStore::SetCompilandSymbolScope( DWORD compilandIndex, SymbolScope& scope )
@@ -805,14 +818,11 @@ namespace MagoST
 
     bool PDBDebugStore::GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo )
     {
-        // line stored in segInstanceIndex
-        return FindCompilandFileSegment( segInstanceIndex, compIndex, fileIndex, segInfo );
-    }
-
-    bool    PDBDebugStore::FindCompilandFileSegment( uint16_t line, uint16_t compIndex, uint16_t fileIndex, FileSegmentInfo& segInfo )
-    {
         if ( (compIndex < 1) || (compIndex > mCompilandCount) )
             return false;
+        if( segInstanceIndex > 0 )
+            return false;
+
 
         IDiaEnumSymbols *pEnumSymbols = NULL;
         HRESULT hr = mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols );
@@ -838,7 +848,7 @@ namespace MagoST
 
         IDiaEnumLineNumbers *pEnumLineNumbers = NULL;
         if( !FAILED( hr ) )
-            hr = mSession->findLinesByLinenum( pCompiland, pSourceFile, line, 0, &pEnumLineNumbers );
+            hr = mSession->findLines( pCompiland, pSourceFile, &pEnumLineNumbers );
 
         if( !FAILED( hr ) )
             hr = fillFileSegmentInfo( pEnumLineNumbers, segInfo );
@@ -857,8 +867,7 @@ namespace MagoST
         return !FAILED( hr );
     }
 
-    HRESULT PDBDebugStore::fillFileSegmentInfo( IDiaEnumLineNumbers *pEnumLineNumbers, FileSegmentInfo& segInfo, 
-                                                IDiaSymbol **ppCompiland, IDiaSourceFile **ppSourceFile )
+    HRESULT PDBDebugStore::fillFileSegmentInfo( IDiaEnumLineNumbers *pEnumLineNumbers, FileSegmentInfo& segInfo )
     {
         HRESULT hr = S_OK;
         LONG lineNumbers = 0;
@@ -868,6 +877,7 @@ namespace MagoST
         hr = pEnumLineNumbers->Reset();
         if( !FAILED( hr ) )
             hr = pEnumLineNumbers->get_Count( &lineNumbers );
+
         if( !FAILED( hr ) )
         {
             mLastSegInfoLineNumbers.reset( new WORD[lineNumbers] );
@@ -893,12 +903,8 @@ namespace MagoST
                 hr = pLineNumber->get_lineNumber( &line );
             if( !FAILED( hr ) && lineIndex == 0 )
             {
-                segInfo.SegmentInstance = (WORD) line;
+                //segInfo.SegmentInstance = (WORD) line;
                 segInfo.Start = off;
-                if( ppCompiland )
-                    pLineNumber->get_compiland( ppCompiland );
-                if( ppSourceFile )
-                    pLineNumber->get_sourceFile( ppSourceFile );
                 hr = pLineNumber->get_addressSection( &section );
             }
             if( !FAILED( hr ) && lineIndex == lineNumbers - 1 )
@@ -980,18 +986,18 @@ namespace MagoST
         return hr;
     }
 
-    bool PDBDebugStore::FindCompilandFileSegment( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& fileSegInfo )
+    HRESULT PDBDebugStore::setLineNumber( IDiaLineNumber* pLineNumber, uint16_t lineIndex, LineNumber& lineNumber )
     {
         HRESULT hr = S_OK;
-        IDiaEnumLineNumbers *pEnumLineNumbers = NULL;
-        if( !FAILED( hr ) )
-            hr = mSession->findLinesByAddr( seg, offset, 1, &pEnumLineNumbers );
 
         IDiaSymbol *pCompiland = NULL;
         IDiaSourceFile *pSourceFile = NULL;
-        if ( !FAILED( hr ) )
-            hr = fillFileSegmentInfo( pEnumLineNumbers, fileSegInfo, &pCompiland, &pSourceFile );
+        if( !FAILED( hr ) )
+            hr = pLineNumber->get_compiland( &pCompiland );
+        if( !FAILED( hr ) )
+            hr = pLineNumber->get_sourceFile( &pSourceFile );
 
+        uint16_t compIndex = 0, fileIndex = 0;
         if( !FAILED( hr ) )
             hr = findCompilandAndFile( pCompiland, pSourceFile, compIndex, fileIndex );
 
@@ -999,11 +1005,125 @@ namespace MagoST
             pCompiland->Release();
         if ( pSourceFile )
             pSourceFile->Release();
-        if ( pEnumLineNumbers )
-            pEnumLineNumbers->Release();
+
+        DWORD line = 0, lineEnd = 0, offset = 0, section = 0, length = 0;
+        if( !FAILED( hr ) )
+            hr = pLineNumber->get_lineNumber( &line );
+        if( !FAILED( hr ) )
+            hr = pLineNumber->get_lineNumberEnd( &lineEnd );
+        if( !FAILED( hr ) )
+            hr = pLineNumber->get_addressOffset( &offset );
+        if( !FAILED( hr ) )
+            hr = pLineNumber->get_addressSection( &section );
+        if( !FAILED( hr ) )
+            hr = pLineNumber->get_length( &length );
+
+        if( !FAILED( hr ) )
+        {
+            lineNumber.CompilandIndex = compIndex;
+            lineNumber.FileIndex = fileIndex;
+            lineNumber.LineIndex = lineIndex;
+
+            lineNumber.Number = (uint16_t) line;
+            lineNumber.NumberEnd = (uint16_t) lineEnd;
+            lineNumber.Offset = (uint16_t) offset;
+            lineNumber.Section = (uint16_t) section;
+            lineNumber.Length = (uint16_t) length;
+        }
+        return hr;
+    }
+
+    bool PDBDebugStore::FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber )
+    {
+        HRESULT hr = S_OK;
+        IDiaEnumLineNumbers *pEnumLineNumbers = NULL;
+        if( !FAILED( hr ) )
+            hr = mSession->findLinesByAddr( seg, offset, 1, &pEnumLineNumbers );
+
+        LONG lineNumbers = 0;
+        IDiaLineNumber* pLineNumber = NULL;
+        if( !FAILED( hr ) )
+            hr = pEnumLineNumbers->get_Count( &lineNumbers );
+        if( !FAILED( hr ) )
+            if( lineNumbers < 1 )
+                hr = E_INVALIDARG;
+        if( !FAILED( hr ) )
+            hr = pEnumLineNumbers->Item( 0, &pLineNumber );
+
+        if( !FAILED( hr ) )
+            setLineNumber( pLineNumber, 0, lineNumber );
+
+        if( pLineNumber )
+            pLineNumber->Release();
+
+        return !FAILED( hr );
+    }
+
+    bool PDBDebugStore::FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber )
+    {
+        if ( (compIndex < 1) || (compIndex > mCompilandCount) )
+            return false;
+
+        releaseFindLineEnumLineNumbers();
+
+        IDiaEnumSymbols *pEnumSymbols = NULL;
+        HRESULT hr = mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols );
+
+        IDiaSymbol *pCompiland = NULL;
+        if( !FAILED( hr ) )
+            hr = pEnumSymbols->Item( compIndex - 1, &pCompiland );
+
+        IDiaEnumSourceFiles *pFiles = NULL;
+        if( !FAILED( hr ) )
+            hr = mSession->findFile( pCompiland, NULL, nsNone, &pFiles );
+
+        LONG fileCount = 0;
+        if( !FAILED( hr ) )
+            hr = pFiles->get_Count( &fileCount );
+
+        if( !FAILED( hr ) && fileIndex >= fileCount )
+            hr = E_INVALIDARG;
+
+        IDiaSourceFile *pSourceFile = NULL;
+        if( !FAILED( hr ) )
+            hr = pFiles->Item( fileIndex, &pSourceFile );
+
+        if( !FAILED( hr ) )
+            hr = mSession->findLinesByLinenum( pCompiland, pSourceFile, line, 0, &mFindLineEnumLineNumbers );
+
+        if( !FAILED( hr ) )
+            hr = mFindLineEnumLineNumbers->Reset();
+
+        if( FAILED( hr ) )
+            return false;
+
+        return FindNextLineByNum( compIndex, fileIndex, line, lineNumber );
+    }
+
+    bool PDBDebugStore::FindNextLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber )
+    {
+        // assume arguments are the same as last call to FindLineByNum
+        UNREFERENCED_PARAMETER( compIndex );
+        UNREFERENCED_PARAMETER( fileIndex );
+        UNREFERENCED_PARAMETER( line );
+
+        if( !mFindLineEnumLineNumbers )
+            return false;
+
+        HRESULT hr = S_OK;
+        IDiaLineNumber* pLineNumber = NULL;
+        ULONG fetched = 0;
+        if( !FAILED( hr ) )
+            hr = mFindLineEnumLineNumbers->Next( 1, &pLineNumber, &fetched );
+        if( hr == S_OK )
+            hr = setLineNumber( pLineNumber, 0, lineNumber );
+        else
+            releaseFindLineEnumLineNumbers();
+
+        if( pLineNumber )
+            pLineNumber->Release();
 
         return hr == S_OK;
     }
-
 }
 

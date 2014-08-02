@@ -66,8 +66,9 @@ namespace MagoST
 
         virtual bool    GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo ) = 0;
 
-        virtual bool    FindCompilandFileSegment( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& segInfo ) = 0;
-        virtual bool    FindCompilandFileSegment( uint16_t line, uint16_t compIndex, uint16_t fileIndex, FileSegmentInfo& segInfo ) = 0;
+        virtual bool    FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber ) = 0;
+        virtual bool    FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber ) = 0;
+        virtual bool    FindNextLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber ) = 0;
     };
 
     class DebugStore : public IDebugStore
@@ -166,8 +167,9 @@ namespace MagoST
 
         virtual bool    GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo );
 
-        virtual bool    FindCompilandFileSegment( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& segInfo );
-        virtual bool    FindCompilandFileSegment( uint16_t line, uint16_t compIndex, uint16_t fileIndex, FileSegmentInfo& segInfo );
+        virtual bool    FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber );
+        virtual bool    FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber );
+        virtual bool    FindNextLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber );
 
         // for debugging
         HRESULT GetSymbolBytePtr( SymHandle handle, BYTE* bytes, DWORD& size );
@@ -232,6 +234,13 @@ namespace MagoST
             OMFSourceModule* srcMod, 
             OMFSourceFile* file, 
             FileSegmentInfo& segInfo );
+
+        bool FindCompilandFileSegmentByOffset( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& segInfo );
+        bool FindCompilandFileSegmentByLine( uint16_t line, uint16_t compIndex, uint16_t fileIndex, uint16_t firstSegIndex, FileSegmentInfo& segInfo );
+        void SetLineNumberFromSegment( uint16_t compIx, uint16_t fileIx, const FileSegmentInfo& segInfo, uint16_t lineIndex, LineNumber& lineNumber );
+
+        template <class TElem>
+        bool BinarySearch( TElem targetKey, TElem* array, int arrayLen, int& indexFound );
 
         // patching line info
         bool MarkLineNumbers( OMFDirEntry* entry );

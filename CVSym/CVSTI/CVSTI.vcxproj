@@ -111,19 +111,6 @@
   <ItemGroup>
     <ResourceCompile Include="CVSTI.rc" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\BinImage\BinImage.vcxproj">
-      <Project>{50220f87-0f20-49b1-b111-a25e1a6c98d9}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-    <ProjectReference Include="..\CVSym\CVSym.vcxproj">
-      <Project>{d4de19ae-33ef-4b61-bffe-784582bc68c1}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

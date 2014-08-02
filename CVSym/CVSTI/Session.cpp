@@ -345,145 +345,14 @@ namespace MagoST
 
     bool Session::FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber )
     {
-        uint16_t        compIx = 0;
-        uint16_t        fileIx = 0;
-        FileSegmentInfo fileSegInfo = { 0 };
-        int             i = 0;
-
-        if ( !mStore->FindCompilandFileSegment( seg, offset, compIx, fileIx, fileSegInfo ) )
-            return false;
-
-        if ( !BinarySearch<DWORD>( offset, fileSegInfo.Offsets, fileSegInfo.LineCount, i ) )
-            return false;
-
-        SetLineNumberFromSegment( compIx, fileIx, fileSegInfo, (uint16_t) i, lineNumber );
-        return true;
+        return mStore->FindLine( seg, offset, lineNumber );
     }
-
-    template <class TElem>
-    bool Session::BinarySearch( TElem targetKey, TElem* array, int arrayLen, int& indexFound )
-    {
-        int     lo = 0;
-        int     hi = arrayLen;
-
-        for ( int i = arrayLen / 2; lo < hi ; i = (lo + hi) / 2 )
-        {
-            if ( array[i] == targetKey )
-            {
-                indexFound = i;
-                return true;
-            }
-
-            if ( array[i] < targetKey )
-            {
-                if ( (i == arrayLen - 1) || (array[i + 1] > targetKey) )
-                {
-                    indexFound = i;
-                    return true;
-                }
-                lo = i + 1;
-            }
-            else
-            {
-                hi = i;
-            }
-        }
-
-        return false;
-    }
-
     bool Session::FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber )
     {
-        FileSegmentInfo fileSegInfo = { 0 };
-
-        if ( !mStore->FindCompilandFileSegment( line, compIndex, fileIndex, fileSegInfo ) )
-            return false;
-
-        if ( fileSegInfo.LineCount == 0 )
-            return false;
-
-        int     lastLine = 0;
-        int     closestDist = std::numeric_limits<int>::max();
-        int     lastLineIndex = -1;
-        int     closestLineIndex = -1;
-
-        for ( int i = 0; i < fileSegInfo.LineCount; i++ )
-        {
-            int curLine = fileSegInfo.LineNumbers[i];
-
-            if ( curLine > lastLine )
-            {
-                lastLine = curLine;
-                lastLineIndex = i;
-            }
-
-            if ( (curLine >= line) && ((curLine - line) < closestDist) )
-            {
-                closestDist = curLine - line;
-                closestLineIndex = i;
-            }
-        }
-
-        // a line was found after or at the target line
-        // it's the closest one, so use it
-
-        if ( closestLineIndex >= 0 )
-        {
-            SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, (uint16_t) closestLineIndex, lineNumber );
-        }
-        else
-        {
-            // there are lines, so one of them has to be the last one
-            _ASSERT( lastLineIndex >= 0 );
-
-            SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, (uint16_t) lastLineIndex, lineNumber );
-        }
-
-        return true;
+        return mStore->FindLineByNum( compIndex, fileIndex, line, lineNumber );
     }
-
     bool Session::FindNextLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber )
     {
-        FileSegmentInfo fileSegInfo = { 0 };
-
-        if ( !mStore->FindCompilandFileSegment( line, compIndex, fileIndex, fileSegInfo ) )
-            return false;
-
-        for ( int i = lineNumber.LineIndex + 1; i < fileSegInfo.LineCount; i++ )
-        {
-            int curLine = fileSegInfo.LineNumbers[i];
-            if ( curLine == lineNumber.Number )
-            {
-                SetLineNumberFromSegment( compIndex, fileIndex, fileSegInfo, (uint16_t) i, lineNumber );
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void Session::SetLineNumberFromSegment( uint16_t compIx, uint16_t fileIx, const FileSegmentInfo& segInfo, uint16_t lineIndex, LineNumber& lineNumber )
-    {
-        lineNumber.CompilandIndex = compIx;
-        lineNumber.FileIndex = fileIx;
-        lineNumber.SegmentInstanceIndex = segInfo.SegmentInstance;
-        lineNumber.LineIndex = lineIndex;
-
-        lineNumber.Number = segInfo.LineNumbers[ lineIndex ];
-        lineNumber.Offset = segInfo.Offsets[ lineIndex ];
-        lineNumber.Section = segInfo.SegmentIndex;
-
-        if ( lineIndex == segInfo.LineCount - 1 )
-        {
-            // TODO: do we have to worry about segInfo.End being 0?
-            lineNumber.Length = segInfo.End - lineNumber.Offset + 1;
-            lineNumber.NumberEnd = 0x7fff;
-        }
-        else
-        {
-            lineNumber.Length = segInfo.Offsets[ lineIndex + 1 ] - lineNumber.Offset;
-            lineNumber.NumberEnd = segInfo.LineNumbers[ lineIndex + 1 ] - 1;
-        }
-
-        //lineNumber.NumberEnd = lineNumber.Number + 1;
+        return mStore->FindNextLineByNum( compIndex, fileIndex, line, lineNumber );
     }
 }

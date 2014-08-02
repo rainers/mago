@@ -194,4 +194,17 @@ namespace MagoST
         DWORD*          Offsets;
         WORD*           LineNumbers;
     };
+
+    struct LineNumber
+    {
+        uint16_t    CompilandIndex;
+        uint16_t    FileIndex;
+        uint16_t    SegmentInstanceIndex;
+        uint16_t    LineIndex;
+        uint16_t    Number;
+        uint16_t    NumberEnd;
+        uint16_t    Section;
+        uint32_t    Offset;
+        uint32_t    Length;
+    };
 }

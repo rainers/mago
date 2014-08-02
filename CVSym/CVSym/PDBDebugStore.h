@@ -13,6 +13,7 @@ struct IDiaDataSource;
 struct IDiaSession;
 struct IDiaSymbol;
 struct IDiaEnumLineNumbers;
+struct IDiaLineNumber;
 struct IDiaSourceFile;
 
 namespace MagoST
@@ -68,18 +69,22 @@ namespace MagoST
 
         virtual bool    GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo );
 
-        virtual bool    FindCompilandFileSegment( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& segInfo );
-        virtual bool    FindCompilandFileSegment( uint16_t line, uint16_t compIndex, uint16_t fileIndex, FileSegmentInfo& segInfo );
+        virtual bool    FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber );
+        virtual bool    FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber );
+        virtual bool    FindNextLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber );
 
     private:
-        HRESULT fillFileSegmentInfo( IDiaEnumLineNumbers *pEnumLineNumbers, FileSegmentInfo& segInfo,
-                                     IDiaSymbol **ppCompiland = NULL, IDiaSourceFile **ppSourceFile = NULL );
+        void releaseFindLineEnumLineNumbers();
+        HRESULT fillFileSegmentInfo( IDiaEnumLineNumbers *pEnumLineNumbers, FileSegmentInfo& segInfo );
         HRESULT findCompilandAndFile( IDiaSymbol *pCompiland, IDiaSourceFile *pSourceFile, uint16_t& compIndex, uint16_t& fileIndex );
+        HRESULT setLineNumber( IDiaLineNumber* pLineNumber, uint16_t lineIndex, LineNumber& lineNumber );
 
         bool mInit;
         IDiaDataSource  *mSource;
         IDiaSession     *mSession;
         IDiaSymbol      *mGlobal;
+        IDiaEnumLineNumbers *mFindLineEnumLineNumbers;
+
         DWORD            mMachineType;
         long             mCompilandCount;
 
