@@ -11,6 +11,7 @@
 #include "RegisterSet.h"
 #include "EnumX86Reg.h"
 #include <MagoDECommon.h>
+#include <MagoCVConst.h>
 
 
 namespace Mago
@@ -201,6 +202,9 @@ namespace
 
     int ArchDataX86::GetArchRegId( int debugRegId )
     {
+        if ( debugRegId == MagoST::CV_ALLREG_VFRAME )
+            return RegX86_EBP;
+
         if ( debugRegId < 0 || debugRegId >= DebugRegCount )
             return -1;
 

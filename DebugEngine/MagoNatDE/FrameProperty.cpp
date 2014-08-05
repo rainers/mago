@@ -17,6 +17,7 @@
 #include "RegProperty.h"
 #include "ICoreProcess.h"
 #include <MagoEED.h>
+#include <MagoCVConst.h>
 
 
 namespace Mago
@@ -198,6 +199,9 @@ namespace Mago
 
             hr = session->GetSymbolInfo( childSH, infoData, symInfo );
             if ( FAILED( hr ) )
+                continue;
+            
+            if( symInfo->GetSymTag() != MagoST::SymTagData )
                 continue;
 
             if ( !symInfo->GetName( pstrName ) )

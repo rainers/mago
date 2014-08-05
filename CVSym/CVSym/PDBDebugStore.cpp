@@ -475,7 +475,7 @@ namespace MagoST
         if( mFindLineEnumLineNumbers )
         {
             mFindLineEnumLineNumbers->Release();
-            mFindLineEnumLineNumbers = 0;
+            mFindLineEnumLineNumbers = NULL;
         }
         
     }
@@ -1026,9 +1026,9 @@ namespace MagoST
 
             lineNumber.Number = (uint16_t) line;
             lineNumber.NumberEnd = (uint16_t) lineEnd;
-            lineNumber.Offset = (uint16_t) offset;
+            lineNumber.Offset = (uint32_t) offset;
             lineNumber.Section = (uint16_t) section;
-            lineNumber.Length = (uint16_t) length;
+            lineNumber.Length = (uint32_t) length;
         }
         return hr;
     }
@@ -1055,6 +1055,8 @@ namespace MagoST
 
         if( pLineNumber )
             pLineNumber->Release();
+        if( pEnumLineNumbers )
+            pEnumLineNumbers->Release();
 
         return !FAILED( hr );
     }
@@ -1093,6 +1095,15 @@ namespace MagoST
 
         if( !FAILED( hr ) )
             hr = mFindLineEnumLineNumbers->Reset();
+
+        if( pSourceFile )
+            pSourceFile->Release();
+        if( pFiles )
+            pFiles->Release();
+        if( pCompiland )
+            pCompiland->Release();
+        if( pEnumSymbols )
+            pEnumSymbols->Release();
 
         if( FAILED( hr ) )
             return false;

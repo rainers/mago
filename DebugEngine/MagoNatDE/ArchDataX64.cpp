@@ -11,6 +11,7 @@
 #include "WinStackWalker.h"
 #include <MagoDECommon.h>
 #include <WinPlat.h>
+#include <MagoCVConst.h>
 
 
 namespace Mago
@@ -192,6 +193,9 @@ namespace
 
     int ArchDataX64::GetArchRegId( int debugRegId )
     {
+        if ( debugRegId == MagoST::CV_ALLREG_VFRAME )
+            return RegX64_RBP;
+
         if ( debugRegId < 0 || debugRegId >= DebugRegCount )
             return -1;
 
