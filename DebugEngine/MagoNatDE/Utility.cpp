@@ -128,60 +128,6 @@ HRESULT Utf16To8( const wchar_t* u16Str, size_t u16StrLen, char*& u8Str, size_t&
     return S_OK;
 }
 
-bool ExactFileNameMatch( const char* pathA, size_t pathALen, const char* pathB, size_t pathBLen )
-{
-    if ( pathALen != pathBLen )
-        return false;
-
-    for ( size_t i = 0; i < pathALen; i++ )
-    {
-        if ( ((pathA[i] == '\\') && (pathB[i] == '/'))
-            || ((pathA[i] == '/') && (pathB[i] == '\\')) )
-        {
-            // empty, mixed slash and back slash count as the same character
-        }
-        else if ( tolower( pathA[i] ) != tolower( pathB[i] ) )
-            return false;
-    }
-
-    return true;
-}
-
-bool PartialFileNameMatch( const char* pathA, size_t pathALen, const char* pathB, size_t pathBLen )
-{
-    if ( (pathALen == 0) || (pathBLen == 0) )
-        return false;
-
-    const char* pca = pathA + pathALen;
-    const char* pcb = pathB + pathBLen;
-
-    do
-    {
-        pca--;
-        pcb--;
-
-        if ( ((*pca == '\\') && (*pcb == '/'))
-            || ((*pca == '/') && (*pcb == '\\')) )
-        {
-            // empty, mixed slash and back slash count as the same character
-        }
-        else if ( tolower( *pca ) != tolower( *pcb ) )
-            return false;
-
-        if ( (*pca == '\\') || (*pca == '/') )
-            return true;
-
-    } while ( (pca != pathA) && (pcb != pathB) );
-
-    if ( (pca == pathA) && (pcb != pathB) )
-        return (*(pcb - 1) == '\\') || (*(pcb - 1) == '/');
-    else if ( (pcb == pathB) && (pca != pathA) )
-        return (*(pca - 1) == '\\') || (*(pca - 1) == '/');
-
-    _ASSERT( (pca == pathA) && (pcb == pathB) );
-    return true;
-}
-
 
 void ConvertVariantToDataVal( const MagoST::Variant& var, MagoEE::DataValue& dataVal )
 {

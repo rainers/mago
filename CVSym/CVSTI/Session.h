@@ -101,5 +101,8 @@ namespace MagoST
         virtual bool FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber );
         virtual bool FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber );
         virtual bool FindNextLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber );
+
+        virtual bool FindLines( bool exactMatch, const char* fileName, size_t fileNameLen, uint16_t reqLineStart, uint16_t reqLineEnd, 
+                                std::list<LineNumber>& lines );
     };
 }

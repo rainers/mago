@@ -1518,6 +1518,52 @@ namespace MagoST
         return false;
     }
 
+    bool DebugStore::FindLines( bool exactMatch, const char* fileName, size_t fileNameLen, uint16_t reqLineStart, uint16_t reqLineEnd, 
+                                std::list<LineNumber>& lines )
+    {
+        for ( uint16_t compIx = 1; compIx <= mCompilandCount; compIx++ )
+        {
+            MagoST::CompilandInfo   compInfo = { 0 };
+
+            HRESULT hr = GetCompilandInfo( compIx, compInfo );
+            if ( FAILED( hr ) )
+                continue;
+
+            for ( uint16_t fileIx = 0; fileIx < compInfo.FileCount; fileIx++ )
+            {
+                MagoST::FileInfo    fileInfo = { 0 };
+                bool                matches = false;
+
+                hr = GetFileInfo( compIx, fileIx, fileInfo );
+                if ( FAILED( hr ) )
+                    continue;
+
+                if ( exactMatch )
+                    matches = ExactFileNameMatch( fileName, fileNameLen, fileInfo.Name.ptr, fileInfo.Name.length );
+                else
+                    matches = PartialFileNameMatch( fileName, fileNameLen, fileInfo.Name.ptr, fileInfo.Name.length );
+
+                if ( !matches )
+                    continue;
+
+                MagoST::LineNumber  line = { 0 };
+                if ( !FindLineByNum( compIx, fileIx, (uint16_t) reqLineStart, line ) )
+                    continue;
+
+                // do the line ranges overlap?
+                if ( ((line.Number <= reqLineEnd) && (line.NumberEnd >= reqLineStart)) )
+                {
+                    do
+                    {
+                        lines.push_back (line);
+                    }
+                    while( FindNextLineByNum( compIx, fileIx, (uint16_t) reqLineStart, line ) );
+                }
+            }
+        }
+        return lines.size() > 0;
+    }
+
     bool DebugStore::FindCompilandFileSegmentByOffset( WORD seg, DWORD offset, uint16_t& compIndex, uint16_t& fileIndex, FileSegmentInfo& fileSegInfo )
     {
         uint32_t    compCount = 0;

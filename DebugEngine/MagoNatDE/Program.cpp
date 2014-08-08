@@ -234,55 +234,15 @@ namespace Mago
             if ( !mod->GetSymbolSession( session ) )
                 continue;
 
-            hr = session->GetCompilandCount( compCount );
-            if ( FAILED( hr ) )
+            std::list<MagoST::LineNumber> lines;
+            if( !session->FindLines( exactMatch, fileName, fileNameLen, reqLineStart, reqLineEnd, lines ) )
                 continue;
 
-            for ( uint16_t compIx = 1; compIx <= compCount; compIx++ )
+            for( std::list<MagoST::LineNumber>::iterator it = lines.begin(); it != lines.end(); ++it )
             {
-                MagoST::CompilandInfo   compInfo = { 0 };
-
-                hr = session->GetCompilandInfo( compIx, compInfo );
-                if ( FAILED( hr ) )
-                    continue;
-
-                for ( uint16_t fileIx = 0; fileIx < compInfo.FileCount; fileIx++ )
-                {
-                    MagoST::FileInfo    fileInfo = { 0 };
-                    bool                matches = false;
-
-                    hr = session->GetFileInfo( compIx, fileIx, fileInfo );
-                    if ( FAILED( hr ) )
-                        continue;
-
-                    if ( exactMatch )
-                        matches = ExactFileNameMatch( fileName, fileNameLen, fileInfo.Name.ptr, fileInfo.Name.length );
-                    else
-                        matches = PartialFileNameMatch( fileName, fileNameLen, fileInfo.Name.ptr, fileInfo.Name.length );
-
-                    if ( !matches )
-                        continue;
-
-                    foundMatch = true;
-
-                    MagoST::LineNumber  line = { 0 };
-                    if ( !session->FindLineByNum( compIx, fileIx, (uint16_t) reqLineStart, line ) )
-                        continue;
-
-                    // do the line ranges overlap?
-                    if ( ((line.Number <= reqLineEnd) && (line.NumberEnd >= reqLineStart)) )
-                    {
-                        line.NumberEnd = line.Number;
-
-                        do
-                        {
-                            bindings.push_back( AddressBinding() );
-                            bindings.back().Addr = session->GetVAFromSecOffset( line.Section, line.Offset );
-                            bindings.back().Mod = mod;
-                        }
-                        while( session->FindNextLineByNum( compIx, fileIx, (uint16_t) reqLineStart, line ) );
-                    }
-                }
+                bindings.push_back( AddressBinding() );
+                bindings.back().Addr = session->GetVAFromSecOffset( it->Section, it->Offset );
+                bindings.back().Mod = mod;
             }
         }
 

@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "PDBDebugStore.h"
 #include "ISymbolInfo.h"
+#include "Util.h"
 
 #include <dia2.h>
 #include <assert.h>
@@ -679,7 +680,7 @@ namespace MagoST
         return S_OK;
     }
 
-    HRESULT PDBDebugStore::GetCompilandCount( uint32_t& count )
+    uint32_t PDBDebugStore::getCompilandCount()
     {
         if( mCompilandCount < 0 )
         {
@@ -694,13 +695,18 @@ namespace MagoST
                 pEnumSymbols->Release();
             }
         }
-        count = mCompilandCount;
+        return mCompilandCount;
+    }
+
+    HRESULT PDBDebugStore::GetCompilandCount( uint32_t& count )
+    {
+        count = getCompilandCount();
         return S_OK;
     }
 
     HRESULT PDBDebugStore::GetCompilandInfo( uint16_t index, CompilandInfo& info )
     {
-        if ( (index < 1) || (index > mCompilandCount) )
+        if ( (index < 1) || (index > getCompilandCount()) )
             return E_INVALIDARG;
 
         IDiaEnumSymbols *pEnumSymbols = NULL;
@@ -753,7 +759,7 @@ namespace MagoST
 
     HRESULT PDBDebugStore::GetFileInfo( uint16_t compilandIndex, uint16_t fileIndex, FileInfo& info )
     {
-        if ( (compilandIndex < 1) || (compilandIndex > mCompilandCount) )
+        if ( (compilandIndex < 1) || (compilandIndex > getCompilandCount()) )
             return E_INVALIDARG;
 
         IDiaEnumSymbols *pEnumSymbols = NULL;
@@ -826,7 +832,7 @@ namespace MagoST
 
     bool PDBDebugStore::GetFileSegment( uint16_t compIndex, uint16_t fileIndex, uint16_t segInstanceIndex, FileSegmentInfo& segInfo )
     {
-        if ( (compIndex < 1) || (compIndex > mCompilandCount) )
+        if ( (compIndex < 1) || (compIndex > getCompilandCount()) )
             return false;
         if( segInstanceIndex > 0 )
             return false;
@@ -1071,7 +1077,7 @@ namespace MagoST
 
     bool PDBDebugStore::FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber )
     {
-        if ( (compIndex < 1) || (compIndex > mCompilandCount) )
+        if ( (compIndex < 1) || (compIndex > getCompilandCount()) )
             return false;
 
         releaseFindLineEnumLineNumbers();
@@ -1143,6 +1149,74 @@ namespace MagoST
             pLineNumber->Release();
 
         return hr == S_OK;
+    }
+
+    bool PDBDebugStore::FindLines( bool exactMatch, const char* fileName, size_t fileNameLen, uint16_t reqLineStart, uint16_t reqLineEnd, 
+                                   std::list<LineNumber>& lines )
+    {
+        IDiaEnumSymbols *pEnumSymbols = NULL;
+        HRESULT hr = mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols );
+        if( !FAILED( hr ) )
+            pEnumSymbols->Reset();
+
+        ULONG fetched;
+        IDiaSymbol *pCompiland = NULL;
+        while( !FAILED( hr ) && pEnumSymbols->Next( 1, &pCompiland, &fetched ) == S_OK )
+        {
+            IDiaEnumSourceFiles *pFiles = NULL;
+            if( !FAILED( hr ) )
+                hr = mSession->findFile( pCompiland, NULL, nsNone, &pFiles );
+
+            IDiaSourceFile *pSourceFile = NULL;
+            while( !FAILED( hr ) && pFiles->Next( 1, &pSourceFile, &fetched ) == S_OK )
+            {
+                BSTR bstrName = NULL;
+                if( !FAILED( hr ) )
+                    hr = pSourceFile->get_fileName( &bstrName );
+                
+                SymString srcFileName;
+                if( !FAILED( hr ) )
+                {
+                    detachBSTR( bstrName, srcFileName );
+                    hr = (srcFileName.GetName() == NULL) ? E_OUTOFMEMORY : S_OK;
+                }
+
+                bool matches = false;
+                if( !FAILED( hr ) )
+                {
+                    if ( exactMatch )
+                        matches = ExactFileNameMatch( fileName, fileNameLen, srcFileName.GetName(), srcFileName.GetLength() );
+                    else
+                        matches = PartialFileNameMatch( fileName, fileNameLen, srcFileName.GetName(), srcFileName.GetLength() );
+                }
+                if( matches )
+                {
+                    IDiaEnumLineNumbers *pEnumLineNumbers = 0;
+                    if( !FAILED( hr ) )
+                        hr = mSession->findLinesByLinenum( pCompiland, pSourceFile, reqLineStart, 0, &pEnumLineNumbers );
+                    
+                    IDiaLineNumber* pLineNumber = NULL;
+                    while( !FAILED( hr ) && pEnumLineNumbers->Next( 1, &pLineNumber, &fetched ) == S_OK )
+                    {
+                        LineNumber line;
+                        setLineNumber( pLineNumber, (uint16_t) lines.size(), line );
+                        if( line.Number <= reqLineEnd && line.NumberEnd >= reqLineStart )
+                            lines.push_back( line );
+                        pLineNumber->Release();
+                    }
+
+                    if( pEnumLineNumbers )
+                        pEnumLineNumbers->Release();
+                }
+                pSourceFile->Release();
+            }
+            if( pFiles )
+                pFiles->Release();
+            pCompiland->Release();
+        }
+        if( pEnumSymbols )
+            pEnumSymbols->Release();
+        return lines.size() > 0;
     }
 }
 

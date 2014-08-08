@@ -128,9 +128,6 @@ namespace Mago
 HRESULT Utf8To16( const char* u8Str, size_t u8StrLen, BSTR& u16Str );
 HRESULT Utf16To8( const wchar_t* u16Str, size_t u16StrLen, char*& u8Str, size_t& u8StrLen );
 
-bool ExactFileNameMatch( const char* pathA, size_t pathALen, const char* pathB, size_t pathBLen );
-bool PartialFileNameMatch( const char* pathA, size_t pathALen, const char* pathB, size_t pathBLen );
-
 namespace MagoEE
 {
     union DataValue;

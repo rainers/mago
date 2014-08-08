@@ -25,3 +25,7 @@ bool     QuickGetAddrOffset( CodeViewSymbol* sym, uint32_t& offset );
 bool     QuickGetName( CodeViewSymbol* sym, SymString& name );
 bool     QuickGetAddrSegment( CodeViewSymbol* sym, uint16_t& segment );
 bool     QuickGetLength( CodeViewSymbol* sym, uint32_t& length );
+
+bool ExactFileNameMatch( const char* pathA, size_t pathALen, const char* pathB, size_t pathBLen );
+bool PartialFileNameMatch( const char* pathA, size_t pathALen, const char* pathB, size_t pathBLen );
+

@@ -79,64 +79,23 @@ namespace Mago
         if ( !mod->GetSymbolSession( session ) )
             return false;
 
-        hr = session->GetCompilandCount( compCount );
-        if ( FAILED( hr ) )
+        std::list<MagoST::LineNumber> lines;
+        if( !session->FindLines( exactMatch, fileName, fileNameLen, mReqLineStart, mReqLineEnd, lines ) )
             return false;
 
-        for ( uint16_t compIx = 1; compIx <= compCount; compIx++ )
+        for( std::list<MagoST::LineNumber>::iterator it = lines.begin(); it != lines.end(); ++it )
         {
-            MagoST::CompilandInfo   compInfo = { 0 };
+            PutLineError( err );
 
-            hr = session->GetCompilandInfo( compIx, compInfo );
+            hr = maker->MakeDocContext( session, it->CompilandIndex, it->FileIndex, *it );
             if ( FAILED( hr ) )
                 continue;
 
-            for ( uint16_t fileIx = 0; fileIx < compInfo.FileCount; fileIx++ )
-            {
-                MagoST::FileInfo    fileInfo = { 0 };
-                bool                matches = false;
-
-                hr = session->GetFileInfo( compIx, fileIx, fileInfo );
-                if ( FAILED( hr ) )
-                    continue;
-
-                if ( exactMatch )
-                    matches = ExactFileNameMatch( fileName, fileNameLen, fileInfo.Name.ptr, fileInfo.Name.length );
-                else
-                    matches = PartialFileNameMatch( fileName, fileNameLen, fileInfo.Name.ptr, fileInfo.Name.length );
-
-                if ( !matches )
-                    continue;
-
-                foundMatch = true;
-
-                PutLineError( err );
-
-                MagoST::LineNumber  line = { 0 };
-                if ( !session->FindLineByNum( compIx, fileIx, (uint16_t) mReqLineStart, line ) )
-                    continue;
-
-                // do the line ranges overlap?
-                if ( ((line.Number <= mReqLineEnd) && (line.Number >= mReqLineStart)) )
-                {
-                    line.NumberEnd = line.Number;
-
-                    hr = maker->MakeDocContext( session, compIx, fileIx, line );
-                    if ( FAILED( hr ) )
-                        continue;
-
-                    do
-                    {
-                        UINT64  addr = 0;
-                        addr = session->GetVAFromSecOffset( line.Section, line.Offset );
-                        maker->AddBoundBP( addr, mod, binding );
-                    }
-                    while( session->FindNextLineByNum( compIx, fileIx, (uint16_t) mReqLineStart, line ) );
-                }
-            }
+            UINT64  addr = addr = session->GetVAFromSecOffset( it->Section, it->Offset );
+            maker->AddBoundBP( addr, mod, binding );
         }
 
-        return foundMatch;
+        return lines.size() > 0;
     }
 
     void BPCodeFileLineBinder::PutDocError( Error& err )

@@ -347,6 +347,12 @@ namespace MagoST
     {
         return mStore->FindLine( seg, offset, lineNumber );
     }
+    bool Session::FindLines( bool exactMatch, const char* fileName, size_t fileNameLen, uint16_t reqLineStart, uint16_t reqLineEnd, 
+                             std::list<LineNumber>& lines )
+    {
+        return mStore->FindLines( exactMatch, fileName, fileNameLen, reqLineStart, reqLineEnd, lines );
+    }
+
     bool Session::FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber )
     {
         return mStore->FindLineByNum( compIndex, fileIndex, line, lineNumber );
