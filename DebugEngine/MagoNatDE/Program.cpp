@@ -220,16 +220,12 @@ namespace Mago
     {
         GuardedArea guard( mModGuard );
 
-        HRESULT hr = S_OK;
-        bool    foundMatch = false;
-
         for ( ModuleMap::iterator it = mModMap.begin();
             it != mModMap.end();
             it++ )
         {
             RefPtr<MagoST::ISession>    session;
             Module*                     mod = it->second;
-            uint32_t                    compCount = 0;
 
             if ( !mod->GetSymbolSession( session ) )
                 continue;
@@ -246,7 +242,7 @@ namespace Mago
             }
         }
 
-        return foundMatch;
+        return bindings.size() > 0;
     }
 
     HRESULT Program::GetMemoryBytes( IDebugMemoryBytes2** ppMemoryBytes )

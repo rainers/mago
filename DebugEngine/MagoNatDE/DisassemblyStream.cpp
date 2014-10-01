@@ -151,6 +151,9 @@ namespace Mago
                     pDisassembly->posBeg.dwColumn = 0;
                     pDisassembly->posEnd.dwLine = mDocInfo.GetLineEnd() - 1;
                     pDisassembly->posEnd.dwColumn = 0xFFFFFFFF;
+                    // never show more than 8 lines of source code before asm instruction
+                    if( pDisassembly->posBeg.dwLine + 8 < pDisassembly->posEnd.dwLine )
+                        pDisassembly->posBeg.dwLine = pDisassembly->posEnd.dwLine - 8;
                     pDisassembly->dwFields |= DSF_POSITION;
                 }
             }

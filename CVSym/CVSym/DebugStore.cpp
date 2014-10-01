@@ -1385,15 +1385,13 @@ namespace MagoST
         {
             // TODO: do we have to worry about segInfo.End being 0?
             lineNumber.Length = segInfo.End - lineNumber.Offset + 1;
-            lineNumber.NumberEnd = 0x7fff;
+            lineNumber.NumberEnd = 0x7fff; // lineNumber.Number;
         }
         else
         {
             lineNumber.Length = segInfo.Offsets[ lineIndex + 1 ] - lineNumber.Offset;
             lineNumber.NumberEnd = segInfo.LineNumbers[ lineIndex + 1 ] - 1;
         }
-
-        //lineNumber.NumberEnd = lineNumber.Number + 1;
     }
 
     bool DebugStore::FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber )

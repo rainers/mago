@@ -49,7 +49,7 @@ namespace MagoST
 
         for ( uint16_t i = 0; i < mSecCount; i++ )
         {
-            if ( rva > mSections[i].RVA )
+            if ( rva >= mSections[i].RVA )
             {
                 uint32_t    curOff = rva - mSections[i].RVA;
 

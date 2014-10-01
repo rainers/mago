@@ -181,7 +181,7 @@ namespace Mago
         //compiland->get_language();
 
         posBegin.dwLine = lineNumber.Number;
-        posEnd.dwLine = lineNumber.NumberEnd;
+        posEnd.dwLine = lineNumber.Number; // NumberEnd;?
 
         // AD7 lines are 0-based, DIA ones are 1-based
         posBegin.dwLine--;
