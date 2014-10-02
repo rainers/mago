@@ -1385,7 +1385,7 @@ namespace MagoST
         {
             // TODO: do we have to worry about segInfo.End being 0?
             lineNumber.Length = segInfo.End - lineNumber.Offset + 1;
-            lineNumber.NumberEnd = 0x7fff; // lineNumber.Number;
+            lineNumber.NumberEnd = lineNumber.Number; // 0x7fff; // 
         }
         else
         {
