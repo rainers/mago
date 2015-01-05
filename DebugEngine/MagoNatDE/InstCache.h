@@ -62,18 +62,20 @@ namespace Mago
 
     public:
         InstReader( uint32_t blockCount, InstBlock** blocks, Address64 startAddr, Address64 endAddr, 
-            Address64 anchorAddr, int ptrSize );
+            Address64 anchorAddr, int ptrSize, IDebugDisassemblyStream2* disasmStream );
 
         const ud_t* GetDisasmData();
         uint32_t Decode();
         uint32_t Disassemble();
-        uint32_t Disassemble( Address64 curPC );
+        uint32_t Disassemble( Address64 curPC, bool symOps );
         bool ReadByte( BYTE& dataByte );
         void SetPC( Address64 pc );
 
     private:
         BYTE* GetInstBuffer( uint32_t& length );
         uint32_t TruncateBeforeAnchor();
+
+        static int Symbolize( ud_t* ud, uint64_t addr );
     };
 
 

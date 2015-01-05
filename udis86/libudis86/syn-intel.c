@@ -12,6 +12,12 @@
 #include "itab.h"
 #include "syn.h"
 
+static void mksym(struct ud* u, const char* fmt, uint64_t addr)
+{
+  if (!u->symbolizer || !(*(u->symbolizer))(u, addr))
+    mkasm(u, fmt, addr); 
+}
+
 /* -----------------------------------------------------------------------------
  * opr_cast() - Prints an operand cast.
  * -----------------------------------------------------------------------------
@@ -48,10 +54,32 @@ static void gen_operand(struct ud* u, struct ud_operand* op, int syn_cast)
 
 		int op_f = 0;
 
+        int64_t off = 0;
+		if (op->offset == 8) {
+			off = op->lval.sbyte;
+		}
+		else if (op->offset == 16)
+			off = op->lval.uword;
+		else if (op->offset == 32) {
+			if (u->adr_mode == 64)
+			    off = op->lval.sdword;
+			else
+                off = op->lval.udword;
+		}
+		else if (op->offset == 64)
+            off = op->lval.uqword;
+
 		if (syn_cast) 
 			opr_cast(u, op);
 
 		mkasm(u, "[");
+
+        if (op->base == UD_R_RIP && !op->index && !op->scale)
+        {
+            uint64_t addr = u->pc + off;
+            if (u->symbolizer && (*(u->symbolizer))(u, addr))
+                goto L_sym;
+        }
 
 		if (u->pfx_seg)
 			mkasm(u, "%s:", ud_reg_tab[u->pfx_seg - UD_R_AL]);
@@ -71,24 +99,17 @@ static void gen_operand(struct ud* u, struct ud_operand* op, int syn_cast)
 		if (op->scale)
 			mkasm(u, "*%d", op->scale);
 
-		if (op->offset == 8) {
-			if (op->lval.sbyte < 0)
-				mkasm(u, "-0x%x", -op->lval.sbyte);
-			else	mkasm(u, "%s0x%x", (op_f) ? "+" : "", op->lval.sbyte);
+		if (off) {
+			if (off < 0)
+				mkasm(u, "-0x" FMT64 "x", -off);
+			else
+            {
+                if (op_f)
+				    mkasm(u, "+");
+                mksym(u, "0x" FMT64 "x", off);
+            }
 		}
-		else if (op->offset == 16)
-			mkasm(u, "%s0x%x", (op_f) ? "+" : "", op->lval.uword);
-		else if (op->offset == 32) {
-			if (u->adr_mode == 64) {
-				if (op->lval.sdword < 0)
-					mkasm(u, "-0x%x", -op->lval.sdword);
-				else	mkasm(u, "%s0x%x", (op_f) ? "+" : "", op->lval.sdword);
-			} 
-			else	mkasm(u, "%s0x%lx", (op_f) ? "+" : "", op->lval.udword);
-		}
-		else if (op->offset == 64) 
-			mkasm(u, "%s0x" FMT64 "x", (op_f) ? "+" : "", op->lval.uqword);
-
+    L_sym:
 		mkasm(u, "]");
 		break;
 	}
@@ -98,8 +119,8 @@ static void gen_operand(struct ud* u, struct ud_operand* op, int syn_cast)
 		switch (op->size) {
 			case  8: mkasm(u, "0x%x", op->lval.ubyte);    break;
 			case 16: mkasm(u, "0x%x", op->lval.uword);    break;
-			case 32: mkasm(u, "0x%lx", op->lval.udword);  break;
-			case 64: mkasm(u, "0x" FMT64 "x", op->lval.uqword); break;
+			case 32: mksym(u, "0x" FMT64 "x", op->lval.udword);  break;
+			case 64: mksym(u, "0x" FMT64 "x", op->lval.uqword); break;
 			default: break;
 		}
 		break;
@@ -108,13 +129,13 @@ static void gen_operand(struct ud* u, struct ud_operand* op, int syn_cast)
 		if (syn_cast) opr_cast(u, op);
 		switch (op->size) {
 			case  8:
-				mkasm(u, "0x" FMT64 "x", u->pc + op->lval.sbyte); 
+				mksym(u, "0x" FMT64 "x", u->pc + op->lval.sbyte); 
 				break;
 			case 16:
-				mkasm(u, "0x" FMT64 "x", u->pc + op->lval.sword);
+				mksym(u, "0x" FMT64 "x", u->pc + op->lval.sword);
 				break;
 			case 32:
-				mkasm(u, "0x" FMT64 "x", u->pc + op->lval.sdword);
+				mksym(u, "0x" FMT64 "x", u->pc + op->lval.sdword);
 				break;
 			default:break;
 		}
@@ -135,7 +156,7 @@ static void gen_operand(struct ud* u, struct ud_operand* op, int syn_cast)
 
 	case UD_OP_CONST:
 		if (syn_cast) opr_cast(u, op);
-		mkasm(u, "%d", op->lval.udword);
+		mksym(u, "%d", op->lval.udword);
 		break;
 
 	default: return;

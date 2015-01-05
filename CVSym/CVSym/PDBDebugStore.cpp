@@ -525,14 +525,14 @@ namespace MagoST
         IDiaSymbol* pSymbol = NULL;
         HRESULT hr = mSession->symbolById( scopeIn.id, &pSymbol );
         IDiaEnumSymbols* pEnumSymbols = NULL;
-        if ( !FAILED( hr ) )
+        if ( !FAILED( hr ) && pSymbol )
             hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &pEnumSymbols );
         IDiaSymbol* pChild = NULL;
-        if ( !FAILED( hr ) )
+        if ( !FAILED( hr ) && pEnumSymbols )
             hr = pEnumSymbols->Item( scopeIn.current, &pChild );
-        if ( !FAILED( hr ) )
+        if ( !FAILED( hr ) && pChild )
             scopeIn.current++;
-        if ( !FAILED( hr ) )
+        if ( !FAILED( hr ) && pChild )
             hr = pChild->get_symIndexId( &symIn.id );
 
         if ( pChild )
@@ -541,7 +541,7 @@ namespace MagoST
             pEnumSymbols->Release();
         if ( pSymbol )
             pSymbol->Release();
-        return !FAILED( hr );
+        return !FAILED( hr ) && pChild;
     }
 
     HRESULT PDBDebugStore::FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data )
@@ -560,10 +560,10 @@ namespace MagoST
             HRESULT hr = mGlobal->findChildren( SymTagNull, wname.get (), nsCaseSensitive, &pEnumSymbols );
             
             IDiaSymbol* pSymbol = NULL;
-            if ( !FAILED( hr ) )
+            if ( !FAILED( hr ) && pEnumSymbols )
                 hr = pEnumSymbols->Item( 0, &pSymbol );
 
-            if ( !FAILED( hr ) )
+            if ( !FAILED( hr ) && pSymbol )
                 hr = pSymbol->get_symIndexId( &dataIn.id );
 
             if ( pSymbol )
@@ -599,14 +599,33 @@ namespace MagoST
 
         PDBStore::SymHandleIn& handleIn = (PDBStore::SymHandleIn&) handle;
 
-        IDiaSymbol* pSymbol = NULL;
-        HRESULT hr = mSession->findSymbolByAddr( segment, offset, SymTagFunction, &pSymbol );
-        if( !FAILED( hr ) && pSymbol )
+        IDiaSymbol* pSymbol1 = NULL;
+        IDiaSymbol* pSymbol2 = NULL;
+        IDiaSymbol* pSymbol3 = NULL;
+        mSession->findSymbolByAddr( segment, offset, SymTagPublicSymbol, &pSymbol1 );
+        mSession->findSymbolByAddr( segment, offset, SymTagFunction, &pSymbol2 );
+        mSession->findSymbolByAddr( segment, offset, SymTagData, &pSymbol3 );
+        IDiaSymbol* pSymbol = pSymbol1;
+        DWORD symoff = 0;
+        if( pSymbol )
+            pSymbol->get_addressOffset(&symoff);
+        DWORD off;
+        if( pSymbol2 && pSymbol2->get_addressOffset(&off) == S_OK && off >= symoff )
+            pSymbol = pSymbol2, symoff = off;
+        if( pSymbol3 && pSymbol3->get_addressOffset(&off) == S_OK && off >= symoff )
+            pSymbol = pSymbol3, symoff = off;
+        
+        HRESULT hr = E_FAIL;
+        if( pSymbol )
             hr = pSymbol->get_symIndexId( &handleIn.id );
 
-        if( pSymbol )
-            pSymbol->Release();
-        return hr;
+        if( pSymbol1 )
+            pSymbol1->Release();
+        if( pSymbol2 )
+            pSymbol2->Release();
+        if( pSymbol3 )
+            pSymbol3->Release();
+        return !FAILED( hr ) ? S_OK : E_FAIL;
     }
 
 

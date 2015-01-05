@@ -243,6 +243,14 @@ namespace Mago
         return regVal.GetInt();
     }
 
+    HRESULT RegisterSet::SetPC( uint64_t addr )
+    {
+        RegisterValue regVal = { 0 };
+        GetValue( mPCId, regVal ); // to grab type
+        regVal.SetInt( addr );
+        return SetValue( mPCId, regVal );
+    }
+
 
     //------------------------------------------------------------------------
     //  TinyRegisterSet
@@ -330,6 +338,11 @@ namespace Mago
     uint64_t TinyRegisterSet::GetPC()
     {
         return mPC;
+    }
+
+    HRESULT TinyRegisterSet::SetPC(uint64_t addr)
+    {
+        return E_NOTIMPL;
     }
 
     bool TinyRegisterSet::GetThreadContext( const void*& context, uint32_t& contextSize )

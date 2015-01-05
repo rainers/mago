@@ -10,6 +10,7 @@
 #include "Program.h"
 #include "Module.h"
 #include "StackFrame.h"
+#include "CodeContext.h"
 #include "EnumFrameInfo.h"
 #include "IDebuggerProxy.h"
 #include "RegisterSet.h"
@@ -117,11 +118,45 @@ namespace Mago
     }
 
     HRESULT Thread::CanSetNextStatement( IDebugStackFrame2* pStackFrame, 
-                                          IDebugCodeContext2* pCodeContext )
-    { return E_NOTIMPL;} 
+                                         IDebugCodeContext2* pCodeContext )
+    {
+        if ( pCodeContext == NULL )
+            return E_INVALIDARG;
+
+        CComQIPtr<IMagoMemoryContext> magoMem = pCodeContext;
+        if ( magoMem == NULL )
+            return E_INVALIDARG;
+
+        return S_OK;
+    } 
     HRESULT Thread::SetNextStatement( IDebugStackFrame2* pStackFrame, 
-                                       IDebugCodeContext2* pCodeContext )
-    { return E_NOTIMPL;} 
+                                      IDebugCodeContext2* pCodeContext )
+    {
+        if ( pCodeContext == NULL )
+            return E_INVALIDARG;
+
+        CComQIPtr<IMagoMemoryContext> magoMem = pCodeContext;
+        if ( magoMem == NULL )
+            return E_INVALIDARG;
+
+        Address64 addr = 0;
+        magoMem->GetAddress( addr );
+        if ( addr == mCurPC )
+            return S_OK;
+
+        RefPtr<IRegisterSet>    topRegSet;
+
+        HRESULT hr = mDebugger->GetThreadContext( mProg->GetCoreProcess(), mCoreThread, topRegSet.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+        hr = topRegSet->SetPC( addr );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = mDebugger->SetThreadContext( mProg->GetCoreProcess(), mCoreThread, topRegSet );
+        return hr;
+    }
+
     HRESULT Thread::Suspend( DWORD* pdwSuspendCount )
     { return E_NOTIMPL;} 
     HRESULT Thread::Resume( DWORD* pdwSuspendCount )

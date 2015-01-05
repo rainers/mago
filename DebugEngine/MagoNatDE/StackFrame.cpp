@@ -579,6 +579,7 @@ namespace Mago
             MagoST::SymInfoData     childData = { 0 };
             MagoST::ISymbolInfo*    childSym = NULL;
             MagoST::SymTag          tag = MagoST::SymTagNull;
+            MagoST::DataKind        kind = MagoST::DataIsUnknown;
             RefPtr<MagoEE::Type>    type;
             RefPtr<MagoEE::Declaration> decl;
 
@@ -589,6 +590,9 @@ namespace Mago
             tag = childSym->GetSymTag();
             if ( tag == MagoST::SymTagEndOfArgs )
                 break;
+
+            if ( !childSym->GetDataKind( kind ) || kind != MagoST::DataIsParam )
+                continue;
 
             mExprContext->MakeDeclarationFromSymbol( childSH, decl.Ref() );
             if ( decl == NULL )

@@ -223,9 +223,7 @@ namespace Mago
         CComPtr<IDebugModule3>          mod3;
         MODULE_INFO_FLAGS               flags = 0;
         RefPtr<MagoST::ISession>        session;
-        CComBSTR                        name;
-
-        mod->GetName( name );
+        CComBSTR                        msg;
 
         hr = mod->QueryInterface( __uuidof( IDebugModule3 ), (void**) &mod3 );
         if ( FAILED( hr ) )
@@ -238,7 +236,13 @@ namespace Mago
         if ( mod->GetSymbolSession( session ) )
             flags |= MIF_SYMBOLS_LOADED;
 
-        symEvent->Init( mod3, name.m_str, flags );
+        mod->GetPath( msg );
+        if( flags & MIF_SYMBOLS_LOADED )
+            msg.Append( L" loaded, symbols found.");
+        else
+            msg.Append( L" loaded, no symbols.");
+
+        symEvent->Init( mod3, msg.m_str, flags );
 
         hr = SendEvent( symEvent.Get(), prog.Get(), NULL );
     }
@@ -252,6 +256,7 @@ namespace Mago
         RefPtr<Program>             prog;
         RefPtr<Module>              mod;
         CComPtr<IDebugModule2>      mod2;
+        CComBSTR                    msg;
 
         if ( !mEngine->FindProgram( uniquePid, prog ) )
             return;
@@ -271,8 +276,10 @@ namespace Mago
         if ( FAILED( hr ) )
             return;
 
-        // TODO: message
-        event->Init( mod2, NULL, false );
+        mod->GetPath( msg );
+        msg.Append( L" unloaded.");
+
+        event->Init( mod2, msg.m_str, false );
 
         SendEvent( event.Get(), prog.Get(), NULL );
     }

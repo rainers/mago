@@ -63,9 +63,18 @@ namespace Mago
         //{
         //}
 
-        //if ( (dwFields & MIF_DEBUGMESSAGE) != 0 )
-        //{
-        //}
+        if ( (dwFields & MIF_DEBUGMESSAGE) != 0 )
+        {
+            if ( mLoadedSymPath != NULL )
+            {
+                pInfo->m_bstrDebugMessage = SysAllocString( L"has Symbols." );
+            }
+            else
+            {
+                pInfo->m_bstrDebugMessage = SysAllocString( L"no symbols." );
+            }
+            pInfo->dwValidFields |= MIF_DEBUGMESSAGE;
+        }
 
         if ( (dwFields & MIF_LOADADDRESS) != 0 )
         {
@@ -111,6 +120,10 @@ namespace Mago
 
             if ( GetSession() != NULL )
                 pInfo->m_dwModuleFlags |= MODULE_FLAG_SYMBOLS;
+
+            uint16_t machine = mCoreMod->GetMachine();
+            if ( machine == IMAGE_FILE_MACHINE_AMD64 || machine == IMAGE_FILE_MACHINE_IA64 )
+                pInfo->m_dwModuleFlags |= MODULE_FLAG_64BIT;
 
             pInfo->dwValidFields |= MIF_FLAGS;
         }
@@ -249,6 +262,11 @@ namespace Mago
         // all other resources can be left open
 
         SetSession( NULL );
+    }
+
+    void    Module::GetPath( CComBSTR& path )
+    {
+        path = mCoreMod->GetPath();
     }
 
     void    Module::GetName( CComBSTR& name )

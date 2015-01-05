@@ -42,7 +42,8 @@ namespace Mago
         Address64 startAddr,
         Address64 endAddr,
         Address64 anchorAddr,
-        int ptrSize )
+        int ptrSize,
+        IDebugDisassemblyStream2* disasmStream )
         :   mBlockCount( blockCount ),
             mBlocks( blocks ),
             mStartAddr( startAddr ),
@@ -64,11 +65,43 @@ namespace Mago
         ud_init( &mDisasm );
         ud_set_mode( &mDisasm, (uint8_t) (ptrSize * 8) );
         ud_set_syntax( &mDisasm, UD_SYN_INTEL );
+
+        if ( disasmStream != NULL )
+        {
+            mDisasm.symbolizer = &Symbolize;
+            mDisasm.sym_context = disasmStream;
+        }
     }
 
     const ud_t* InstReader::GetDisasmData()
     {
         return &mDisasm;
+    }
+
+    // callback from udis86 to translate an address to a symbol
+    int InstReader::Symbolize( ud_t* ud, uint64_t addr )
+    {
+        IDebugDisassemblyStream2* dds = (IDebugDisassemblyStream2*) ud->sym_context;
+        CComPtr<IDebugCodeContext2> pCodeContext;
+        HRESULT hr = dds->GetCodeContext( addr, &pCodeContext );
+        if( FAILED( hr ) )
+            return 0;
+
+        CONTEXT_INFO info = { 0 };
+        hr = pCodeContext->GetInfo( CIF_FUNCTION | CIF_ADDRESSOFFSET, &info );
+        if( FAILED( hr ) || info.bstrFunction == NULL )
+            return 0;
+
+        ud->insn_fill += wcstombs( ud->insn_buffer + ud->insn_fill, info.bstrFunction, 100 );
+        if( info.dwFields & CIF_ADDRESSOFFSET )
+            ud->insn_fill += wcstombs( ud->insn_buffer + ud->insn_fill, info.bstrAddressOffset, 30 );
+        ud->insn_fill += sprintf( (char*) ud->insn_buffer + ud->insn_fill, " (0x%I64x)", addr );
+            
+        SysFreeString( info.bstrFunction );
+        if( info.bstrAddressOffset != NULL )
+            SysFreeString( info.bstrAddressOffset );
+
+        return 1;
     }
 
     // If the last disassembled instruction crosses the anchor, then the last 
@@ -121,9 +154,12 @@ namespace Mago
         return instLen;
     }
 
-    uint32_t InstReader::Disassemble( Address64 curPC )
+    uint32_t InstReader::Disassemble( Address64 curPC, bool symOps )
     {
         ud_set_pc( &mDisasm, curPC );
+
+        if( mDisasm.sym_context )
+            mDisasm.symbolizer = symOps ? &Symbolize : NULL;
 
         return Disassemble();
     }
@@ -378,7 +414,7 @@ namespace Mago
     {
         // TODO: assert params
 
-        InstReader  reader( blockCount, blocks, startAddr, endAddr, mAnchorAddr, mPtrSize );
+        InstReader  reader( blockCount, blocks, startAddr, endAddr, mAnchorAddr, mPtrSize, NULL );
         uint32_t    instLen = 0;
         uint32_t    virtPos = (uint32_t) (startAddr - blocks[0]->Address);
 

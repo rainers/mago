@@ -17,6 +17,8 @@ namespace Mago
     interface IMagoMemoryContext : IUnknown
     {
         STDMETHOD( GetAddress )( Address64& address ) = 0;
+        
+        STDMETHOD( GetScope )( MagoST::SymHandle& funcSH, MagoST::SymHandle& blockSH, RefPtr<Module>& module ) = 0;
     };
 
 
@@ -80,6 +82,8 @@ namespace Mago
 
         STDMETHOD( GetAddress )( Address64& addr );
 
+        STDMETHOD( GetScope )( MagoST::SymHandle& funcSH, MagoST::SymHandle& blockSH, RefPtr<Module>& module );
+
     public:
         static HRESULT MakeCodeContext( 
             Address64 newAddr, 
@@ -95,5 +99,6 @@ namespace Mago
         HRESULT FindFunction();
         BSTR GetFunctionName();
         TEXT_POSITION GetFunctionOffset();
+        bool GetAddressOffset( uint32_t& offset );
     };
 }

@@ -69,6 +69,7 @@ namespace Mago
         virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value ) = 0;
         virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly ) = 0;
         virtual uint64_t GetPC() = 0;
+        virtual HRESULT SetPC(uint64_t addr) = 0;
         virtual bool GetThreadContext( const void*& context, uint32_t& contextSize ) = 0;
         virtual RegisterType GetRegisterType( uint32_t regId ) = 0;
     };
@@ -99,6 +100,7 @@ namespace Mago
         virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value );
         virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly );
         virtual uint64_t GetPC();
+        virtual HRESULT SetPC(uint64_t addr);
         virtual bool GetThreadContext( const void*& context, uint32_t& contextSize );
         virtual RegisterType GetRegisterType( uint32_t regId );
     };
@@ -134,6 +136,7 @@ namespace Mago
         virtual HRESULT SetValue( uint32_t regId, const RegisterValue& value );
         virtual HRESULT IsReadOnly( uint32_t regId, bool& readOnly );
         virtual uint64_t GetPC();
+        virtual HRESULT SetPC(uint64_t addr);
         virtual bool GetThreadContext( const void*& context, uint32_t& contextSize );
         virtual RegisterType GetRegisterType( uint32_t regId );
     };

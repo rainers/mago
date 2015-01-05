@@ -69,6 +69,7 @@ namespace Mago
 
         // TODO: could this benefit from r-value refs?
         void    GetName( CComBSTR& name );
+        void    GetPath( CComBSTR& path );
 
         Address64 GetAddress();
         DWORD   GetSize();

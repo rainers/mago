@@ -211,7 +211,7 @@ namespace MagoST
 
     bool BPRelSymbol::GetDataKind( DataKind& dataKind )
     {
-        dataKind = DataIsLocal;
+        dataKind = mData.Symbol.Handle.Sym->bprel.offset < 0 ? DataIsParam : DataIsLocal;
         return true;
     }
 

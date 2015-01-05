@@ -91,6 +91,17 @@ namespace Mago
 
         if ( (dwFields & CIF_ADDRESSOFFSET) != 0 )
         {
+            uint32_t offset = 0;
+            if( GetAddressOffset( offset ) && offset != 0 )
+            {
+                wchar_t offStr[MaxAddrStringLength + 1] = L"";
+                swprintf_s( offStr, MaxAddrStringLength, L"+0x%x", offset );
+
+                pInfo->bstrAddressOffset = SysAllocString( offStr );
+
+                if ( pInfo->bstrAddressOffset != NULL )
+                    pInfo->dwFields |= CIF_ADDRESSOFFSET;
+            }
         }
 
         if ( (dwFields & CIF_ADDRESSABSOLUTE) != 0 )
@@ -175,15 +186,33 @@ namespace Mago
                 result = (mAddr >= otherAddr);
                 break;
 
-                // TODO:
-            case CONTEXT_SAME_SCOPE:
-                result = (mAddr == otherAddr);
-                break;
-
             case CONTEXT_SAME_FUNCTION:
             case CONTEXT_SAME_MODULE:
             case CONTEXT_SAME_PROCESS:
-                break;
+            case CONTEXT_SAME_SCOPE: 
+            {
+                MagoST::SymHandle funcSH, blockSH;
+                RefPtr<Module> module;
+                if( magoCode->GetScope( funcSH, blockSH, module ) == S_OK )
+                {
+                    FindFunction();
+                    switch ( compare )
+                    {
+                    case CONTEXT_SAME_SCOPE: 
+                        result = memcmp( &mBlockSH, &blockSH, sizeof( mBlockSH ) ) == 0;
+                        break;
+                    case CONTEXT_SAME_FUNCTION:
+                        result = memcmp( &mFuncSH, &funcSH, sizeof( mFuncSH ) ) == 0;
+                        break;
+                    case CONTEXT_SAME_MODULE:
+                        result = (mModule == module);
+                        break;
+                    case CONTEXT_SAME_PROCESS:
+                        // TODO
+                        break;
+                    }
+                }
+            }
             }
 
             if ( result )
@@ -229,6 +258,15 @@ namespace Mago
     HRESULT CodeContext::GetAddress( Address64& addr )
     {
         addr = mAddr;
+        return S_OK;
+    }
+
+    HRESULT CodeContext::GetScope( MagoST::SymHandle& funcSH, MagoST::SymHandle& blockSH, RefPtr<Module>& module )
+    {
+        FindFunction();
+        funcSH = mFuncSH;
+        blockSH = mBlockSH;
+        module = mModule;
         return S_OK;
     }
 
@@ -345,6 +383,38 @@ namespace Mago
             return NULL;
 
         return bstrName.Detach();
+    }
+
+    bool CodeContext::GetAddressOffset( uint32_t& offset )
+    {
+        HRESULT hr = S_OK;
+        MagoST::SymInfoData         infoData = { 0 };
+        MagoST::ISymbolInfo*        symInfo = NULL;
+        RefPtr<MagoST::ISession>    session;
+        SymString                   pstrName;
+        CComBSTR                    bstrName;
+
+        hr = FindFunction();
+        if ( FAILED( hr ) )
+            return false;
+
+        if ( !mModule->GetSymbolSession( session ) )
+            return false;
+
+        hr = session->GetSymbolInfo( mFuncSH, infoData, symInfo );
+        if ( FAILED( hr ) )
+            return false;
+
+        uint32_t off;
+        uint16_t seg;
+        if( !symInfo->GetAddressOffset( off ) )
+            return false;
+        if( !symInfo->GetAddressSegment( seg ) )
+            return false;
+        uint64_t addr = session->GetVAFromSecOffset( seg, off );
+
+        offset = (uint32_t) ( mAddr - addr );
+        return true;
     }
 
     TEXT_POSITION CodeContext::GetFunctionOffset()

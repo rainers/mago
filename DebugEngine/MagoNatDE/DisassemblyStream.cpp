@@ -177,6 +177,27 @@ namespace Mago
                 pDisassembly->dwFlags |= DF_DOCUMENTCHANGE;
             pDisassembly->dwFields |= DSF_FLAGS;
         }
+
+        if( ( dwFields & DSF_SYMBOL ) != 0 )
+        {
+            CComPtr<IDebugCodeContext2> pCodeContext;
+            HRESULT hr = GetCodeContext( mReadAddr, &pCodeContext );
+            if( !FAILED( hr ) )
+            {
+                CONTEXT_INFO info = { 0 };
+                hr = pCodeContext->GetInfo( CIF_FUNCTION | CIF_ADDRESSOFFSET, &info );
+                if( !FAILED( hr ) && info.bstrFunction != NULL && info.bstrAddressOffset == NULL )
+                {
+                    pDisassembly->bstrSymbol = info.bstrFunction;
+                    pDisassembly->dwFields |= DSF_SYMBOL;
+                    info.bstrFunction = NULL;
+                }
+                if( info.bstrFunction != NULL )
+                    SysFreeString( info.bstrFunction );
+                if( info.bstrAddressOffset != NULL )
+                    SysFreeString( info.bstrAddressOffset );
+            }
+        }
     }
 
     HRESULT DisassemblyStream::Read( 
@@ -206,7 +227,7 @@ namespace Mago
         InstBlock*  blocks[2] = { block, nextBlock };
         uint32_t    blockCount = (nextBlock == NULL ? 1 : 2);
         Address64   endAddr = (nextBlock == NULL ? block->GetLimit() : nextBlock->GetLimit());
-        InstReader  reader( blockCount, blocks, mReadAddr, endAddr, mAnchorAddr, mPtrSize );
+        InstReader  reader( blockCount, blocks, mReadAddr, endAddr, mAnchorAddr, mPtrSize, this );
         uint32_t    instLen = 0;
 
         // we might have already determined there were invalid instructions there
@@ -236,6 +257,7 @@ namespace Mago
         }
 
         mStartOfRead = true;
+        bool symOps = ( ( dwFields & DSF_OPERANDS_SYMBOLS ) != 0 );
 
         // update for the byte before the first one in the range, so that we 
         // always get an accurate document change indication no matter where 
@@ -243,9 +265,9 @@ namespace Mago
 
         mDocInfo.Update( mReadAddr - 1 );
 
-        for ( instLen = reader.Disassemble( mReadAddr ); 
+        for ( instLen = reader.Disassemble( mReadAddr, symOps ); 
             (instLen != 0) && (instFound < instToFind); 
-            instLen = reader.Disassemble( mReadAddr ) )
+            instLen = reader.Disassemble( mReadAddr, symOps ) )
         {
             const ud_t* ud = reader.GetDisasmData();
 
@@ -654,7 +676,7 @@ namespace Mago
         InstBlock*  blocks[2] = { block, nextBlock };
         uint32_t    blockCount = (nextBlock == NULL ? 1 : 2);
         Address64   endAddr = (nextBlock == NULL ? block->GetLimit() : nextBlock->GetLimit());
-        InstReader  reader( blockCount, blocks, mAnchorAddr, endAddr, mAnchorAddr, mPtrSize );
+        InstReader  reader( blockCount, blocks, mAnchorAddr, endAddr, mAnchorAddr, mPtrSize, 0 );
         uint32_t    instLen = 0;
 
         for ( instLen = reader.Decode(); 

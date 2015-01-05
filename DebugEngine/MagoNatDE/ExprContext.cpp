@@ -1329,13 +1329,18 @@ namespace Mago
             return E_INVALIDARG;
 
         bool isArray = false;
+        bool isDstring = false;
         if( name.GetLength() == 6 )
             isArray = ( strncmp( name.GetName(), "dArray", 6 ) == 0 || strncmp( name.GetName(), "string", 6 ) == 0 );
-        else if( name.GetLength() == 7 )
-            isArray = ( strncmp( name.GetName(), "wstring", 7 ) == 0 || strncmp( name.GetName(), "dstring", 7 ) == 0 );
+        else if( name.GetLength() == 7 && strncmp( name.GetName(), "wstring", 7 ) == 0 )
+            isArray = true;
+        else if( name.GetLength() == 7 && strncmp( name.GetName(), "dstring", 7 ) == 0 )
+            isArray = isDstring = true;
         if( !isArray && name.GetLength() > 2 )
+        {
             isArray = strcmp( name.GetName() + name.GetLength() - 2, "[]" ) == 0;
-
+            isDstring = isArray && ( strcmp( name.GetName(), "dchar[]" ) == 0 || strcmp( name.GetName(), "const(dchar)[]" ) == 0 );
+        }
         if( isArray )
         {
             MagoEE::Declaration* ptrdecl = NULL;
@@ -1348,7 +1353,16 @@ namespace Mago
             {
                 MagoEE::ITypeNext* nexttype = ptrtype->AsTypeNext();
                 if( nexttype != NULL )
-                    hr = mTypeEnv->NewDArray( nexttype->GetNext(), type );
+                {
+                    if( isDstring )
+                    {
+                        MagoEE::TypeBasic* tb = new MagoEE::TypeBasic( MagoEE::Tdchar );
+                        tb->Mod = nexttype->GetNext()->Mod;
+                        hr = mTypeEnv->NewDArray( tb, type );
+                    }
+                    else
+                        hr = mTypeEnv->NewDArray( nexttype->GetNext(), type );
+                }
             }
 
             if( ptrtype )
