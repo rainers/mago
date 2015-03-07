@@ -19,7 +19,6 @@
 #include <MagoCVConst.h>
 
 using namespace std;
-using namespace boost;
 using MagoEE::Type;
 using namespace MagoST;
 
@@ -264,7 +263,7 @@ void ConvertVariantToDataVal( const Variant& var, MagoEE::DataValue& dataVal )
     }
 }
 
-boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Declaration* decl )
+std::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Declaration* decl )
 {
     _ASSERT( decl != NULL );
 
@@ -272,7 +271,7 @@ boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Declaration* decl 
     DiaDecl*                    diaDecl = (DiaDecl*) decl;
     ISymbolInfo*                sym = diaDecl->GetSymbol();
     LocationType                loc = LocIsNull;
-    boost::shared_ptr<DataObj>  val;
+    std::shared_ptr<DataObj>  val;
     MagoEE::DataValueKind       valKind = MagoEE::DataValueKind_None;
     MagoEE::DataValue           dataVal = { 0 };
     RefPtr<Type>                type;
@@ -427,15 +426,15 @@ boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Declaration* decl 
     return val;
 }
 
-boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Address address, MagoEE::Type* type )
+std::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Address address, MagoEE::Type* type )
 {
     return GetValue( address, type, NULL );
 }
 
-boost::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Address address, Type* type, MagoEE::Declaration* decl )
+std::shared_ptr<DataObj> ProgramValueEnv::GetValue( MagoEE::Address address, Type* type, MagoEE::Declaration* decl )
 {
     HRESULT hr = S_OK;
-    boost::shared_ptr<DataObj> val( new LValueObj( decl, address ) );
+    std::shared_ptr<DataObj> val( new LValueObj( decl, address ) );
 
     val->SetType( type );
 

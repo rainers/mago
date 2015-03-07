@@ -26,8 +26,8 @@ public:
 
     virtual MagoEE::Address Allocate( uint32_t size );
 
-    virtual boost::shared_ptr<DataObj> GetValue( MagoEE::Declaration* decl );
-    virtual boost::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type );
+    virtual std::shared_ptr<DataObj> GetValue( MagoEE::Declaration* decl );
+    virtual std::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type );
     virtual void SetValue( MagoEE::Address address, DataObj* obj );
     virtual RefPtr<MagoEE::Declaration> GetThis();
     virtual RefPtr<MagoEE::Declaration> GetSuper();
@@ -37,7 +37,7 @@ public:
     static Real10 ReadFloat( uint8_t* srcBuf, MagoEE::Address addr, MagoEE::Type* type );
 
 private:
-    boost::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type, MagoEE::Declaration* decl );
+    std::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type, MagoEE::Declaration* decl );
 
     uint64_t ReadInt( MagoEE::Address addr, size_t size, bool isSigned );
     Real10 ReadFloat( MagoEE::Address addr, MagoEE::Type* type );

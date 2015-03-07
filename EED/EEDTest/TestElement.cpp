@@ -257,7 +257,7 @@ void TestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
 }
 
-boost::shared_ptr<DataObj> TestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> TestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     throw L"Can't evaluate.";
 }
@@ -306,9 +306,9 @@ void IntTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv 
     mType = typeEnv->GetType( MagoEE::Tint32 );
 }
 
-boost::shared_ptr<DataObj> IntTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> IntTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
 
     val->SetType( mType );
     val->Value.UInt64Value = mVal;
@@ -367,9 +367,9 @@ void RealTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv
 #endif
 }
 
-boost::shared_ptr<DataObj> RealTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> RealTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
 
     val->SetType( mType );
     val->Value.Float80Value = mVal;
@@ -467,9 +467,9 @@ void NullTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv
     mType = typeEnv->GetVoidPointerType();
 }
 
-boost::shared_ptr<DataObj> NullTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> NullTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
 
     val->SetType( mType );
 
@@ -529,9 +529,9 @@ void DArrayTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataE
         throw L"Failed making new D-Array type.";
 }
 
-boost::shared_ptr<DataObj> DArrayTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> DArrayTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
 
     val->SetType( mType );
     val->Value.Array = mVal;
@@ -632,11 +632,11 @@ void ArithmeticTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* d
         mChildren[1]->GetType() );
 }
 
-boost::shared_ptr<DataObj> ArithmeticTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> ArithmeticTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
-    boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-    boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
 
     val->SetType( mType );
 
@@ -1139,7 +1139,7 @@ const wchar_t* AddTestElement::GetPreOrPostOperator()
     return L"++";
 }
 
-boost::shared_ptr<DataObj> AddTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> AddTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     Type*   ltype = mChildren[0]->GetType();
     Type*   rtype = mChildren[1]->GetType();
@@ -1148,9 +1148,9 @@ boost::shared_ptr<DataObj> AddTestElement::Evaluate( ITypeEnv* typeEnv, IScope* 
         || ((ltype->IsReal() || ltype->IsIntegral()) && rtype->IsImaginary()) )
     {
         // making up a complex, not actually subtracting
-        boost::shared_ptr<DataObj>     val( new RValueObj() );
-        boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-        boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     val( new RValueObj() );
+        std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
         Complex10   c;
 
         if ( ltype->IsReal() || ltype->IsIntegral() )
@@ -1215,7 +1215,7 @@ const wchar_t* SubTestElement::GetPreOrPostOperator()
     return L"--";
 }
 
-boost::shared_ptr<DataObj> SubTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> SubTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     Type*   ltype = mChildren[0]->GetType();
     Type*   rtype = mChildren[1]->GetType();
@@ -1224,9 +1224,9 @@ boost::shared_ptr<DataObj> SubTestElement::Evaluate( ITypeEnv* typeEnv, IScope* 
         || ((ltype->IsReal() || ltype->IsIntegral()) && rtype->IsImaginary()) )
     {
         // making up a complex, not actually subtracting
-        boost::shared_ptr<DataObj>     val( new RValueObj() );
-        boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-        boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     val( new RValueObj() );
+        std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
         Complex10   c;
 
         if ( ltype->IsReal() || ltype->IsIntegral() )
@@ -1252,9 +1252,9 @@ boost::shared_ptr<DataObj> SubTestElement::Evaluate( ITypeEnv* typeEnv, IScope* 
         // I would prefer if it was (0 + Xi) - complex, in other words, 
         // let ArithmeticTestElement::Evaluate handle it by promoting the imaginary to a complex
 
-        boost::shared_ptr<DataObj>     val( new RValueObj() );
-        boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-        boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     val( new RValueObj() );
+        std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
         Complex10   c;
 
         Real10  r = ConvertToFloat( left.get() );
@@ -1318,9 +1318,9 @@ void MulTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv 
         mChildren[1]->GetType() );
 }
 
-boost::shared_ptr<DataObj> MulTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> MulTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val;
+    std::shared_ptr<DataObj>   val;
 
     Type*   ltype = mChildren[0]->GetType();
     Type*   rtype = mChildren[1]->GetType();
@@ -1329,8 +1329,8 @@ boost::shared_ptr<DataObj> MulTestElement::Evaluate( ITypeEnv* typeEnv, IScope* 
         || (ltype->IsComplex() && (rtype->IsImaginary() || rtype->IsReal() || rtype->IsIntegral())) )
     {
         val.reset( new RValueObj() );
-        boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-        boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
         Complex10   c;
 
         if ( ltype->IsReal() || ltype->IsIntegral() )
@@ -1445,9 +1445,9 @@ void DivTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv 
         mChildren[1]->GetType() );
 }
 
-boost::shared_ptr<DataObj> DivTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> DivTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val;
+    std::shared_ptr<DataObj>   val;
 
     Type*   ltype = mChildren[0]->GetType();
     Type*   rtype = mChildren[1]->GetType();
@@ -1455,8 +1455,8 @@ boost::shared_ptr<DataObj> DivTestElement::Evaluate( ITypeEnv* typeEnv, IScope* 
     if ( ltype->IsComplex() && (rtype->IsReal() || rtype->IsIntegral() || rtype->IsImaginary()) )
     {
         val.reset( new RValueObj() );
-        boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-        boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
         Complex10   c;
 
         if ( rtype->IsReal() || rtype->IsIntegral() )
@@ -1654,9 +1654,9 @@ void NegateTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataE
         throw L"Can only negate integrals and floats.";
 }
 
-boost::shared_ptr<DataObj> NegateTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> NegateTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<DataObj>   val( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
 
     if ( mType->IsComplex() )
     {
@@ -1699,7 +1699,7 @@ void UnaryAddTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dat
         throw L"Can only UnaryAdd integrals and floats.";
 }
 
-boost::shared_ptr<DataObj> UnaryAddTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> UnaryAddTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     return mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
 }
@@ -1830,9 +1830,9 @@ void BitNotTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataE
         throw L"Can only BitNot integrals.";
 }
 
-boost::shared_ptr<DataObj> BitNotTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> BitNotTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<DataObj>   val( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
 
     _ASSERT( mType->IsIntegral() );
 
@@ -1869,11 +1869,11 @@ void ShiftTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEn
         mType = typeEnv->GetType( MagoEE::Tint32 );
 }
 
-boost::shared_ptr<DataObj> ShiftTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> ShiftTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
-    boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-    boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
 
     val->SetType( mType );
 
@@ -1994,16 +1994,16 @@ void AndAndTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataE
     mType = typeEnv->GetType( MagoEE::Tbool );
 }
 
-boost::shared_ptr<DataObj> AndAndTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> AndAndTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
-    boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
 
     val->SetType( mType );
 
     if ( EvalBool( left.get() ) )
     {
-        boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
 
         val->Value.UInt64Value = EvalBool( right.get() ) ? 1 : 0;
     }
@@ -2090,16 +2090,16 @@ void OrOrTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv
     mType = typeEnv->GetType( MagoEE::Tbool );
 }
 
-boost::shared_ptr<DataObj> OrOrTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> OrOrTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
-    boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
 
     val->SetType( mType );
 
     if ( !AndAndTestElement::EvalBool( left.get() ) )
     {
-        boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+        std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
 
         val->Value.UInt64Value = AndAndTestElement::EvalBool( right.get() ) ? 1 : 0;
     }
@@ -2133,10 +2133,10 @@ void NotTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv 
     mType = typeEnv->GetType( MagoEE::Tbool );
 }
 
-boost::shared_ptr<DataObj> NotTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> NotTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
-    boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
 
     val->SetType( mType );
 
@@ -2239,11 +2239,11 @@ void CompareTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* data
     mType = typeEnv->GetType( MagoEE::Tbool );
 }
 
-boost::shared_ptr<DataObj> CompareTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> CompareTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
-    boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-    boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
     RefPtr<Type>            commonType;
 
     val->SetType( mType );
@@ -2476,11 +2476,11 @@ void PtrArithmeticTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv
         throw L"Can only PtrArithmetic pointers with integrals.";
 }
 
-boost::shared_ptr<DataObj> PtrArithmeticTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> PtrArithmeticTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
-    boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-    boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
 
     val->SetType( mType );
 
@@ -2571,11 +2571,11 @@ void PtrDiffTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* data
     mType = typeEnv->GetAliasType( MagoEE::Tptrdiff_t );
 }
 
-boost::shared_ptr<DataObj> PtrDiffTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> PtrDiffTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<RValueObj>   val( new RValueObj() );
-    boost::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
-    boost::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<RValueObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>     left( mChildren[0]->Evaluate( typeEnv, scope, dataEnv ) );
+    std::shared_ptr<DataObj>     right( mChildren[1]->Evaluate( typeEnv, scope, dataEnv ) );
 
     Type*    elemType = left->GetType()->AsTypeNext()->GetNext();
 
@@ -2606,7 +2606,7 @@ void GroupTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEn
     mType = mChildren[0]->GetType();
 }
 
-boost::shared_ptr<DataObj> GroupTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> GroupTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     return mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
 }
@@ -2722,10 +2722,10 @@ void CastTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv
     }
 }
 
-boost::shared_ptr<DataObj> CastTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> CastTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj> child;
-    boost::shared_ptr<DataObj> val( new RValueObj() );
+    std::shared_ptr<DataObj> child;
+    std::shared_ptr<DataObj> val( new RValueObj() );
 
     if ( mChildren.size() > 1 )
         child = mChildren[1]->Evaluate( typeEnv, scope, dataEnv );
@@ -3093,7 +3093,7 @@ void BasicTypeTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* da
     _ASSERT( mType.Get() != NULL );
 }
 
-boost::shared_ptr<DataObj> BasicTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> BasicTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     throw L"Can't evaluate a type.";
 }
@@ -3157,7 +3157,7 @@ void RefTypeTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* data
         throw L"Couldn't get type.";
 }
 
-boost::shared_ptr<DataObj> RefTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> RefTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     throw L"Can't evaluate a type.";
 }
@@ -3221,7 +3221,7 @@ void PointerTypeTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* 
     _ASSERT( mType.Get() != NULL );
 }
 
-boost::shared_ptr<DataObj> PointerTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> PointerTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     throw L"Can't evaluate a type.";
 }
@@ -3273,7 +3273,7 @@ void SArrayTypeTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* d
     _ASSERT( mType.Get() != NULL );
 }
 
-boost::shared_ptr<DataObj> SArrayTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> SArrayTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     throw L"Can't evaluate a type.";
 }
@@ -3327,7 +3327,7 @@ void DArrayTypeTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* d
     _ASSERT( mType.Get() != NULL );
 }
 
-boost::shared_ptr<DataObj> DArrayTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> DArrayTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     throw L"Can't evaluate a type.";
 }
@@ -3379,7 +3379,7 @@ void AArrayTypeTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* d
     _ASSERT( mType.Get() != NULL );
 }
 
-boost::shared_ptr<DataObj> AArrayTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> AArrayTypeTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     throw L"Can't evaluate a type.";
 }
@@ -3436,7 +3436,7 @@ void VerifyTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataE
         ThrowError( L"needs a TypedValue." );
 }
 
-void TestElement::VerifyCompareValues( ITypeEnv* typeEnv, const boost::shared_ptr<DataObj>& val, const boost::shared_ptr<DataObj>& refVal )
+void TestElement::VerifyCompareValues( ITypeEnv* typeEnv, const std::shared_ptr<DataObj>& val, const std::shared_ptr<DataObj>& refVal )
 {
     if ( !val->GetType()->Equals( refVal->GetType() ) )
     {
@@ -3511,10 +3511,10 @@ void TestElement::VerifyCompareValues( ITypeEnv* typeEnv, const boost::shared_pt
     }
 }
 
-boost::shared_ptr<DataObj> VerifyTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> VerifyTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     //_ASSERT( _wcsicmp( mId.c_str(), L"37.1" ) != 0 );
-    boost::shared_ptr<DataObj> val;
+    std::shared_ptr<DataObj> val;
 
     try
     {
@@ -3575,10 +3575,10 @@ void VerifyCompareMemory( DataEnv* oldEnv, DataEnv* newEnv, size_t addr, size_t 
     }
 }
 
-boost::shared_ptr<DataObj> VerifyTestElement::EvaluateSelf( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> VerifyTestElement::EvaluateSelf( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj> val;
-    boost::shared_ptr<DataObj> refVal;
+    std::shared_ptr<DataObj> val;
+    std::shared_ptr<DataObj> refVal;
     bool    hasMemChecks = mChildren.size() > 2;
 
     if ( hasMemChecks && (gAppSettings.TestEvalDataEnv != NULL) )
@@ -3638,10 +3638,10 @@ boost::shared_ptr<DataObj> VerifyTestElement::EvaluateSelf( ITypeEnv* typeEnv, I
     return val;
 }
 
-boost::shared_ptr<DataObj> VerifyTestElement::EvaluateEED( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> VerifyTestElement::EvaluateEED( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj> val;
-    boost::shared_ptr<DataObj> refVal;
+    std::shared_ptr<DataObj> val;
+    std::shared_ptr<DataObj> refVal;
     bool    hasMemChecks = mChildren.size() > 2;
 
     if ( hasMemChecks && (gAppSettings.TestEvalDataEnv != NULL) )
@@ -3683,7 +3683,7 @@ boost::shared_ptr<DataObj> VerifyTestElement::EvaluateEED( ITypeEnv* typeEnv, IS
     return val;
 }
 
-boost::shared_ptr<DataObj> VerifyTestElement::EvaluateText( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> VerifyTestElement::EvaluateText( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     wostringstream      stream;
 
@@ -3723,7 +3723,7 @@ boost::shared_ptr<DataObj> VerifyTestElement::EvaluateText( ITypeEnv* typeEnv, I
         ThrowError( msg.c_str() );
     }
 
-    boost::shared_ptr<DataObj> val;
+    std::shared_ptr<DataObj> val;
 
     if ( result.ObjVal.Addr != 0 )
         val.reset( new LValueObj( NULL, result.ObjVal.Addr ) );
@@ -3847,9 +3847,9 @@ void TypedValueTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* d
         throw L"Type expected.";
 }
 
-boost::shared_ptr<DataObj> TypedValueTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> TypedValueTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val;
+    std::shared_ptr<DataObj>   val;
 
     if ( dynamic_cast<TypeTestElement*>( mChildren[0].Get() ) == NULL )
     {
@@ -3913,10 +3913,10 @@ void MemoryValueTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* 
     mType = mChildren[0]->GetType();
 }
 
-boost::shared_ptr<DataObj> MemoryValueTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> MemoryValueTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val;
-    boost::shared_ptr<DataObj>   refVal;
+    std::shared_ptr<DataObj>   val;
+    std::shared_ptr<DataObj>   refVal;
 
     refVal = mChildren[1]->Evaluate( typeEnv, scope, dataEnv );
 
@@ -3955,9 +3955,9 @@ void MemoryValueTestElement::SetAttribute( const wchar_t* name, const wchar_t* v
 //  TestTestElement
 //----------------------------------------------------------------------------
 
-boost::shared_ptr<DataObj> TestTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> TestTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val;
+    std::shared_ptr<DataObj>   val;
 
     for ( List::iterator it = mChildren.begin();
         it != mChildren.end();
@@ -4024,9 +4024,9 @@ void IdTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
     bool    ok = mDecl->GetType( mType.Ref() );
 }
 
-boost::shared_ptr<DataObj> IdTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> IdTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val;
+    std::shared_ptr<DataObj>   val;
 
     if ( mDecl->IsConstant() || mDecl->IsVar() )
     {
@@ -4035,7 +4035,7 @@ boost::shared_ptr<DataObj> IdTestElement::Evaluate( ITypeEnv* typeEnv, IScope* s
     else if ( mDecl->IsField() )
     {
         RefPtr<MagoEE::Declaration> thisDecl;
-        boost::shared_ptr<DataObj>  thisVal;
+        std::shared_ptr<DataObj>  thisVal;
         MagoEE::Address             addr = 0;
         int                         offset = 0;
         RefPtr<Type>                type;
@@ -4133,9 +4133,9 @@ void MemberTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataE
     bool    ok = mDecl->GetType( mType.Ref() );
 }
 
-boost::shared_ptr<DataObj> MemberTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> MemberTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val;
+    std::shared_ptr<DataObj>   val;
 
     if ( mDecl->IsConstant() || mDecl->IsVar() )
     {
@@ -4143,7 +4143,7 @@ boost::shared_ptr<DataObj> MemberTestElement::Evaluate( ITypeEnv* typeEnv, IScop
     }
     else if ( mDecl->IsField() )
     {
-        boost::shared_ptr<DataObj> parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+        std::shared_ptr<DataObj> parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
         MagoEE::Address     parentAddr = 0;
         MagoEE::Address     addr = 0;
         RefPtr<Type>        type;
@@ -4276,9 +4276,9 @@ void StdPropertyTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* 
         throw L"Couldn't find standard property.";
 }
 
-boost::shared_ptr<DataObj> StdPropertyTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> StdPropertyTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val;
+    std::shared_ptr<DataObj>   val;
 
     RefPtr<Declaration> parentDecl = mChildren[0]->GetDeclaration();
     Type*               parentType = mChildren[0]->GetType();
@@ -4314,7 +4314,7 @@ boost::shared_ptr<DataObj> StdPropertyTestElement::Evaluate( ITypeEnv* typeEnv, 
     {
         if ( (parentType != NULL) && parentType->IsFloatingPoint() )
         {
-            boost::shared_ptr<DataObj> parentVal = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+            std::shared_ptr<DataObj> parentVal = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
             Real10& r = val->Value.Float80Value;
 
             if ( parentVal->GetType()->IsReal() )
@@ -4334,7 +4334,7 @@ boost::shared_ptr<DataObj> StdPropertyTestElement::Evaluate( ITypeEnv* typeEnv, 
     {
         if ( (parentType != NULL) && parentType->IsFloatingPoint() )
         {
-            boost::shared_ptr<DataObj> parentVal = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+            std::shared_ptr<DataObj> parentVal = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
             Real10& r = val->Value.Float80Value;
 
             if ( parentVal->GetType()->IsReal() )
@@ -4358,7 +4358,7 @@ boost::shared_ptr<DataObj> StdPropertyTestElement::Evaluate( ITypeEnv* typeEnv, 
                 val->Value.UInt64Value = parentType->AsTypeSArray()->GetLength();
             else
             {
-                boost::shared_ptr<DataObj> parentVal = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+                std::shared_ptr<DataObj> parentVal = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
 
                 val->Value.UInt64Value = parentVal->Value.Array.Length;
             }
@@ -4370,7 +4370,7 @@ boost::shared_ptr<DataObj> StdPropertyTestElement::Evaluate( ITypeEnv* typeEnv, 
     {
         if ( (parentType != NULL) && (parentType->IsSArray() || parentType->IsDArray()) )
         {
-            boost::shared_ptr<DataObj> parentVal = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+            std::shared_ptr<DataObj> parentVal = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
 
             if ( parentType->IsSArray() )
             {
@@ -4415,9 +4415,9 @@ public:
     IndexDataEnv( IValueEnv* parentEnv, MagoEE::dlength_t arrayLen )
         : mParentEnv( parentEnv ), mArrayLen( arrayLen )
     { }
-    virtual boost::shared_ptr<DataObj> GetValue( MagoEE::Declaration* decl )
+    virtual std::shared_ptr<DataObj> GetValue( MagoEE::Declaration* decl )
     { return mParentEnv->GetValue( decl ); }
-    virtual boost::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type )
+    virtual std::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type )
     { return mParentEnv->GetValue( address, type ); }
     virtual void SetValue( MagoEE::Address address, DataObj* obj )
     { mParentEnv->SetValue( address, obj ); }
@@ -4457,11 +4457,11 @@ void IndexTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEn
     mType = parentType->AsTypeNext()->GetNext();
 }
 
-boost::shared_ptr<DataObj> IndexTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> IndexTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>     val;
-    boost::shared_ptr<DataObj>     parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
-    boost::shared_ptr<DataObj>     index;
+    std::shared_ptr<DataObj>     val;
+    std::shared_ptr<DataObj>     parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     index;
     uint32_t                elemSize = mType->GetSize();
     int64_t                 offset = 0;
     MagoEE::Address         addr = 0;
@@ -4557,12 +4557,12 @@ void SliceTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEn
         throw L"Failed making new D-array type for Slice.";
 }
 
-boost::shared_ptr<DataObj> SliceTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> SliceTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>     val( new RValueObj() );
-    boost::shared_ptr<DataObj>     parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
-    boost::shared_ptr<DataObj>     index( new RValueObj() );
-    boost::shared_ptr<DataObj>     limit( new RValueObj() );
+    std::shared_ptr<DataObj>     val( new RValueObj() );
+    std::shared_ptr<DataObj>     parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     index( new RValueObj() );
+    std::shared_ptr<DataObj>     limit( new RValueObj() );
     uint32_t                elemSize = mType->AsTypeNext()->GetNext()->GetSize();
     int64_t                 offset = 0;
     MagoEE::Address         addr = 0;
@@ -4651,10 +4651,10 @@ void AddressTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* data
         throw L"Couldn't make new pointer type.";
 }
 
-boost::shared_ptr<DataObj> AddressTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> AddressTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>     val( new RValueObj() );
-    boost::shared_ptr<DataObj>     parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     val( new RValueObj() );
+    std::shared_ptr<DataObj>     parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
     MagoEE::Address         addr = 0;
 
     if ( !parent->GetAddress( addr ) )
@@ -4697,10 +4697,10 @@ void PointerTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* data
     mType = parentType->AsTypeNext()->GetNext();
 }
 
-boost::shared_ptr<DataObj> PointerTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> PointerTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>     val;
-    boost::shared_ptr<DataObj>     parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     val;
+    std::shared_ptr<DataObj>     parent = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
     MagoEE::Address         addr = 0;
 
     if ( mChildren[0]->GetType()->IsDArray() )
@@ -4739,9 +4739,9 @@ void DollarTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataE
     mType = typeEnv->GetType( MagoEE::Tuns32 );
 }
 
-boost::shared_ptr<DataObj> DollarTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> DollarTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
-    boost::shared_ptr<DataObj>   val( new RValueObj() );
+    std::shared_ptr<DataObj>   val( new RValueObj() );
     MagoEE::dlength_t       len = 0;
 
     if ( !dataEnv->GetArrayLength( len ) )
@@ -4793,11 +4793,11 @@ void AssignTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataE
     mType = mChildren[0]->GetType();
 }
 
-boost::shared_ptr<DataObj> AssignTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> AssignTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     // TODO: we don't need to evaluate it, only get its address
-    boost::shared_ptr<DataObj>     val = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
-    boost::shared_ptr<DataObj>     rightVal = mChildren[1]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     val = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     rightVal = mChildren[1]->Evaluate( typeEnv, scope, dataEnv );
     MagoEE::Address         addr = 0;
 
     // in this test framework, L-values always have addresses
@@ -4851,11 +4851,11 @@ void PreAssignTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* da
     mType = mBinElem->GetType();
 }
 
-boost::shared_ptr<DataObj> PreAssignTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> PreAssignTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     // TODO: we don't need to evaluate it, only get its address
-    boost::shared_ptr<DataObj>     val = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
-    boost::shared_ptr<DataObj>     rightVal = mBinElem->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     val = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     rightVal = mBinElem->Evaluate( typeEnv, scope, dataEnv );
     MagoEE::Address         addr = 0;
 
     // in this test framework, L-values always have addresses
@@ -4920,12 +4920,12 @@ void PostAssignTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEnv* d
     mType = mBinElem->GetType();
 }
 
-boost::shared_ptr<DataObj> PostAssignTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> PostAssignTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     // TODO: we don't need to evaluate it, only get its address
-    boost::shared_ptr<DataObj>     val = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
-    boost::shared_ptr<DataObj>     newVal;
-    boost::shared_ptr<DataObj>     rightVal = mBinElem->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     val = mChildren[0]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     newVal;
+    std::shared_ptr<DataObj>     rightVal = mBinElem->Evaluate( typeEnv, scope, dataEnv );
     MagoEE::Address         addr = 0;
 
     // in this test framework, L-values always have addresses
@@ -4985,12 +4985,12 @@ void CombinedAssignTestElement::Bind( ITypeEnv* typeEnv, IScope* scope, IValueEn
     mType = binChild->GetChildren()[0]->GetType();
 }
 
-boost::shared_ptr<DataObj> CombinedAssignTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
+std::shared_ptr<DataObj> CombinedAssignTestElement::Evaluate( ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv )
 {
     ContainerTestElement*   binChild = dynamic_cast<ContainerTestElement*>( mChildren[0].Get() );
     // TODO: we don't need to evaluate it, only get its address
-    boost::shared_ptr<DataObj>     val = binChild->GetChildren()[0]->Evaluate( typeEnv, scope, dataEnv );
-    boost::shared_ptr<DataObj>     rightVal = binChild->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     val = binChild->GetChildren()[0]->Evaluate( typeEnv, scope, dataEnv );
+    std::shared_ptr<DataObj>     rightVal = binChild->Evaluate( typeEnv, scope, dataEnv );
     MagoEE::Address         addr = 0;
 
     // in this test framework, L-values always have addresses

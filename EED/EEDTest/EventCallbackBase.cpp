@@ -9,7 +9,6 @@
 #include "EventCallbackBase.h"
 
 using namespace std;
-using namespace boost;
 
 
 // TODO: this stubbed out base class should be provided the Exec library itself

@@ -12,7 +12,7 @@ class ValueDataElement : public DataElement
 {
 public:
     virtual void WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Type* type ) = 0;
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
 
     static RefPtr<ValueDataElement>   MakeValueElement( const wchar_t* value );
 };
@@ -22,7 +22,7 @@ class NullValueElement : public ValueDataElement
 {
 public:
     virtual void WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Type* type );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
 
     virtual void AddChild( Element* elem );
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -39,7 +39,7 @@ public:
     IntValueElement();
 
     virtual void WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Type* type );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
 
     virtual void AddChild( Element* elem );
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -58,7 +58,7 @@ public:
     RealValueElement();
 
     virtual void WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Type* type );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
 
     virtual void AddChild( Element* elem );
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -77,7 +77,7 @@ public:
     ComplexValueElement();
 
     virtual void WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Type* type );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
 
     virtual void AddChild( Element* elem );
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -126,7 +126,7 @@ class AddressOfValueDataElement : public ValueDataElement
 public:
     virtual void BindTypes( MagoEE::ITypeEnv* typeEnv, IScope* scope );
     virtual void WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Type* type );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
 
     virtual void AddChild( Element* elem );
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -171,7 +171,7 @@ public:
 
     virtual void BindTypes( MagoEE::ITypeEnv* typeEnv, IScope* scope );
     virtual void WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Type* type );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::Type* type );
 
     virtual void AddChild( Element* elem );
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );

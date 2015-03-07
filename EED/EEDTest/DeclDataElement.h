@@ -45,6 +45,7 @@ public:
     virtual bool IsConstant();
     virtual bool IsType();
     virtual bool IsBaseClass();
+    virtual bool IsStaticField();
 
     virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl );
     virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
@@ -85,7 +86,7 @@ class ConstantDataElement : public DeclDataElement
     RefPtr<ValueDataElement> mVal;
 
 public:
-    boost::shared_ptr<DataObj> Evaluate();
+    std::shared_ptr<DataObj> Evaluate();
 
     virtual void BindTypes( MagoEE::ITypeEnv* typeEnv, IScope* scope );
 

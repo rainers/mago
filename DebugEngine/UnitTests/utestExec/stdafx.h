@@ -27,12 +27,10 @@
 #include <fstream>
 #include <list>
 #include <map>
+#include <memory>
 
 // Windows
 #include <windows.h>
-
-// Boost
-#include <boost/shared_ptr.hpp>
 
 // Other
 #include <cpptest.h>

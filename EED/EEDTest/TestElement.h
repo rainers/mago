@@ -25,8 +25,8 @@ class DataObj;
 class IValueEnv
 {
 public:
-    virtual boost::shared_ptr<DataObj> GetValue( MagoEE::Declaration* decl ) = 0;
-    virtual boost::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type ) = 0;
+    virtual std::shared_ptr<DataObj> GetValue( MagoEE::Declaration* decl ) = 0;
+    virtual std::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type ) = 0;
     virtual void SetValue( MagoEE::Address address, DataObj* obj ) = 0;
     virtual RefPtr<MagoEE::Declaration> GetThis() = 0;
     virtual RefPtr<MagoEE::Declaration> GetSuper() = 0;
@@ -54,7 +54,7 @@ public:
     virtual RefPtr<MagoEE::Declaration> GetDeclaration();
     virtual bool TrySetType( MagoEE::Type* type );
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -63,8 +63,8 @@ public:
 protected:
     static void VerifyCompareValues( 
         MagoEE::ITypeEnv* typeEnv,
-        const boost::shared_ptr<DataObj>& val, 
-        const boost::shared_ptr<DataObj>& refVal );
+        const std::shared_ptr<DataObj>& val, 
+        const std::shared_ptr<DataObj>& refVal );
     static bool FloatEqual( const Real10& left, const Real10& right, MagoEE::Type* type );
 };
 
@@ -79,7 +79,7 @@ public:
 
     // TestElement
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -99,7 +99,7 @@ public:
 
     // TestElement
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -115,7 +115,7 @@ public:
     // TestElement
     virtual bool TrySetType( MagoEE::Type* type );
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -156,7 +156,7 @@ public:
 
     // TestElement
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -182,7 +182,7 @@ class ArithmeticTestElement : public CombinableTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     static RefPtr<MagoEE::Type> GetCommonType( MagoEE::ITypeEnv* typeEnv, MagoEE::Type* left, MagoEE::Type* right );
@@ -210,7 +210,7 @@ class AddTestElement : public ArithmeticTestElement
 {
 public:
     virtual const wchar_t* GetPreOrPostOperator();
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
 
 protected:
     virtual uint64_t        UIntOp( uint64_t left, uint64_t right );
@@ -225,7 +225,7 @@ class SubTestElement : public ArithmeticTestElement
 {
 public:
     virtual const wchar_t* GetPreOrPostOperator();
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
 
 protected:
     virtual uint64_t        UIntOp( uint64_t left, uint64_t right );
@@ -240,7 +240,7 @@ class MulTestElement : public ArithmeticTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
 
 protected:
     virtual uint64_t        UIntOp( uint64_t left, uint64_t right );
@@ -255,7 +255,7 @@ class DivTestElement : public ArithmeticTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
 
 protected:
     virtual uint64_t        UIntOp( uint64_t left, uint64_t right );
@@ -295,7 +295,7 @@ class NegateTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -304,7 +304,7 @@ class UnaryAddTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -349,7 +349,7 @@ class BitNotTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -358,7 +358,7 @@ class ShiftTestElement : public CombinableTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
 protected:
@@ -394,7 +394,7 @@ class AndAndTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     static bool EvalBool( DataObj* val );
@@ -405,7 +405,7 @@ class OrOrTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -414,7 +414,7 @@ class NotTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -451,7 +451,7 @@ public:
     CompareTestElement();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -494,7 +494,7 @@ class PtrArithmeticTestElement : public CombinableTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
 protected:
@@ -528,7 +528,7 @@ class PtrDiffTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -537,7 +537,7 @@ class GroupTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -550,7 +550,7 @@ public:
     CastTestElement();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -580,7 +580,7 @@ public:
     BasicTypeTestElement();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -599,7 +599,7 @@ public:
     RefTypeTestElement();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -617,7 +617,7 @@ public:
     PointerTypeTestElement();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -634,7 +634,7 @@ public:
     SArrayTypeTestElement();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -650,7 +650,7 @@ public:
     DArrayTypeTestElement();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -666,7 +666,7 @@ public:
     AArrayTypeTestElement();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     // Element
@@ -677,7 +677,7 @@ public:
 class TestTestElement : public ContainerTestElement
 {
 public:
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -688,16 +688,16 @@ class VerifyTestElement : public ContainerTestElement
 
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
 
 private:
-    boost::shared_ptr<DataObj> EvaluateSelf( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    boost::shared_ptr<DataObj> EvaluateEED( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    std::shared_ptr<DataObj> EvaluateSelf( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    std::shared_ptr<DataObj> EvaluateEED( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
 
-    boost::shared_ptr<DataObj> EvaluateText( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    std::shared_ptr<DataObj> EvaluateText( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
 
     void ThrowError( const wchar_t* msg );
 };
@@ -707,7 +707,7 @@ class TypedValueTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -722,7 +722,7 @@ public:
     size_t GetAddress();
 
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -740,7 +740,7 @@ public:
 
     virtual RefPtr<MagoEE::Declaration> GetDeclaration();
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void AddChild( Element* elem );
@@ -757,7 +757,7 @@ class MemberTestElement : public ContainerTestElement
 public:
     virtual RefPtr<MagoEE::Declaration> GetDeclaration();
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -770,7 +770,7 @@ class StdPropertyTestElement : public ContainerTestElement
 
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -781,7 +781,7 @@ class IndexTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -790,7 +790,7 @@ class SliceTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -799,7 +799,7 @@ class AddressTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -808,7 +808,7 @@ class PointerTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -817,7 +817,7 @@ class DollarTestElement : public TestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void AddChild( Element* elem );
@@ -830,7 +830,7 @@ class AssignTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };
 
@@ -842,7 +842,7 @@ class PreAssignTestElement : public ContainerTestElement
 
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -856,7 +856,7 @@ class PostAssignTestElement : public ContainerTestElement
 
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 
     virtual void SetAttribute( const wchar_t* name, const wchar_t* value );
@@ -867,6 +867,6 @@ class CombinedAssignTestElement : public ContainerTestElement
 {
 public:
     virtual void Bind( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
-    virtual boost::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
+    virtual std::shared_ptr<DataObj> Evaluate( MagoEE::ITypeEnv* typeEnv, IScope* scope, IValueEnv* dataEnv );
     virtual void ToDText( std::wostringstream& stream );
 };

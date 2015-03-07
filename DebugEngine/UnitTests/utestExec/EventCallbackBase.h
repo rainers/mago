@@ -129,7 +129,7 @@ struct BreakpointEventNode : public EventNode
     }
 };
 
-typedef std::list< boost::shared_ptr< EventNode > >   EventList;
+typedef std::list< std::shared_ptr< EventNode > >   EventList;
 
 
 class EventCallbackBase : public IEventCallback
@@ -143,7 +143,7 @@ class EventCallbackBase : public IEventCallback
     bool                    mTrackEvents;
     bool                    mTrackLastEvent;
     EventList               mEvents;
-    boost::shared_ptr<EventNode>   mLastEvent;
+    std::shared_ptr<EventNode>   mLastEvent;
 
     ModuleMap               mModules;
     RefPtr<IModule>         mProcMod;
@@ -168,7 +168,7 @@ public:
     uint32_t GetLastThreadId();
     const EventList& GetEvents();
     void ClearEvents();
-    boost::shared_ptr<EventNode> GetLastEvent();
+    std::shared_ptr<EventNode> GetLastEvent();
     bool GetLoadCompleted();
     bool GetProcessExited();
     uint32_t GetProcessExitCode();
@@ -197,7 +197,7 @@ public:
     void PrintCallstacksX64( IProcess* process );
 
 private:
-    void TrackEvent( const boost::shared_ptr<EventNode>& node );
+    void TrackEvent( const std::shared_ptr<EventNode>& node );
 };
 
 

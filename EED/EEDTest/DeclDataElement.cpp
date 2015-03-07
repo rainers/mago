@@ -95,6 +95,11 @@ bool DeclDataElement::IsBaseClass()
     return false;
 }
 
+bool DeclDataElement::IsStaticField()
+{
+    return false;
+}
+
 HRESULT DeclDataElement::FindObject( const wchar_t* name, Declaration*& decl )
 {
     return E_FAIL;
@@ -226,10 +231,10 @@ void VarDataElement::PrintElement()
 // ConstantDataElement
 //----------------------------------------------------------------------------
 
-boost::shared_ptr<DataObj> ConstantDataElement::Evaluate()
+std::shared_ptr<DataObj> ConstantDataElement::Evaluate()
 {
-    boost::shared_ptr<DataObj>  val( new RValueObj() );
-    boost::shared_ptr<DataObj>  childVal = mVal->Evaluate( mType->GetType() );
+    std::shared_ptr<DataObj>  val( new RValueObj() );
+    std::shared_ptr<DataObj>  childVal = mVal->Evaluate( mType->GetType() );
 
     val->SetType( mType->GetType() );
     val->Value = childVal->Value;

@@ -9,7 +9,6 @@
 #include "DataElement.h"
 #include "DataValue.h"
 
-using namespace boost;
 using MagoEE::ITypeEnv;
 
 
@@ -20,7 +19,7 @@ using MagoEE::ITypeEnv;
 // ValueDataElement
 //----------------------------------------------------------------------------
 
-boost::shared_ptr<DataObj> ValueDataElement::Evaluate( MagoEE::Type* type )
+std::shared_ptr<DataObj> ValueDataElement::Evaluate( MagoEE::Type* type )
 {
     throw L"Can't evaluate to a single value.";
 }
@@ -54,9 +53,9 @@ void NullValueElement::WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Ty
     memset( buffer, 0, type->GetSize() );
 }
 
-boost::shared_ptr<DataObj> NullValueElement::Evaluate( MagoEE::Type* type )
+std::shared_ptr<DataObj> NullValueElement::Evaluate( MagoEE::Type* type )
 {
-    boost::shared_ptr<DataObj>  val( new RValueObj() );
+    std::shared_ptr<DataObj>  val( new RValueObj() );
 
     // rely on the owner setting the right type
     if ( type->IsPointer() )
@@ -132,9 +131,9 @@ void IntValueElement::WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Typ
     memcpy( buffer, &iVal, size );
 }
 
-boost::shared_ptr<DataObj> IntValueElement::Evaluate( MagoEE::Type* type )
+std::shared_ptr<DataObj> IntValueElement::Evaluate( MagoEE::Type* type )
 {
-    boost::shared_ptr<DataObj>  val( new RValueObj() );
+    std::shared_ptr<DataObj>  val( new RValueObj() );
 
     // rely on the owner setting the right type
     val->Value.UInt64Value = Value;
@@ -252,9 +251,9 @@ void RealValueElement::WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Ty
     memcpy( buffer, &fVal, size );
 }
 
-boost::shared_ptr<DataObj> RealValueElement::Evaluate( MagoEE::Type* type )
+std::shared_ptr<DataObj> RealValueElement::Evaluate( MagoEE::Type* type )
 {
-    boost::shared_ptr<DataObj>  val( new RValueObj() );
+    std::shared_ptr<DataObj>  val( new RValueObj() );
 
     // rely on the owner setting the right type
     val->Value.Float80Value = Value;
@@ -306,9 +305,9 @@ void ComplexValueElement::WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE:
     RealValueElement::WriteData( buffer, bufLimit, type, Value.ImaginaryPart );
 }
 
-boost::shared_ptr<DataObj> ComplexValueElement::Evaluate( MagoEE::Type* type )
+std::shared_ptr<DataObj> ComplexValueElement::Evaluate( MagoEE::Type* type )
 {
-    boost::shared_ptr<DataObj>  val( new RValueObj() );
+    std::shared_ptr<DataObj>  val( new RValueObj() );
 
     // rely on the owner setting the right type
     val->Value.Complex80Value = Value;
@@ -516,14 +515,14 @@ void AddressOfValueDataElement::WriteData( uint8_t* buffer, uint8_t* bufLimit, M
     memcpy( buffer, &aVal, size );
 }
 
-boost::shared_ptr<DataObj> AddressOfValueDataElement::Evaluate( MagoEE::Type* type )
+std::shared_ptr<DataObj> AddressOfValueDataElement::Evaluate( MagoEE::Type* type )
 {
     MagoEE::Address addr = 0;
 
     if ( !mRef->GetAddress( addr ) )
         throw L"Can't get address.";
 
-    shared_ptr<DataObj> val( new RValueObj() );
+    std::shared_ptr<DataObj> val( new RValueObj() );
 
     val->Value.Addr = addr;
 
@@ -648,17 +647,17 @@ void SliceValueDataElement::BindTypes( ITypeEnv* typeEnv, IScope* scope )
 
 void SliceValueDataElement::WriteData( uint8_t* buffer, uint8_t* bufLimit, MagoEE::Type* type )
 {
-    shared_ptr<DataObj> val = Evaluate( type );
+    std::shared_ptr<DataObj> val = Evaluate( type );
     uint32_t    sizetLen = mSizeType->GetSize();
 
     IntValueElement::WriteData( buffer, bufLimit, mSizeType, val->Value.Array.Length );
     AddressOfValueDataElement::WriteData( buffer + sizetLen, bufLimit, mPtrType, val->Value.Array.Addr );
 }
 
-boost::shared_ptr<DataObj> SliceValueDataElement::Evaluate( MagoEE::Type* type )
+std::shared_ptr<DataObj> SliceValueDataElement::Evaluate( MagoEE::Type* type )
 {
-    shared_ptr<DataObj> val( new RValueObj() );
-    shared_ptr<DataObj> ptr = mPtr->Evaluate( mPtrType );
+    std::shared_ptr<DataObj> val( new RValueObj() );
+    std::shared_ptr<DataObj> ptr = mPtr->Evaluate( mPtrType );
     uint32_t            len = mEndIndex - mStartIndex;
     MagoEE::Address     addr = 0;
 

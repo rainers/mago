@@ -10,7 +10,6 @@
 #include "DataValue.h"
 #include "DataElement.h"
 
-using namespace boost;
 using MagoEE::Type;
 using MagoEE::Declaration;
 
@@ -52,7 +51,7 @@ MagoEE::Address DataEnv::Allocate( uint32_t size )
     return addr;
 }
 
-boost::shared_ptr<DataObj> DataEnv::GetValue( MagoEE::Declaration* decl )
+std::shared_ptr<DataObj> DataEnv::GetValue( MagoEE::Declaration* decl )
 {
     if ( decl->IsConstant() )
     {
@@ -72,16 +71,16 @@ boost::shared_ptr<DataObj> DataEnv::GetValue( MagoEE::Declaration* decl )
     throw L"Can't get value.";
 }
 
-boost::shared_ptr<DataObj> DataEnv::GetValue( MagoEE::Address address, MagoEE::Type* type )
+std::shared_ptr<DataObj> DataEnv::GetValue( MagoEE::Address address, MagoEE::Type* type )
 {
     return GetValue( address, type, NULL );
 }
 
-boost::shared_ptr<DataObj> DataEnv::GetValue( MagoEE::Address address, MagoEE::Type* type, MagoEE::Declaration* decl )
+std::shared_ptr<DataObj> DataEnv::GetValue( MagoEE::Address address, MagoEE::Type* type, MagoEE::Declaration* decl )
 {
     _ASSERT( type != NULL );
 
-    shared_ptr<LValueObj>   val( new LValueObj( decl, address ) );
+    std::shared_ptr<LValueObj>   val( new LValueObj( decl, address ) );
     size_t  size = 0;
 
     if ( type->IsPointer() 
@@ -324,7 +323,7 @@ HRESULT DataEnvBinder::GetReturnType( MagoEE::Type*& type )
 
 HRESULT DataEnvBinder::GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& value )
 {
-    shared_ptr<DataObj> val = mDataEnv->GetValue( decl );
+    std::shared_ptr<DataObj> val = mDataEnv->GetValue( decl );
 
     if ( val == NULL )
         throw L"No value.";
@@ -335,7 +334,7 @@ HRESULT DataEnvBinder::GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& v
 
 HRESULT DataEnvBinder::GetValue( MagoEE::Address addr, MagoEE::Type* type, MagoEE::DataValue& value )
 {
-    shared_ptr<DataObj> val = mDataEnv->GetValue( addr, type );
+    std::shared_ptr<DataObj> val = mDataEnv->GetValue( addr, type );
 
     if ( val == NULL )
         throw L"No value.";

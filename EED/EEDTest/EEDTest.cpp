@@ -20,7 +20,6 @@
 #include "SymUtil.h"
 
 using namespace std;
-using namespace boost;
 using MagoEE::ITypeEnv;
 
 
@@ -300,7 +299,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
         TestElement*    testRoot = (TestElement*) handler->GetRoot();
         std::wostringstream dtext;
-        boost::shared_ptr<DataObj>  v;
+        std::shared_ptr<DataObj>  v;
 
         if ( options.Verbose )
             testRoot->PrintElement();

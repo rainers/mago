@@ -11,7 +11,6 @@
 #include <MagoCVConst.h>
 
 using MagoEE::Type;
-using namespace boost;
 using namespace MagoST;
 
 
@@ -216,6 +215,11 @@ bool DiaDecl::IsType()
 bool DiaDecl::IsBaseClass()
 {
     return mSymInfo->GetSymTag() == MagoST::SymTagBaseClass;
+}
+
+bool DiaDecl::IsStaticField()
+{
+    return false;
 }
 
 HRESULT DiaDecl::FindObject( const wchar_t* name, Declaration*& decl )

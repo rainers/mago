@@ -28,7 +28,7 @@ enum OutputType
 struct Options
 {
     OutputType                      OutType;
-    boost::shared_ptr<Test::Output> Out;
+    std::shared_ptr<Test::Output> Out;
     wstring                         Filename;
 };
 
