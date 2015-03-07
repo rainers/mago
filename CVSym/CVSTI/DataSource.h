@@ -36,10 +36,9 @@ namespace MagoST
 
         virtual HRESULT LoadDataForExe( 
             const wchar_t* filename,
-            const wchar_t* searchPath,
             ILoadCallback* callback );
 
-        virtual HRESULT InitDebugInfo();
+        virtual HRESULT InitDebugInfo( const wchar_t* filename, const wchar_t* searchPath );
 
         virtual HRESULT OpenSession( ISession*& session );
 

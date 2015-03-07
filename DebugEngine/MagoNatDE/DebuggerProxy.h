@@ -10,6 +10,7 @@
 #include "IDebuggerProxy.h"
 #include "..\Exec\DebuggerProxy.h"
 
+#include <string>
 
 namespace Mago
 {
@@ -112,6 +113,9 @@ namespace Mago
 
         virtual ProbeRunMode OnCallProbe( 
             IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange );
+
+        void SetSymbolSearchPath( const std::wstring& searchPath );
+        const std::wstring& GetSymbolSearchPath() const;
 
     private:
         HRESULT CacheSystemInfo();

@@ -46,6 +46,93 @@ namespace PDBStore
 
 }
 
+class CCallback : public IDiaLoadCallback2
+{
+    int m_nRefCount;
+public:
+    CCallback() { m_nRefCount = 0; }
+
+    //IUnknown
+    ULONG STDMETHODCALLTYPE AddRef() {
+        m_nRefCount++;
+        return m_nRefCount;
+    }
+    ULONG STDMETHODCALLTYPE Release() {
+        if ( (--m_nRefCount) == 0 )
+            delete this;
+        return m_nRefCount;
+    }
+    HRESULT STDMETHODCALLTYPE QueryInterface( REFIID rid, void **ppUnk ) {
+        if ( ppUnk == NULL ) {
+            return E_INVALIDARG;
+        }
+        if (rid == __uuidof( IDiaLoadCallback2 ) )
+            *ppUnk = (IDiaLoadCallback2 *)this;
+        else if (rid == __uuidof( IDiaLoadCallback ) )
+            *ppUnk = (IDiaLoadCallback *)this;
+        else if (rid == __uuidof( IUnknown ) )
+            *ppUnk = (IUnknown *)this;
+        else
+            *ppUnk = NULL;
+        if ( *ppUnk != NULL ) {
+            AddRef();
+            return S_OK;
+        }
+        return E_NOINTERFACE;
+    }
+
+    HRESULT STDMETHODCALLTYPE NotifyDebugDir(
+                BOOL fExecutable, 
+                DWORD cbData,
+                BYTE data[]) // really a const struct _IMAGE_DEBUG_DIRECTORY *
+    {
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE NotifyOpenDBG(
+                LPCOLESTR dbgPath, 
+                HRESULT resultCode)
+    {
+        // wprintf(L"opening %s...\n", dbgPath);
+        return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE NotifyOpenPDB(
+                LPCOLESTR pdbPath, 
+                HRESULT resultCode)
+    {
+        // wprintf(L"opening %s...\n", pdbPath);
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE RestrictRegistryAccess()         
+    {
+        // return hr != S_OK to prevent querying the registry for symbol search paths
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE RestrictSymbolServerAccess()
+    {
+      // return hr != S_OK to prevent accessing a symbol server
+      return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE RestrictOriginalPathAccess()     
+    {
+        // return hr != S_OK to prevent querying the registry for symbol search paths
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE RestrictReferencePathAccess()
+    {
+        // return hr != S_OK to prevent accessing a symbol server
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE RestrictDBGAccess()
+    {
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE RestrictSystemRootAccess()
+    {
+        return S_OK;
+    }
+};
+
 namespace MagoST
 {
     void detachBSTR( BSTR bstr, SymString &sym )
@@ -380,7 +467,7 @@ namespace MagoST
         CloseDebugInfo();
     }
 
-    HRESULT PDBDebugStore::InitDebugInfo( BYTE* buffer, DWORD size )
+    HRESULT PDBDebugStore::InitDebugInfo( BYTE* buffer, DWORD size, const wchar_t* filename, const wchar_t* searchPath )
     {
         if ( (buffer == NULL) || (size == 0) )
             return E_INVALIDARG;
@@ -395,15 +482,6 @@ namespace MagoST
         // so later CoUninit is only called once for each successful call to CoInit
         mInit = true;
 
-        if ( memcmp( buffer, "RSDS", 4 ) != 0 )
-            return E_BAD_FORMAT;
-
-        const char* pdbname = (const char*) buffer + 24;
-        wchar_t wszFilename[MAX_PATH];
-        int ret = MultiByteToWideChar( CP_UTF8, 0, pdbname, -1, wszFilename, MAX_PATH );
-        if ( ret == 0 )
-            return HRESULT_FROM_WIN32( GetLastError() );
-
         // Obtain access to the provider
         GUID msdia120 = { 0x3BFCEA48, 0x620F, 0x4B6B, { 0x81, 0xF7, 0xB9, 0xAF, 0x75, 0x45, 0x4C, 0x7D } };
         GUID msdia110 = { 0x761D3BCD, 0x1304, 0x41D5, { 0x94, 0xE8, 0xEA, 0xC5, 0x4E, 0x4A, 0xC1, 0x72 } };
@@ -417,10 +495,33 @@ namespace MagoST
         if ( FAILED( hr ) )
             return hr;
 
+#if 1
+        PVOID OldValue = NULL;
+        BOOL redir = Wow64DisableWow64FsRedirection( &OldValue );
+
+        RefPtr<CCallback> callback = new CCallback;
+        hr = mSource->loadDataForExe( filename, searchPath, callback );
+
+        if( redir )
+            Wow64RevertWow64FsRedirection( OldValue );
+
+        if ( FAILED( hr ) )
+            return hr;
+#else
+        if ( memcmp( buffer, "RSDS", 4 ) != 0 )
+            return E_BAD_FORMAT;
+
+        const char* pdbname = (const char*) buffer + 24;
+        wchar_t wszFilename[MAX_PATH];
+        int ret = MultiByteToWideChar( CP_UTF8, 0, pdbname, -1, wszFilename, MAX_PATH );
+        if ( ret == 0 )
+            return HRESULT_FROM_WIN32( GetLastError() );
+
         // Open and prepare a program database (.pdb) file as a debug data source
         hr = mSource->loadDataFromPdb( wszFilename );
         if ( FAILED( hr ) )
             return hr;
+#endif
 
         // Open a session for querying symbols
         hr = mSource->openSession( &mSession );

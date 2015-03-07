@@ -28,6 +28,7 @@ namespace MagoCore
         CommandFunctor*     mCurCommand;
         volatile bool       mShutdown;
         Guard               mCommandGuard;
+        std::wstring        mSymbolSearchPath;
 
     public:
         DebuggerProxy();
@@ -92,6 +93,9 @@ namespace MagoCore
             uint32_t size, 
             uint32_t& sizeRead, 
             uint8_t* pdata );
+
+        void SetSymbolSearchPath( const std::wstring& searchPath );
+        const std::wstring& GetSymbolSearchPath() const;
 
     private:
         static DWORD CALLBACK   DebugPollProc( void* param );

@@ -188,11 +188,11 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = dataSource->LoadDataForExe( mCoreMod->GetPath(), NULL, callback );
+        hr = dataSource->LoadDataForExe( mCoreMod->GetPath(), callback );
         if ( FAILED( hr ) )
             return hr;
 
-        hr = dataSource->InitDebugInfo();
+        hr = dataSource->InitDebugInfo( mCoreMod->GetPath(), mCoreMod->GetSymbolSearchPath() );
         if ( FAILED( hr ) )
             return hr;
 

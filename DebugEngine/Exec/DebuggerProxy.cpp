@@ -487,7 +487,7 @@ namespace MagoCore
     {
         HRESULT hr = S_OK;
 
-        hr = mExec.Init( mCallback );
+        hr = mExec.Init( mCallback, this );
         if ( FAILED( hr ) )
             return hr;
 
@@ -563,5 +563,14 @@ namespace MagoCore
         cmd->Run();
 
         return S_OK;
+    }
+
+    void DebuggerProxy::SetSymbolSearchPath( const std::wstring& searchPath )
+    {
+        mSymbolSearchPath = searchPath;
+    }
+    const std::wstring& DebuggerProxy::GetSymbolSearchPath() const
+    {
+        return mSymbolSearchPath;
     }
 }

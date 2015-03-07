@@ -12,6 +12,8 @@
 
 namespace Mago
 {
+    class RemoteDebuggerProxy;
+
     class RemoteProcess : public ICoreProcess
     {
         long                mRefCount;
@@ -77,6 +79,7 @@ namespace Mago
     class RemoteModule : public ICoreModule
     {
         long                mRefCount;
+        RemoteDebuggerProxy* mDebuggerProxy; // backward reference
 
         Address64           mImageBase;
         Address64           mPrefImageBase;
@@ -85,7 +88,8 @@ namespace Mago
         std::wstring        mPath;
 
     public:
-        RemoteModule( 
+        RemoteModule(
+            RemoteDebuggerProxy* debuggerProxy,
             Address64 imageBase, 
             Address64 prefImageBase, 
             uint32_t size, 
@@ -100,6 +104,7 @@ namespace Mago
         virtual uint32_t        GetSize();
         virtual uint16_t        GetMachine();
         virtual const wchar_t*  GetPath();
+        virtual const wchar_t*  GetSymbolSearchPath();
 
     private:
         RemoteModule( const RemoteModule& );

@@ -7,9 +7,11 @@
 
 #include "Common.h"
 #include "Module.h"
+#include "DebuggerProxy.h"
 
 
 Module::Module( 
+               MagoCore::DebuggerProxy* debuggerProxy,
                Address imageBase, 
                uint32_t size, 
                uint16_t machine, 
@@ -17,6 +19,7 @@ Module::Module(
                uint32_t debugInfoFileOffset, 
                uint32_t debugInfoSize )
 :   mRefCount( 0 ),
+    mDebuggerProxy( debuggerProxy ),
     mImageBase( imageBase ),
     mPrefImageBase( 0 ),
     mSize( size ),
@@ -78,6 +81,11 @@ uint16_t        Module::GetMachine()
 const wchar_t*  Module::GetPath()
 {
     return mPath.c_str();
+}
+
+const wchar_t*  Module::GetSymbolSearchPath()
+{
+    return mDebuggerProxy->GetSymbolSearchPath().data();
 }
 
 Address         Module::GetPreferredImageBase()

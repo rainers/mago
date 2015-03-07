@@ -31,6 +31,7 @@ namespace Mago
         GUID                    mSessionGuid;
         HCTXCMD                 mhContext[2];
         DWORD                   mEventPhysicalTid;
+        std::wstring            mSymbolSearchPath;
 
     public:
         RemoteDebuggerProxy();
@@ -124,6 +125,9 @@ namespace Mago
             uint32_t threadId, 
             MagoRemote_Address address, 
             MagoRemote_AddressRange* thunkRange );
+
+        void SetSymbolSearchPath( const std::wstring& searchPath );
+        const std::wstring& GetSymbolSearchPath() const;
 
     private:
         HCTXCMD GetContextHandle();

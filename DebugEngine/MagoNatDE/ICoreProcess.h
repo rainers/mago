@@ -74,6 +74,7 @@ namespace Mago
         virtual uint32_t        GetSize() = 0;
         virtual uint16_t        GetMachine() = 0;
         virtual const wchar_t*  GetPath() = 0;
+        virtual const wchar_t*  GetSymbolSearchPath() = 0;
 
     private:
         ICoreModule( const ICoreModule& );

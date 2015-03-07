@@ -9,6 +9,7 @@
 
 #include "Common.h"
 #include "RemoteProcess.h"
+#include "RemoteDebuggerProxy.h"
 #include "ArchData.h"
 
 
@@ -145,12 +146,14 @@ namespace Mago
     //------------------------------------------------------------------------
 
     RemoteModule::RemoteModule( 
+            RemoteDebuggerProxy* debuggerProxy,
             Address64 imageBase, 
             Address64 prefImageBase, 
             uint32_t size, 
             uint16_t machineType, 
             const wchar_t* path )
         :   mRefCount( 0 ),
+            mDebuggerProxy( debuggerProxy ),
             mImageBase( imageBase ),
             mPrefImageBase( prefImageBase ),
             mSize( size ),
@@ -200,5 +203,10 @@ namespace Mago
     const wchar_t* RemoteModule::GetPath()
     {
         return mPath.c_str();
+    }
+
+    const wchar_t* RemoteModule::GetSymbolSearchPath()
+    {
+        return mDebuggerProxy->GetSymbolSearchPath().data ();
     }
 }

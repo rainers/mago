@@ -75,6 +75,8 @@ namespace Mago
 
     HRESULT Engine::EnumPrograms( IEnumDebugPrograms2** ppEnum )
     {
+        GuardedArea guard( mProgsGuard );
+
         return MakeEnumWithCount<
             EnumDebugPrograms,
             IEnumDebugPrograms2,
@@ -312,6 +314,49 @@ namespace Mago
         return S_OK;
     }
 
+    ////////////////////////////////////////////////////////////////////////////// 
+    // IDebugEngine3 methods 
+
+    HRESULT Engine::SetSymbolPath( LPCOLESTR szSymbolSearchPath, LPCOLESTR szSymbolCachePath, LOAD_SYMBOLS_FLAGS Flags )
+    {
+        std::wstring symServer = L"http://msdl.microsoft.com/download/symbols";
+        std::wstring searchPath = szSymbolSearchPath;
+        std::wstring cachePath = szSymbolCachePath;
+
+        if( !cachePath.empty() )
+        {
+            size_t p = searchPath.find( symServer );
+            if( p != std::wstring::npos && ( p == 0 || searchPath[p - 1] == ';' ) )
+                searchPath.insert( p, L"SRV*" + cachePath + L"\\MicrosoftPublicSymbols*" );
+
+            cachePath = L"SRV*" + cachePath + L"\\MicrosoftPublicSymbols*;SRV*" + cachePath + L"*";
+        }
+
+        if( !searchPath.empty() && !cachePath.empty() && searchPath[0] != ';' )
+            cachePath.push_back( ';' );
+        cachePath.append( searchPath );
+
+        mDebugger.SetSymbolSearchPath( cachePath );
+        if( mRemoteDebugger )
+            mRemoteDebugger->SetSymbolSearchPath( cachePath );
+        return S_OK;
+    }
+    HRESULT Engine::LoadSymbols()
+    {
+        return E_NOTIMPL;
+    }
+    HRESULT Engine::SetJustMyCodeState( BOOL fUpdate, DWORD dwModules, JMC_CODE_SPEC *rgJMCSpec)
+    {
+        return E_NOTIMPL;
+    }
+    HRESULT Engine::SetEngineGuid( GUID *guidEngine )
+    {
+        return E_NOTIMPL;
+    }
+    HRESULT Engine::SetAllExceptions( EXCEPTION_STATE dwState )
+    {
+        return E_NOTIMPL;
+    }
 
     ////////////////////////////////////////////////////////////////////////////// 
     // IDebugEngineLaunch2 methods 
@@ -516,7 +561,10 @@ namespace Mago
         prog->SetCoreProcess( proc.Get() );
         prog->SetDebuggerProxy( debugger );
 
-        mProgs.insert( ProgramMap::value_type( proc->GetPid(), prog ) );
+        {
+            GuardedArea guard( mProgsGuard );
+            mProgs.insert( ProgramMap::value_type( proc->GetPid(), prog ) );
+        }
 
 Error:
         if ( FAILED( hr ) )
@@ -697,6 +745,7 @@ Error:
 
     bool Engine::FindProgram( DWORD id, RefPtr<Program>& prog )
     {
+        GuardedArea guard( mProgsGuard );
         ProgramMap::iterator    it = mProgs.find( id );
 
         if ( it == mProgs.end() )
@@ -708,6 +757,7 @@ Error:
 
     void Engine::DeleteProgram( Program* prog )
     {
+        GuardedArea guard( mProgsGuard );
         mProgs.erase( prog->GetCoreProcess()->GetPid() );
 
         prog->Dispose();
@@ -738,6 +788,8 @@ Error:
 
     void Engine::ForeachProgram( ProgramCallback* callback )
     {
+        GuardedArea guard( mProgsGuard );
+
         for ( ProgramMap::iterator it = mProgs.begin();
             it != mProgs.end();
             it++ )

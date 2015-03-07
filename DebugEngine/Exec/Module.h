@@ -9,10 +9,15 @@
 
 #include "IModule.h"
 
+namespace MagoCore
+{
+    class DebuggerProxy;
+}
 
 class Module : public IModule
 {
     LONG            mRefCount;
+    MagoCore::DebuggerProxy* mDebuggerProxy; // backward reference
 
     Address         mImageBase;
     Address         mPrefImageBase;
@@ -26,6 +31,7 @@ class Module : public IModule
 
 public:
     Module( 
+        MagoCore::DebuggerProxy* debuggerProxy,
         Address imageBase, 
         uint32_t size, 
         uint16_t machine, 
@@ -37,12 +43,15 @@ public:
     void            AddRef();
     void            Release();
 
+    MagoCore::DebuggerProxy* GetDebuggerProxy() { return mDebuggerProxy; }
+
     Address         GetImageBase();
     uint32_t        GetDebugInfoFileOffset();
     uint32_t        GetDebugInfoSize();
     uint32_t        GetSize();
     uint16_t        GetMachine();
     const wchar_t*  GetPath();
+    const wchar_t*  GetSymbolSearchPath();
     Address         GetPreferredImageBase();
     void            SetPreferredImageBase( Address address );
 

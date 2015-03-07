@@ -15,7 +15,6 @@
 #include "RemoteDebuggerProxy.h"
 #include "ExceptionTable.h"
 
-
 namespace Mago
 {
     class Program;
@@ -26,7 +25,7 @@ namespace Mago
     class Engine :
         public CComObjectRootEx<CComMultiThreadModel>,
         public CComCoClass<Engine, &CLSID_MagoNativeEngine>,
-        public IDebugEngine2,
+        public IDebugEngine3,
         public IDebugEngineLaunch2
     {
         typedef std::map< DWORD, RefPtr<Program> >  ProgramMap;
@@ -41,6 +40,7 @@ namespace Mago
         DWORD               mLastBPId;
         DWORD               mLastModId;
         CComPtr<IDebugEventCallback2>   mCallback;
+        Guard               mProgsGuard;
         Guard               mBindBPGuard;
         Guard               mPendingBPGuard;
         Guard               mExceptionGuard;
@@ -55,6 +55,7 @@ namespace Mago
 
     BEGIN_COM_MAP(Engine)
         COM_INTERFACE_ENTRY(IDebugEngine2)
+        COM_INTERFACE_ENTRY(IDebugEngine3)
         COM_INTERFACE_ENTRY(IDebugEngineLaunch2)
     END_COM_MAP()
 
@@ -86,6 +87,14 @@ namespace Mago
         STDMETHOD( SetRegistryRoot )( LPCOLESTR pszRegistryRoot ); 
         STDMETHOD( SetMetric )( LPCOLESTR pszMetric, VARIANT varValue ); 
         STDMETHOD( CauseBreak )(); 
+
+        //////////////////////////////////////////////////////////// 
+        // IDebugEngine3
+        STDMETHOD( SetSymbolPath )( LPCOLESTR szSymbolSearchPath, LPCOLESTR szSymbolCachePath, LOAD_SYMBOLS_FLAGS Flags );
+        STDMETHOD( LoadSymbols )();
+        STDMETHOD( SetJustMyCodeState )( BOOL fUpdate, DWORD dwModules, JMC_CODE_SPEC *rgJMCSpec);
+        STDMETHOD( SetEngineGuid )( GUID *guidEngine );
+        STDMETHOD( SetAllExceptions )( EXCEPTION_STATE dwState );
 
         //////////////////////////////////////////////////////////// 
         // IDebugEngineLaunch2 

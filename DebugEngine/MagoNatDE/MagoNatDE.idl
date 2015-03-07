@@ -30,6 +30,6 @@ library MagoNatDELib
 	]
 	coclass MagoNativeEngine
 	{
-		[default] interface IDebugEngine2;
+		[default] interface IDebugEngine3;
 	};
 };

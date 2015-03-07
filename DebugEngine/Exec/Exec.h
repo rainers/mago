@@ -32,6 +32,11 @@ class PathResolver;
 template <class T>
 class RefPtr;
 
+namespace MagoCore
+{
+    class DebuggerProxy;
+}
+
 /*
 Mode    Disp.   Thread  Method
         Allowed
@@ -96,6 +101,8 @@ class Exec
     bool            mIsDispatching;
     bool            mIsShutdown;
 
+    MagoCore::DebuggerProxy*  mDebuggerProxy; // backward reference
+
 public:
     Exec();
     ~Exec();
@@ -106,7 +113,7 @@ public:
     // event handling methods and some control methods must be made from that 
     // thread.
     //
-    HRESULT Init( IEventCallback* callback );
+    HRESULT Init( IEventCallback* callback, MagoCore::DebuggerProxy* debuggerProxy );
 
     // Stops debugging all processes, and frees resources. 
     //

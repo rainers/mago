@@ -1046,6 +1046,7 @@ Error:
         RefPtr<RemoteModule> coreModule;
 
         coreModule = new RemoteModule( 
+            this,
             (Address64) modInfo->ImageBase, 
             (Address64) modInfo->PreferredImageBase,
             modInfo->Size,
@@ -1141,5 +1142,14 @@ Error:
         thunkRange->End = execThunkRange.End;
 
         return (MagoRemote_ProbeRunMode) mode;
+    }
+
+    void RemoteDebuggerProxy::SetSymbolSearchPath( const std::wstring& searchPath )
+    {
+        mSymbolSearchPath = searchPath;
+    }
+    const std::wstring& RemoteDebuggerProxy::GetSymbolSearchPath() const
+    {
+        return mSymbolSearchPath;
     }
 }

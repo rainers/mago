@@ -97,12 +97,14 @@ Exec::~Exec()
 }
 
 
-HRESULT Exec::Init( IEventCallback* callback )
+HRESULT Exec::Init( IEventCallback* callback, MagoCore::DebuggerProxy* debuggerProxy )
 {
     // already initialized?
     if ( mTid != 0 )
         return E_ALREADY_INIT;
     if ( callback == NULL )
+        return E_INVALIDARG;
+    if ( debuggerProxy == NULL )
         return E_INVALIDARG;
 
     HRESULT hr = S_OK;
@@ -127,6 +129,7 @@ HRESULT Exec::Init( IEventCallback* callback )
     callback->AddRef();
 
     mCallback = callback;
+    mDebuggerProxy = debuggerProxy;
     mProcMap = map.release();
     mResolver = resolver.release();
 
@@ -1632,6 +1635,7 @@ HRESULT Exec::CreateModule( Process* proc, const DEBUG_EVENT& event, RefPtr<Modu
         goto Error;
 
     newMod = new Module( 
+        mDebuggerProxy,
         (Address) loadInfo->lpBaseOfDll,
         imageInfo.Size,
         imageInfo.MachineType,

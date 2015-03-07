@@ -81,6 +81,7 @@ namespace Mago
         virtual uint32_t        GetSize();
         virtual uint16_t        GetMachine();
         virtual const wchar_t*  GetPath();
+        virtual const wchar_t*  GetSymbolSearchPath();
 
     private:
         LocalModule( const LocalModule& );

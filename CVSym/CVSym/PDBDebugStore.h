@@ -25,7 +25,7 @@ namespace MagoST
         PDBDebugStore();
         virtual ~PDBDebugStore();
 
-        HRESULT InitDebugInfo( BYTE* buffer, DWORD size );
+        HRESULT InitDebugInfo( BYTE* buffer, DWORD size, const wchar_t* filename, const wchar_t* searchPath );
         void CloseDebugInfo();
         IDiaSession* getSession() const { return mSession; }
 

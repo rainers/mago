@@ -184,4 +184,9 @@ namespace Mago
     {
         return mExecMod->GetPath();
     }
+
+    const wchar_t* LocalModule::GetSymbolSearchPath()
+    {
+        return mExecMod->GetSymbolSearchPath();
+    }
 }

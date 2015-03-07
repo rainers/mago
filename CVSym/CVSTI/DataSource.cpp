@@ -53,11 +53,8 @@ namespace MagoST
 
     HRESULT DataSource::LoadDataForExe( 
         const wchar_t* filename,
-        const wchar_t* searchPath,
         ILoadCallback* callback )
     {
-        UNREFERENCED_PARAMETER( searchPath );
-
         HRESULT hr = S_OK;
         auto_ptr<ImageDebugContainer>   container( new ImageDebugContainer() );
         RefPtr<IAddressMap> addrMap;
@@ -84,7 +81,7 @@ namespace MagoST
         return S_OK;
     }
 
-    HRESULT DataSource::InitDebugInfo()
+    HRESULT DataSource::InitDebugInfo( const wchar_t* filename, const wchar_t* searchPath )
     {
         HRESULT hr;
 
@@ -92,7 +89,7 @@ namespace MagoST
         if( mDebugView && memcmp( mDebugView, "RSDS", 4 ) == 0 )
         {
             PDBDebugStore* pdbStore = new PDBDebugStore;
-            hr = pdbStore->InitDebugInfo( mDebugView, mDebugSize );
+            hr = pdbStore->InitDebugInfo( mDebugView, mDebugSize, filename, searchPath );
             mStore = pdbStore;
         }
         else

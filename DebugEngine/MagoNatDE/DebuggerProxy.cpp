@@ -466,4 +466,13 @@ namespace Mago
 
         return mode;
     }
+
+    void DebuggerProxy::SetSymbolSearchPath( const std::wstring& searchPath )
+    {
+        mExecThread.SetSymbolSearchPath( searchPath );
+    }
+    const std::wstring& DebuggerProxy::GetSymbolSearchPath() const
+    {
+        return mExecThread.GetSymbolSearchPath();
+    }
 }
