@@ -708,13 +708,16 @@ namespace MagoST
         mSession->findSymbolByAddr( segment, offset, SymTagData, &pSymbol3 );
         IDiaSymbol* pSymbol = pSymbol1;
         DWORD symoff = 0;
-        if( pSymbol )
-            pSymbol->get_addressOffset(&symoff);
-        DWORD off;
-        if( pSymbol2 && pSymbol2->get_addressOffset(&off) == S_OK && off >= symoff )
-            pSymbol = pSymbol2, symoff = off;
-        if( pSymbol3 && pSymbol3->get_addressOffset(&off) == S_OK && off >= symoff )
-            pSymbol = pSymbol3, symoff = off;
+        DWORD off, sec;
+        if( pSymbol1 && pSymbol1->get_addressSection( &sec ) == S_OK && sec == segment )
+            (pSymbol = pSymbol1)->get_addressOffset(&symoff);
+
+        if( pSymbol2 && pSymbol2->get_addressSection( &sec ) == S_OK && sec == segment )
+            if( pSymbol2->get_addressOffset(&off) == S_OK && off >= symoff )
+                pSymbol = pSymbol2, symoff = off;
+        if( pSymbol3 && pSymbol3->get_addressSection( &sec ) == S_OK && sec == segment )
+            if( pSymbol3->get_addressOffset(&off) == S_OK && off >= symoff )
+                pSymbol = pSymbol3, symoff = off;
         
         HRESULT hr = E_FAIL;
         if( pSymbol )
