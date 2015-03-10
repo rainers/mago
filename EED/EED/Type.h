@@ -115,6 +115,8 @@ namespace MagoEE
         virtual ITypeSArray* AsTypeSArray();
         virtual ITypeDArray* AsTypeDArray();
         virtual ITypeAArray* AsTypeAArray();
+
+        virtual Type* Unaliased();
     };
 
 
@@ -480,5 +482,7 @@ namespace MagoEE
         virtual ITypeSArray* AsTypeSArray();
         virtual ITypeDArray* AsTypeDArray();
         virtual ITypeAArray* AsTypeAArray();
+
+        virtual Type* Unaliased();
     };
 }

@@ -60,6 +60,10 @@ namespace Mago
         virtual HRESULT FindObject( 
             const wchar_t* name, 
             MagoEE::Declaration*& decl );
+        virtual HRESULT FindObjectType( 
+            MagoEE::Declaration* decl,
+            const wchar_t* name, 
+            MagoEE::Type*& type );
 
         virtual HRESULT GetThis( MagoEE::Declaration*& decl );
         virtual HRESULT GetSuper( MagoEE::Declaration*& decl );

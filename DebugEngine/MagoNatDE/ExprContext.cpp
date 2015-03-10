@@ -176,6 +176,28 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT ExprContext::FindObjectType( 
+        MagoEE::Declaration* decl,
+        const wchar_t* name, 
+        MagoEE::Type*& type )
+    {
+        MagoEE::Declaration* keydecl = NULL;
+        HRESULT hr = decl->FindObject( name, keydecl );
+        if( FAILED( hr ) )
+            return hr;
+
+        MagoEE::Type* keytype = NULL;
+        hr = E_INVALIDARG;
+        if( keydecl != NULL && keydecl->GetType( keytype ) && keytype != NULL )
+        {
+            type = keytype->Unaliased();
+            hr = S_OK;
+        }
+        if( keydecl )
+            keydecl->Release();
+        return hr;
+    }
+
     HRESULT ExprContext::GetThis( MagoEE::Declaration*& decl )
     {
         HRESULT hr = S_OK;
@@ -893,6 +915,10 @@ namespace Mago
             hr = MakeDeclarationFromBaseClassSymbol( infoData, symInfo, decl );
             break;
 
+        case SymTagTypedef:
+            hr = MakeDeclarationFromTypedefSymbol( infoData, symInfo, decl );
+            break;
+
         default:
             return E_FAIL;
         }
@@ -1393,7 +1419,21 @@ namespace Mago
 
         if( name.GetLength() == 11 && strncmp( name.GetName(), "dAssocArray", 11 ) == 0 )
         {
-            // no type information yet in debug info, just plain void pointer
+            MagoEE::Type* keytype = NULL;
+            MagoEE::Type* valtype = NULL;
+            HRESULT hr = FindObjectType( decl, L"__key_t", keytype );
+            if( !FAILED( hr ) )
+                hr = FindObjectType( decl, L"__val_t", valtype );
+            if( !FAILED( hr ) )
+            {
+                hr = mTypeEnv->NewAArray( valtype, keytype, type );
+            }
+            if( keytype )
+                keytype->Release();
+            if( valtype )
+                valtype->Release();
+            if( !FAILED( hr ) )
+                return hr;
         }
 
         if ( !decl->GetType( type ) )

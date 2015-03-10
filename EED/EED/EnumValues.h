@@ -9,7 +9,6 @@
 
 #include "EED.h"
 
-
 namespace MagoEE
 {
     class EEDEnumValues : public IEEDEnumValues
@@ -82,6 +81,35 @@ namespace MagoEE
 
 
     typedef EEDEnumSArray EEDEnumDArray;
+
+    class EEDEnumAArray : public EEDEnumValues
+    {
+        uint64_t        mCountDone;
+        uint64_t        mBucketIndex;
+        Address         mNextNode;
+        BB64            mBB;
+
+        HRESULT ReadBB();
+        HRESULT ReadAddress( Address baseAddr, uint64_t index, Address& ptrValue );
+        HRESULT FindCurrent();
+        HRESULT FindNext();
+        uint32_t AlignTSize( uint32_t size );
+
+    public:
+        EEDEnumAArray();
+
+        virtual uint32_t GetCount();
+        virtual uint32_t GetIndex();
+        virtual void Reset();
+        virtual HRESULT Skip( uint32_t count );
+        virtual HRESULT Clone( IEEDEnumValues*& copiedEnum );
+
+        virtual HRESULT EvaluateNext( 
+            const EvalOptions& options, 
+            EvalResult& result, 
+            std::wstring& name, 
+            std::wstring& fullName );
+    };
 
 
     class EEDEnumStruct : public EEDEnumValues

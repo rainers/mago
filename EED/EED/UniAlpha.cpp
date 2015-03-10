@@ -311,6 +311,20 @@ namespace MagoEE
         return false;
     }
 
+    bool IsIdentifier( const wchar_t* str )
+    {
+        if ( !str || !str[0] )
+            return false;
+
+        if( !IsIdentChar( str[0] ) && !IsUniAlpha( str[0] ) )
+            return false;
+
+        for( str++; *str; str++ )
+            if( !IsIdentChar( *str ) && !IsUniAlpha( *str ) && !IsHexDigit( *str ) )
+                return false;
+
+        return true;
+    }
 
     int Utf8To32( const char* utf8Str, int utf8Len, dchar_t* utf32Str, int utf32Len )
     {

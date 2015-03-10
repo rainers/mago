@@ -13,28 +13,6 @@
 #include <MagoEED.h>
 
 
-struct DArray32
-{
-    uint32_t    length; // size_t
-    uint32_t    ptr;    // T*
-};
-
-struct aaA32
-{
-    uint32_t    next;   // aaA*
-    uint32_t    hash;   // size_t
-    // key
-    // value
-};
-
-struct BB32
-{
-    DArray32    b;      // aaA*[]
-    uint32_t    nodes;  // size_t
-    uint32_t    keyti;  // TypeInfo
-    // aaA*[4]  binit
-};
-
 struct TypeInfo_Struct32
 {
     uint32_t    vptr;
@@ -53,28 +31,6 @@ struct TypeInfo_Struct32
     // ...
 };
 
-struct DArray64
-{
-    uint64_t    length; // size_t
-    uint64_t    ptr;    // T*
-};
-
-struct aaA64
-{
-    uint64_t    next;   // aaA*
-    uint64_t    hash;   // size_t
-    // key
-    // value
-};
-
-struct BB64
-{
-    DArray64    b;      // aaA*[]
-    uint64_t    nodes;  // size_t
-    uint64_t    keyti;  // TypeInfo
-    // aaA*[4]  binit
-};
-
 struct TypeInfo_Struct64
 {
     uint64_t    vptr;
@@ -90,12 +46,6 @@ struct TypeInfo_Struct64
     uint64_t    xdtor;      // void function(void*)
     uint64_t    xpostblit;  // void function(void*)
     uint32_t    m_align;
-};
-
-union aaAUnion
-{
-    aaA32 _32;
-    aaA64 _64;
 };
 
 
@@ -646,8 +596,14 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
+            if ( bb32.firstUsedBucket > bb32.nodes )
+            {
+                bb32.keyti = bb32.firstUsedBucket; // compatibility fix for dmd before 2.067
+                bb32.firstUsedBucket = 0;
+            }
             bb.b.length = bb32.b.length;
             bb.b.ptr = bb32.b.ptr;
+            bb.firstUsedBucket = bb32.firstUsedBucket;
             bb.keyti = bb32.keyti;
             bb.nodes = bb32.nodes;
         }
@@ -656,6 +612,12 @@ namespace Mago
             hr = ReadMemory( address, sizeof bb, &bb );
             if ( FAILED( hr ) )
                 return hr;
+
+            if ( bb.firstUsedBucket > bb.nodes )
+            {
+                bb.keyti = bb.firstUsedBucket; // compatibility fix for dmd before 2.067
+                bb.firstUsedBucket = 0;
+            }
         }
 
         return S_OK;

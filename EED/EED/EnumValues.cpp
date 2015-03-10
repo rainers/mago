@@ -7,6 +7,7 @@
 
 #include "Common.h"
 #include "EnumValues.h"
+#include "UniAlpha.h"
 
 
 namespace MagoEE
@@ -238,10 +239,13 @@ namespace MagoEE
         name.clear();
         name.append( indexStr );
 
+        bool isIdent = IsIdentifier( mParentExprText.data() );
         fullName.clear();
-        fullName.append( L"(" );
+        if ( !isIdent )
+            fullName.append( L"(" );
         fullName.append( mParentExprText );
-        fullName.append( L")" );
+        if ( !isIdent )
+            fullName.append( L")" );
         fullName.append( name );
 
         hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
@@ -259,6 +263,272 @@ namespace MagoEE
         mCountDone++;
 
         return S_OK;
+    }
+
+
+    //------------------------------------------------------------------------
+    //  EEDEnumSArray
+    //------------------------------------------------------------------------
+
+    EEDEnumAArray::EEDEnumAArray()
+        :   mCountDone( 0 )
+    {
+        mBB.nodes = UINT64_MAX;
+        mBucketIndex = 0;
+        mNextNode = NULL;
+    }
+
+    HRESULT EEDEnumAArray::ReadBB()
+    {
+        HRESULT hr = S_OK;
+        uint32_t sizeRead;
+
+        if ( mBB.nodes != UINT64_MAX )
+            return S_OK;
+
+        _ASSERT( mParentVal._Type->IsAArray() );
+        Address address = mParentVal.Value.Addr;
+
+        if( address == NULL )
+        {
+            memset( &mBB, 0, sizeof mBB );
+            return S_OK;
+        }
+
+        if ( mParentVal._Type->GetSize() == 4 )
+        {
+            BB32    bb32;
+            hr = mBinder->ReadMemory( address, sizeof bb32, sizeRead, (uint8_t*)&bb32 );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( bb32.firstUsedBucket > bb32.nodes )
+            {
+                bb32.keyti = bb32.firstUsedBucket; // compatibility fix for dmd before 2.067
+                bb32.firstUsedBucket = 0;
+            }
+            mBB.b.length = bb32.b.length;
+            mBB.b.ptr = bb32.b.ptr;
+            mBB.firstUsedBucket = bb32.firstUsedBucket;
+            mBB.keyti = bb32.keyti;
+            mBB.nodes = bb32.nodes;
+        }
+        else
+        {
+            hr = mBinder->ReadMemory( address, sizeof mBB, sizeRead, (uint8_t*)&mBB );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( mBB.firstUsedBucket > mBB.nodes )
+            {
+                mBB.keyti = mBB.firstUsedBucket; // compatibility fix for dmd before 2.067
+                mBB.firstUsedBucket = 0;
+            }
+        }
+
+        return S_OK;
+    }
+
+    HRESULT EEDEnumAArray::ReadAddress( Address baseAddr, uint64_t index, Address& ptrValue )
+    {
+        HRESULT hr = S_OK;
+        uint32_t ptrSize = mParentVal._Type->GetSize();
+        uint64_t addr = baseAddr + (index * ptrSize);
+        uint32_t sizeRead;
+
+        if ( ptrSize == 4 )
+        {
+            uint32_t    ptrValue32;
+
+            hr = mBinder->ReadMemory( addr, ptrSize, sizeRead, (uint8_t*)&ptrValue32 );
+            if ( FAILED( hr ) )
+                return hr;
+
+            ptrValue = ptrValue32;
+        }
+        else
+        {
+            hr = mBinder->ReadMemory( addr, ptrSize, sizeRead, (uint8_t*)&ptrValue );
+            if ( FAILED( hr ) )
+                return hr;
+        }
+
+        return S_OK;
+    }
+
+    uint32_t EEDEnumAArray::AlignTSize( uint32_t size )
+    {
+        uint32_t ptrSize = mParentVal._Type->GetSize();
+        if ( ptrSize == 4 )
+            return (size + sizeof( uint32_t ) - 1) & ~(sizeof( uint32_t ) - 1);
+        else
+            return (size + 16 - 1) & ~(16 - 1);
+    }
+
+    uint32_t EEDEnumAArray::GetCount()
+    {
+        uint32_t    count = 0;
+
+        HRESULT hr = ReadBB();
+        if ( !FAILED( hr ) )
+            count = (uint32_t) mBB.nodes;
+
+        return count;
+    }
+
+    uint32_t EEDEnumAArray::GetIndex()
+    {
+        return (uint32_t) mCountDone;
+    }
+
+    void EEDEnumAArray::Reset()
+    {
+        mCountDone = 0;
+        mBucketIndex = 0;
+        mNextNode = NULL;
+    }
+
+    HRESULT EEDEnumAArray::FindCurrent()
+    {
+        while( mNextNode == NULL && mBucketIndex < mBB.b.length )
+        {
+            HRESULT hr = ReadAddress( mBB.b.ptr, mBucketIndex, mNextNode );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if( mNextNode != NULL )
+                return S_OK;
+
+            mBucketIndex++;
+        }
+        return S_OK;
+    }
+
+    HRESULT EEDEnumAArray::FindNext()
+    {
+        HRESULT hr = FindCurrent();
+        if ( FAILED( hr ) )
+            return hr;
+
+        if( mNextNode )
+        {
+            hr = ReadAddress( mNextNode, 0, mNextNode );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if( mNextNode != NULL )
+                return S_OK;
+
+            mBucketIndex++;
+        }
+        return FindCurrent();
+    }
+
+    HRESULT EEDEnumAArray::Skip( uint32_t count )
+    {
+        if ( count > (GetCount() - mCountDone) )
+        {
+            mBucketIndex = mBB.b.length;
+            mNextNode = NULL;
+            mCountDone = GetCount();
+            return S_FALSE;
+        }
+
+        HRESULT hr = FindCurrent();
+        if ( FAILED( hr ) )
+            return hr;
+
+        for( uint32_t i = 0; i < count; i++ )
+        {
+            hr = FindNext();
+            if ( FAILED( hr ) )
+                return E_FAIL;
+            
+            mCountDone++;
+        }
+
+        return S_OK;
+    }
+
+    HRESULT EEDEnumAArray::Clone( IEEDEnumValues*& copiedEnum )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<EEDEnumAArray>  en = new EEDEnumAArray();
+
+        if ( en == NULL )
+            return E_OUTOFMEMORY;
+
+        hr = en->Init( mBinder, mParentExprText.c_str(), mParentVal, mTypeEnv, mStrTable );
+        if ( FAILED( hr ) )
+            return hr;
+
+        en->mBB = mBB;
+        en->mCountDone = mCountDone;
+        en->mBucketIndex = mBucketIndex;
+        en->mNextNode = mNextNode;
+
+        copiedEnum = en.Detach();
+        return S_OK;
+    }
+
+    HRESULT EEDEnumAArray::EvaluateNext( 
+        const EvalOptions& options, 
+        EvalResult& result,
+        std::wstring& name,
+        std::wstring& fullName )
+    {
+        if ( mCountDone >= GetCount() )
+            return E_FAIL;
+
+        HRESULT hr = FindCurrent();
+        if ( FAILED( hr ) )
+            return hr;
+
+        if( !mNextNode )
+            return E_FAIL;
+
+        _ASSERT( mParentVal._Type->IsAArray() );
+        ITypeAArray* aa = mParentVal._Type->AsTypeAArray();
+
+        uint32_t ptrSize = mParentVal._Type->GetSize();
+
+        DataObject keyobj;
+        keyobj._Type = aa->GetIndex();
+        keyobj.Addr = mNextNode + 2 * ptrSize;
+
+        hr = mBinder->GetValue( keyobj.Addr, keyobj._Type, keyobj.Value );
+        if ( FAILED( hr ) )
+            return hr;
+
+        std::wstring keystr;
+        hr = FormatValue( mBinder, keyobj, 10, keystr );
+        if ( FAILED( hr ) )
+            return hr;
+
+        name = L"[" + keystr + L"]";
+
+        RefPtr<IEEDParsedExpr>  parsedExpr;
+
+        bool isIdent = IsIdentifier( mParentExprText.data() );
+        fullName.clear();
+        if ( !isIdent )
+            fullName.append( L"(" );
+        fullName.append( mParentExprText );
+        if ( !isIdent )
+            fullName.append( L")" );
+        fullName.append( name );
+
+        uint32_t alignKeySize = AlignTSize( aa->GetIndex()->GetSize() );
+
+        result.ObjVal.Addr = mNextNode + 2 * ptrSize + alignKeySize;
+        result.ObjVal._Type = aa->GetElement();
+        hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mCountDone++;
+
+        return FindNext();
     }
 
 
@@ -472,9 +742,13 @@ namespace MagoEE
     {
         name.append( decl->GetName() );
 
-        fullName.append( L"(" );
+        bool isIdent = IsIdentifier( mParentExprText.data() );
+        if( !isIdent )
+            fullName.append( L"(" );
         fullName.append( mParentExprText );
-        fullName.append( L")." );
+        if( !isIdent )
+            fullName.append( L")" );
+        fullName.append( L"." );
         fullName.append( name );
 
         return true;

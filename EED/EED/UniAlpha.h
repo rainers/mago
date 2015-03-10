@@ -14,6 +14,7 @@ namespace MagoEE
     bool IsOctalDigit( wchar_t c );
     bool IsIdentChar( wchar_t c );
     bool IsUniAlpha( wchar_t ch );
+    bool IsIdentifier( const wchar_t* str );
 
     int Utf8To32( const char* utf8Str, int utf8Len, dchar_t* utf32Str, int utf32Len );
     int Utf8To16( const char* utf8Str, int utf8Len, wchar_t* utf16Str, int utf16Len );

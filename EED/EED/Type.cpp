@@ -229,6 +229,11 @@ namespace MagoEE
         return NULL;
     }
 
+    Type* Type::Unaliased()
+    {
+        return this;
+    }
+
     bool Type::CanRefMember()
     {
         return false;
@@ -1579,4 +1584,10 @@ namespace MagoEE
     {
         return mAliased->AsTypeAArray();
     }
+
+    Type* TypeTypedef::Unaliased()
+    {
+        return mAliased->Unaliased();
+    }
+
 }
