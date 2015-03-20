@@ -437,7 +437,11 @@ namespace Mago
         if ( found )
         {
             if ( event->GetSearchKey() == ExceptionEvent::Code )
-                event->SetExceptionName( info.bstrExceptionName );
+            {
+                wchar_t name[256] = L"";
+                _swprintf_p( name, _countof( name ), L"0x%08x: %s", event->GetCode(), (BSTR) info.bstrExceptionName );
+                event->SetExceptionName( name );
+            }
             state = info.dwState;
         }
 

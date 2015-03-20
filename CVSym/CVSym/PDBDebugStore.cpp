@@ -542,8 +542,12 @@ namespace MagoST
             case IMAGE_FILE_MACHINE_I386 : mMachineType = CV_CFL_80386; break;
             case IMAGE_FILE_MACHINE_IA64 : mMachineType = CV_CFL_IA64; break;
             case IMAGE_FILE_MACHINE_AMD64 : mMachineType = CV_CFL_AMD64; break;
+            case IMAGE_FILE_MACHINE_CEE : mMachineType = CV_CFL_CEE; break;
             default:
-                assert( false );
+#if defined _DEBUG
+                if( IsDebuggerPresent() )
+                    __debugbreak();
+#endif
                 return E_PDB_NOT_IMPLEMENTED;
             }
         }
