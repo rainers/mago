@@ -32,7 +32,7 @@ namespace Mago
         int             mPtrSize;
 
         MagoST::SymHandle   mFuncSH;
-        MagoST::SymHandle   mBlockSH;
+        std::vector<MagoST::SymHandle> mBlockSH;
 
         CComPtr<IDebugDocumentContext2> mDocContext;
 

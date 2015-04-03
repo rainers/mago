@@ -169,7 +169,7 @@ namespace MagoST
         return FindOuterSymbolByRVA( heapId, (DWORD) rva, handle );
     }
 
-    HRESULT Session::FindInnermostSymbol( SymHandle parentHandle, WORD segment, DWORD offset, SymHandle& handle )
+    HRESULT Session::FindInnermostSymbol( SymHandle parentHandle, WORD segment, DWORD offset, std::vector<SymHandle>& handles )
     {
         HRESULT         hr = S_OK;
         SymInfoData     infoData = { 0 };
@@ -183,6 +183,8 @@ namespace MagoST
         if ( !symInfo->GetAddressSegment( funcSeg ) || (funcSeg != segment) )
             return E_FAIL;
 
+        handles.resize( 0 );
+
         // recursing down the block children has to stop somewhere
         for ( int i = 0; i < USHRT_MAX; i++ )
         {
@@ -190,6 +192,8 @@ namespace MagoST
             // in case there are no children
             SymHandle   curHandle = parentHandle;
             bool        foundChild = false;
+
+            handles.push_back( parentHandle );
 
             hr = mStore->SetChildSymbolScope( parentHandle, scope );
             if ( FAILED( hr ) )
@@ -230,7 +234,6 @@ namespace MagoST
                 break;
         }
 
-        handle = parentHandle;
         return S_OK;
     }
 

@@ -24,7 +24,6 @@ namespace Mago
             mPtrSize( 0 )
     {
         memset( &mFuncSH, 0, sizeof mFuncSH );
-        memset( &mBlockSH, 0, sizeof mBlockSH );
     }
 
     StackFrame::~StackFrame()

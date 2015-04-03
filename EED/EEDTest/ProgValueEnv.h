@@ -39,7 +39,7 @@ class ProgramValueEnv : public IValueEnv, public IScope
 #else
     MagoST::ISession*           mSymSession;
     MagoST::SymHandle           mFuncSH;
-    MagoST::SymHandle           mBlockSH;
+    std::vector<MagoST::SymHandle> mBlockSH;
     MagoST::TypeIndex           mThisTI;
 #endif
 
@@ -129,5 +129,5 @@ private:
     std::shared_ptr<DataObj> GetValue( MagoEE::Address address, MagoEE::Type* type, MagoEE::Declaration* decl );
 
     HRESULT FindOuterSymbolByRVA( DWORD rva, MagoST::SymHandle& handle );
-    HRESULT FindSymbolByRVA( DWORD rva, MagoST::SymHandle& handle, MagoST::SymHandle& innermostChild );
+    HRESULT FindSymbolByRVA( DWORD rva, MagoST::SymHandle& handle, std::vector<MagoST::SymHandle>& innermostChild );
 };

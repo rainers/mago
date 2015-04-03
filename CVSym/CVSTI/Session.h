@@ -65,7 +65,7 @@ namespace MagoST
         virtual HRESULT FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle );
         virtual HRESULT FindOuterSymbolByRVA( SymbolHeapId heapId, DWORD rva, SymHandle& handle );
         virtual HRESULT FindOuterSymbolByVA( SymbolHeapId heapId, DWORD64 va, SymHandle& handle );
-        virtual HRESULT FindInnermostSymbol( SymHandle parentHandle, WORD segment, DWORD offset, SymHandle& handle );
+        virtual HRESULT FindInnermostSymbol( SymHandle parentHandle, WORD segment, DWORD offset, std::vector<SymHandle>& handles );
 
         virtual HRESULT SetChildSymbolScope( SymHandle handle, SymbolScope& scope );
 

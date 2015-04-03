@@ -78,7 +78,6 @@ ProgramValueEnv::ProgramValueEnv( const wchar_t* progPath, uint32_t stopRva, Mag
 #endif
 {
     memset( &mFuncSH, 0, sizeof mFuncSH );
-    memset( &mBlockSH, 0, sizeof mBlockSH );
 }
 
 ProgramValueEnv::~ProgramValueEnv()
@@ -196,8 +195,11 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
     if ( nzChars == 0 )
         return HRESULT_FROM_WIN32( GetLastError() );
 
-    // take away one for the terminator
-    hr = mSymSession->FindChildSymbol( mBlockSH, nameChars.Get(), nzChars-1, childSH );
+    hr = E_FAIL;
+    for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
+        // take away one for the terminator
+        hr = mSymSession->FindChildSymbol( *it, nameChars.Get(), nzChars-1, childSH );
+
     if ( hr != S_OK )
     {
         EnumNamedSymbolsData    enumData = { 0 };
@@ -500,7 +502,10 @@ RefPtr<MagoEE::Declaration> ProgramValueEnv::GetThis()
     SymHandle   childSH;
     RefPtr<MagoEE::Declaration> decl;
 
-    hr = mSymSession->FindChildSymbol( mBlockSH, "this", 4, childSH );
+    hr = E_FAIL;
+    for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
+        // take away one for the terminator
+        hr = mSymSession->FindChildSymbol( *it, "this", 4, childSH );
     if ( hr != S_OK )
         return NULL;
 
@@ -528,7 +533,7 @@ HRESULT ProgramValueEnv::LoadSymbols( DWORD64 loadAddr )
     RefPtr<IDataSource>     dataSource;
     RefPtr<ISession>        session;
     SymHandle               funcSym = { 0 };
-    SymHandle               blockSym = { 0 };
+    std::vector<SymHandle>  blockSym;
     SymInfoData             infoData = { 0 };
     ISymbolInfo*            symInfo = NULL;
 
@@ -569,7 +574,7 @@ HRESULT ProgramValueEnv::LoadSymbols( DWORD64 loadAddr )
     return S_OK;
 }
 
-HRESULT ProgramValueEnv::FindSymbolByRVA( DWORD rva, MagoST::SymHandle& handle, MagoST::SymHandle& innermostChild )
+HRESULT ProgramValueEnv::FindSymbolByRVA( DWORD rva, MagoST::SymHandle& handle, std::vector<MagoST::SymHandle>& innermostChild )
 {
     HRESULT     hr = S_OK;
     uint16_t    sec = 0;
@@ -585,7 +590,10 @@ HRESULT ProgramValueEnv::FindSymbolByRVA( DWORD rva, MagoST::SymHandle& handle, 
 
     hr = mSymSession->FindInnermostSymbol( handle, sec, offset, innermostChild );
     if ( hr != S_OK )
-        innermostChild = handle;
+    {
+        innermostChild.resize( 1 );
+        innermostChild[0] = handle;
+    }
 
     return S_OK;
 }

@@ -26,7 +26,7 @@ namespace Mago
         RefPtr<Module>                  mModule;
         RefPtr<Thread>                  mThread;
         MagoST::SymHandle               mFuncSH;
-        MagoST::SymHandle               mBlockSH;
+        std::vector<MagoST::SymHandle>  mBlockSH;
         RefPtr<MagoEE::ITypeEnv>        mTypeEnv;
         RefPtr<MagoEE::NameTable>       mStrTable;
 
@@ -107,7 +107,8 @@ namespace Mago
         MagoEE::ITypeEnv* GetTypeEnv();
         MagoEE::NameTable* GetStringTable();
         MagoST::SymHandle GetFunctionSH();
-        MagoST::SymHandle GetBlockSH();
+        const std::vector<MagoST::SymHandle>& GetBlockSH();
+        Address64 GetPC();
 
         HRESULT GetAddress( MagoEE::Declaration* decl, MagoEE::Address& addr );
 
@@ -141,7 +142,7 @@ namespace Mago
             Module* module,
             Thread* thread,
             MagoST::SymHandle funcSH, 
-            MagoST::SymHandle blockSH,
+            std::vector<MagoST::SymHandle>& blockSH,
             Address64 pc,
             IRegisterSet* regSet );
 

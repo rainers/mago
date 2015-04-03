@@ -43,7 +43,6 @@ namespace Mago
         :   mPC( 0 )
     {
         memset( &mFuncSH, 0, sizeof mFuncSH );
-        memset( &mBlockSH, 0, sizeof mBlockSH );
     }
 
     ExprContext::~ExprContext()
@@ -201,13 +200,17 @@ namespace Mago
     HRESULT ExprContext::GetThis( MagoEE::Declaration*& decl )
     {
         HRESULT hr = S_OK;
-        MagoST::SymHandle           childSH;
+        MagoST::SymHandle           childSH = { 0 };
         RefPtr<MagoST::ISession>    session;
 
         if ( !mModule->GetSymbolSession( session ) )
             return E_NOT_FOUND;
 
-        hr = session->FindChildSymbol( mBlockSH, "this", 4, childSH );
+        hr = E_FAIL;
+        for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
+            // take away one for the terminator
+            hr = session->FindChildSymbol( *it, "this", 4, childSH );
+
         if ( hr != S_OK )
             return E_NOT_FOUND;
 
@@ -668,7 +671,7 @@ namespace Mago
         Module* module, 
         Thread* thread,
         MagoST::SymHandle funcSH, 
-        MagoST::SymHandle blockSH,
+        std::vector<MagoST::SymHandle>& blockSH,
         Address64 pc,
         IRegisterSet* regSet )
     {
@@ -714,7 +717,14 @@ namespace Mago
         if ( !mModule->GetSymbolSession( session ) )
             return E_NOT_FOUND;
 
-        return FindLocalSymbol( session, mBlockSH, name, nameLen, localSH );
+        HRESULT hr = E_FAIL;
+        for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
+            // take away one for the terminator
+            hr = session->FindChildSymbol( *it, name, nameLen, localSH );
+        
+        if ( hr != S_OK )
+            return E_NOT_FOUND;
+        return S_OK;
     }
 
     HRESULT ExprContext::FindGlobalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& globalSH )
@@ -756,23 +766,6 @@ namespace Mago
             }
         }
         return hr;
-    }
-
-    HRESULT ExprContext::FindLocalSymbol( 
-        MagoST::ISession* session, 
-        MagoST::SymHandle blockSH,
-        const char* name, 
-        size_t nameLen, 
-        MagoST::SymHandle& localSH )
-    {
-        HRESULT hr = S_OK;
-
-        // TODO: go down the lexical hierarchy
-        hr = session->FindChildSymbol( blockSH, name, nameLen, localSH );
-        if ( hr != S_OK )
-            return E_NOT_FOUND;
-
-        return S_OK;
     }
 
     HRESULT ExprContext::FindGlobalSymbol( 
@@ -828,9 +821,14 @@ namespace Mago
         return mFuncSH;
     }
 
-    MagoST::SymHandle ExprContext::GetBlockSH()
+    const std::vector<MagoST::SymHandle>& ExprContext::GetBlockSH()
     {
         return mBlockSH;
+    }
+
+    Address64 ExprContext::GetPC()
+    {
+        return mPC;
     }
 
     // TODO: these declarations can be cached. We can keep a small cache for each module

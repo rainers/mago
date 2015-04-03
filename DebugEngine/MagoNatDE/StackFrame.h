@@ -36,7 +36,7 @@ namespace Mago
         int                             mPtrSize;
 
         MagoST::SymHandle               mFuncSH;
-        MagoST::SymHandle               mBlockSH;
+        std::vector<MagoST::SymHandle>  mBlockSH;
 
         RefPtr<ExprContext>             mExprContext;
         Guard                           mExprContextGuard;

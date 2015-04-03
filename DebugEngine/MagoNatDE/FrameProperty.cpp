@@ -174,7 +174,6 @@ namespace Mago
 
         HRESULT hr = S_OK;
         RefPtr<MagoST::ISession>    session;
-        MagoST::SymHandle           funcSH = { 0 };
         MagoST::SymHandle           childSH = { 0 };
         MagoST::SymbolScope         scope = { 0 };
 
@@ -182,44 +181,44 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        funcSH = exprContext->GetFunctionSH();
+        const std::vector<MagoST::SymHandle>& blockSH = exprContext->GetBlockSH();
 
-        hr = session->SetChildSymbolScope( funcSH, scope );
-        if ( FAILED( hr ) )
-            return hr;
-
-        // TODO: need to go down the block's ancestors until you get to the function
-
-        while ( session->NextSymbol( scope, childSH ) )
+        for ( auto it = blockSH.rbegin(); it != blockSH.rend(); it++)
         {
-            MagoST::SymInfoData     infoData = { 0 };
-            MagoST::ISymbolInfo*    symInfo = NULL;
-            SymString               pstrName;
-            CComBSTR                bstrName;
-
-            hr = session->GetSymbolInfo( childSH, infoData, symInfo );
+            hr = session->SetChildSymbolScope( *it, scope );
             if ( FAILED( hr ) )
-                continue;
+                return hr;
+
+            while ( session->NextSymbol( scope, childSH ) )
+            {
+                MagoST::SymInfoData     infoData = { 0 };
+                MagoST::ISymbolInfo*    symInfo = NULL;
+                SymString               pstrName;
+                CComBSTR                bstrName;
+
+                hr = session->GetSymbolInfo( childSH, infoData, symInfo );
+                if ( FAILED( hr ) )
+                    continue;
             
-            if( symInfo->GetSymTag() != MagoST::SymTagData )
-                continue;
+                if ( symInfo->GetSymTag() != MagoST::SymTagData )
+                    continue;
 
-            if ( !symInfo->GetName( pstrName ) )
-                continue;
+                if ( !symInfo->GetName( pstrName ) )
+                    continue;
 
-            hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), bstrName.m_str );
-            if ( FAILED( hr ) )
-                continue;
+                hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), bstrName.m_str );
+                if ( FAILED( hr ) )
+                    continue;
 
-            mNames.push_back( bstrName );
-            bstrName.Detach();
+                mNames.push_back( bstrName );
+                bstrName.Detach();
+            }
         }
 
         mExprContext = exprContext;
 
         return S_OK;
     }
-
 
     ////////////////////////////////////////////////////////////////////////////// 
 

@@ -19,7 +19,6 @@ namespace Mago
             mPtrSize( 0 )
     {
         memset( &mFuncSH, 0, sizeof mFuncSH );
-        memset( &mBlockSH, 0, sizeof mBlockSH );
     }
 
     CodeContext::~CodeContext()
@@ -199,7 +198,7 @@ namespace Mago
                     switch ( compare )
                     {
                     case CONTEXT_SAME_SCOPE: 
-                        result = memcmp( &mBlockSH, &blockSH, sizeof( mBlockSH ) ) == 0;
+                        result = memcmp( &mBlockSH.back(), &blockSH, sizeof( blockSH ) ) == 0;
                         break;
                     case CONTEXT_SAME_FUNCTION:
                         result = memcmp( &mFuncSH, &funcSH, sizeof( mFuncSH ) ) == 0;
@@ -265,7 +264,7 @@ namespace Mago
     {
         FindFunction();
         funcSH = mFuncSH;
-        blockSH = mBlockSH;
+        blockSH = mBlockSH.back();
         module = mModule;
         return S_OK;
     }
