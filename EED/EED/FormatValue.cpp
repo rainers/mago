@@ -476,6 +476,61 @@ namespace MagoEE
         return FormatAddress( addr, type, outStr );
     }
 
+    HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, int radix, std::wstring& outStr )
+    {
+        HRESULT         hr = S_OK;
+
+        _ASSERT( type->AsTypeStruct() );
+        RefPtr<Declaration> decl = type->GetDeclaration();
+        if ( decl == NULL )
+            return E_INVALIDARG;
+
+        RefPtr<IEnumDeclarationMembers> members;
+        if ( !decl->EnumMembers( members.Ref() ) )
+            return E_INVALIDARG;
+
+        outStr.append( L"{" );
+        for ( ; ; )
+        {
+            RefPtr<Declaration> member;
+            if ( !members->Next( member.Ref() ) )
+                break;
+            if ( member->IsBaseClass() || member->IsStaticField() )
+                continue;
+
+            if ( outStr.length () > 64 )
+            {
+                outStr.append( L", ..." );
+                break;
+            }
+
+            DataObject memberObj;
+            member->GetType( memberObj._Type.Ref() );
+            memberObj.Addr = addr;
+            int offset;
+            if ( member->GetOffset( offset ) )
+                memberObj.Addr += offset;
+
+            hr = binder->GetValue( memberObj.Addr, memberObj._Type, memberObj.Value );
+            if ( FAILED( hr ) )
+                return hr;
+
+            std::wstring memberStr;
+            hr = FormatValue( binder, memberObj, radix, memberStr );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( outStr.length() > 1 )
+                outStr.append( L", " );
+            outStr.append( member->GetName() );
+            outStr.append( L"=" );
+            outStr.append( memberStr );
+        }
+        outStr.append( L"}" );
+
+        return hr;
+    }
+
     HRESULT FormatPointer( IValueBinder* binder, const DataObject& objVal, std::wstring& outStr )
     {
         _ASSERT( objVal._Type->IsPointer() );
@@ -740,6 +795,10 @@ namespace MagoEE
         else if ( type->IsAArray() )
         {
             hr = FormatAArray( objVal.Value.Addr, objVal._Type, radix, outStr );
+        }
+        else if ( type->AsTypeStruct() )
+        {
+            hr = FormatStruct( binder, objVal.Addr, type, radix, outStr );
         }
         else
             hr = E_FAIL;
