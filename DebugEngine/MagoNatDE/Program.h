@@ -141,6 +141,7 @@ namespace Mago
         HRESULT     EnumBPCookies( Address64, std::vector< BPCookie >& iter );
         Address64   GetEntryPoint();
         void        SetEntryPoint( Address64 address );
+        void        UpdateAAVersion( Module* mod );
 
     private:
         HRESULT     StepInternal( IDebugThread2* pThread, STEPKIND sk, STEPUNIT step );

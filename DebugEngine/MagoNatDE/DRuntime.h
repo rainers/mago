@@ -27,9 +27,13 @@ namespace Mago
         IDebuggerProxy*         mDebugger;
         RefPtr<ICoreProcess>    mCoreProc;
         int                     mPtrSize;
+        int                     mAAVersion;
 
     public:
         DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess );
+
+        void SetAAVersion( int ver );
+        int GetAAVersion() const { return mAAVersion; }
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 
@@ -84,11 +88,16 @@ namespace Mago
 
         HRESULT ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, void* buffer );
 
-        HRESULT ReadBB( Address64 addr, BB64& bb );
+        HRESULT ReadBB( Address64 addr, BB64& bb, BB64_V1& bb_v1 );
         HRESULT ReadTypeInfoStruct( Address64 addr, TypeInfo_Struct64& ti );
         HRESULT ReadAddress( Address64 baseAddr, uint64_t index, uint64_t& ptrValue );
         HRESULT ReadDArray( Address64 addr, DArray64& darray );
         HRESULT ReadThrowable( Address64 addr, Throwable64& throwable );
+
+        HRESULT FindValue( BB64& bb, uint64_t hash, 
+                           const MagoEE::DataObject& key, uint8_t*& keybuf, MagoEE::Address& valueAddr );
+        HRESULT FindValue_V1( BB64_V1& bb, uint64_t hash, 
+                              const MagoEE::DataObject& key, uint8_t*& keybuf, MagoEE::Address& valueAddr );
 
         DRuntime& operator=( const DRuntime& other );
         DRuntime( const DRuntime& other );

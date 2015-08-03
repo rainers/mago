@@ -348,6 +348,11 @@ HRESULT DataEnvBinder::GetValue( MagoEE::Address aArrayAddr, const MagoEE::DataO
     return E_NOTIMPL;
 }
 
+int DataEnvBinder::GetAAVersion ()
+{
+    return -1;
+}
+
 HRESULT DataEnvBinder::SetValue( MagoEE::Declaration* decl, const MagoEE::DataValue& value )
 {
     MagoEE::Address addr = 0;

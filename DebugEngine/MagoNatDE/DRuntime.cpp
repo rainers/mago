@@ -54,7 +54,8 @@ namespace Mago
     DRuntime::DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess )
         :   mDebugger( debugger ),
             mCoreProc( coreProcess ),
-            mPtrSize( 0 )
+            mPtrSize( 0 ),
+            mAAVersion( -1 )
     {
         _ASSERT( debugger != NULL );
         _ASSERT( coreProcess != NULL );
@@ -419,30 +420,42 @@ namespace Mago
         return memcmp( keyBuf, nodeArrayBuf, key._Type->GetSize() ) == 0;
     }
 
+    // mix hash to "fix" bad hash functions
+    static uint64_t mix( uint64_t h, uint32_t ptrSize )
+    {
+        // final mix function of MurmurHash2
+        static const uint64_t m = 0x5bd1e995;
+        h ^= h >> 13;
+        h *= m;
+        if ( ptrSize == 4 )
+            h &= 0xffffffff;
+        h ^= h >> 15;
+        return h;
+    }
+
     HRESULT DRuntime::GetValue(
         MagoEE::Address aArrayAddr, 
         const MagoEE::DataObject& key, 
         MagoEE::Address& valueAddr )
     {
-        const int MAX_AA_SEARCH_NODES = 1000000;
-        const int AAA_BUF_SIZE = sizeof( aaA64 ) + sizeof( MagoEE::DataValue );
-
         HRESULT     hr = S_OK;
         BB64        bb = { 0 };
-        uint64_t    aaaBuf[ (AAA_BUF_SIZE + sizeof( uint64_t )-1) / sizeof( uint64_t ) ] = { 0 };
-        aaAUnion*   aaa = (aaAUnion*) aaaBuf;
+        BB64_V1     bb_v1 = { 0 };
         uint64_t    hash = 0;
         HeapPtr     keyBuf;
 
-        hr = ReadBB( aArrayAddr, bb );
+        hr = ReadBB( aArrayAddr, bb, bb_v1 );
         if ( FAILED( hr ) )
             return hr;
 
-        if ( (bb.b.ptr == 0) || (bb.b.length == 0) )
+        if ( mAAVersion != 1 && ( (bb.b.ptr == 0) || (bb.b.length == 0) ) )
+            return E_FAIL;
+        if ( mAAVersion == 1 && ( (bb_v1.buckets.ptr == 0) || (bb_v1.buckets.length == 0) ) )
             return E_FAIL;
 
         if ( key._Type->AsTypeStruct() != NULL )
         {
+            // TODO: fails for mAAVersion == 1, no TypeInfo for key
             hr = GetStructHash( key, bb, keyBuf, hash );
             if ( FAILED( hr ) )
                 return hr;
@@ -459,6 +472,27 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
         }
+
+        if ( mAAVersion == 1 )
+            hr = FindValue_V1( bb_v1, hash, key, keyBuf.Ref(), valueAddr );
+        else
+            hr = FindValue( bb, hash, key, keyBuf.Ref(), valueAddr );
+
+        return hr;
+    }
+
+    HRESULT DRuntime::FindValue( 
+        BB64& bb, 
+        uint64_t hash,
+        const MagoEE::DataObject& key, 
+        uint8_t*& keyBuf,
+        MagoEE::Address& valueAddr )
+    {
+        const int MAX_AA_SEARCH_NODES = 1000000;
+        const int AAA_BUF_SIZE = sizeof( aaA64 ) + 4 * sizeof( MagoEE::DataValue );
+
+        uint64_t    aaaBuf[ (AAA_BUF_SIZE + sizeof( uint64_t )-1) / sizeof( uint64_t ) ] = { 0 };
+        aaAUnion*   aaa = (aaAUnion*) aaaBuf;
 
         uint64_t    bucketIndex = hash % bb.b.length;
         uint64_t    aaAAddr = 0;
@@ -487,7 +521,7 @@ namespace Mago
             aaa = (aaAUnion*) nodeBuf.Get();
         }
 
-        hr = ReadAddress( bb.b.ptr, bucketIndex, aaAAddr );
+        HRESULT hr = ReadAddress( bb.b.ptr, bucketIndex, aaAAddr );
         if ( FAILED( hr ) )
             return hr;
 
@@ -561,6 +595,103 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT DRuntime::FindValue_V1( 
+        BB64_V1& bb, 
+        uint64_t hash,
+        const MagoEE::DataObject& key, 
+        uint8_t*& keyBuf,
+        MagoEE::Address& valueAddr )
+    {
+        uint64_t hashFilledMark = 1LL << (8 * mPtrSize - 1);
+        hash = ( mix( hash, mPtrSize ) & ( hashFilledMark - 1 ) ) | hashFilledMark;
+
+        const int MAX_AA_SEARCH_NODES = 1000000;
+        const int AAA_BUF_SIZE = sizeof( aaA64 ) + 4 * sizeof( MagoEE::DataValue );
+
+        const int HASH_EMPTY = 0;
+        //const int HASH_DELETED = 0x1;
+
+        uint64_t    aaaBuf[ (AAA_BUF_SIZE + sizeof( uint64_t )-1) / sizeof( uint64_t ) ] = { 0 };
+        aaAUnion*   aaa = (aaAUnion*) aaaBuf;
+
+        uint64_t    bucketIndex = hash % bb.buckets.length;
+        uint64_t    aaAAddr = 0;
+        HeapPtr     nodeBuf;
+        HeapPtr     nodeArrayBuf;
+
+        if ( bb.keysz > sizeof aaaBuf )
+        {
+            nodeBuf = (uint8_t*) HeapAlloc( GetProcessHeap(), 0, bb.keysz );
+            if ( nodeBuf.IsEmpty() )
+                return E_OUTOFMEMORY;
+
+            aaa = (aaAUnion*) nodeBuf.Get();
+        }
+
+        valueAddr = 0;
+
+        for ( int j = 0; j < MAX_AA_SEARCH_NODES; bucketIndex = ( bucketIndex + ++j ) % bb.buckets.length )
+        {
+            uint64_t    bucketHash;
+            HRESULT hr = ReadAddress( bb.buckets.ptr, 2 * bucketIndex, bucketHash );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( bucketHash == HASH_EMPTY )
+                break;
+
+            if ( bucketHash != hash )
+                continue;
+
+            hr = ReadAddress( bb.buckets.ptr, 2 * bucketIndex + 1, aaAAddr );
+            if ( FAILED( hr ) )
+                return hr;
+
+            MagoEE::DataValue nodeKey = { 0 };
+            bool     found = false;
+
+            hr = ReadMemory( aaAAddr, bb.keysz, aaa );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( key._Type->AsTypeStruct() != NULL )
+            {
+                found = EqualStruct( key, keyBuf, aaa );
+            }
+            else if ( key._Type->IsSArray() )
+            {
+                found = EqualSArray( key, keyBuf, aaa );
+            }
+            else if ( key._Type->IsDArray() )
+            {
+                hr = FromRawValue( aaa, key._Type, nodeKey );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                found = EqualDArray( key, keyBuf, nodeArrayBuf, nodeKey );
+            }
+            else
+            {
+                hr = FromRawValue( aaa, key._Type, nodeKey );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                found = EqualValue( key._Type, key.Value, nodeKey );
+            }
+
+            if ( found )
+            {
+                valueAddr = aaAAddr + bb.valoff;
+                break;
+            }
+        }
+
+        if ( valueAddr == 0 )
+            return E_NOT_FOUND;
+
+        return S_OK;
+    }
+
     HRESULT DRuntime::ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, void* buffer )
     {
         HRESULT         hr = S_OK;
@@ -584,36 +715,91 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT DRuntime::ReadBB( Address64 address, BB64& bb )
+    HRESULT DRuntime::ReadBB( Address64 address, BB64& bb, BB64_V1& bb_v1 )
     {
         HRESULT hr = S_OK;
 
         if ( mPtrSize == 4 )
         {
             BB32    bb32;
+            BB32_V1 bb32_v1;
 
-            hr = ReadMemory( address, sizeof bb32, &bb32 );
+            if ( mAAVersion == 1 )
+                hr = ReadMemory( address, sizeof bb32_v1, &bb32_v1 );
+            else
+                hr = ReadMemory( address, sizeof bb32, &bb32 );
             if ( FAILED( hr ) )
                 return hr;
 
-            if ( bb32.firstUsedBucket > bb32.nodes )
+            if ( mAAVersion == -1 )
             {
-                bb32.keyti = bb32.firstUsedBucket; // compatibility fix for dmd before 2.067
-                bb32.firstUsedBucket = 0;
+                if ( bb32.b.length > 4 && ( bb32.b.length & ( bb32.b.length - 1 ) ) == 0 )
+                {
+                    mAAVersion = 1; // power of 2 indicates new AA
+                    hr = ReadMemory( address, sizeof bb32_v1, &bb32_v1 );
+                    if ( FAILED( hr ) )
+                        return hr;
+                }
+                else
+                {
+                    // uninitialized arrays likely hit this case, so better don't remmeber
+                    // mAAVersion = 0;
+                }
             }
-            bb.b.length = bb32.b.length;
-            bb.b.ptr = bb32.b.ptr;
-            bb.firstUsedBucket = bb32.firstUsedBucket;
-            bb.keyti = bb32.keyti;
-            bb.nodes = bb32.nodes;
+
+            if ( mAAVersion == 1 )
+            {
+                bb_v1.buckets.length = bb32_v1.buckets.length;
+                bb_v1.buckets.ptr = bb32_v1.buckets.ptr;
+                bb_v1.used = bb32_v1.used;
+                bb_v1.deleted = bb32_v1.deleted;
+                bb_v1.entryTI = bb32_v1.entryTI;
+                bb_v1.firstUsed = bb32_v1.firstUsed;
+                bb_v1.keysz = bb32_v1.keysz;
+                bb_v1.valsz = bb32_v1.valsz;
+                bb_v1.valoff = bb32_v1.valoff;
+                bb_v1.flags = bb32_v1.flags;
+            }
+            else
+            {
+                if ( bb32.firstUsedBucket > bb32.nodes )
+                {
+                    bb32.keyti = bb32.firstUsedBucket; // compatibility fix for dmd before 2.067
+                    bb32.firstUsedBucket = 0;
+                }
+                bb.b.length = bb32.b.length;
+                bb.b.ptr = bb32.b.ptr;
+                bb.firstUsedBucket = bb32.firstUsedBucket;
+                bb.keyti = bb32.keyti;
+                bb.nodes = bb32.nodes;
+            }
         }
         else
         {
-            hr = ReadMemory( address, sizeof bb, &bb );
+            if ( mAAVersion == 1 )
+                hr = ReadMemory( address, sizeof bb_v1, &bb_v1 );
+            else
+                hr = ReadMemory( address, sizeof bb, &bb );
+
             if ( FAILED( hr ) )
                 return hr;
 
-            if ( bb.firstUsedBucket > bb.nodes )
+            if ( mAAVersion == -1 )
+            {
+                if ( bb.b.length > 4 && ( bb.b.length & ( bb.b.length - 1 ) ) == 0 )
+                {
+                    mAAVersion = 1; // power of 2 indicates new AA
+                    hr = ReadMemory( address, sizeof bb_v1, &bb_v1 );
+                    if ( FAILED( hr ) )
+                        return hr;
+                }
+                else
+                {
+                    mAAVersion = 0;
+                }
+            }
+
+            if ( mAAVersion == 0 && bb.firstUsedBucket > bb.nodes )
             {
                 bb.keyti = bb.firstUsedBucket; // compatibility fix for dmd before 2.067
                 bb.firstUsedBucket = 0;
@@ -925,4 +1111,10 @@ namespace Mago
         }
         return S_OK;
     }
+
+    void DRuntime::SetAAVersion( int ver )
+    {
+        mAAVersion = ver;
+    }
+
 }

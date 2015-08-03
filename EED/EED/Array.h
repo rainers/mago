@@ -7,6 +7,8 @@
 
 #pragma once
 
+// V0: up to dmd 2.067 - buckets with linked lists
+// V1: dmd 2.068       - open address hash map
 
 struct DArray32
 {
@@ -31,6 +33,25 @@ struct BB32
     // aaA*[4]  binit
 };
 
+struct Bucket32
+{
+    uint32_t    hash;   // size_t
+    uint32_t    entry;  // void*
+};
+
+struct BB32_V1
+{
+    DArray32    buckets;   // Bucket[]
+    uint32_t    used;      // uint
+    uint32_t    deleted;   // uint
+    uint32_t    entryTI;   // TypeInfo_Struct 
+    uint32_t    firstUsed; // uint
+    uint32_t    keysz;     // uint 
+    uint32_t    valsz;     // uint 
+    uint32_t    valoff;    // uint 
+    uint8_t     flags;     // Flags keyHasPostblit(1), hasPointers(2)
+};
+
 struct DArray64
 {
     uint64_t    length; // size_t
@@ -52,6 +73,25 @@ struct BB64
     uint64_t    firstUsedBucket;  // size_t, added in dmd 2.067
     uint64_t    keyti;  // TypeInfo
     // aaA*[4]  binit
+};
+
+struct Bucket64
+{
+    uint64_t    hash;   // size_t
+    uint64_t    entry;  // void*
+};
+
+struct BB64_V1
+{
+    DArray64    buckets;   // Bucket[]
+    uint32_t    used;      // uint
+    uint32_t    deleted;   // uint
+    uint64_t    entryTI;   // TypeInfo_Struct 
+    uint32_t    firstUsed; // uint
+    uint32_t    keysz;     // uint 
+    uint32_t    valsz;     // uint 
+    uint32_t    valoff;    // uint 
+    uint8_t     flags;     // Flags keyHasPostblit(1), hasPointers(2)
 };
 
 union aaAUnion

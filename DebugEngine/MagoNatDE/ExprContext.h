@@ -83,6 +83,8 @@ namespace Mago
             const MagoEE::DataObject& key, 
             MagoEE::Address& valueAddr );
 
+        virtual int GetAAVersion();
+
         virtual HRESULT SetValue( 
             MagoEE::Declaration* decl, 
             const MagoEE::DataValue& value );

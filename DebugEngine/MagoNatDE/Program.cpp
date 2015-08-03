@@ -462,10 +462,36 @@ namespace Mago
         return mDRuntime.Get();
     }
 
+    bool FindGlobalSymbolAddress( Module* mainMod, const char* symbol, Address64& symaddr );
+
     void Program::SetDRuntime( UniquePtr<DRuntime>& druntime )
     {
         mDRuntime.Attach( NULL );
         mDRuntime.Swap( druntime );
+
+        if ( mDRuntime && mDebugger && mCoreProc )
+        {
+            GuardedArea guard( mModGuard );
+
+            for ( ModuleMap::iterator it = mModMap.begin(); it != mModMap.end(); it++ )
+                UpdateAAVersion( it->second );
+        }
+    }
+
+    void Program::UpdateAAVersion( Module* mod )
+    {
+        if ( mDRuntime && mDebugger && mCoreProc )
+        {
+            Address64 addr;
+            uint32_t read, unreadable, ver;
+            if ( FindGlobalSymbolAddress( mod, "__aaVersion", addr ) )
+            {
+                if ( mDebugger->ReadMemory( mCoreProc, addr, 4, read, unreadable, (uint8_t*) &ver ) == S_OK )
+                    mDRuntime->SetAAVersion( ver );
+            }
+            else if ( FindGlobalSymbolAddress( mod, "_D2rt3aaA11fakeEntryTIFxC8TypeInfoxC8TypeInfoZC15TypeInfo_Struct", addr ) )
+                mDRuntime->SetAAVersion( 1 );
+        }
     }
 
     bool Program::GetAttached()

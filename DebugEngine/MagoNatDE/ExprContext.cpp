@@ -479,6 +479,13 @@ namespace Mago
         return druntime->GetValue( aArrayAddr, key, valueAddr );
     }
 
+    int ExprContext::GetAAVersion()
+    {
+        Program* prog = mThread->GetProgram();
+        DRuntime* druntime = prog->GetDRuntime();
+        return druntime->GetAAVersion();
+    }
+
     HRESULT ExprContext::SetValue( 
         MagoEE::Declaration* decl, 
         const MagoEE::DataValue& value )

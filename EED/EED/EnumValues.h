@@ -84,10 +84,15 @@ namespace MagoEE
 
     class EEDEnumAArray : public EEDEnumValues
     {
+        int             mAAVersion;
         uint64_t        mCountDone;
         uint64_t        mBucketIndex;
         Address         mNextNode;
-        BB64            mBB;
+        union
+        {
+            BB64            mBB;
+            BB64_V1         mBB_V1;
+        };
 
         HRESULT ReadBB();
         HRESULT ReadAddress( Address baseAddr, uint64_t index, Address& ptrValue );
@@ -96,7 +101,7 @@ namespace MagoEE
         uint32_t AlignTSize( uint32_t size );
 
     public:
-        EEDEnumAArray();
+        EEDEnumAArray( int aaVersion );
 
         virtual uint32_t GetCount();
         virtual uint32_t GetIndex();

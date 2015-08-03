@@ -16,6 +16,7 @@
 #include "BoundBreakpoint.h"
 #include "ComEnumWithCount.h"
 #include "ICoreProcess.h"
+#include "DRuntime.h"
 #include <MagoCVConst.h>
 
 
@@ -202,6 +203,8 @@ namespace Mago
         hr = mod->LoadSymbols( false );
         // later we'll check if symbols were loaded
 
+        prog->UpdateAAVersion( mod.Get() );
+
         hr = mEngine->BindPendingBPsToModule( mod.Get(), prog.Get() );
 
         hr = MakeCComObject( event );
@@ -306,7 +309,7 @@ namespace Mago
 
     // find the entry point that the user defined in their program
 
-    bool FindUserEntryPoint( Module* mainMod, Address64& entryPoint )
+    bool FindGlobalSymbolAddress(Module* mainMod, const char* symbol, Address64& symaddr)
     {
         HRESULT hr = S_OK;
         RefPtr<MagoST::ISession> session;
@@ -316,7 +319,11 @@ namespace Mago
 
         MagoST::EnumNamedSymbolsData enumData = { 0 };
 
-        hr = session->FindFirstSymbol( MagoST::SymHeap_GlobalSymbols, "D main", 6, enumData );
+        hr = session->FindFirstSymbol( MagoST::SymHeap_GlobalSymbols, symbol, strlen(symbol), enumData );
+        if ( hr != S_OK )
+            hr = session->FindFirstSymbol( MagoST::SymHeap_StaticSymbols, symbol, strlen(symbol), enumData );
+        if ( hr != S_OK )
+            hr = session->FindFirstSymbol( MagoST::SymHeap_PublicSymbols, symbol, strlen(symbol), enumData );
         if ( hr != S_OK )
             return false;
 
@@ -344,8 +351,13 @@ namespace Mago
         if ( addr == 0 )
             return false;
 
-        entryPoint = (Address64) addr;
+        symaddr = (Address64) addr;
         return true;
+    }
+
+    bool FindUserEntryPoint( Module* mainMod, Address64& entryPoint )
+    {
+        return FindGlobalSymbolAddress( mainMod, "D main", entryPoint );
     }
 
     void EventCallback::OnLoadComplete( DWORD uniquePid, DWORD threadId )

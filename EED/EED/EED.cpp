@@ -228,7 +228,7 @@ namespace MagoEE
         }
         else if ( parentVal._Type->IsAArray() )
         {
-            en = new EEDEnumAArray();
+            en = new EEDEnumAArray( binder->GetAAVersion() );
         }
         else if ( parentVal._Type->AsTypeStruct() != NULL )
         {
