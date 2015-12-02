@@ -496,8 +496,24 @@ namespace MagoST
             return hr;
 
 #if 1
+
+        // Load Wow64*Wow64FsRedirection functions dynamically to support Windows XP.
+#define TRY_LOAD_WINAPI_FUNC(module, type, name, params) \
+    typedef type (WINAPI *name ## Ptr) params; \
+    name ## Ptr name = reinterpret_cast<name ## Ptr>(GetProcAddress(module, #name));
+
+        HMODULE kernel32Module = GetModuleHandle(L"KERNEL32.dll");
+        TRY_LOAD_WINAPI_FUNC(kernel32Module,
+            BOOL, Wow64DisableWow64FsRedirection, (_Out_ PVOID *OldValue));
+        TRY_LOAD_WINAPI_FUNC(kernel32Module,
+            BOOL, Wow64RevertWow64FsRedirection, (_In_ PVOID OldValue));
+
+#undef TRY_LOAD_WINAPI_FUNC
+
+
         PVOID OldValue = NULL;
-        BOOL redir = Wow64DisableWow64FsRedirection( &OldValue );
+        BOOL redir = Wow64DisableWow64FsRedirection &&
+            Wow64DisableWow64FsRedirection( &OldValue );
 
         RefPtr<CCallback> callback = new CCallback;
         hr = mSource->loadDataForExe( filename, searchPath, callback );
