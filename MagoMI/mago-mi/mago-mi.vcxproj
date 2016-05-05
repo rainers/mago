@@ -84,7 +84,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\Include;$(ProjectDir)..\..\DebugEngine\MagoNatDE;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\editline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir)MagoNatDE;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\DebugEngine\MagoNatDE;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\editline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -106,7 +106,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\Include;$(ProjectDir)..\..\DebugEngine\MagoNatDE;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\editline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir)MagoNatDE;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\DebugEngine\MagoNatDE;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\editline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -130,7 +130,7 @@
       <AdditionalOptions>/Oy- %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\Include;$(ProjectDir)..\..\DebugEngine\MagoNatDE;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\editline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir)MagoNatDE;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\DebugEngine\MagoNatDE;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\editline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -153,7 +153,7 @@
       <AdditionalOptions>/Oy- %(AdditionalOptions)</AdditionalOptions>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\Include;$(ProjectDir)..\..\DebugEngine\MagoNatDE;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\editline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutDir)MagoNatDE;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\DebugEngine\MagoNatDE;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\editline\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -173,10 +173,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\cmdline.cpp" />
+    <ClCompile Include="source\debugger.cpp" />
     <ClCompile Include="source\mago-mi.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="source\cmdline.h" />
+    <ClInclude Include="source\debugger.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
