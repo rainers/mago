@@ -48,6 +48,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <tchar.h>
 #include <wincon.h>
 
+#define MY_DEBUG(x) fprintf(stderr, x);
 
 int _el_display_prev_hist()
 {
@@ -906,7 +907,16 @@ void rl_free(void *mem)
   free(mem);
 }
 
-  
+int isInConsole() {
+	_el_h_in = GetStdHandle(STD_INPUT_HANDLE);
+	DWORD count = 0;
+	INPUT_RECORD irBuffer;
+	if (!PeekConsoleInput(_el_h_in, &irBuffer, 1, &count)) {
+		return 0;
+	}
+	return 1;
+}
+
 /*
 main readline function
 */
@@ -1022,7 +1032,7 @@ char *readline(const char *prompt)
     get screen buffer info from the current console
     */
     if (!GetConsoleScreenBufferInfo(_el_h_out, &sbInfo)) {
-      _el_clean_exit();
+		_el_clean_exit();
       return NULL;
     }
     _el_temp_print_size = sbInfo.dwSize.X + 1;
@@ -1050,7 +1060,7 @@ char *readline(const char *prompt)
       }
       if (!SetConsoleCursorPosition(_el_h_out,
         sbInfo.dwCursorPosition)) {
-        _el_clean_exit();
+		  _el_clean_exit();
         return NULL;
       }
       if (_el_print_string(_el_prompt)) {
@@ -1058,7 +1068,7 @@ char *readline(const char *prompt)
         return NULL;
       }
       if (_el_set_cursor(_el_prompt_len)) {
-        _el_clean_exit();
+		  _el_clean_exit();
         return NULL;
       }
       if (_el_print_string(_el_line_buffer)) {
@@ -1081,7 +1091,7 @@ char *readline(const char *prompt)
     wait for console events
     */
     if (!PeekConsoleInput(_el_h_in, &irBuffer, 1, &count)) {
-      _el_clean_exit();
+		_el_clean_exit();
       return NULL;
     }
     if (count) {

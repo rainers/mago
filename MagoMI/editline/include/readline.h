@@ -133,6 +133,8 @@ prototypes of functions which may be
 called by the user
 */
 void source_editrc();
+/* returns nonzero if app has console, 0 if it's redirected input */
+int isInConsole();
 char *readline(const char *prompt);
 char **rl_completion_matches(const char *text, char *entry_func(const char *, int));
 char *rl_filename_completion_function(const char *text, int state);
