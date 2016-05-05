@@ -6,8 +6,9 @@
 
 ExecutableInfo executableInfo;
 ExecutableInfo::ExecutableInfo() : exename(NULL), paramCount(0), dir(NULL) {
-
+	setDir(getCurrentDirectory());
 }
+
 ExecutableInfo::~ExecutableInfo() {
 	if (exename)
 		free((void*)exename);
@@ -41,18 +42,20 @@ void ExecutableInfo::setExecutable(const wchar_t * exe) {
 		exename = (const wchar_t*)NULL;
 		return;
 	}
-	exename = dupAndUnquoteString(exe);
-
+	const wchar_t * tmp = dupAndUnquoteString(exe);
+	exename = relativeToAbsolutePath(tmp);
+	free((void*)tmp);
 }
 
 void ExecutableInfo::setDir(const wchar_t * directory) {
 	if (dir)
 		free((void*)dir);
-	if (!directory) {
-		dir = (const wchar_t*)NULL;
+	dir = NULL;
+	if (!directory)
 		return;
-	}
-	dir = dupAndUnquoteString(directory);
+	const wchar_t * tmp = dupAndUnquoteString(directory);
+	dir = relativeToAbsolutePath(tmp);
+	free((void*)tmp);
 }
 
 void ExecutableInfo::addParam(const wchar_t * param) {
@@ -84,6 +87,51 @@ bool fileExists(const wchar_t * fname) {
 		return false;
 	CloseHandle(h);
 	return true;
+}
+
+bool isAbsolutePath(const wchar_t * s) {
+	if (!s)
+		return false;
+	if (s[0] && s[1] == ':' && s[2] == '\\')
+		return true;
+	if (s[0] == '\\' && s[1] == '\\')
+		return true;
+	if (s[0] == '\\' || s[0] == '/')
+		return true;
+	return false;
+}
+
+void fixPathDelimiters(wchar_t * s) {
+	for (int i = 0; s[i]; i++)
+		if (s[i] == '/')
+			s[i] = '\\';
+}
+
+const wchar_t * getCurrentDirectory() {
+	wchar_t buf[4096];
+	GetCurrentDirectoryW(4095, buf);
+	return _wcsdup(buf);
+}
+
+const wchar_t * relativeToAbsolutePath(const wchar_t * s) {
+	wchar_t buf[4096];
+	buf[0] = 0;
+	if (isAbsolutePath(s)) {
+		wcscat(buf, s);
+	} else {
+		GetCurrentDirectoryW(4095, buf);
+		int len = wcslen(buf);
+		if (buf[len - 1] != '\\') {
+			buf[len++] = '\\';
+			buf[len] = 0;
+		}
+		int slen = wcslen(s);
+		if (slen + len >= 4093)
+			return _wcsdup(buf);
+		wcscat(buf, s);
+	}
+	fixPathDelimiters(buf);
+	return _wcsdup(buf);
 }
 
 enum CmdLineParamType {
@@ -228,7 +276,9 @@ CmdLineParamDef * findParam(const wchar_t * &name) {
 			for (; name[j] && params[i].longName[j] && (params[i].longName[j] != '=') && name[j] == params[i].longName[j]; j++)
 				;
 			if ((!params[i].longName[j] || params[i].longName[j] == '=') && (!name[j] || name[j] == '=')) {
-				name += j + 1;
+				name += j;
+				if (name[0] == '=')
+					name++;
 				return &params[i];
 			}
 		}

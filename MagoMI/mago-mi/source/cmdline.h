@@ -20,3 +20,8 @@ struct ExecutableInfo {
 extern ExecutableInfo executableInfo;
 
 bool fileExists(const wchar_t * fname);
+const wchar_t * dupAndUnquoteString(const wchar_t * s);
+const wchar_t * relativeToAbsolutePath(const wchar_t * s);
+bool isAbsolutePath(const wchar_t * s);
+void fixPathDelimiters(wchar_t * s);
+const wchar_t * getCurrentDirectory();
