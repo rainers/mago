@@ -2,69 +2,87 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <windows.h>
 
 ExecutableInfo executableInfo;
-ExecutableInfo::ExecutableInfo() : exename(NULL), paramCount(0) {
+ExecutableInfo::ExecutableInfo() : exename(NULL), paramCount(0), dir(NULL) {
 
 }
 ExecutableInfo::~ExecutableInfo() {
 	if (exename)
 		free((void*)exename);
+	if (dir)
+		free((void*)dir);
 	exename = NULL;
+	dir = NULL;
 	for (int i = 0; i < paramCount; i++) {
 		free((void*)params[i]);
 	}
 	paramCount = 0;
 }
 
-const char * dupAndUnquoteString(const char * s) {
+const wchar_t * dupAndUnquoteString(const wchar_t * s) {
 	if (!s || !s[0])
 		return NULL;
 	if (s[0] == '\"') {
 		s++;
-		char * res = _strdup(s);
-		if (res[strlen(res) - 1] == '\"')
-			res[strlen(res) - 1] = '\0';
+		wchar_t * res = _wcsdup(s);
+		if (res[wcslen(res) - 1] == '\"')
+			res[wcslen(res) - 1] = '\0';
 		return res;
 	}
-	return _strdup(s);
+	return _wcsdup(s);
 }
 
-void ExecutableInfo::setExecutable(const char * exe) {
+void ExecutableInfo::setExecutable(const wchar_t * exe) {
+	if (exename)
+		free((void*)exename);
 	if (!exe) {
-		exename = (const char*)NULL;
+		exename = (const wchar_t*)NULL;
 		return;
 	}
 	exename = dupAndUnquoteString(exe);
 
 }
 
-void ExecutableInfo::addParam(const char * param) {
+void ExecutableInfo::setDir(const wchar_t * directory) {
+	if (dir)
+		free((void*)dir);
+	if (!directory) {
+		dir = (const wchar_t*)NULL;
+		return;
+	}
+	dir = dupAndUnquoteString(directory);
+}
+
+void ExecutableInfo::addParam(const wchar_t * param) {
 	if (paramCount >= MAX_PARAM_COUNT) {
 		fprintf(stderr, "Too many executable file parameters");
 		exit(3);
 	}
-	params[paramCount++] = _strdup(param);
+	params[paramCount++] = _wcsdup(param);
 }
 
 void ExecutableInfo::dumpParams() {
 	if (exename) {
-		printf("Executable file: %s\n", exename);
+		wprintf(L"Executable file: %s\n", exename);
 		if (paramCount) {
-			printf("Inferior arguments: ");
+			wprintf(L"Inferior arguments: ");
 			for (int i = 0; i < paramCount; i++) {
-				printf("%s ", params[i]);
+				wprintf(L"%s ", params[i]);
 			}
-			printf("\n");
+			wprintf(L"\n");
 		}
 	}
+	if (dir)
+		wprintf(L"Directory: %s\n", dir);
 }
 
-bool fileExists(const char * fname) {
-	FILE * f = fopen(fname, "rb");
-	if (!f)
+bool fileExists(const wchar_t * fname) {
+	HANDLE h = CreateFileW(fname, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (h == INVALID_HANDLE_VALUE)
 		return false;
-	fclose(f);
+	CloseHandle(h);
 	return true;
 }
 
@@ -74,7 +92,7 @@ enum CmdLineParamType {
 };
 
 struct CmdLineParamDef;
-typedef void(*parameterHandler)(CmdLineParamDef * param, const char * value);
+typedef void(*parameterHandler)(CmdLineParamDef * param, const wchar_t * value);
 
 struct CmdLineParamDef {
 	const char * shortName;
@@ -106,7 +124,7 @@ struct CmdLineParamDef {
 
 void dumpParameterHelp();
 
-void showHelp(CmdLineParamDef * param, const char * value) {
+void showHelp(CmdLineParamDef * param, const wchar_t * value) {
 	printf("This is Mago debugger. Usage:\n");
 	printf("    mago-mi [options] [executable-file]\n");
 	printf("    mago-mi [options] --args executable-file [inferior-arguments ...]\n");
@@ -114,17 +132,17 @@ void showHelp(CmdLineParamDef * param, const char * value) {
 	exit(0);
 }
 
-void showVersion(CmdLineParamDef * param, const char * value) {
+void showVersion(CmdLineParamDef * param, const wchar_t * value) {
 	printf("mago-mi debugger v0.1\n");
 	exit(0);
 }
 
-void defParamHandler(CmdLineParamDef * param, const char * value) {
+void defParamHandler(CmdLineParamDef * param, const wchar_t * value) {
 	// TODO
 }
 
-void handleInterpreter(CmdLineParamDef * param, const char * value) {
-	if (strcmp(value, "mi2")) {
+void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
+	if (wcscmp(value, L"mi2")) {
 		fprintf(stderr, "Only mi2 interpreter is supported");
 		exit(2);
 	}
@@ -132,7 +150,7 @@ void handleInterpreter(CmdLineParamDef * param, const char * value) {
 
 static bool argsFound = false;
 
-void handleArgs(CmdLineParamDef * param, const char * value) {
+void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
 	if (executableInfo.exename) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
@@ -141,7 +159,7 @@ void handleArgs(CmdLineParamDef * param, const char * value) {
 	argsFound = true;
 }
 
-void handleExec(CmdLineParamDef * param, const char * value) {
+void handleExec(CmdLineParamDef * param, const wchar_t * value) {
 	if (executableInfo.exename) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
@@ -149,7 +167,11 @@ void handleExec(CmdLineParamDef * param, const char * value) {
 	executableInfo.setExecutable(value);
 }
 
-void nonParamHandler(const char * value) {
+void handleDir(CmdLineParamDef * param, const wchar_t * value) {
+	executableInfo.setDir(value);
+}
+
+void nonParamHandler(const wchar_t * value) {
 	if (!executableInfo.exename) {
 		executableInfo.setExecutable(value);
 		return;
@@ -170,6 +192,8 @@ CmdLineParamDef params[] = {
 	CmdLineParamDef("Operating modes"),
 	CmdLineParamDef(NULL, "--help", NO_PARAMS, "Print this message and then exit", NULL, &showHelp),
 	CmdLineParamDef(NULL, "--version", NO_PARAMS, "Print version information and then exit", NULL, &showVersion),
+	CmdLineParamDef("Other options"),
+	CmdLineParamDef(NULL, "--cd=DIR", STRING_PARAM, "Change current directory to DIR.", NULL, &handleDir),
 	CmdLineParamDef()
 };
 
@@ -186,7 +210,7 @@ void dumpParameterHelp() {
 	}
 }
 
-CmdLineParamDef * findParam(const char * &name) {
+CmdLineParamDef * findParam(const wchar_t * &name) {
 	if (name[0] == '-' && name[1] != '-') {
 		for (int i = 0; !params[i].isLast(); i++) {
 			if (params[i].isHelpSection())
@@ -212,20 +236,20 @@ CmdLineParamDef * findParam(const char * &name) {
 	return NULL;
 }
 
-void parseCommandLine(int argc, char *argv[]) {
+void parseCommandLine(int argc, wchar_t *argv[]) {
 	for (int i = 1; i < argc; i++) {
-		char * v = argv[i];
+		wchar_t * v = argv[i];
 		if (v[0] == '-') {
-			const char * value = v;
+			const wchar_t * value = v;
 			CmdLineParamDef * param = findParam(value);
 			if (!param) {
-				fprintf(stderr, "Unknown command line parameter %s", v);
+				fwprintf(stderr, L"Unknown command line parameter %s", v);
 				exit(1);
 			}
 			if (param->paramType != NO_PARAMS) {
 				if (!value[0]) {
 					if (i == argc - 1) {
-						fprintf(stderr, "Value not specified for parameter %s", v);
+						fwprintf(stderr, L"Value not specified for parameter %s", v);
 						exit(1);
 					}
 					i++;
@@ -234,7 +258,7 @@ void parseCommandLine(int argc, char *argv[]) {
 			}
 			else {
 				if (value[0]) {
-					fprintf(stderr, "Value not allowed for parameter %s", v);
+					fwprintf(stderr, L"Value not allowed for parameter %s", v);
 					exit(1);
 				}
 			}
