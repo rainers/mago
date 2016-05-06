@@ -39,7 +39,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _READLINE_H_
 #define _READLINE_H_
 
-#define WINAPI_PARTITION_DESKTOP
 #include <windows.h>
 //#include <wincon.h>
 
