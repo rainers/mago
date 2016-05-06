@@ -5,13 +5,13 @@
 #include <string>
 #include <list>
 #include "SmartPtr.h"
-#include "Types.h"
-#include "Error.h"
-#include "Module.h"
-#include "Process.h"
-#include "EventCallback.h"
-#include "DebuggerProxy.h"
-#include "IModule.h"
+#include "../../DebugEngine/Exec/Types.h"
+#include "../../DebugEngine/Exec/Error.h"
+#include "../../DebugEngine/Exec/Module.h"
+#include "../../DebugEngine/Exec/Process.h"
+#include "../../DebugEngine/Exec/EventCallback.h"
+#include "../../DebugEngine/Exec/DebuggerProxy.h"
+#include "../../DebugEngine/Exec/IModule.h"
 #include "cmdinput.h"
 
 class Debugger : public IEventCallback, public CmdInputCallback {

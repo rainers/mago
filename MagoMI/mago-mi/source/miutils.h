@@ -148,3 +148,5 @@ std::wstring unquoteString(std::wstring s);
 std::wstring relativeToAbsolutePath(std::wstring s);
 bool isAbsolutePath(std::wstring s);
 std::wstring getCurrentDirectory();
+
+void testEngine();

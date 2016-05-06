@@ -82,3 +82,24 @@ std::wstring relativeToAbsolutePath(std::wstring s) {
 	return buf.wstr();
 }
 
+
+
+
+
+//#include <atlbase.h>
+#include "../../DebugEngine/MagoNatDE/Common.h"
+#include "../../DebugEngine/MagoNatDE/PendingBreakpoint.h"
+#include "../../DebugEngine/MagoNatDE/Program.h"
+#include "../../DebugEngine/MagoNatDE/Engine.h"
+
+class CThisExeModule : public CAtlExeModuleT <CThisExeModule>
+{};
+CThisExeModule _AtlModule;
+
+void testEngine() {
+	CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	//_atl.RegisterTypeLib();
+	CComObject<Mago::Engine> * engine = NULL;
+	CComObject<Mago::Engine>::CreateInstance(&engine);
+	//engine = new Mago::Engine();
+}
