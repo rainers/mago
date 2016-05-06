@@ -84,7 +84,7 @@ std::wstring relativeToAbsolutePath(std::wstring s) {
 
 
 
-
+#include "cmdline.h"
 
 //#include <atlbase.h>
 #include "../../DebugEngine/MagoNatDE/Common.h"
@@ -96,10 +96,64 @@ class CThisExeModule : public CAtlExeModuleT <CThisExeModule>
 {};
 CThisExeModule _AtlModule;
 
+class TestCallback : public CComObjectRootEx<CComMultiThreadModel>, public IDebugEventCallback2 {
+public:
+	TestCallback() {}
+	~TestCallback() {}
+	DECLARE_NOT_AGGREGATABLE(TestCallback)
+	BEGIN_COM_MAP(TestCallback)
+		COM_INTERFACE_ENTRY(IDebugEventCallback2)
+	END_COM_MAP()
+	//virtual ULONG STDMETHODCALLTYPE AddRef() {}
+	//virtual ULONG STDMETHODCALLTYPE Release() {}
+	//virtual HRESULT STDMETHODCALLTYPE QueryInterface(
+	//	/* [in] */ REFIID riid,
+	//	/* [iid_is][out] */ _COM_Outptr_ void __RPC_FAR *__RPC_FAR *ppvObject) {
+	//	return E_NOTIMPL;
+	//}
+	virtual HRESULT STDMETHODCALLTYPE Event(
+		/* [in] */ __RPC__in_opt IDebugEngine2 *pEngine,
+		/* [in] */ __RPC__in_opt IDebugProcess2 *pProcess,
+		/* [in] */ __RPC__in_opt IDebugProgram2 *pProgram,
+		/* [in] */ __RPC__in_opt IDebugThread2 *pThread,
+		/* [in] */ __RPC__in_opt IDebugEvent2 *pEvent,
+		/* [in] */ __RPC__in REFIID riidEvent,
+		/* [in] */ DWORD dwAttrib) {
+		// Event
+		printf("TestCallback.Event() is called\n");
+		return S_OK;
+	}
+};
+
 void testEngine() {
 	CoInitializeEx(NULL, COINIT_MULTITHREADED);
 	//_atl.RegisterTypeLib();
 	CComObject<Mago::Engine> * engine = NULL;
 	CComObject<Mago::Engine>::CreateInstance(&engine);
 	//engine = new Mago::Engine();
+	IDebugProcess2* debugProcess = NULL;
+	CComObject<TestCallback> * callback = NULL;
+	CComObject<TestCallback>::CreateInstance(&callback);
+	//info.Dir = executableInfo.dir.c_str();
+	//info.Exe = executableInfo.exename.c_str();
+	//info.CommandLine = executableInfo.exename.c_str();
+	//CComPtr<IDebugDefaultPort2> spDefaultPort;
+	//HRESULT hr = pPort->QueryInterface(&spDefaultPort);
+
+	HRESULT hr = engine->LaunchSuspended(
+		NULL, //pszMachine,
+		NULL, //IDebugPort2*          pPort,
+		executableInfo.exename.c_str(), //LPCOLESTR             pszExe,
+		NULL, //LPCOLESTR             pszArgs,
+		executableInfo.dir.c_str(), //LPCOLESTR             pszDir,
+		NULL, //BSTR                  bstrEnv,
+		NULL, //LPCOLESTR             pszOptions,
+		0, //LAUNCH_FLAGS          dwLaunchFlags,
+		NULL, //DWORD                 hStdInput,
+		NULL, //DWORD                 hStdOutput,
+		NULL, //DWORD                 hStdError,
+		callback, //IDebugEventCallback2* pCallback,
+		&debugProcess //IDebugProcess2**      ppDebugProcess
+		);
+	printf("Launched result=%d\n", hr);
 }
