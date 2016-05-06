@@ -15,6 +15,7 @@ CmdInput::CmdInput() : _callback(NULL), _closed(false)
 
 CmdInput::~CmdInput() {
 	_instance = NULL;
+	free_history();
 }
 
 /// write line to stdout

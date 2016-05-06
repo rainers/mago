@@ -1,3 +1,4 @@
+#include <windows.h>
 #include "miutils.h"
 
 std::string toUtf8(const std::wstring s) {
@@ -24,6 +25,60 @@ std::wstring toUtf16(const std::string s) {
 		// TODO: add UTF conversion
 		buf.append(ch);
 	}
+	return buf.wstr();
+}
+
+
+
+std::wstring unquoteString(std::wstring s) {
+	if (s.empty())
+		return s;
+	if (s[0] == '\"') {
+		if (s.length() > 1 && s[s.length() - 1] == '\"')
+			return s.substr(1, s.length() - 2);
+		return s.substr(1, s.length() - 1);
+	}
+	return s;
+}
+
+bool fileExists(std::wstring fname) {
+	HANDLE h = CreateFileW(fname.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (h == INVALID_HANDLE_VALUE)
+		return false;
+	CloseHandle(h);
+	return true;
+}
+
+bool isAbsolutePath(std::wstring s) {
+	if (s.empty())
+		return false;
+	if (s[0] && s[1] == ':' && s[2] == '\\')
+		return true;
+	if (s[0] == '\\' && s[1] == '\\')
+		return true;
+	if (s[0] == '\\' || s[0] == '/')
+		return true;
+	return false;
+}
+
+std::wstring getCurrentDirectory() {
+	wchar_t buf[4096];
+	GetCurrentDirectoryW(4095, buf);
+	return std::wstring(buf);
+}
+
+std::wstring relativeToAbsolutePath(std::wstring s) {
+	WstringBuffer buf;
+	if (isAbsolutePath(s)) {
+		buf += s;
+	} else {
+		buf = getCurrentDirectory();
+		int len = buf.length();
+		if (buf.last() != '\\')
+			buf += '\\';
+		buf += s;
+	}
+	buf.replace('/', '\\');
 	return buf.wstr();
 }
 

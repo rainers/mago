@@ -87,6 +87,12 @@ public:
 			;
 		append(s, len);
 	}
+	/// replace item
+	void replace(T replaceWhat, T replaceWith) {
+		for (int i = 0; i < _len; i++)
+			if (_buf[i] == replaceWhat)
+				_buf[i] = replaceWith;
+	}
 	void assign(const T * s, size_t count) {
 		reset();
 		append(s, count);
@@ -122,13 +128,23 @@ std::wstring toUtf16(const std::string s);
 
 struct StringBuffer : public Buffer<char> {
 	StringBuffer & operator = (const std::string & s) { assign(s.c_str(), s.length()); return *this; }
+	StringBuffer & operator += (char ch) { append(ch); return *this; }
 	std::string str() { return std::string(c_str(), length()); }
 	std::wstring wstr() { return toUtf16(str()); }
 };
 
 struct WstringBuffer : public Buffer<wchar_t> {
 	WstringBuffer & operator = (const std::wstring & s) { assign(s.c_str(), s.length()); return *this; }
+	WstringBuffer & operator += (const std::wstring & s) { append(s.c_str(), s.length()); return *this; }
+	WstringBuffer & operator += (wchar_t ch) { append(ch); return *this; }
 	std::string str() { return toUtf8(wstr()); }
 	std::wstring wstr() { return std::wstring(c_str(), length()); }
 };
 
+
+
+bool fileExists(std::wstring fname);
+std::wstring unquoteString(std::wstring s);
+std::wstring relativeToAbsolutePath(std::wstring s);
+bool isAbsolutePath(std::wstring s);
+std::wstring getCurrentDirectory();

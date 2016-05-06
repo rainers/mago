@@ -202,16 +202,16 @@ int Debugger::enterCommandLoop() {
 	if (FAILED(_debuggerProxy.Start())) {
 		return -1;
 	}
-	if (executableInfo.exename) {
+	if (!executableInfo.exename.empty()) {
 		if (!fileExists(executableInfo.exename)) {
 			fprintf(stderr, "%s: no such file or directory", executableInfo.exename);
 			_debuggerProxy.Shutdown();
 			return 4;
 		}
 		LaunchInfo  info = { 0 };
-		info.Dir = executableInfo.dir;
-		info.Exe = executableInfo.exename;
-		info.CommandLine = executableInfo.exename;
+		info.Dir = executableInfo.dir.c_str();
+		info.Exe = executableInfo.exename.c_str();
+		info.CommandLine = executableInfo.exename.c_str();
 		HRESULT hr = _debuggerProxy.Launch(&info, _proc.Ref());
 	}
 

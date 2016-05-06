@@ -3,135 +3,65 @@
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
+#include "miutils.h"
 
 ExecutableInfo executableInfo;
-ExecutableInfo::ExecutableInfo() : exename(NULL), paramCount(0), dir(NULL) {
+ExecutableInfo::ExecutableInfo() : paramCount(0) {
 	setDir(getCurrentDirectory());
 }
 
-ExecutableInfo::~ExecutableInfo() {
-	if (exename)
-		free((void*)exename);
-	if (dir)
-		free((void*)dir);
-	exename = NULL;
-	dir = NULL;
+void ExecutableInfo::clear() {
+	exename.clear();
+	dir.clear();
 	for (int i = 0; i < paramCount; i++) {
-		free((void*)params[i]);
+		params[i].clear();
 	}
 	paramCount = 0;
 }
 
-const wchar_t * dupAndUnquoteString(const wchar_t * s) {
-	if (!s || !s[0])
-		return NULL;
-	if (s[0] == '\"') {
-		s++;
-		wchar_t * res = _wcsdup(s);
-		if (res[wcslen(res) - 1] == '\"')
-			res[wcslen(res) - 1] = '\0';
-		return res;
-	}
-	return _wcsdup(s);
+ExecutableInfo::~ExecutableInfo() {
+	clear();
 }
 
-void ExecutableInfo::setExecutable(const wchar_t * exe) {
-	if (exename)
-		free((void*)exename);
-	if (!exe) {
-		exename = (const wchar_t*)NULL;
+void ExecutableInfo::setExecutable(std::wstring  exe) {
+	if (exe.empty()) {
+		exename.clear();
 		return;
 	}
-	const wchar_t * tmp = dupAndUnquoteString(exe);
+	std::wstring tmp = unquoteString(exe);
 	exename = relativeToAbsolutePath(tmp);
-	free((void*)tmp);
 }
 
-void ExecutableInfo::setDir(const wchar_t * directory) {
-	if (dir)
-		free((void*)dir);
-	dir = NULL;
-	if (!directory)
+void ExecutableInfo::setDir(std::wstring directory) {
+	if (directory.empty()) {
+		dir.clear();
 		return;
-	const wchar_t * tmp = dupAndUnquoteString(directory);
+	}
+	std::wstring tmp = unquoteString(directory);
 	dir = relativeToAbsolutePath(tmp);
-	free((void*)tmp);
 }
 
-void ExecutableInfo::addParam(const wchar_t * param) {
+void ExecutableInfo::addParam(std::wstring param) {
 	if (paramCount >= MAX_PARAM_COUNT) {
 		fprintf(stderr, "Too many executable file parameters");
 		exit(3);
 	}
-	params[paramCount++] = _wcsdup(param);
+	params[paramCount++] = param;
 }
 
 void ExecutableInfo::dumpParams() {
-	if (exename) {
-		wprintf(L"Executable file: %s\n", exename);
+	if (!exename.empty()) {
+		wprintf(L"Executable file: %s\n", exename.c_str());
 		if (paramCount) {
 			wprintf(L"Inferior arguments: ");
 			for (int i = 0; i < paramCount; i++) {
-				wprintf(L"%s ", params[i]);
+				wprintf(L"%s ", params[i].c_str());
 			}
 			wprintf(L"\n");
 		}
 	}
-	if (dir)
-		wprintf(L"Directory: %s\n", dir);
-}
-
-bool fileExists(const wchar_t * fname) {
-	HANDLE h = CreateFileW(fname, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (h == INVALID_HANDLE_VALUE)
-		return false;
-	CloseHandle(h);
-	return true;
-}
-
-bool isAbsolutePath(const wchar_t * s) {
-	if (!s)
-		return false;
-	if (s[0] && s[1] == ':' && s[2] == '\\')
-		return true;
-	if (s[0] == '\\' && s[1] == '\\')
-		return true;
-	if (s[0] == '\\' || s[0] == '/')
-		return true;
-	return false;
-}
-
-void fixPathDelimiters(wchar_t * s) {
-	for (int i = 0; s[i]; i++)
-		if (s[i] == '/')
-			s[i] = '\\';
-}
-
-const wchar_t * getCurrentDirectory() {
-	wchar_t buf[4096];
-	GetCurrentDirectoryW(4095, buf);
-	return _wcsdup(buf);
-}
-
-const wchar_t * relativeToAbsolutePath(const wchar_t * s) {
-	wchar_t buf[4096];
-	buf[0] = 0;
-	if (isAbsolutePath(s)) {
-		wcscat(buf, s);
-	} else {
-		GetCurrentDirectoryW(4095, buf);
-		int len = wcslen(buf);
-		if (buf[len - 1] != '\\') {
-			buf[len++] = '\\';
-			buf[len] = 0;
-		}
-		int slen = wcslen(s);
-		if (slen + len >= 4093)
-			return _wcsdup(buf);
-		wcscat(buf, s);
-	}
-	fixPathDelimiters(buf);
-	return _wcsdup(buf);
+	if (!dir.empty())
+		wprintf(L"Directory: %s\n", dir.c_str());
 }
 
 enum CmdLineParamType {
@@ -199,7 +129,7 @@ void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
 static bool argsFound = false;
 
 void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
-	if (executableInfo.exename) {
+	if (!executableInfo.exename.empty()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
 	}
@@ -208,11 +138,11 @@ void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
 }
 
 void handleExec(CmdLineParamDef * param, const wchar_t * value) {
-	if (executableInfo.exename) {
+	if (!executableInfo.exename.empty()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
 	}
-	executableInfo.setExecutable(value);
+	executableInfo.setExecutable(std::wstring(value));
 }
 
 void handleDir(CmdLineParamDef * param, const wchar_t * value) {
@@ -220,15 +150,15 @@ void handleDir(CmdLineParamDef * param, const wchar_t * value) {
 }
 
 void nonParamHandler(const wchar_t * value) {
-	if (!executableInfo.exename) {
-		executableInfo.setExecutable(value);
+	if (executableInfo.exename.empty()) {
+		executableInfo.setExecutable(std::wstring(value));
 		return;
 	}
 	if (!argsFound) {
 		fprintf(stderr, "Use --args to provide inferior arguments");
 		exit(3);
 	}
-	executableInfo.addParam(value);
+	executableInfo.addParam(std::wstring(value));
 }
 
 CmdLineParamDef params[] = {
