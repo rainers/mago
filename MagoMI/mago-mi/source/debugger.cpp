@@ -1,4 +1,5 @@
 #include "debugger.h"
+#include "cmdline.h"
 
 void InitDebug()
 {
@@ -11,8 +12,10 @@ void InitDebug()
 	//SetLocalMemWorkingSetLimit( 550 );
 }
 
-Debugger::Debugger() : _mod(NULL) {
+Debugger::Debugger() : _mod(NULL), _quitRequested(false) {
 	InitDebug();
+	_cmdinput.setCallback(this);
+	_debuggerProxy.Init(this);
 }
 
 Debugger::~Debugger() {
@@ -163,4 +166,60 @@ ProbeRunMode Debugger::OnCallProbe(
 	IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange)
 {
 	return ProbeRunMode_Run;
+}
+
+void Debugger::writeOutput(std::wstring msg) {
+	_cmdinput.writeLine(msg);
+}
+
+void Debugger::writeOutput(std::string msg) {
+	_cmdinput.writeLine(toUtf16(msg));
+}
+
+void Debugger::writeOutput(const char * msg) {
+	_cmdinput.writeLine(toUtf16(std::string(msg)));
+}
+
+void Debugger::writeOutput(const wchar_t * msg) {
+	_cmdinput.writeLine(std::wstring(msg));
+}
+
+/// called on new input line
+void Debugger::onInputLine(std::wstring &s) {
+	fwprintf(stdout, L"Input line: %s\n", s.c_str());
+	if (s == L"quit") {
+		_quitRequested = true;
+		writeOutput("Quit requested");
+	}
+}
+/// called when ctrl+c or ctrl+break is called
+void Debugger::onCtrlBreak() {
+	writeOutput("Ctrl+Break is pressed");
+}
+
+int Debugger::enterCommandLoop() {
+	writeOutput("Entering command loop");
+	if (FAILED(_debuggerProxy.Start())) {
+		return -1;
+	}
+	if (executableInfo.exename) {
+		if (!fileExists(executableInfo.exename)) {
+			fprintf(stderr, "%s: no such file or directory", executableInfo.exename);
+			_debuggerProxy.Shutdown();
+			return 4;
+		}
+		LaunchInfo  info = { 0 };
+		info.Dir = executableInfo.dir;
+		info.Exe = executableInfo.exename;
+		info.CommandLine = executableInfo.exename;
+		HRESULT hr = _debuggerProxy.Launch(&info, _proc.Ref());
+	}
+
+	while (!_cmdinput.isClosed() && !_quitRequested) {
+		_cmdinput.poll();
+	}
+	writeOutput("Debugger shutdown");
+	_debuggerProxy.Shutdown();
+	writeOutput("Exiting");
+	return 0;
 }

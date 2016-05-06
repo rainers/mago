@@ -12,12 +12,15 @@
 #include "EventCallback.h"
 #include "DebuggerProxy.h"
 #include "IModule.h"
+#include "cmdinput.h"
 
-class Debugger : public IEventCallback {
+class Debugger : public IEventCallback, public CmdInputCallback {
 	MagoCore::DebuggerProxy _debuggerProxy;
 	RefPtr<IProcess> _proc;
 	//Exec*       _exec;
 	IModule*    _mod;
+	CmdInput _cmdinput;
+	bool _quitRequested;
 public:
 	MagoCore::DebuggerProxy & GetProxy() { return _debuggerProxy; }
 	Debugger();
@@ -44,4 +47,18 @@ public:
 
 	virtual ProbeRunMode OnCallProbe(
 		IProcess* process, uint32_t threadId, Address address, AddressRange& thunkRange);
+
+	virtual void writeOutput(std::wstring msg);
+	virtual void writeOutput(std::string msg);
+	virtual void writeOutput(const char * msg);
+	virtual void writeOutput(const wchar_t * msg);
+
+	// CmdInputCallback interface handlers
+
+	/// called on new input line
+	virtual void onInputLine(std::wstring &s);
+	/// called when ctrl+c or ctrl+break is called
+	virtual void onCtrlBreak();
+
+	virtual int enterCommandLoop();
 };

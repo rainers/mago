@@ -21,22 +21,25 @@ CmdInput::~CmdInput() {
 bool CmdInput::writeLine(std::wstring s) {
 	GuardedArea area(_consoleGuard);
 	HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
-	WstringBuffer line;
-	line = s;
-	line += L"\r\n";
+	WstringBuffer buf;
+	buf = s;
+	buf += L"\r\n";
+	std::string line = toUtf8(buf.wstr());
 	DWORD bytesWritten = 0;
-	return WriteFile(h_out, line.c_str(), line.length()*sizeof(wchar_t), &bytesWritten, NULL) != 0;
+	//printf("line to write: %s", line.c_str());
+	return WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
 }
 
 /// write line to stderr
 bool CmdInput::writeStderrLine(std::wstring s) {
 	GuardedArea area(_consoleGuard);
 	HANDLE h_out = GetStdHandle(STD_ERROR_HANDLE);
-	WstringBuffer line;
-	line = s;
-	line += L"\r\n";
+	WstringBuffer buf;
+	buf = s;
+	buf += L"\r\n";
+	std::string line = toUtf8(buf.wstr());
 	DWORD bytesWritten = 0;
-	return WriteFile(h_out, line.c_str(), line.length()*sizeof(wchar_t), &bytesWritten, NULL) != 0;
+	return WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
 }
 
 /// returns true if stdin/stdout is closed

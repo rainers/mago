@@ -15,7 +15,8 @@ public:
 
 /// console or redirected stdin input
 /// Supports readline editor for windows console
-class CmdInput {
+struct CmdInput {
+private:
 	CmdInputCallback * _callback;
 	bool _inConsole;
 	bool _closed;
