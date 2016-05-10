@@ -90,6 +90,7 @@ std::wstring relativeToAbsolutePath(std::wstring s) {
 
 #include "MIEngine.h"
 
+#if 0
 class MICallback : public IDebugEventCallback2 {
 public:
 	MICallback() {}
@@ -117,15 +118,23 @@ public:
 		/* [in] */ __RPC__in REFIID riidEvent,
 		/* [in] */ DWORD dwAttrib) {
 		// Event
+		if (!memcmp(&riidEvent, &IID_IDebugEngineCreateEvent2, sizeof(IID))) {
+			IDebugEngineCreateEvent2 * pevent = NULL;
+			if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugEngineCreateEvent2, (void**)&pevent))) {
+			}
+		} else if (!memcmp(&riidEvent, &IID_IDebugProgramCreateEvent2, sizeof(IID))) {
+
+		}
 		printf("TestCallback.Event() is called\n");
 		return S_OK;
 	}
 };
+#endif
 
 void testEngine() {
 
 	MIEngine engine;
-	MICallback callback;
+	MIEventCallback callback;
 	engine.Init(&callback);
 
 	HRESULT hr = engine.Launch(

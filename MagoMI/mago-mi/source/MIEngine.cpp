@@ -279,7 +279,159 @@ MIEngine::~MIEngine() {
 		debugPort->Release();
 }
 
-HRESULT MIEngine::Init(IDebugEventCallback2 * callback) {
+HRESULT STDMETHODCALLTYPE MIEngine::QueryInterface(
+	/* [in] */ REFIID riid,
+	/* [iid_is][out] */ _COM_Outptr_ void __RPC_FAR *__RPC_FAR *ppvObject) {
+	*ppvObject = NULL;
+	return E_NOINTERFACE;
+}
+ULONG STDMETHODCALLTYPE MIEngine::AddRef(void) {
+	return 1000;
+}
+ULONG STDMETHODCALLTYPE MIEngine::Release(void) {
+	return 1000;
+}
+
+HRESULT STDMETHODCALLTYPE MIEngine::Event(
+	/* [in] */ __RPC__in_opt IDebugEngine2 *pEngine,
+	/* [in] */ __RPC__in_opt IDebugProcess2 *pProcess,
+	/* [in] */ __RPC__in_opt IDebugProgram2 *pProgram,
+	/* [in] */ __RPC__in_opt IDebugThread2 *pThread,
+	/* [in] */ __RPC__in_opt IDebugEvent2 *pEvent,
+	/* [in] */ __RPC__in REFIID riidEvent,
+	/* [in] */ DWORD dwAttrib) {
+	// Event
+	if (!memcmp(&riidEvent, &IID_IDebugEngineCreateEvent2, sizeof(IID))) {
+		IDebugEngineCreateEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugEngineCreateEvent2, (void**)&pevent))) {
+			return callback->OnDebugEngineCreated(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugProgramCreateEvent2, sizeof(IID))) {
+		IDebugProgramCreateEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugProgramCreateEvent2, (void**)&pevent))) {
+			return callback->OnDebugProgramCreated(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugProgramDestroyEvent2, sizeof(IID))) {
+		IDebugProgramDestroyEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugProgramDestroyEvent2, (void**)&pevent))) {
+			return callback->OnDebugProgramDestroy(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugLoadCompleteEvent2, sizeof(IID))) {
+		IDebugLoadCompleteEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugLoadCompleteEvent2, (void**)&pevent))) {
+			return callback->OnDebugLoadComplete(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugEntryPointEvent2, sizeof(IID))) {
+		IDebugEntryPointEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugEntryPointEvent2, (void**)&pevent))) {
+			return callback->OnDebugEntryPoint(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugThreadCreateEvent2, sizeof(IID))) {
+		IDebugThreadCreateEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugThreadCreateEvent2, (void**)&pevent))) {
+			return callback->OnDebugThreadCreate(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugThreadDestroyEvent2, sizeof(IID))) {
+		IDebugThreadDestroyEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugThreadDestroyEvent2, (void**)&pevent))) {
+			return callback->OnDebugThreadDestroy(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugStepCompleteEvent2, sizeof(IID))) {
+		IDebugStepCompleteEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugStepCompleteEvent2, (void**)&pevent))) {
+			return callback->OnDebugStepComplete(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugBreakEvent2, sizeof(IID))) {
+		IDebugBreakEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugBreakEvent2, (void**)&pevent))) {
+			return callback->OnDebugBreak(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugOutputStringEvent2, sizeof(IID))) {
+		IDebugOutputStringEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugOutputStringEvent2, (void**)&pevent))) {
+			return callback->OnDebugOutputString(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugModuleLoadEvent2, sizeof(IID))) {
+		IDebugModuleLoadEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugModuleLoadEvent2, (void**)&pevent))) {
+			return callback->OnDebugModuleLoad(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugSymbolSearchEvent2, sizeof(IID))) {
+		IDebugSymbolSearchEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugSymbolSearchEvent2, (void**)&pevent))) {
+			return callback->OnDebugSymbolSearch(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugBreakpointEvent2, sizeof(IID))) {
+		IDebugBreakpointEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugBreakpointEvent2, (void**)&pevent))) {
+			return callback->OnDebugBreakpoint(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugBreakpointBoundEvent2, sizeof(IID))) {
+		IDebugBreakpointBoundEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugBreakpointBoundEvent2, (void**)&pevent))) {
+			return callback->OnDebugBreakpointBound(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugBreakpointErrorEvent2, sizeof(IID))) {
+		IDebugBreakpointErrorEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugBreakpointErrorEvent2, (void**)&pevent))) {
+			return callback->OnDebugBreakpointError(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugBreakpointUnboundEvent2, sizeof(IID))) {
+		IDebugBreakpointUnboundEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugBreakpointUnboundEvent2, (void**)&pevent))) {
+			return callback->OnDebugBreakpointUnbound(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugExceptionEvent2, sizeof(IID))) {
+		IDebugExceptionEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugExceptionEvent2, (void**)&pevent))) {
+			return callback->OnDebugException(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	else if (!memcmp(&riidEvent, &IID_IDebugMessageEvent2, sizeof(IID))) {
+		IDebugMessageEvent2 * pevent = NULL;
+		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugMessageEvent2, (void**)&pevent))) {
+			return callback->OnDebugMessage(pEngine, pProcess, pProgram, pThread, pevent);
+		}
+		return E_NOINTERFACE;
+	}
+	printf("TestCallback.Event() is called\n");
+	return S_OK;
+}
+
+HRESULT MIEngine::Init(MIEventCallback * callback) {
 	HRESULT hr = S_OK;
 	CComObject<Mago::Engine> * pengine = NULL;
 	hr = CComObject<Mago::Engine>::CreateInstance(&pengine);
@@ -306,7 +458,7 @@ HRESULT MIEngine::Launch(const wchar_t * pszExe,
 		NULL, //DWORD                 hStdInput,
 		NULL, //DWORD                 hStdOutput,
 		NULL, //DWORD                 hStdError,
-		callback, //IDebugEventCallback2* pCallback,
+		this, //IDebugEventCallback2* pCallback,
 		&debugProcess //IDebugProcess2**      ppDebugProcess
 		);
 	if (FAILED(hr)) {
@@ -332,7 +484,7 @@ HRESULT MIEngine::Launch(const wchar_t * pszExe,
 		&rgpProgram, //IDebugProgram2** rgpPrograms,
 		&rgpProgramNode, //IDebugProgramNode2** rgpProgramNodes,
 		1, //DWORD celtPrograms,
-		callback, //IDebugEventCallback2* pCallback,
+		this, //IDebugEventCallback2* pCallback,
 		ATTACH_REASON_LAUNCH //ATTACH_REASON dwReason
 		);
 	if (FAILED(hr)) {
