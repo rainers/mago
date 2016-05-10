@@ -83,6 +83,7 @@ std::wstring relativeToAbsolutePath(std::wstring s) {
 }
 
 
+#if 1
 
 #include "cmdline.h"
 
@@ -91,6 +92,93 @@ std::wstring relativeToAbsolutePath(std::wstring s) {
 #include "../../DebugEngine/MagoNatDE/PendingBreakpoint.h"
 #include "../../DebugEngine/MagoNatDE/Program.h"
 #include "../../DebugEngine/MagoNatDE/Engine.h"
+
+class MIDebugPort : public CComObjectRootEx<CComMultiThreadModel>, public IDebugPort2 {
+public:
+	MIDebugPort() {}
+	~MIDebugPort() {}
+	DECLARE_NOT_AGGREGATABLE(MIDebugPort)
+	BEGIN_COM_MAP(MIDebugPort)
+		COM_INTERFACE_ENTRY(IDebugPort2)
+	END_COM_MAP()
+public:
+	virtual HRESULT STDMETHODCALLTYPE GetPortName(
+		/* [out] */ __RPC__deref_out_opt BSTR *pbstrName) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetPortId(
+		/* [out] */ __RPC__out GUID *pguidPort) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetPortRequest(
+		/* [out] */ __RPC__deref_out_opt IDebugPortRequest2 **ppRequest) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetPortSupplier(
+		/* [out] */ __RPC__deref_out_opt IDebugPortSupplier2 **ppSupplier) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetProcess(
+		/* [in] */ AD_PROCESS_ID ProcessId,
+		/* [out] */ __RPC__deref_out_opt IDebugProcess2 **ppProcess) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE EnumProcesses(
+		/* [out] */ __RPC__deref_out_opt IEnumDebugProcesses2 **ppEnum) {
+		return E_NOTIMPL;
+	}
+};
+
+class MIPortSupplier : public CComObjectRootEx<CComMultiThreadModel>, public IDebugPortSupplier2 {
+public:
+	MIPortSupplier() {}
+	~MIPortSupplier() {}
+	DECLARE_NOT_AGGREGATABLE(MIPortSupplier)
+	BEGIN_COM_MAP(MIPortSupplier)
+		COM_INTERFACE_ENTRY(IDebugPortSupplier2)
+	END_COM_MAP()
+public:
+	virtual HRESULT STDMETHODCALLTYPE GetPortSupplierName(
+		/* [out] */ __RPC__deref_out_opt BSTR *pbstrName) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetPortSupplierId(
+		/* [out] */ __RPC__out GUID *pguidPortSupplier) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetPort(
+		/* [in] */ __RPC__in REFGUID guidPort,
+		/* [out] */ __RPC__deref_out_opt IDebugPort2 **ppPort) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE EnumPorts(
+		/* [out] */ __RPC__deref_out_opt IEnumDebugPorts2 **ppEnum) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE CanAddPort(void) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE AddPort(
+		/* [in] */ __RPC__in_opt IDebugPortRequest2 *pRequest,
+		/* [out] */ __RPC__deref_out_opt IDebugPort2 **ppPort) {
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE RemovePort(
+		/* [in] */ __RPC__in_opt IDebugPort2 *pPort) {
+		return E_NOTIMPL;
+	}
+};
 
 class CThisExeModule : public CAtlExeModuleT <CThisExeModule>
 {};
@@ -134,6 +222,10 @@ void testEngine() {
 	IDebugProcess2* debugProcess = NULL;
 	CComObject<TestCallback> * callback = NULL;
 	CComObject<TestCallback>::CreateInstance(&callback);
+
+	CComObject<MIDebugPort> * pPort = NULL;
+	CComObject<MIDebugPort>::CreateInstance(&pPort);
+
 	//info.Dir = executableInfo.dir.c_str();
 	//info.Exe = executableInfo.exename.c_str();
 	//info.CommandLine = executableInfo.exename.c_str();
@@ -142,7 +234,7 @@ void testEngine() {
 
 	HRESULT hr = engine->LaunchSuspended(
 		NULL, //pszMachine,
-		NULL, //IDebugPort2*          pPort,
+		pPort, //IDebugPort2*          pPort,
 		executableInfo.exename.c_str(), //LPCOLESTR             pszExe,
 		NULL, //LPCOLESTR             pszArgs,
 		executableInfo.dir.c_str(), //LPCOLESTR             pszDir,
@@ -157,3 +249,5 @@ void testEngine() {
 		);
 	printf("Launched result=%d\n", hr);
 }
+
+#endif
