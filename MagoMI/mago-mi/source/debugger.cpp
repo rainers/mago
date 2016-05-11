@@ -26,24 +26,24 @@ Debugger::~Debugger() {
 }
 
 void Debugger::writeOutput(std::wstring msg) {
-	_cmdinput.writeLine(msg);
+	writeStdout(msg);
 }
 
 void Debugger::writeOutput(std::string msg) {
-	_cmdinput.writeLine(toUtf16(msg));
+	writeStdout(toUtf16(msg));
 }
 
 void Debugger::writeOutput(const char * msg) {
-	_cmdinput.writeLine(toUtf16(std::string(msg)));
+	writeStdout(toUtf16(std::string(msg)));
 }
 
 void Debugger::writeOutput(const wchar_t * msg) {
-	_cmdinput.writeLine(std::wstring(msg));
+	writeStdout(std::wstring(msg));
 }
 
 /// called on new input line
 void Debugger::onInputLine(std::wstring &s) {
-	fwprintf(stdout, L"Input line: %s\n", s.c_str());
+	writeStdout(L"Input line: %s\n", s.c_str());
 	if (s == L"quit") {
 		_quitRequested = true;
 		writeOutput("Quit requested");

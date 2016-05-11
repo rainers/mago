@@ -19,28 +19,90 @@ CmdInput::~CmdInput() {
 }
 
 /// write line to stdout
-bool CmdInput::writeLine(std::wstring s) {
+bool writeStdout(std::wstring s) {
 	GuardedArea area(_consoleGuard);
 	HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
 	WstringBuffer buf;
 	buf = s;
 	buf += L"\r\n";
 	std::string line = toUtf8(buf.wstr());
+	if (_cmdinput.inConsole()) {
+		// erase current edit line
+		readline_interrupt();
+	}
 	DWORD bytesWritten = 0;
 	//printf("line to write: %s", line.c_str());
 	return WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
 }
 
 /// write line to stderr
-bool CmdInput::writeStderrLine(std::wstring s) {
+bool writeStderr(std::wstring s) {
 	GuardedArea area(_consoleGuard);
 	HANDLE h_out = GetStdHandle(STD_ERROR_HANDLE);
 	WstringBuffer buf;
 	buf = s;
 	buf += L"\r\n";
 	std::string line = toUtf8(buf.wstr());
+	if (_cmdinput.inConsole()) {
+		// erase current edit line
+		readline_interrupt();
+	}
 	DWORD bytesWritten = 0;
 	return WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
+}
+
+// global stdinput object
+CmdInput _cmdinput;
+
+#define OUT_BUFFER_SIZE 16384
+/// formatted output to debugger stdout
+bool writeStdout(const char * fmt, ...) {
+	bool res = true;
+	va_list args;
+	va_start(args, fmt);
+	static char buffer[OUT_BUFFER_SIZE];
+	vsnprintf(buffer, OUT_BUFFER_SIZE - 1, fmt, args);
+	va_end(args);
+	std::string s = std::string(buffer);
+	std::wstring ws = toUtf16(s);
+	return writeStdout(ws);
+}
+
+/// formatted output to debugger stderr
+bool writeStderr(const char * fmt, ...) {
+	bool res = true;
+	va_list args;
+	va_start(args, fmt);
+	static char buffer[OUT_BUFFER_SIZE];
+	vsnprintf(buffer, OUT_BUFFER_SIZE - 1, fmt, args);
+	va_end(args);
+	std::string s = std::string(buffer);
+	std::wstring ws = toUtf16(s);
+	return writeStderr(ws);
+}
+
+/// formatted output to debugger stdout
+bool writeStdout(const wchar_t * fmt, ...) {
+	bool res = true;
+	va_list args;
+	va_start(args, fmt);
+	static wchar_t buffer[OUT_BUFFER_SIZE];
+	_vsnwprintf_s(buffer, OUT_BUFFER_SIZE - 1, fmt, args);
+	va_end(args);
+	std::wstring ws = std::wstring(buffer);
+	return writeStdout(ws);
+}
+
+/// formatted output to debugger stderr
+bool writeStderr(const wchar_t * fmt, ...) {
+	bool res = true;
+	va_list args;
+	va_start(args, fmt);
+	static wchar_t buffer[OUT_BUFFER_SIZE];
+	_vsnwprintf_s(buffer, OUT_BUFFER_SIZE - 1, fmt, args);
+	va_end(args);
+	std::wstring ws = std::wstring(buffer);
+	return writeStderr(ws);
 }
 
 /// returns true if stdin/stdout is closed

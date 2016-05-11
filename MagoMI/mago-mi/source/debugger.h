@@ -17,7 +17,6 @@
 
 class Debugger : public MIEventCallback, public CmdInputCallback {
 	RefPtr<MIEngine> _engine;
-	CmdInput _cmdinput;
 	bool _quitRequested;
 public:
 	Debugger();

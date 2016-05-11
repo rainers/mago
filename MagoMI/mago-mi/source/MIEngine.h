@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../DebugEngine/MagoNatDE/Common.h"
+#include "cmdinput.h"
 
 namespace Mago {
 	class Engine;
@@ -10,7 +11,8 @@ namespace Mago {
 
 class MIDebugPort;
 
-#define DUMP_EVENT(x) printf("%s\n", #x)
+//#define DUMP_EVENT(x) printf("%s\n", #x)
+#define DUMP_EVENT(x) writeStdout("%s\n", #x)
 
 class MIEventCallback {
 public:

@@ -25,16 +25,31 @@ private:
 public:
 	CmdInput();
 	~CmdInput();
+	bool inConsole() { return _inConsole; }
 	/// sets input callback
 	void setCallback(CmdInputCallback * callback) {
 		_callback = callback;
 	}
-	/// write line to stdout, returns false if writing is failed
-	bool writeLine(std::wstring s);
-	/// write line to stderr, returns false if writing is failed
-	bool writeStderrLine(std::wstring s);
+
 	/// returns true if stdin/stdout is closed
 	bool isClosed();
 	/// poll input, return false if stdin is closed or eof
 	bool poll();
 };
+
+/// global cmd input object
+extern CmdInput _cmdinput;
+
+/// write line to stdout, returns false if writing is failed
+bool writeStdout(std::wstring s);
+/// write line to stderr, returns false if writing is failed
+bool writeStderr(std::wstring s);
+
+/// formatted output to debugger stdout
+bool writeStdout(const char * fmt, ...);
+/// formatted output to debugger stdout
+bool writeStdout(const wchar_t * fmt, ...);
+/// formatted output to debugger stderr
+bool writeStderr(const char * fmt, ...);
+/// formatted output to debugger stderr
+bool writeStderr(const wchar_t * fmt, ...);

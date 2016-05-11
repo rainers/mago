@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "logger.h"
 
 template <typename T>
 struct Buffer {
