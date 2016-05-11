@@ -42,6 +42,8 @@ std::wstring toUtf16(const std::string s) {
 		unsigned int ch1 = (unsigned int)((i + 1 < s.length()) ? s[i + 1] : 0);
 		unsigned int ch2 = (unsigned int)((i + 2 < s.length()) ? s[i + 2] : 0);
 		unsigned int ch3 = (unsigned int)((i + 3 < s.length()) ? s[i + 3] : 0);
+		unsigned int ch4 = (unsigned int)((i + 4 < s.length()) ? s[i + 4] : 0);
+		unsigned int ch5 = (unsigned int)((i + 5 < s.length()) ? s[i + 5] : 0);
 
 		if (!(ch0 & 0x80)) {
 			// 0x00..0x7F single byte
@@ -129,53 +131,13 @@ std::wstring relativeToAbsolutePath(std::wstring s) {
 }
 
 
-#if 1
+#if 0
 
 #include "cmdline.h"
 #include "readline.h"
 
 #include "MIEngine.h"
 
-#if 0
-class MICallback : public IDebugEventCallback2 {
-public:
-	MICallback() {}
-	~MICallback() {}
-	virtual HRESULT STDMETHODCALLTYPE QueryInterface(
-			/* [in] */ REFIID riid, 
-			/* [iid_is][out] */ _COM_Outptr_ void __RPC_FAR *__RPC_FAR *ppvObject) {
-		*ppvObject = NULL; 
-		return E_NOINTERFACE; 
-	} 
-	virtual ULONG STDMETHODCALLTYPE AddRef(void) {
-			
-			return 1000; 
-	} 
-	virtual ULONG STDMETHODCALLTYPE Release(void) {
-				
-			return 1000; 
-	}
-	virtual HRESULT STDMETHODCALLTYPE Event(
-		/* [in] */ __RPC__in_opt IDebugEngine2 *pEngine,
-		/* [in] */ __RPC__in_opt IDebugProcess2 *pProcess,
-		/* [in] */ __RPC__in_opt IDebugProgram2 *pProgram,
-		/* [in] */ __RPC__in_opt IDebugThread2 *pThread,
-		/* [in] */ __RPC__in_opt IDebugEvent2 *pEvent,
-		/* [in] */ __RPC__in REFIID riidEvent,
-		/* [in] */ DWORD dwAttrib) {
-		// Event
-		if (!memcmp(&riidEvent, &IID_IDebugEngineCreateEvent2, sizeof(IID))) {
-			IDebugEngineCreateEvent2 * pevent = NULL;
-			if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugEngineCreateEvent2, (void**)&pevent))) {
-			}
-		} else if (!memcmp(&riidEvent, &IID_IDebugProgramCreateEvent2, sizeof(IID))) {
-
-		}
-		printf("TestCallback.Event() is called\n");
-		return S_OK;
-	}
-};
-#endif
 
 #if 1
 void testReadLine() {
@@ -209,7 +171,6 @@ void testReadLine() {
 	}
 }
 #endif
-
 
 void testEngine() {
 
