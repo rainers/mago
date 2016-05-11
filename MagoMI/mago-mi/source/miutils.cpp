@@ -135,9 +135,16 @@ void testEngine() {
 
 	wprintf(L"Testing new line input\n");
 	for (;;) {
-		wchar_t * line = readline_new("(gdb) ");
-		wprintf(L"Line: %s\n", line);
-		if (!line)
+		wchar_t * line = NULL;
+		int res = readline_poll("(gdb) ", &line);
+		if (res == READLINE_READY) {
+			wprintf(L"Line: %s\n", line);
+			free(line);
+		}
+		else if (res == READLINE_CTRL_C) {
+			wprintf(L"Ctrl+C is pressed\n");
+		}
+		else if (res == READLINE_ERROR)
 			break;
 	}
 

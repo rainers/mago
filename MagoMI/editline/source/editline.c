@@ -181,19 +181,19 @@ catch CTRL+C signals
 */
 BOOL _el_signal_handler(DWORD fdwCtrlType)
 {
-  _el_ctrl_c_pressed = FALSE;
-  switch (fdwCtrlType) {
-    case CTRL_C_EVENT:
-    if (_el_line_buffer && wcslen(_el_line_buffer)) {
-      _el_ctrl_c_pressed = TRUE;
-    }
-    else {
-      _el_clean_exit();
-    }
-    break;
-  }
-  
-  return _el_ctrl_c_pressed;
+	_el_ctrl_c_pressed = FALSE;
+	switch (fdwCtrlType) {
+		case CTRL_C_EVENT:
+		case CTRL_BREAK_EVENT:
+			if (_el_line_buffer) { // && wcslen(_el_line_buffer)
+				_el_ctrl_c_pressed = TRUE;
+			}
+			else {
+				_el_clean_exit();
+			}
+			break;
+	}
+	return _el_ctrl_c_pressed;
 }
 
 
@@ -917,13 +917,6 @@ int isInConsole() {
 	return 1;
 }
 
-enum ReadLineResult {
-	READLINE_ERROR,
-	READLINE_IN_PROGRESS,
-	READLINE_READY,
-	READLINE_CTRL_C
-};
-
 typedef struct ReadlineState_ {
 	wchar_t buf[_EL_CONSOLE_BUF_LEN];
 	char **array;
@@ -1051,31 +1044,17 @@ int ReadlineState_prepare(ReadlineState * this, const char * prompt) {
 	SetConsoleMode(_el_h_out, ENABLE_PROCESSED_OUTPUT);
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)
 		_el_signal_handler, TRUE);
+	rl_point = 0;
 	return 1;
 }
 
 
 /* readline splitting : init part, returns nonzero if success */
-int ReadlineState_poll(ReadlineState * this, const char * prompt, wchar_t ** ret_string, int * cursor_pos, int was_interrupted) {
-	rl_point = 0;
+int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_interrupted) {
 	if (!_el_line_buffer) {
-		if (!ReadlineState_prepare(this, prompt))
-			return READLINE_ERROR;
+		return READLINE_ERROR;
 	}
-
-	if (ret_string && *ret_string) {
-
-		wcscpy(_el_line_buffer, *ret_string);
-		this->line_len = (int)wcslen(_el_line_buffer);
-		free(*ret_string);
-		*ret_string = NULL;
-		if (cursor_pos && *cursor_pos >= 0 && *cursor_pos <= this->line_len) {
-			rl_point = *cursor_pos /* + _el_prompt_len*/;
-		}
-	}
-	else {
-		*ret_string = NULL;
-	}
+	*ret_string = NULL;
 	while ((this->buf[0] != VK_RETURN)
 		&& (!_el_ctrl_c_pressed) && _el_line_buffer) {
 		/*
@@ -1520,16 +1499,13 @@ int ReadlineState_poll(ReadlineState * this, const char * prompt, wchar_t ** ret
 			*/
 			WaitForSingleObject(_el_h_in, INFINITE);
 		}
-		if (cursor_pos) {
-			*cursor_pos = rl_point /* - _el_prompt_len*/;
-		}
-		while (this->buf[0] == VK_RETURN || _el_ctrl_c_pressed)
+		if (this->buf[0] == VK_RETURN || _el_ctrl_c_pressed)
 			break;
 		if (!_el_line_buffer) {
 			return READLINE_ERROR;
 		}
-		*ret_string = _wcsdup(_el_line_buffer);
-		_el_clean_exit();
+		//*ret_string = _wcsdup(_el_line_buffer);
+		//_el_clean_exit();
 		return READLINE_IN_PROGRESS;
 	}
 
@@ -1539,34 +1515,44 @@ int ReadlineState_poll(ReadlineState * this, const char * prompt, wchar_t ** ret
 	/*
 	if CTRL+C has been pressed, return an empty string
 	*/
-	if (_el_line_buffer) {
-		if (_el_ctrl_c_pressed) {
-			this->n = (int)wcslen(_el_line_buffer) - rl_point;
-			if (this->n) {
-				_el_set_cursor(this->n);
-			}
-			_el_line_buffer[0] = _T('\0');
+	if (_el_ctrl_c_pressed) {
+		/*
+		this->n = (int)wcslen(_el_line_buffer) - rl_point;
+		if (this->n) {
+			_el_set_cursor(this->n);
 		}
-		//_el_w2mb(_el_line_buffer, &rl_line_buffer);
-		*ret_string = _wcsdup(_el_line_buffer);
+		*/
+	} else {
+		if (_el_line_buffer) {
+			//_el_w2mb(_el_line_buffer, &rl_line_buffer);
+			*ret_string = _wcsdup(_el_line_buffer);
+		}
 	}
 	_el_clean_exit();
 	return _el_ctrl_c_pressed ? READLINE_CTRL_C : READLINE_READY; // this->ret_string;
 }
 
 static ReadlineState read_line_state;
-wchar_t * readline_new(const char * prompt) {
-	ReadlineState_init(&read_line_state);
-	ReadlineState_prepare(&read_line_state, prompt);
-	wchar_t * ret_string = wcsdup(L"INITIAL LINE");
-	int cursor_pos = 8;
-	for (;;) {
-		int res = ReadlineState_poll(&read_line_state, prompt, &ret_string, &cursor_pos, 1);
-		if (res == READLINE_ERROR)
-			return NULL;
-		if (res == READLINE_READY || res == READLINE_CTRL_C)
-			return ret_string;
+static int _readline_new_is_interrupted = 0;
+static int _readline_new_last_state = READLINE_READY;
+
+void readline_interrupt() {
+	_readline_new_is_interrupted = 1;
+}
+
+int readline_poll(const char * prompt, wchar_t ** result_string) {
+	*result_string = NULL;
+	if (_readline_new_last_state != READLINE_IN_PROGRESS) {
+		ReadlineState_init(&read_line_state);
+		if (ReadlineState_prepare(&read_line_state, prompt) == READLINE_ERROR) {
+			_readline_new_last_state = READLINE_ERROR;
+			return READLINE_ERROR;
+		}
 	}
+	_readline_new_last_state = ReadlineState_poll(&read_line_state, result_string, _readline_new_is_interrupted);
+	_el_ctrl_c_pressed = 0;
+	_readline_new_is_interrupted = 0;
+	return _readline_new_last_state;
 }
 
 /*

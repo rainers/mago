@@ -134,8 +134,28 @@ called by the user
 void source_editrc();
 /* returns nonzero if app has console, 0 if it's redirected input */
 int isInConsole();
+
 /*New implementation*/
-wchar_t * readline_new(const char * prompt);
+enum ReadLineResult {
+	READLINE_ERROR,
+	READLINE_IN_PROGRESS,
+	READLINE_READY,
+	READLINE_CTRL_C
+};
+
+
+/* 
+  readline_poll -- polls for console input
+  Return values:
+       READLINE_ERROR: error occured, further input is impossible
+	   READLINE_IN_PROGRESS: continue polling
+	   READLINE_READY: input string is ready in result_string (don't forget to free it)
+	   READLINE_CTRL_C: ctrl+c is pressed
+	   */
+int readline_poll(const char * prompt, wchar_t ** result_string);
+/* Readline is interrupted with other console output */
+void readline_interrupt();
+
 char *readline(const char *prompt);
 char **rl_completion_matches(const char *text, char *entry_func(const char *, int));
 char *rl_filename_completion_function(const char *text, int state);
