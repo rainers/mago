@@ -1,5 +1,6 @@
 #include "debugger.h"
 #include "cmdline.h"
+#include "../../DebugEngine/Exec/Log.h"
 
 void InitDebug()
 {
@@ -13,6 +14,7 @@ void InitDebug()
 }
 
 Debugger::Debugger() : _quitRequested(false) {
+	Log::Enable(false);
 	_engine = new MIEngine();
 	//InitDebug();
 	_cmdinput.setCallback(this);

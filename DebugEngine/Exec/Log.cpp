@@ -25,9 +25,16 @@ static const char*      gEventNames[] =
     "RIP_EVENT",
 };
 
+static bool _log_enabled = true;
+
+void Log::Enable(bool enabled) {
+    _log_enabled = enabled;
+}
 
 void Log::LogDebugEvent( const DEBUG_EVENT& event )
 {
+    if (!_log_enabled)
+        return;
     if ( event.dwDebugEventCode >= _countof( gEventNames ) )
         return;
 

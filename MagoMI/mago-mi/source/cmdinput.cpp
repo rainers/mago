@@ -24,7 +24,7 @@ bool writeStdout(std::wstring s) {
 	HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
 	WstringBuffer buf;
 	buf = s;
-	buf += L"\r\n";
+	buf += L"\n";
 	std::string line = toUtf8(buf.wstr());
 	if (_cmdinput.inConsole()) {
 		// erase current edit line
@@ -32,6 +32,7 @@ bool writeStdout(std::wstring s) {
 	}
 	DWORD bytesWritten = 0;
 	//printf("line to write: %s", line.c_str());
+	CRLog::debug("STDOUT: %s", line.c_str());
 	return WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
 }
 
@@ -41,13 +42,14 @@ bool writeStderr(std::wstring s) {
 	HANDLE h_out = GetStdHandle(STD_ERROR_HANDLE);
 	WstringBuffer buf;
 	buf = s;
-	buf += L"\r\n";
+	buf += L"\n";
 	std::string line = toUtf8(buf.wstr());
 	if (_cmdinput.inConsole()) {
 		// erase current edit line
 		readline_interrupt();
 	}
 	DWORD bytesWritten = 0;
+	CRLog::debug("STDERR: %s", line.c_str());
 	return WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
 }
 
@@ -126,6 +128,8 @@ void CmdInput::lineCompleted() {
 	_buf.trimEol();
 	std::wstring res = _buf.wstr();
 	_buf.reset();
+	std::string s = toUtf8(res);
+	CRLog::debug("STDIN: %s", s.c_str());
 	if (_callback) {
 		_callback->onInputLine(res);
 	}

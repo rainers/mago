@@ -12,7 +12,7 @@ namespace Mago {
 class MIDebugPort;
 
 //#define DUMP_EVENT(x) printf("%s\n", #x)
-#define DUMP_EVENT(x) writeStdout("%s\n", #x)
+#define DUMP_EVENT(x) writeStdout("Event: %s\n", #x); CRLog::debug("Event: %s", #x)
 
 class MIEventCallback {
 public:
