@@ -75,17 +75,34 @@ bool CmdInput::poll() {
 		return false;
 	if (_inConsole) {
 		//
-		char *line;
-		line = readline("(gdb) ");
-		if (!line) {
+		wchar_t * line = NULL;
+		int res = READLINE_ERROR;
+		{
+			GuardedArea area(_consoleGuard);
+			res = readline_poll("(gdb) ", &line);
+		}
+		if (res == READLINE_READY) {
+			//wprintf(L"Line: %s\n", line);
+			if (line) {
+				std::wstring s = line;
+				std::string histLine = toUtf8(s);
+				add_history((char*)histLine.c_str());
+				free(line);
+				_buf = histLine;
+				lineCompleted();
+			}
+		}
+		else if (res == READLINE_CTRL_C) {
+			//wprintf(L"Ctrl+C is pressed\n");
+			if (_callback) {
+				_callback->onCtrlBreak();
+			}
+		}
+		else if (res == READLINE_ERROR) {
 			_closed = true;
 			return false;
 		}
-		add_history(line);
-		std::string s = line;
-		free(line);
-		_buf = s;
-		lineCompleted();
+		return true;
 	} else {
 		{
 			GuardedArea area(_consoleGuard);

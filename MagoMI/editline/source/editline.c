@@ -626,8 +626,13 @@ int _el_print_string(wchar_t *string)
     */
     wcscpy_s(_el_temp_print, _el_temp_print_size, string);
     padded_len = _el_pad(&sbInfo, _el_temp_print);
-    if (!WriteConsole(_el_h_out, _el_temp_print,
+    if (!WriteConsoleW(_el_h_out, _el_temp_print,
       padded_len, &n_chars, NULL)) {
+		int err = GetLastError();
+		if (!WriteConsole(_el_h_out, L"привет", 6, &n_chars, NULL)) {
+			err = GetLastError();
+		}
+		wprintf("%s\n", L"привет");
       return -1;
     }
     /*
@@ -1044,7 +1049,12 @@ int ReadlineState_prepare(ReadlineState * this, const char * prompt) {
 	SetConsoleMode(_el_h_out, ENABLE_PROCESSED_OUTPUT);
 	SetConsoleCtrlHandler((PHANDLER_ROUTINE)
 		_el_signal_handler, TRUE);
+	//_setmode(_fileno(stdout), _O_U16TEXT);
 	rl_point = 0;
+
+	//SetConsoleCP(CP_UTF8);
+	//SetConsoleOutputCP(CP_UTF8);
+
 	return 1;
 }
 
@@ -1500,7 +1510,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 			/*
 			wait for console input
 			*/
-			WaitForSingleObject(_el_h_in, INFINITE);
+			WaitForSingleObject(_el_h_in, 2); //INFINITE
 		}
 		if (this->buf[0] == VK_RETURN || _el_ctrl_c_pressed)
 			break;

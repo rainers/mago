@@ -5,12 +5,30 @@ std::string toUtf8(const std::wstring s) {
 	StringBuffer buf;
 	for (unsigned i = 0; i < s.length(); i++) {
 		wchar_t ch = s[i];
-		if (ch < 128) {
-			buf.append((char)ch);
+		if (!(ch & ~0x7F)) {
+			buf.append((unsigned char)ch);
+		}
+		else if (!(ch & ~0x7FF)) {
+			buf.append((unsigned char)(((ch >> 6) & 0x1F) | 0xC0));
+			buf.append((unsigned char)(((ch)& 0x3F) | 0x80));
+		}
+		else if (!(ch & ~0xFFFF)) {
+			buf.append((unsigned char)(((ch >> 12) & 0x0F) | 0xE0));
+			buf.append((unsigned char)(((ch >> 6) & 0x3F) | 0x80));
+			buf.append((unsigned char)(((ch)& 0x3F) | 0x80));
+		}
+		else if (!(ch & ~0x1FFFFF)) {
+			buf.append((unsigned char)(((ch >> 18) & 0x07) | 0xF0));
+			buf.append((unsigned char)(((ch >> 12) & 0x3F) | 0x80));
+			buf.append((unsigned char)(((ch >> 6) & 0x3F) | 0x80));
+			buf.append((unsigned char)(((ch)& 0x3F) | 0x80));
 		}
 		else {
-			// TODO: add UTF conversion
-			buf.append((char)ch);
+			buf.append((unsigned char)(((ch >> 24) & 0x03) | 0xF8));
+			buf.append((unsigned char)(((ch >> 18) & 0x3F) | 0x80));
+			buf.append((unsigned char)(((ch >> 12) & 0x3F) | 0x80));
+			buf.append((unsigned char)(((ch >> 6) & 0x3F) | 0x80));
+			buf.append((unsigned char)(((ch)& 0x3F) | 0x80));
 		}
 	}
 	return buf.str();
@@ -19,10 +37,38 @@ std::string toUtf8(const std::wstring s) {
 std::wstring toUtf16(const std::string s) {
 	WstringBuffer buf;
 	for (unsigned i = 0; i < s.length(); i++) {
-		char ch = s[i];
-		char ch2 = (i + 1 < s.length()) ? s[i + 1] : 0;
-		char ch3 = (i + 2 < s.length()) ? s[i + 2] : 0;
-		// TODO: add UTF conversion
+		wchar_t ch = 0;
+		unsigned int ch0 = (unsigned int)s[i];
+		unsigned int ch1 = (unsigned int)((i + 1 < s.length()) ? s[i + 1] : 0);
+		unsigned int ch2 = (unsigned int)((i + 2 < s.length()) ? s[i + 2] : 0);
+		unsigned int ch3 = (unsigned int)((i + 3 < s.length()) ? s[i + 3] : 0);
+
+		if (!(ch0 & 0x80)) {
+			// 0x00..0x7F single byte
+			// 0x80 == 10000000
+			// !(ch0 & 0x80) => ch0 < 10000000
+			ch = (wchar_t)ch0;
+		}
+		else if ((ch0 & 0xE0) == 0xC0) {
+			// two bytes 110xxxxx 10xxxxxx
+			ch = (wchar_t)(((ch0 & 0x1F) << 6) | (ch1 & 0x3F));
+		}
+		else if ((ch0 & 0xF0) == 0xE0) {
+			// three bytes 1110xxxx 10xxxxxx 10xxxxxx
+			ch = (wchar_t)(((ch0 & 0x0F) << 12) | ((ch1 & 0x3F) << 6) | (ch2 & 0x3F));
+		}
+		else if ((ch0 & 0xF8) == 0xF0) {
+			// four bytes 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+			ch = (wchar_t)(((ch0 & 0x07) << 18) | ((ch1 & 0x3F) << 12) | ((ch2 & 0x3F) << 6) | (ch3 & 0x3F));
+		}
+		else if ((ch0 & 0xFC) == 0xF8) {
+			// five bytes 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+			ch = (wchar_t)(((ch0 & 0x03) << 24) | ((ch1 & 0x3F) << 18) | ((ch2 & 0x3F) << 12) | ((ch3 & 0x3F) << 6) | (ch4 & 0x3F));
+		}
+		else if ((ch0 & 0xFE) == 0xFC) {
+			// six bytes 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+			ch = (wchar_t)(((ch0 & 0x01) << 30) | ((ch1 & 0x3F) << 24) | ((ch2 & 0x3F) << 18) | ((ch3 & 0x3F) << 12) | ((ch4 & 0x3F) << 6) | (ch5 & 0x3F));
+		}
 		buf.append(ch);
 	}
 	return buf.wstr();
@@ -131,28 +177,43 @@ public:
 };
 #endif
 
-void testEngine() {
-
+#if 1
+void testReadLine() {
 	wprintf(L"Testing new line input\n");
 	for (int i = 0; i < 10000000; i++) {
 		wchar_t * line = NULL;
 		int res = readline_poll("(gdb) ", &line);
 		if (res == READLINE_READY) {
-			wprintf(L"Line: %s\n", line);
-			free(line);
+			DWORD count;
+			wprintf(L"Line:", line);
+			WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), line, wcslen(line), &count, NULL);
+			wprintf(L"\n", line);
+			if (line) {
+				std::wstring s = line;
+				std::string histLine = toUtf8(s);
+				add_history((char*)histLine.c_str());
+				free(line);
+			}
 		}
 		else if (res == READLINE_CTRL_C) {
 			wprintf(L"Ctrl+C is pressed\n");
 		}
 		else if (res == READLINE_ERROR)
 			break;
-		if (i > 0 && (i % 10) == 0) {
+		if (i > 0 && (i % 1000) == 0) {
 			readline_interrupt();
-			printf("Some additional lines - input interrupted\n");
+			printf("Some additional lines - input interrupted %d\n", i);
 			printf("And one more line\n");
-			printf("Third line\n");
+			//printf("Third line\n");
 		}
 	}
+}
+#endif
+
+
+void testEngine() {
+
+	testReadLine();
 
 	MIEngine engine;
 	MIEventCallback callback;
