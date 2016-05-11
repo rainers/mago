@@ -134,7 +134,7 @@ public:
 void testEngine() {
 
 	wprintf(L"Testing new line input\n");
-	for (;;) {
+	for (int i = 0; i < 1000000; i++) {
 		wchar_t * line = NULL;
 		int res = readline_poll("(gdb) ", &line);
 		if (res == READLINE_READY) {
@@ -146,6 +146,10 @@ void testEngine() {
 		}
 		else if (res == READLINE_ERROR)
 			break;
+		if (i > 0 && (i % 10) == 0) {
+			readline_interrupt();
+			printf("Some additional lines - input interrupted\n... and one more line\n");
+		}
 	}
 
 	MIEngine engine;

@@ -1513,7 +1513,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 	while (next_history());
 	previous_history();
 	/*
-	if CTRL+C has been pressed, return an empty string
+	if CTRL+C has been pressed, return NULL
 	*/
 	if (_el_ctrl_c_pressed) {
 		/*
@@ -1538,6 +1538,10 @@ static int _readline_new_last_state = READLINE_READY;
 
 void readline_interrupt() {
 	_readline_new_is_interrupted = 1;
+	if (_el_line_buffer) {
+		// input in progress
+		printf("\n");
+	}
 }
 
 int readline_poll(const char * prompt, wchar_t ** result_string) {
