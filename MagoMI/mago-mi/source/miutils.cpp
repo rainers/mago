@@ -134,7 +134,7 @@ public:
 void testEngine() {
 
 	wprintf(L"Testing new line input\n");
-	for (int i = 0; i < 1000000; i++) {
+	for (int i = 0; i < 10000000; i++) {
 		wchar_t * line = NULL;
 		int res = readline_poll("(gdb) ", &line);
 		if (res == READLINE_READY) {
@@ -148,7 +148,9 @@ void testEngine() {
 			break;
 		if (i > 0 && (i % 10) == 0) {
 			readline_interrupt();
-			printf("Some additional lines - input interrupted\n... and one more line\n");
+			printf("Some additional lines - input interrupted\n");
+			printf("And one more line\n");
+			printf("Third line\n");
 		}
 	}
 

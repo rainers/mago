@@ -778,6 +778,8 @@ set the physical cursor position
 */
 int _el_set_cursor(int offset)
 {  
+	if (!offset)
+		return 0;
   CONSOLE_SCREEN_BUFFER_INFO sbInfo;
   int width;
   int old_x;
@@ -805,13 +807,14 @@ int _el_set_cursor(int offset)
     count how many characters exist
     before the right margin
     */
-    c_first_line = sbInfo.srWindow.Right
+    c_first_line = sbInfo.srWindow.Right + 1
       - sbInfo.dwCursorPosition.X;
+
     /*
     if the cursor needs to be moved further,
     move to the next line(s)
     */
-    if (offset > c_first_line) {
+    if (offset >= c_first_line) {
       dy = (offset - c_first_line) / width + 1;
     }
     dx = offset - dy * width;
@@ -822,12 +825,12 @@ int _el_set_cursor(int offset)
     before the left margin
     */
     c_first_line = sbInfo.dwCursorPosition.X
-      - sbInfo.srWindow.Left;
+      - sbInfo.srWindow.Left + 1;
     /*
     if the cursor needs to be moved further,
     move to the previous line(s)
     */
-    if (-offset > c_first_line) {
+    if (-offset >= c_first_line) {
       dy = (offset + c_first_line) / width - 1;
     }
     dx = offset - dy * width;
@@ -850,7 +853,7 @@ int _el_set_cursor(int offset)
   sbInfo.dwCursorPosition.Y += (SHORT)dy;
 
   return (SetConsoleCursorPosition(_el_h_out,
-    sbInfo.dwCursorPosition) ? 0 : 1);
+	  sbInfo.dwCursorPosition) ? 0 : 1);
 }
 
 
@@ -924,7 +927,6 @@ typedef struct ReadlineState_ {
 	int start;
 	int end;
 	int compl_pos;
-	int n;
 	int index;
 	int len;
 	int line_len;
@@ -935,7 +937,6 @@ typedef struct ReadlineState_ {
 	COORD coord;
 	DWORD count;
 	INPUT_RECORD irBuffer;
-	CONSOLE_SCREEN_BUFFER_INFO sbInfo;
 
 } ReadlineState;
 
@@ -946,7 +947,6 @@ void ReadlineState_init(ReadlineState * this) {
 	this->start = 0;
 	this->end = 0;
 	this->compl_pos = -1;
-	this->n = 0;
 	this->index = 0;
 	this->len = 0;
 	this->line_len = 0;
@@ -1051,6 +1051,9 @@ int ReadlineState_prepare(ReadlineState * this, const char * prompt) {
 
 /* readline splitting : init part, returns nonzero if success */
 int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_interrupted) {
+	int n;
+	CONSOLE_SCREEN_BUFFER_INFO sbInfo;
+
 	if (!_el_line_buffer) {
 		return READLINE_ERROR;
 	}
@@ -1060,11 +1063,11 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 		/*
 		get screen buffer info from the current console
 		*/
-		if (!GetConsoleScreenBufferInfo(_el_h_out, &this->sbInfo)) {
+		if (!GetConsoleScreenBufferInfo(_el_h_out, &sbInfo)) {
 			_el_clean_exit();
 			return READLINE_ERROR;
 		}
-		_el_temp_print_size = this->sbInfo.dwSize.X + 1;
+		_el_temp_print_size = sbInfo.dwSize.X + 1;
 		if (!(_el_temp_print = realloc(_el_temp_print,
 			_el_temp_print_size * sizeof(wchar_t)))) {
 			_el_clean_exit();
@@ -1074,21 +1077,21 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 		/*
 		compute the current visible console width
 		*/
-		this->width = this->sbInfo.srWindow.Right - this->sbInfo.srWindow.Left + 1;
+		this->width = sbInfo.srWindow.Right - sbInfo.srWindow.Left + 1;
 		/*
 		if the user has changed the window size
 		update the view
 		*/
 		if (this->old_width != this->width || was_interrupted) {
 			this->line_len = (int)wcslen(_el_line_buffer);
-			this->sbInfo.dwCursorPosition.X = 0;
-			if (this->old_width) {
-				this->n = (_el_prompt_len + this->line_len - 1) / this->old_width;
-				this->sbInfo.dwCursorPosition.Y -= (SHORT)this->n;
-				this->coord.Y = this->sbInfo.dwCursorPosition.Y;
+			sbInfo.dwCursorPosition.X = 0;
+			if (this->old_width && !was_interrupted) {
+				n = (_el_prompt_len + this->line_len - 1) / this->old_width;
+				sbInfo.dwCursorPosition.Y -= (SHORT)n;
+				this->coord.Y = sbInfo.dwCursorPosition.Y;
 			}
 			if (!SetConsoleCursorPosition(_el_h_out,
-				this->sbInfo.dwCursorPosition)) {
+				sbInfo.dwCursorPosition)) {
 				_el_clean_exit();
 				return READLINE_ERROR;
 			}
@@ -1112,7 +1115,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 				this->coord.X = 0;
 				this->coord.Y += (SHORT)((_el_prompt_len + this->line_len - 1) / this->width + 1);
 				FillConsoleOutputCharacter(_el_h_out, _T(' '),
-					this->sbInfo.dwSize.X * (this->n + 2), this->coord, &this->count);
+					sbInfo.dwSize.X * (n + 2), this->coord, &this->count);
 			}
 			if (_el_set_cursor(rl_point - this->line_len)) { //  
 				_el_clean_exit();
@@ -1355,21 +1358,21 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 							if (!rl_point) {
 								break;
 							}
-							this->n = 1;
-							while (((rl_point - this->n) > 0)
-								&& (iswspace(_el_line_buffer[rl_point - this->n]))) {
-								++this->n;
+							n = 1;
+							while (((rl_point - n) > 0)
+								&& (iswspace(_el_line_buffer[rl_point - n]))) {
+								++n;
 							}
-							while ((rl_point - this->n)
-								&& (!iswspace(_el_line_buffer[rl_point - this->n]))) {
-								++this->n;
+							while ((rl_point - n)
+								&& (!iswspace(_el_line_buffer[rl_point - n]))) {
+								++n;
 							}
-							if (rl_point - this->n) {
-								--this->n;
+							if (rl_point - n) {
+								--n;
 							}
 							_el_compl_index = 0;
 							this->compl_pos = -1;
-							if (_el_delete_char(VK_BACK, this->n)) {
+							if (_el_delete_char(VK_BACK, n)) {
 								_el_clean_exit();
 								return READLINE_ERROR;
 							}
@@ -1517,9 +1520,9 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 	*/
 	if (_el_ctrl_c_pressed) {
 		/*
-		this->n = (int)wcslen(_el_line_buffer) - rl_point;
-		if (this->n) {
-			_el_set_cursor(this->n);
+		n = (int)wcslen(_el_line_buffer) - rl_point;
+		if (n) {
+			_el_set_cursor(n);
 		}
 		*/
 	} else {
@@ -1537,10 +1540,27 @@ static int _readline_new_is_interrupted = 0;
 static int _readline_new_last_state = READLINE_READY;
 
 void readline_interrupt() {
+	CONSOLE_SCREEN_BUFFER_INFO sbInfo;
+	int cursor_y_offset = 0;
+	int editor_lines = 1;
+	COORD coord;
+	DWORD count;
 	_readline_new_is_interrupted = 1;
 	if (_el_line_buffer) {
 		// input in progress
-		printf("\n");
+		if (!GetConsoleScreenBufferInfo(_el_h_out, &sbInfo)) {
+			return;
+		}
+		int width = sbInfo.srWindow.Right - sbInfo.srWindow.Left + 1;
+		cursor_y_offset = (_el_prompt_len + rl_point) / width;
+		editor_lines = (_el_prompt_len + read_line_state.line_len) / width;
+
+		sbInfo.dwCursorPosition.X = 0;
+		sbInfo.dwCursorPosition.Y -= cursor_y_offset;
+
+		SetConsoleCursorPosition(_el_h_out, sbInfo.dwCursorPosition);
+		FillConsoleOutputCharacter(_el_h_out, _T(' '),
+			width * (editor_lines + 2), sbInfo.dwCursorPosition, &count);
 	}
 }
 
@@ -1556,6 +1576,9 @@ int readline_poll(const char * prompt, wchar_t ** result_string) {
 	_readline_new_last_state = ReadlineState_poll(&read_line_state, result_string, _readline_new_is_interrupted);
 	_el_ctrl_c_pressed = 0;
 	_readline_new_is_interrupted = 0;
+	if (_readline_new_last_state == READLINE_ERROR) {
+		_readline_new_is_interrupted = 2;
+	}
 	return _readline_new_last_state;
 }
 

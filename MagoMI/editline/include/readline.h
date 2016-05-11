@@ -45,7 +45,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /*
 these defines may be changed
 */
-#define _EL_BUF_LEN      4096  /* maximum line buffer size */
+#define _EL_BUF_LEN      32768  /* maximum line buffer size */
 #define DEFAULT_HISTORY_SIZE    200  /* default number of history entries */
 
 /*
