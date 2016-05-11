@@ -606,7 +606,7 @@ int _el_print_string(wchar_t *string)
     put the cursor back into the position
     it occupied before printing
     */
-    sbInfo.dwCursorPosition.Y -= (dy + 1);
+    sbInfo.dwCursorPosition.Y -= (SHORT)(dy + 1);
     sbInfo.dwCursorPosition.X = x_initial;
     if (!SetConsoleCursorPosition(_el_h_out,
       sbInfo.dwCursorPosition)) {
@@ -844,10 +844,10 @@ int _el_set_cursor(int offset)
     if (!GetConsoleScreenBufferInfo(_el_h_out, &sbInfo)) {
       return -1;
     }
-    sbInfo.dwCursorPosition.X = old_x;
+    sbInfo.dwCursorPosition.X = (SHORT)old_x;
   }
-  sbInfo.dwCursorPosition.X += dx;
-  sbInfo.dwCursorPosition.Y += dy;
+  sbInfo.dwCursorPosition.X += (SHORT)dx;
+  sbInfo.dwCursorPosition.Y += (SHORT)dy;
 
   return (SetConsoleCursorPosition(_el_h_out,
     sbInfo.dwCursorPosition) ? 0 : 1);
@@ -915,6 +915,658 @@ int isInConsole() {
 		return 0;
 	}
 	return 1;
+}
+
+enum ReadLineResult {
+	READLINE_ERROR,
+	READLINE_IN_PROGRESS,
+	READLINE_READY,
+	READLINE_CTRL_C
+};
+
+typedef struct ReadlineState_ {
+	wchar_t buf[_EL_CONSOLE_BUF_LEN];
+	char **array;
+	char *ret_string;
+	int start;
+	int end;
+	int compl_pos;
+	int n;
+	int index;
+	int len;
+	int line_len;
+	int old_width;
+	int width;
+	UINT32 ctrl;
+	UINT32 special;
+	COORD coord;
+	DWORD count;
+	INPUT_RECORD irBuffer;
+	CONSOLE_SCREEN_BUFFER_INFO sbInfo;
+
+} ReadlineState;
+
+/* readline splitting : init part, returns nonzero if success */
+void ReadlineState_init(ReadlineState * this) {
+	this->array = NULL;
+	this->ret_string = NULL;
+	this->start = 0;
+	this->end = 0;
+	this->compl_pos = -1;
+	this->n = 0;
+	this->index = 0;
+	this->len = 0;
+	this->line_len = 0;
+	this->old_width = 0;
+	this->width = 0;
+	this->ctrl = 0;
+	this->special = 0;
+	this->count = 0;
+
+	/* init globals */
+	_el_ctrl_c_pressed = FALSE;
+	_el_line_buffer = NULL;
+	_el_temp_print = NULL;
+	_el_next_compl = NULL;
+	rl_line_buffer = NULL;
+	_el_file_name = NULL;
+	_el_dir_name = NULL;
+	_el_old_arg = NULL;
+	_el_wide = NULL;
+	_el_text = NULL;
+	_el_text_mb = NULL;
+	_el_compl_array = NULL;
+	_el_completer_word_break_characters = NULL;
+	rl_point = 0;
+	rl_attempted_completion_over = 0;
+	_el_compl_index = 0;
+	_el_n_compl = 0;
+	_el_h_in = NULL;
+	_el_h_out = NULL;
+	wcscpy_s(_el_basic_file_break_characters,
+		_EL_MAX_FILE_BREAK_CHARACTERS, _EL_BASIC_FILE_BREAK_CHARACTERS);
+	memset(&this->coord, 0, sizeof(COORD));
+	memset(this->buf, 0, _EL_CONSOLE_BUF_LEN * sizeof(wchar_t));
+	memset(&this->irBuffer, 0, sizeof(INPUT_RECORD));
+}
+
+/* readline splitting : init part, returns nonzero if success */
+int ReadlineState_prepare(ReadlineState * this, const char * prompt) {
+	/*
+	allocate buffers
+	*/
+	_el_line_buffer_size = _EL_BUF_LEN + 1;
+	_el_line_buffer = (wchar_t *)malloc(_el_line_buffer_size * sizeof(wchar_t));
+	if (!_el_mb2w((char *)rl_basic_word_break_characters,
+		&_el_basic_word_break_characters)) {
+		_el_clean_exit();
+		return READLINE_ERROR;
+	}
+	if (rl_completer_word_break_characters) {
+		if (!_el_mb2w((char *)rl_completer_word_break_characters,
+			&_el_completer_word_break_characters)) {
+			_el_clean_exit();
+			return READLINE_ERROR;
+		}
+	}
+	if (!(_el_line_buffer)) {
+		_el_clean_exit();
+		return READLINE_ERROR;
+	}
+	memset(_el_line_buffer, 0, _el_line_buffer_size * sizeof(wchar_t));
+	rl_attempted_completion_over = 0;
+	_el_print = (wchar_t *)malloc(_el_line_buffer_size * sizeof(wchar_t));
+	if (!(_el_print)) {
+		_el_clean_exit();
+		return READLINE_ERROR;
+	}
+	memset(_el_print, 0, _el_line_buffer_size * sizeof(wchar_t));
+	rl_prompt = _strdup(prompt);
+	if (!(rl_prompt)) {
+		_el_clean_exit();
+		return READLINE_ERROR;
+	}
+	if (!_el_mb2w((char *)prompt, &_el_prompt)) {
+		_el_clean_exit();
+		return READLINE_ERROR;
+	}
+	_el_prompt_len = (int)wcslen(_el_prompt);
+	/*
+	get I/O handles for current console
+	*/
+	_el_h_in = GetStdHandle(STD_INPUT_HANDLE);
+	_el_h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+	if ((!(_el_h_in)) || (!(_el_h_out))) {
+		_el_clean_exit();
+		return READLINE_ERROR;
+	}
+	/*
+	set console modes
+	*/
+	_el_prev_in_cm_saved = GetConsoleMode(_el_h_in, &_el_prev_in_cm);
+	_el_prev_out_cm_saved = GetConsoleMode(_el_h_out, &_el_prev_out_cm);
+	SetConsoleMode(_el_h_in, ENABLE_PROCESSED_INPUT
+		| ENABLE_EXTENDED_FLAGS | ENABLE_INSERT_MODE
+		| ENABLE_QUICK_EDIT_MODE);
+	SetConsoleMode(_el_h_out, ENABLE_PROCESSED_OUTPUT);
+	SetConsoleCtrlHandler((PHANDLER_ROUTINE)
+		_el_signal_handler, TRUE);
+	return 1;
+}
+
+
+/* readline splitting : init part, returns nonzero if success */
+int ReadlineState_poll(ReadlineState * this, const char * prompt, wchar_t ** ret_string, int * cursor_pos, int was_interrupted) {
+	rl_point = 0;
+	if (!_el_line_buffer) {
+		if (!ReadlineState_prepare(this, prompt))
+			return READLINE_ERROR;
+	}
+
+	if (ret_string && *ret_string) {
+
+		wcscpy(_el_line_buffer, *ret_string);
+		this->line_len = (int)wcslen(_el_line_buffer);
+		free(*ret_string);
+		*ret_string = NULL;
+		if (cursor_pos && *cursor_pos >= 0 && *cursor_pos <= this->line_len) {
+			rl_point = *cursor_pos /* + _el_prompt_len*/;
+		}
+	}
+	else {
+		*ret_string = NULL;
+	}
+	while ((this->buf[0] != VK_RETURN)
+		&& (!_el_ctrl_c_pressed) && _el_line_buffer) {
+		/*
+		get screen buffer info from the current console
+		*/
+		if (!GetConsoleScreenBufferInfo(_el_h_out, &this->sbInfo)) {
+			_el_clean_exit();
+			return READLINE_ERROR;
+		}
+		_el_temp_print_size = this->sbInfo.dwSize.X + 1;
+		if (!(_el_temp_print = realloc(_el_temp_print,
+			_el_temp_print_size * sizeof(wchar_t)))) {
+			_el_clean_exit();
+			return READLINE_ERROR;
+		}
+		_el_temp_print[0] = _T('\0');
+		/*
+		compute the current visible console width
+		*/
+		this->width = this->sbInfo.srWindow.Right - this->sbInfo.srWindow.Left + 1;
+		/*
+		if the user has changed the window size
+		update the view
+		*/
+		if (this->old_width != this->width || was_interrupted) {
+			this->line_len = (int)wcslen(_el_line_buffer);
+			this->sbInfo.dwCursorPosition.X = 0;
+			if (this->old_width) {
+				this->n = (_el_prompt_len + this->line_len - 1) / this->old_width;
+				this->sbInfo.dwCursorPosition.Y -= (SHORT)this->n;
+				this->coord.Y = this->sbInfo.dwCursorPosition.Y;
+			}
+			if (!SetConsoleCursorPosition(_el_h_out,
+				this->sbInfo.dwCursorPosition)) {
+				_el_clean_exit();
+				return READLINE_ERROR;
+			}
+			if (_el_print_string(_el_prompt)) {
+				_el_clean_exit();
+				return READLINE_ERROR;
+			}
+			if (_el_set_cursor(_el_prompt_len)) {
+				_el_clean_exit();
+				return READLINE_ERROR;
+			}
+			if (_el_print_string(_el_line_buffer)) {
+				_el_clean_exit();
+				return READLINE_ERROR;
+			}
+			if (_el_set_cursor(this->line_len)) {
+				_el_clean_exit();
+				return READLINE_ERROR;
+			}
+			if (this->old_width && (this->old_width < this->width)) {
+				this->coord.X = 0;
+				this->coord.Y += (SHORT)((_el_prompt_len + this->line_len - 1) / this->width + 1);
+				FillConsoleOutputCharacter(_el_h_out, _T(' '),
+					this->sbInfo.dwSize.X * (this->n + 2), this->coord, &this->count);
+			}
+			if (_el_set_cursor(rl_point - this->line_len)) { //  
+				_el_clean_exit();
+				return READLINE_ERROR;
+			}
+		}
+		this->old_width = this->width;
+		/*
+		wait for console events
+		*/
+		if (!PeekConsoleInput(_el_h_in, &this->irBuffer, 1, &this->count)) {
+			_el_clean_exit();
+			return READLINE_ERROR;
+		}
+		if (this->count) {
+			if ((this->irBuffer.EventType == KEY_EVENT) && this->irBuffer.Event.KeyEvent.bKeyDown) {
+				/*
+				the user pressed a key
+				*/
+				this->ctrl = (this->irBuffer.Event.KeyEvent.dwControlKeyState
+					& (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED));
+				if (this->irBuffer.Event.KeyEvent.uChar.UnicodeChar == _T('\n')) {
+					if (!ReadConsoleInput(_el_h_in, &this->irBuffer, 1, &this->count)) {
+						_el_clean_exit();
+						return READLINE_ERROR;
+					}
+					this->buf[0] = VK_RETURN;
+					continue;
+				}
+				if (this->irBuffer.Event.KeyEvent.uChar.UnicodeChar == _T('\0')) {
+					/*
+					if it is a special key, just remove it from the buffer
+					*/
+					if (!ReadConsoleInput(_el_h_in, &this->irBuffer, 1, &this->count)) {
+						_el_clean_exit();
+						return READLINE_ERROR;
+					}
+					this->special = this->irBuffer.Event.KeyEvent.wVirtualKeyCode;
+					/*
+					parse the special key
+					*/
+					switch (this->special) {
+						/*
+						arrow left, arrow right
+						HOME and END keys
+						*/
+					case VK_LEFT:
+					case VK_RIGHT:
+					case VK_HOME:
+					case VK_END:
+						if (_el_move_cursor(this->special, this->ctrl)) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						arrow up: display previous history element (if any)
+						after recording the current command line
+						*/
+					case VK_UP:
+						if (_el_display_prev_hist()) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						page up: display the first history element (if any)
+						after recording the current command line
+						*/
+					case VK_PRIOR:
+						if (_el_display_first_hist()) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						arrow down: display next history element (if any)
+						after recording the current command line
+						*/
+					case VK_DOWN:
+						if (_el_display_next_hist()) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+					case VK_NEXT:
+						/*
+						page down: display last history element (if any)
+						after recording the current command line
+						*/
+						if (_el_display_last_hist()) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						delete char
+						*/
+					case VK_DELETE:
+						if (rl_point != wcslen(_el_line_buffer)) {
+							if (_el_delete_char(VK_DELETE, 1)) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+							_el_compl_index = 0;
+							this->compl_pos = -1;
+						}
+						break;
+					}
+				}
+				else {
+					/*
+					if it is a normal key, remove it from the buffer
+					*/
+					memset(this->buf, 0, _EL_CONSOLE_BUF_LEN * sizeof(wchar_t));
+					if (!ReadConsole(_el_h_in, this->buf, 1, &this->count, NULL)) {
+						_el_clean_exit();
+						return READLINE_ERROR;
+					}
+					/*
+					then parse it
+					*/
+					switch (this->buf[0]) {
+						/*
+						backspace
+						*/
+					case VK_BACK:
+						if (rl_point) {
+							_el_compl_index = 0;
+							this->compl_pos = -1;
+							if (_el_delete_char(VK_BACK, 1)) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+						}
+						break;
+
+						/*
+						TAB: do completion
+						*/
+					case VK_TAB:
+						if ((!this->array) || (rl_point != this->compl_pos)) {
+							_el_free_array(this->array);
+							this->index = 0;
+							if (_el_text) {
+								free(_el_text);
+								_el_text = NULL;
+							}
+							if (!(_el_text = _el_get_compl_text(&this->start, &this->end))) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+							if (_el_old_arg) {
+								_el_old_arg[0] = _T('\0');
+							}
+							if (!_el_w2mb(_el_text, &_el_text_mb)) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+							if (!_el_w2mb(_el_line_buffer, &rl_line_buffer)) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+							this->array = (rl_attempted_completion_function
+								? rl_attempted_completion_function(_el_text_mb, this->start, this->end)
+								: rl_completion_matches(_el_text_mb, (rl_completion_entry_function
+									? rl_completion_entry_function : rl_filename_completion_function)));
+							if (!this->array) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+						}
+						if (!this->array[this->index]) {
+							this->index = 0;
+						}
+						if (this->array[this->index]) {
+							if (!_el_mb2w(this->array[this->index], &_el_next_compl)) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+							this->len = 0;
+							if (_el_old_arg) {
+								this->len = (int)wcslen(_el_old_arg);
+#if 0
+								fwprintf(stderr, _T("VK_TAB) _el_old_arg = '%s', len = %d\n"), _el_old_arg, len);
+								fflush(stderr);
+#endif
+							}
+							if (!this->len) {
+								this->len = (int)wcslen(_el_text);
+							}
+							if (this->len) {
+								if (_el_delete_char(VK_BACK, this->len)) {
+									_el_clean_exit();
+									return READLINE_ERROR;
+								}
+							}
+							this->len = (int)wcslen(_el_next_compl);
+							if (!(_el_old_arg = realloc(_el_old_arg,
+								(this->len + 1) * sizeof(wchar_t)))) {
+								return READLINE_ERROR;
+							}
+							_el_old_arg[this->len] = _T('\0');
+							memcpy(_el_old_arg, _el_next_compl, this->len * sizeof(wchar_t));
+							this->line_len = (int)wcslen(_el_line_buffer);
+							if (_el_insert_char(_el_next_compl, this->len)) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+							free(_el_next_compl);
+							_el_next_compl = NULL;
+							this->compl_pos = ((rl_point && (!wcschr(_el_completer_word_break_characters
+								? _el_completer_word_break_characters : _el_basic_word_break_characters,
+								_el_line_buffer[rl_point - 1]))) ? rl_point : -1);
+							++this->index;
+						}
+						break;
+
+						/*
+						ENTER: move the cursor to end of line,
+						then return to the caller program
+						*/
+					case VK_RETURN:
+						if (_el_set_cursor((int)wcslen(_el_line_buffer) - rl_point)) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						delete word
+						*/
+					case 0x17:  /* CTRL + W */
+						if (this->ctrl) {
+							if (!rl_point) {
+								break;
+							}
+							this->n = 1;
+							while (((rl_point - this->n) > 0)
+								&& (iswspace(_el_line_buffer[rl_point - this->n]))) {
+								++this->n;
+							}
+							while ((rl_point - this->n)
+								&& (!iswspace(_el_line_buffer[rl_point - this->n]))) {
+								++this->n;
+							}
+							if (rl_point - this->n) {
+								--this->n;
+							}
+							_el_compl_index = 0;
+							this->compl_pos = -1;
+							if (_el_delete_char(VK_BACK, this->n)) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+							break;
+						}
+
+						/*
+						delete until end of line
+						*/
+					case 0x0B:  /* CTRL + K */
+						if (this->ctrl) {
+							this->line_len = (int)wcslen(_el_line_buffer);
+							if (rl_point < this->line_len) {
+								_el_compl_index = 0;
+								this->compl_pos = -1;
+								if (_el_delete_char(VK_DELETE, this->line_len - rl_point)) {
+									_el_clean_exit();
+									return READLINE_ERROR;
+								}
+							}
+							break;
+						}
+
+						/*
+						beginning-of-line
+						*/
+					case 0x01:  /* CTRL + A */
+						if (_el_move_cursor(VK_HOME, 0)) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						end-of-line
+						*/
+					case 0x05:  /* CTRL + E */
+						if (_el_move_cursor(VK_END, 0)) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						forward-char
+						*/
+					case 0x06:  /* CTRL + F */
+						if (_el_move_cursor(VK_RIGHT, 0)) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						backward-char
+						*/
+					case 0x02:  /* CTRL + B */
+						if (_el_move_cursor(VK_LEFT, 0)) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						previous-line
+						*/
+					case 0x10:  /* CTRL + P */
+						if (_el_display_prev_hist()) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						next-line
+						*/
+					case 0x0E:  /* CTRL + N */
+						if (_el_display_next_hist()) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						break;
+
+						/*
+						delete char
+						*/
+					case 0x04:  /* CTRL + D */
+						if (rl_point != wcslen(_el_line_buffer)) {
+							if (_el_delete_char(VK_DELETE, 1)) {
+								_el_clean_exit();
+								return READLINE_ERROR;
+							}
+							_el_compl_index = 0;
+							this->compl_pos = -1;
+						}
+						break;
+
+						/*
+						if it is a printable character, print it
+						NOTE: I have later commented out the
+						iswprint() check since for instance it
+						prevents the euro sign from being printed
+						*/
+					default:
+						/*if (iswprint(buf[0])) {*/
+						_el_compl_index = 0;
+						this->compl_pos = -1;
+						if (_el_insert_char(this->buf, 1)) {
+							_el_clean_exit();
+							return READLINE_ERROR;
+						}
+						/*}*/
+					}
+				}
+			}
+			/*
+			if it was not a keyboard event, just remove it from buffer
+			*/
+			else if (!ReadConsoleInput(_el_h_in, &this->irBuffer, 1, &this->count)) {
+				_el_clean_exit();
+				return READLINE_ERROR;
+			}
+		}
+		else {
+			/*
+			wait for console input
+			*/
+			WaitForSingleObject(_el_h_in, INFINITE);
+		}
+		if (cursor_pos) {
+			*cursor_pos = rl_point /* - _el_prompt_len*/;
+		}
+		while (this->buf[0] == VK_RETURN || _el_ctrl_c_pressed)
+			break;
+		if (!_el_line_buffer) {
+			return READLINE_ERROR;
+		}
+		*ret_string = _wcsdup(_el_line_buffer);
+		_el_clean_exit();
+		return READLINE_IN_PROGRESS;
+	}
+
+	printf("\n");
+	while (next_history());
+	previous_history();
+	/*
+	if CTRL+C has been pressed, return an empty string
+	*/
+	if (_el_line_buffer) {
+		if (_el_ctrl_c_pressed) {
+			this->n = (int)wcslen(_el_line_buffer) - rl_point;
+			if (this->n) {
+				_el_set_cursor(this->n);
+			}
+			_el_line_buffer[0] = _T('\0');
+		}
+		//_el_w2mb(_el_line_buffer, &rl_line_buffer);
+		*ret_string = _wcsdup(_el_line_buffer);
+	}
+	_el_clean_exit();
+	return _el_ctrl_c_pressed ? READLINE_CTRL_C : READLINE_READY; // this->ret_string;
+}
+
+static ReadlineState read_line_state;
+wchar_t * readline_new(const char * prompt) {
+	ReadlineState_init(&read_line_state);
+	ReadlineState_prepare(&read_line_state, prompt);
+	wchar_t * ret_string = wcsdup(L"INITIAL LINE");
+	int cursor_pos = 8;
+	for (;;) {
+		int res = ReadlineState_poll(&read_line_state, prompt, &ret_string, &cursor_pos, 1);
+		if (res == READLINE_ERROR)
+			return NULL;
+		if (res == READLINE_READY || res == READLINE_CTRL_C)
+			return ret_string;
+	}
 }
 
 /*
@@ -1055,7 +1707,7 @@ char *readline(const char *prompt)
       sbInfo.dwCursorPosition.X = 0;
       if (old_width) {
         n = (_el_prompt_len + line_len - 1) / old_width;
-        sbInfo.dwCursorPosition.Y -= n;
+        sbInfo.dwCursorPosition.Y -= (SHORT)n;
         coord.Y = sbInfo.dwCursorPosition.Y;
       }
       if (!SetConsoleCursorPosition(_el_h_out,
@@ -1081,7 +1733,7 @@ char *readline(const char *prompt)
       }
       if (old_width && (old_width < width)) {
         coord.X = 0;
-        coord.Y += (_el_prompt_len + line_len - 1) / width + 1;
+        coord.Y += (SHORT)((_el_prompt_len + line_len - 1) / width + 1);
         FillConsoleOutputCharacter(_el_h_out, _T(' '),
           sbInfo.dwSize.X * (n + 2), coord, &count);
       }

@@ -133,6 +133,14 @@ public:
 
 void testEngine() {
 
+	wprintf(L"Testing new line input\n");
+	for (;;) {
+		wchar_t * line = readline_new("(gdb) ");
+		wprintf(L"Line: %s\n", line);
+		if (!line)
+			break;
+	}
+
 	MIEngine engine;
 	MIEventCallback callback;
 	engine.Init(&callback);
