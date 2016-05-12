@@ -203,23 +203,23 @@ HRESULT Debugger::OnDebugProgramCreated(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugProgramCreateEvent2 * pEvent) 
 {
-	if (_verbose)
-		writeDebuggerMessage(std::wstring(L"Program created"));
-	else
-		CRLog::info("Program created");
+	writeStdout(L"=thread-group-added,id=\"i1\"");
+	CRLog::info("Program created");
 	return S_OK;
 }
+
 HRESULT Debugger::OnDebugProgramDestroy(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
 	IDebugProgramDestroyEvent2 * pEvent) 
 {
+	DWORD exitCode = 0;
+	pEvent->GetExitCode(&exitCode);
+	writeStdout(L"=thread-group-exited,id=\"i1\",exit-code=\"%d\"", exitCode);
+	writeStdout(L"*stopped,reason=\"exited-normally\"", exitCode);
 	_stopped = true;
-	if (_verbose)
-		writeDebuggerMessage(std::wstring(L"Program destroyed"));
-	else
-		CRLog::info("Program destroyed");
+	CRLog::info("Program destroyed");
 	return S_OK;
 }
 HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
@@ -248,12 +248,24 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 		CRLog::info("Entry point");
 	return S_OK;
 }
+
+// reads thread id from thread
+DWORD getThreadId(IDebugThread2 * pThread) {
+	if (!pThread)
+		return 0;
+	DWORD res = 0;
+	if (FAILED(pThread->GetThreadId(&res)))
+		return 0;
+	return res;
+}
+
 HRESULT Debugger::OnDebugThreadCreate(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
 	IDebugThreadCreateEvent2 * pEvent) 
 {
+	writeStdout(L"=thread-created,id=\"%d\",group-id=\"i1\"", getThreadId(pThread));
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Thread created"));
 	else
@@ -268,6 +280,7 @@ HRESULT Debugger::OnDebugThreadDestroy(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugThreadDestroyEvent2 * pEvent)
 {
+	writeStdout(L"=thread-exited,id=\"%d\",group-id=\"i1\"", getThreadId(pThread));
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Thread destroyed"));
 	else
@@ -305,13 +318,28 @@ HRESULT Debugger::OnDebugOutputString(IDebugEngine2 *pEngine,
 	return S_OK;
 }
 
+std::wstring getModuleName(IDebugModule2 * pModule) {
+	if (!pModule)
+		return std::wstring();
+	MODULE_INFO info;
+	pModule->GetInfo(MIF_NAME, &info);
+	return std::wstring(info.m_bstrName);
+}
+
 HRESULT Debugger::OnDebugModuleLoad(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
 	IDebugModuleLoadEvent2 * pEvent) 
 {
-	DUMP_EVENT(OnDebugModuleLoad);
+	//DUMP_EVENT(OnDebugModuleLoad);
+	IDebugModule2 * pModule = NULL;
+	BOOL pbLoad = FALSE;
+	pEvent->GetModule(&pModule, NULL, &pbLoad);
+	std::wstring moduleName = getModuleName(pModule);
+	//writeStdout(L"=library-loaded,id=\"%s\",target-name=\"%s\",host-name=\"%s\",symbols-loaded=\"0\",thread-group-id=\"i1\"", 
+	//	moduleName.c_str(), moduleName.c_str(), moduleName.c_str());
+	pModule->Release();
 	return S_OK;
 }
 
@@ -319,8 +347,19 @@ HRESULT Debugger::OnDebugSymbolSearch(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
-	IDebugSymbolSearchEvent2 * pEvent) {
-	DUMP_EVENT(OnDebugSymbolSearch);
+	IDebugSymbolSearchEvent2 * pEvent) 
+{
+	//DUMP_EVENT(OnDebugSymbolSearch);
+
+	IDebugModule3 * pModule = NULL;
+	MODULE_INFO_FLAGS dwModuleInfoFlags = 0;
+	pEvent->GetSymbolSearchInfo(&pModule, NULL, &dwModuleInfoFlags);
+	bool loaded = dwModuleInfoFlags & MIF_SYMBOLS_LOADED;
+	std::wstring moduleName = getModuleName(pModule);
+	writeStdout(L"=library-loaded,id=\"%s\",target-name=\"%s\",host-name=\"%s\",symbols-loaded=\"%d\",thread-group-id=\"i1\"",
+		moduleName.c_str(), moduleName.c_str(), moduleName.c_str(),
+		loaded ? 1 : 0
+		);
 	return S_OK;
 }
 HRESULT Debugger::OnDebugBreakpoint(IDebugEngine2 *pEngine,
