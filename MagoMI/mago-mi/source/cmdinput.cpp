@@ -24,8 +24,7 @@ public:
 
 	void Lock()
 	{
-		DWORD dwCount = 0, dwWaitResult;
-		dwWaitResult = WaitForSingleObject(
+		DWORD dwWaitResult = WaitForSingleObject(
 			_mutex,    // handle to mutex
 			INFINITE);  // no time-out interval
 	}
@@ -126,7 +125,7 @@ bool writeStdout(std::wstring s) {
 		std::string line = toUtf8(buf.wstr());
 		DWORD bytesWritten = 0;
 		//printf("line to write: %s", line.c_str());
-		int res = WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
+		bool res = WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
 		//res = WriteFile(h_out, "\n", 1, &bytesWritten, NULL) != 0;
 		return res;
 	}
@@ -155,7 +154,6 @@ CmdInput _cmdinput;
 #define OUT_BUFFER_SIZE 16384
 /// formatted output to debugger stdout
 bool writeStdout(const char * fmt, ...) {
-	bool res = true;
 	va_list args;
 	va_start(args, fmt);
 	static char buffer[OUT_BUFFER_SIZE];
@@ -168,7 +166,6 @@ bool writeStdout(const char * fmt, ...) {
 
 /// formatted output to debugger stderr
 bool writeStderr(const char * fmt, ...) {
-	bool res = true;
 	va_list args;
 	va_start(args, fmt);
 	static char buffer[OUT_BUFFER_SIZE];
@@ -181,7 +178,6 @@ bool writeStderr(const char * fmt, ...) {
 
 /// formatted output to debugger stdout
 bool writeStdout(const wchar_t * fmt, ...) {
-	bool res = true;
 	va_list args;
 	va_start(args, fmt);
 	static wchar_t buffer[OUT_BUFFER_SIZE];
@@ -193,7 +189,6 @@ bool writeStdout(const wchar_t * fmt, ...) {
 
 /// formatted output to debugger stderr
 bool writeStderr(const wchar_t * fmt, ...) {
-	bool res = true;
 	va_list args;
 	va_start(args, fmt);
 	static wchar_t buffer[OUT_BUFFER_SIZE];

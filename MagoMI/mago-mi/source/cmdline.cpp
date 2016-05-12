@@ -113,6 +113,8 @@ struct CmdLineParamDef {
 void dumpParameterHelp();
 
 static void showHelp(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
+	UNREFERENCED_PARAMETER(value);
 	printf("This is Mago debugger. Usage:\n");
 	printf("    mago-mi [options] [executable-file]\n");
 	printf("    mago-mi [options] --args executable-file [inferior-arguments ...]\n");
@@ -121,15 +123,20 @@ static void showHelp(CmdLineParamDef * param, const wchar_t * value) {
 }
 
 static void showVersion(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
+	UNREFERENCED_PARAMETER(value);
 	printf("mago-mi debugger v0.1\n");
 	exit(0);
 }
 
 void defParamHandler(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
+	UNREFERENCED_PARAMETER(value);
 	// TODO
 }
 
 static void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
 	if (wcscmp(value, L"mi2")) {
 		fprintf(stderr, "Only mi2 interpreter is supported");
 		exit(2);
@@ -140,6 +147,7 @@ static void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
 static bool argsFound = false;
 
 static void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
 	if (params.hasExecutableSpecified()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
@@ -149,6 +157,7 @@ static void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
 }
 
 static void handleExec(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
 	if (params.hasExecutableSpecified()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
@@ -157,10 +166,13 @@ static void handleExec(CmdLineParamDef * param, const wchar_t * value) {
 }
 
 static void handleDir(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
 	params.setDir(value);
 }
 
 static void handleVerbose(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
+	UNREFERENCED_PARAMETER(value);
 	params.verbose = true;
 }
 

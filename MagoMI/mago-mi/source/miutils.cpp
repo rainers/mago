@@ -4,7 +4,7 @@
 std::string toUtf8(const std::wstring s) {
 	StringBuffer buf;
 	for (unsigned i = 0; i < s.length(); i++) {
-		wchar_t ch = s[i];
+		unsigned ch = s[i];
 		if (!(ch & ~0x7F)) {
 			buf.append((unsigned char)ch);
 		}
@@ -135,6 +135,7 @@ bool parseUlong(std::wstring & s, uint64_t &value) {
 		return false;
 	value = n;
 	s = s.substr(i, s.length() - i);
+	return true;
 }
 
 bool isValidIdentChar(wchar_t ch) {
@@ -211,7 +212,6 @@ std::wstring relativeToAbsolutePath(std::wstring s) {
 		buf += s;
 	} else {
 		buf = getCurrentDirectory();
-		int len = buf.length();
 		if (buf.last() != '\\')
 			buf += '\\';
 		buf += s;
