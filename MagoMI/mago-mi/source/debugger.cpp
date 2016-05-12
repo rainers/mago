@@ -83,6 +83,14 @@ void Debugger::writeResultMessage(ulong requestId, const wchar_t * status, std::
 	writeStdout(buf.wstr());
 }
 
+// MI interface stdout output: [##requestId##]^error[,"msg"]
+void Debugger::writeErrorMessage(ulong requestId, std::wstring msg) {
+	if (params.miMode)
+		writeResultMessage(requestId, L"error", msg);
+	else
+		writeStdout(msg);
+}
+
 /// called on new input line
 void Debugger::onInputLine(std::wstring &s) {
 	CRLog::debug("Input line: %s", toUtf8(s).c_str());
