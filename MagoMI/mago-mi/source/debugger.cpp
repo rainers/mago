@@ -16,6 +16,7 @@ void InitDebug()
 Debugger::Debugger() 
 	: _quitRequested(false)
 	, _verbose(false)
+	, _loadCalled(false)
 	, _loaded(false)
 	, _started(false)
 	, _paused(false)
@@ -123,6 +124,9 @@ int Debugger::enterCommandLoop() {
 		if (FAILED(hr)) {
 			writeOutput("Failed to load debuggee\n");
 		}
+		else {
+			_loadCalled = true;
+		}
 	}
 
 	while (!_cmdinput.isClosed() && !_quitRequested) {
@@ -136,6 +140,10 @@ int Debugger::enterCommandLoop() {
 
 // start execution
 bool Debugger::run(uint64_t requestId) {
+	if (!_loadCalled) {
+		writeErrorMessage(requestId, std::wstring(L"Executable is not specified"));
+		return false;
+	}
 	if (_started) {
 		writeErrorMessage(requestId, std::wstring(L"Process is already started"));
 		return false;

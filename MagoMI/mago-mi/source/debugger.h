@@ -19,6 +19,7 @@ class Debugger : public MIEventCallback, public CmdInputCallback {
 	RefPtr<MIEngine> _engine;
 	bool _quitRequested;
 	bool _verbose;
+	bool _loadCalled;
 	bool _loaded;
 	bool _started;
 	bool _paused;

@@ -98,6 +98,7 @@ CmdInput::~CmdInput() {
 }
 
 static bool _readlineEditActive = false;
+static bool _readlinePromptShown = false;
 
 /// write line to stdout
 bool writeStdout(std::wstring s) {
@@ -227,6 +228,7 @@ void CmdInput::lineCompleted() {
 	_buf.reset();
 	std::string s = toUtf8(res);
 	CRLog::debug("STDIN: %s", s.c_str());
+	_readlinePromptShown = false;
 	if (_callback) {
 		_callback->onInputLine(res);
 	}
@@ -241,7 +243,6 @@ bool CmdInput::poll() {
 		wchar_t * line = NULL;
 		int res = READLINE_ERROR;
 		{
-			CRLog::trace("polling readline");
 			TimeCheckedGuardedArea area(_consoleGuard, "readline_poll");
 			res = readline_poll("(gdb) ", &line);
 			if (res == READLINE_IN_PROGRESS)
@@ -271,9 +272,19 @@ bool CmdInput::poll() {
 		return true;
 	} else {
 		{
-			TimeCheckedGuardedArea area(_consoleGuard, "stdin poll");
 			HANDLE h_in = GetStdHandle(STD_INPUT_HANDLE);
+
+
 			if (h_in && h_in != INVALID_HANDLE_VALUE) {
+				{
+					TimeCheckedGuardedArea area(_consoleGuard, "stdin poll");
+					if (!_readlinePromptShown) {
+						HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+						DWORD bytesWritten = 0;
+						WriteFile(h_out, "(gdb)\n", 6, &bytesWritten, NULL);
+						_readlinePromptShown = true;
+					}
+				}
 				for (;;) {
 					//printf("Waiting for STDIN input\n");
 					//DWORD res = WaitForSingleObject(h_in, 100);
