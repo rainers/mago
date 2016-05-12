@@ -19,6 +19,8 @@ struct ExecutableInfo {
 	void setDir(std::wstring directory);
 	void addArg(std::wstring param);
 	void dumpParams();
+
+	bool hasExecutableSpecified();
 };
 
 extern ExecutableInfo params;

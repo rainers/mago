@@ -14,7 +14,9 @@ void InitDebug()
 }
 
 Debugger::Debugger() 
-	: _quitRequested(false)
+	: _pProcess(NULL)
+	, _pProgram(NULL)
+	, _quitRequested(false)
 	, _verbose(false)
 	, _loadCalled(false)
 	, _loaded(false)
@@ -62,7 +64,10 @@ void Debugger::writeStringMessage(wchar_t ch, std::wstring msg) {
 
 // MI interface stdout output: ~"msg_text"
 void Debugger::writeDebuggerMessage(std::wstring msg) {
-	writeStringMessage('~', msg);
+	if (!params.miMode)
+		writeStdout(msg);
+	else
+		writeStringMessage('~', msg);
 }
 
 // MI interface stdout output: [##requestId##]^result[,"msg"]
@@ -92,8 +97,14 @@ void Debugger::onInputLine(std::wstring &s) {
 		_quitRequested = true;
 		writeOutput("Quit requested");
 	}
+	else if (cmd.commandName == L"help") {
+		writeDebuggerMessage(std::wstring(L"Type quit to exit."));
+	}
 	else if (cmd.commandName == L"run" || cmd.commandName == L"-exec-run") {
 		run(cmd.requestId);
+	}
+	else if (cmd.commandName == L"continue" || cmd.commandName == L"-exec-continue") {
+		resume(cmd.requestId);
 	}
 	else
 	{
@@ -108,32 +119,42 @@ void Debugger::onCtrlBreak() {
 	writeOutput("Ctrl+Break is pressed");
 }
 
-int Debugger::enterCommandLoop() {
-	writeOutput("Entering command loop");
-	if (!params.exename.empty()) {
-		if (!fileExists(params.exename)) {
-			fprintf(stderr, "%s: no such file or directory", params.exename);
-			return 4;
-		}
+// load executable
+bool Debugger::load() {
+	if (!params.hasExecutableSpecified()) {
+		writeErrorMessage(UNSPECIFIED_REQUEST_ID, std::wstring(L"Executable file not specified. Use file or exec-file"));
+	}
+	writeDebuggerMessage(std::wstring(L"Starting program: ") + params.exename);
+	if (!fileExists(params.exename)) {
+		writeErrorMessage(UNSPECIFIED_REQUEST_ID, std::wstring(L"Executable file not found: ") + params.exename);
+		return false;
+	}
+	HRESULT hr = _engine->Launch(
+		params.exename.c_str(), //LPCOLESTR             pszExe,
+		NULL, //LPCOLESTR             pszArgs,
+		params.dir.c_str() //LPCOLESTR             pszDir,
+		);
+	if (FAILED(hr)) {
+		writeErrorMessage(UNSPECIFIED_REQUEST_ID, std::wstring(L"Failed to start debugging of ") + params.exename);
+		return false;
+	}
+	else {
+		_loadCalled = true;
+	}
+	return true;
+}
 
-		HRESULT hr = _engine->Launch(
-			params.exename.c_str(), //LPCOLESTR             pszExe,
-			NULL, //LPCOLESTR             pszArgs,
-			params.dir.c_str() //LPCOLESTR             pszDir,
-			);
-		if (FAILED(hr)) {
-			writeOutput("Failed to load debuggee\n");
-		}
-		else {
-			_loadCalled = true;
-		}
+int Debugger::enterCommandLoop() {
+	CRLog::info("Entering command loop");
+	if (params.hasExecutableSpecified()) {
+		load();
 	}
 
 	while (!_cmdinput.isClosed() && !_quitRequested) {
 		_cmdinput.poll();
 	}
-	writeOutput("Debugger shutdown");
-	writeOutput("Exiting");
+	CRLog::info("Debugger shutdown");
+	CRLog::info("Exiting");
 	return 0;
 }
 
@@ -141,7 +162,7 @@ int Debugger::enterCommandLoop() {
 // start execution
 bool Debugger::run(uint64_t requestId) {
 	if (!_loadCalled) {
-		writeErrorMessage(requestId, std::wstring(L"Executable is not specified"));
+		writeErrorMessage(requestId, std::wstring(L"Executable is not specified. Use file or exec-file command."));
 		return false;
 	}
 	if (_started) {
@@ -161,7 +182,7 @@ bool Debugger::run(uint64_t requestId) {
 	return true;
 }
 
-// resume paused execution
+// resume paused execution (continue)
 bool Debugger::resume(uint64_t requestId) {
 	if (!_started) {
 		writeErrorMessage(requestId, std::wstring(L"Process is not started"));
@@ -175,12 +196,16 @@ bool Debugger::resume(uint64_t requestId) {
 		writeErrorMessage(requestId, std::wstring(L"Process is already running"));
 		return false;
 	}
-	if (FAILED(_engine->ResumeProcess())) {
-		writeErrorMessage(requestId, std::wstring(L"Failed to resume process"));
-		_stopped = true;
+	if (!_pProgram) {
+		writeErrorMessage(requestId, std::wstring(L"Process is not started"));
+		return false;
+	}
+	if (FAILED(_pProgram->Continue(NULL))) {
+		writeErrorMessage(requestId, std::wstring(L"Failed to continue process"));
 		return false;
 	}
 	writeResultMessage(requestId, L"running", NULL);
+	_paused = false;
 	return true;
 }
 
@@ -211,6 +236,8 @@ HRESULT Debugger::OnDebugProgramCreated(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugProgramCreateEvent2 * pEvent) 
 {
+	_pProcess = pProcess;
+	_pProgram = pProgram;
 	writeStdout(L"=thread-group-added,id=\"i1\"");
 	CRLog::info("Program created");
 	return S_OK;
@@ -237,6 +264,8 @@ HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
 	IDebugLoadCompleteEvent2 * pEvent) 
 {
 	_loaded = true;
+	_started = true;
+	_paused = true;
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Load complete"));
 	else
@@ -250,6 +279,7 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 	IDebugEntryPointEvent2 * pEvent) 
 {
 	_loaded = true;
+	_paused = true;
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Entry point"));
 	else

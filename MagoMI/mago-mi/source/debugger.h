@@ -17,6 +17,8 @@
 
 class Debugger : public MIEventCallback, public CmdInputCallback {
 	RefPtr<MIEngine> _engine;
+	IDebugProcess2 * _pProcess;
+	IDebugProgram2 *_pProgram;
 	bool _quitRequested;
 	bool _verbose;
 	bool _loadCalled;
@@ -54,6 +56,8 @@ public:
 
 	virtual int enterCommandLoop();
 
+	// load executable
+	virtual bool load();
 	// start execution
 	virtual bool run(uint64_t requestId);
 	// resume paused execution

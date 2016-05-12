@@ -29,6 +29,10 @@ ExecutableInfo::~ExecutableInfo() {
 	clear();
 }
 
+bool ExecutableInfo::hasExecutableSpecified() {
+	return !exename.empty();
+}
+
 void ExecutableInfo::setExecutable(std::wstring  exe) {
 	if (exe.empty()) {
 		exename.clear();
@@ -136,7 +140,7 @@ static void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
 static bool argsFound = false;
 
 static void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
-	if (!params.exename.empty()) {
+	if (params.hasExecutableSpecified()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
 	}
@@ -145,7 +149,7 @@ static void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
 }
 
 static void handleExec(CmdLineParamDef * param, const wchar_t * value) {
-	if (!params.exename.empty()) {
+	if (params.hasExecutableSpecified()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
 	}
