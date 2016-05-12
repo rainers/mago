@@ -18,6 +18,7 @@
 class Debugger : public MIEventCallback, public CmdInputCallback {
 	RefPtr<MIEngine> _engine;
 	bool _quitRequested;
+	bool _verbose;
 public:
 	Debugger();
 	virtual ~Debugger();
@@ -28,6 +29,10 @@ public:
 	virtual void writeOutput(std::string msg);
 	virtual void writeOutput(const char * msg);
 	virtual void writeOutput(const wchar_t * msg);
+	// MI interface stdout output: ch"msg_text"
+	virtual void writeStringMessage(wchar_t ch, std::wstring msg);
+	// MI interface stdout output: ~"msg_text"
+	virtual void writeDebuggerMessage(std::wstring msg);
 
 	// CmdInputCallback interface handlers
 
@@ -37,4 +42,97 @@ public:
 	virtual void onCtrlBreak();
 
 	virtual int enterCommandLoop();
+
+
+	// MIEventCallback interface
+	virtual HRESULT OnDebugEngineCreated(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugEngineCreateEvent2 * pEvent);
+	virtual HRESULT OnDebugProgramCreated(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugProgramCreateEvent2 * pEvent);
+	virtual HRESULT OnDebugProgramDestroy(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugProgramDestroyEvent2 * pEvent);
+	virtual HRESULT OnDebugLoadComplete(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugLoadCompleteEvent2 * pEvent);
+	virtual HRESULT OnDebugEntryPoint(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugEntryPointEvent2 * pEvent);
+	virtual HRESULT OnDebugThreadCreate(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugThreadCreateEvent2 * pEvent);
+	virtual HRESULT OnDebugThreadDestroy(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugThreadDestroyEvent2 * pEvent);
+	virtual HRESULT OnDebugStepComplete(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugStepCompleteEvent2 * pEvent);
+	virtual HRESULT OnDebugBreak(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugBreakEvent2 * pEvent);
+	virtual HRESULT OnDebugOutputString(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugOutputStringEvent2 * pEvent);
+	virtual HRESULT OnDebugModuleLoad(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugModuleLoadEvent2 * pEvent);
+	virtual HRESULT OnDebugSymbolSearch(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugSymbolSearchEvent2 * pEvent);
+	virtual HRESULT OnDebugBreakpoint(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugBreakpointEvent2 * pEvent);
+	virtual HRESULT OnDebugBreakpointBound(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugBreakpointBoundEvent2 * pEvent);
+	virtual HRESULT OnDebugBreakpointError(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugBreakpointErrorEvent2 * pEvent);
+	virtual HRESULT OnDebugBreakpointUnbound(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugBreakpointUnboundEvent2 * pEvent);
+	virtual HRESULT OnDebugException(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugExceptionEvent2 * pEvent);
+	virtual HRESULT OnDebugMessage(IDebugEngine2 *pEngine,
+		IDebugProcess2 *pProcess,
+		IDebugProgram2 *pProgram,
+		IDebugThread2 *pThread,
+		IDebugMessageEvent2 * pEvent);
 };

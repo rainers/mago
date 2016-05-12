@@ -6,7 +6,7 @@
 #include "miutils.h"
 
 ExecutableInfo executableInfo;
-ExecutableInfo::ExecutableInfo() : paramCount(0) {
+ExecutableInfo::ExecutableInfo() : paramCount(0), verbose(false) {
 	setDir(getCurrentDirectory());
 }
 
@@ -102,7 +102,7 @@ struct CmdLineParamDef {
 
 void dumpParameterHelp();
 
-void showHelp(CmdLineParamDef * param, const wchar_t * value) {
+static void showHelp(CmdLineParamDef * param, const wchar_t * value) {
 	printf("This is Mago debugger. Usage:\n");
 	printf("    mago-mi [options] [executable-file]\n");
 	printf("    mago-mi [options] --args executable-file [inferior-arguments ...]\n");
@@ -110,7 +110,7 @@ void showHelp(CmdLineParamDef * param, const wchar_t * value) {
 	exit(0);
 }
 
-void showVersion(CmdLineParamDef * param, const wchar_t * value) {
+static void showVersion(CmdLineParamDef * param, const wchar_t * value) {
 	printf("mago-mi debugger v0.1\n");
 	exit(0);
 }
@@ -119,7 +119,7 @@ void defParamHandler(CmdLineParamDef * param, const wchar_t * value) {
 	// TODO
 }
 
-void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
+static void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
 	if (wcscmp(value, L"mi2")) {
 		fprintf(stderr, "Only mi2 interpreter is supported");
 		exit(2);
@@ -128,7 +128,7 @@ void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
 
 static bool argsFound = false;
 
-void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
+static void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
 	if (!executableInfo.exename.empty()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
@@ -137,7 +137,7 @@ void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
 	argsFound = true;
 }
 
-void handleExec(CmdLineParamDef * param, const wchar_t * value) {
+static void handleExec(CmdLineParamDef * param, const wchar_t * value) {
 	if (!executableInfo.exename.empty()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
@@ -145,8 +145,12 @@ void handleExec(CmdLineParamDef * param, const wchar_t * value) {
 	executableInfo.setExecutable(std::wstring(value));
 }
 
-void handleDir(CmdLineParamDef * param, const wchar_t * value) {
+static void handleDir(CmdLineParamDef * param, const wchar_t * value) {
 	executableInfo.setDir(value);
+}
+
+static void handleVerbose(CmdLineParamDef * param, const wchar_t * value) {
+	executableInfo.verbose = true;
 }
 
 void nonParamHandler(const wchar_t * value) {
@@ -170,6 +174,7 @@ CmdLineParamDef params[] = {
 	CmdLineParamDef("Operating modes"),
 	CmdLineParamDef(NULL, "--help", NO_PARAMS, "Print this message and then exit", NULL, &showHelp),
 	CmdLineParamDef(NULL, "--version", NO_PARAMS, "Print version information and then exit", NULL, &showVersion),
+	CmdLineParamDef("-v", NULL, NO_PARAMS, "Verbose output", NULL, &handleVerbose),
 	CmdLineParamDef("Other options"),
 	CmdLineParamDef(NULL, "--cd=DIR", STRING_PARAM, "Change current directory to DIR.", NULL, &handleDir),
 	CmdLineParamDef()
@@ -193,6 +198,8 @@ CmdLineParamDef * findParam(const wchar_t * &name) {
 		for (int i = 0; !params[i].isLast(); i++) {
 			if (params[i].isHelpSection())
 				continue;
+			if (!params[i].shortName)
+				continue;
 			if (params[i].shortName[1] == name[1]) {
 				name += 2;
 				return &params[i];
@@ -201,6 +208,8 @@ CmdLineParamDef * findParam(const wchar_t * &name) {
 	} else if (name[0] == '-' && name[1] == '-') {
 		for (int i = 0; !params[i].isLast(); i++) {
 			if (params[i].isHelpSection())
+				continue;
+			if (!params[i].longName)
 				continue;
 			int j = 0;
 			for (; name[j] && params[i].longName[j] && (params[i].longName[j] != '=') && name[j] == params[i].longName[j]; j++)

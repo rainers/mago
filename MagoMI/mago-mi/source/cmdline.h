@@ -9,6 +9,7 @@ struct ExecutableInfo {
 	int paramCount;
 	std::wstring  params[MAX_PARAM_COUNT];
 	std::wstring dir;
+	bool verbose;
 
 	ExecutableInfo();
 	~ExecutableInfo();

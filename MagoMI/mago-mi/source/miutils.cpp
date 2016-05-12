@@ -76,7 +76,34 @@ std::wstring toUtf16(const std::string s) {
 	return buf.wstr();
 }
 
-
+WstringBuffer & WstringBuffer::appendStringLiteral(std::wstring s) {
+	append('\"');
+	for (size_t i = 0; i < s.length(); i++) {
+		wchar_t ch = s[i];
+		switch (ch) {
+		case '\"':
+			append(L"\\\"");
+			break;
+		case '\n':
+			append(L"\\n");
+			break;
+		case '\t':
+			append(L"\\t");
+			break;
+		case '\r':
+			append(L"\\r");
+			break;
+		case '\0':
+			append(L"\\0");
+			break;
+		default:
+			append(ch);
+			break;
+		}
+	}
+	append('\"');
+	return *this;
+}
 
 std::wstring unquoteString(std::wstring s) {
 	if (s.empty())

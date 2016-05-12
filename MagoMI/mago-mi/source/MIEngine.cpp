@@ -120,7 +120,7 @@ public:
 
 typedef std::map<DWORD, RefPtr<MIDebugProcess>> MIProcessMap;
 
-class MIDebugPort : public IDebugPort2, public IDebugDefaultPort2, public IDebugPortNotify2, public IDebugPortSupplier2 {
+class MIDebugPort : /*public IDebugPort2, */ public IDebugDefaultPort2, public IDebugPortNotify2, public IDebugPortSupplier2 {
 public:
 	MIDebugPort() {}
 	~MIDebugPort() {}
@@ -440,6 +440,7 @@ HRESULT MIEngine::Init(MIEventCallback * callback) {
 	this->engine = pengine;
 	this->callback = callback;
 	this->debugPort = new MIDebugPort();
+	return S_OK;
 }
 
 HRESULT MIEngine::Launch(const wchar_t * pszExe,

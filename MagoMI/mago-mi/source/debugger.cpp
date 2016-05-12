@@ -13,8 +13,9 @@ void InitDebug()
 	//SetLocalMemWorkingSetLimit( 550 );
 }
 
-Debugger::Debugger() : _quitRequested(false) {
+Debugger::Debugger() : _quitRequested(false), _verbose(false) {
 	Log::Enable(false);
+	_verbose = executableInfo.verbose;
 	_engine = new MIEngine();
 	//InitDebug();
 	_cmdinput.setCallback(this);
@@ -41,6 +42,19 @@ void Debugger::writeOutput(const char * msg) {
 
 void Debugger::writeOutput(const wchar_t * msg) {
 	writeStdout(std::wstring(msg));
+}
+
+// MI interface stdout output: ch"msg_text"
+void Debugger::writeStringMessage(wchar_t ch, std::wstring msg) {
+	WstringBuffer buf;
+	buf.append(ch);
+	buf.appendStringLiteral(msg);
+	writeStdout(buf.wstr());
+}
+
+// MI interface stdout output: ~"msg_text"
+void Debugger::writeDebuggerMessage(std::wstring msg) {
+	writeStringMessage('~', msg);
 }
 
 /// called on new input line
@@ -80,4 +94,207 @@ int Debugger::enterCommandLoop() {
 	writeOutput("Debugger shutdown");
 	writeOutput("Exiting");
 	return 0;
+}
+
+
+
+
+#undef DUMP_EVENT
+#define DUMP_EVENT(x) \
+	if (_verbose) \
+		writeDebuggerMessage(std::wstring(L#x)); \
+	else \
+		CRLog::info(#x);
+
+
+
+HRESULT Debugger::OnDebugEngineCreated(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugEngineCreateEvent2 * pEvent) 
+{
+	if (_verbose)
+		writeDebuggerMessage(std::wstring(L"Debug engine created"));
+	else
+		CRLog::info("Debug engine created");
+	return S_OK;
+}
+HRESULT Debugger::OnDebugProgramCreated(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugProgramCreateEvent2 * pEvent) 
+{
+	if (_verbose)
+		writeDebuggerMessage(std::wstring(L"Program created"));
+	else
+		CRLog::info("Program created");
+	return S_OK;
+}
+HRESULT Debugger::OnDebugProgramDestroy(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugProgramDestroyEvent2 * pEvent) 
+{
+	if (_verbose)
+		writeDebuggerMessage(std::wstring(L"Program destroyed"));
+	else
+		CRLog::info("Program destroyed");
+	return S_OK;
+}
+HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugLoadCompleteEvent2 * pEvent) 
+{
+	if (_verbose)
+		writeDebuggerMessage(std::wstring(L"Load complete"));
+	else
+		CRLog::info("Load complete");
+	return S_OK;
+}
+HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugEntryPointEvent2 * pEvent) 
+{
+	if (_verbose)
+		writeDebuggerMessage(std::wstring(L"Entry point"));
+	else
+		CRLog::info("Entry point");
+	return S_OK;
+}
+HRESULT Debugger::OnDebugThreadCreate(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugThreadCreateEvent2 * pEvent) 
+{
+	if (_verbose)
+		writeDebuggerMessage(std::wstring(L"Thread created"));
+	else
+		CRLog::info("Thread created");
+	return S_OK;
+}
+
+
+HRESULT Debugger::OnDebugThreadDestroy(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugThreadDestroyEvent2 * pEvent)
+{
+	if (_verbose)
+		writeDebuggerMessage(std::wstring(L"Thread destroyed"));
+	else
+		CRLog::info("Thread destroyed");
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugStepComplete(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugStepCompleteEvent2 * pEvent) 
+{
+	DUMP_EVENT(OnDebugStepComplete);
+	return S_OK;
+}
+HRESULT Debugger::OnDebugBreak(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugBreakEvent2 * pEvent) 
+{
+	DUMP_EVENT(OnDebugBreak);
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugOutputString(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugOutputStringEvent2 * pEvent) 
+{
+	DUMP_EVENT(OnDebugOutputString);
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugModuleLoad(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugModuleLoadEvent2 * pEvent) 
+{
+	DUMP_EVENT(OnDebugModuleLoad);
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugSymbolSearch(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugSymbolSearchEvent2 * pEvent) {
+	DUMP_EVENT(OnDebugSymbolSearch);
+	return S_OK;
+}
+HRESULT Debugger::OnDebugBreakpoint(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugBreakpointEvent2 * pEvent) 
+{
+	DUMP_EVENT(OnDebugBreakpoint);
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugBreakpointBound(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugBreakpointBoundEvent2 * pEvent) 
+{
+	DUMP_EVENT(OnDebugBreakpointBound);
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugBreakpointError(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugBreakpointErrorEvent2 * pEvent) {
+	DUMP_EVENT(OnDebugBreakpointError);
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugBreakpointUnbound(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugBreakpointUnboundEvent2 * pEvent) {
+	DUMP_EVENT(OnDebugBreakpointUnbound);
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugException(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugExceptionEvent2 * pEvent) {
+	DUMP_EVENT(OnDebugException);
+	return S_OK;
+}
+
+HRESULT Debugger::OnDebugMessage(IDebugEngine2 *pEngine,
+	IDebugProcess2 *pProcess,
+	IDebugProgram2 *pProgram,
+	IDebugThread2 *pThread,
+	IDebugMessageEvent2 * pEvent) {
+
+	DUMP_EVENT(OnDebugMessage);
+	return S_OK;
 }

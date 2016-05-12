@@ -140,6 +140,8 @@ struct WstringBuffer : public Buffer<wchar_t> {
 	WstringBuffer & operator += (wchar_t ch) { append(ch); return *this; }
 	std::string str() { return toUtf8(wstr()); }
 	std::wstring wstr() { return std::wstring(c_str(), length()); }
+	// appends double quoted string, e.g. "Some message.\n"
+	WstringBuffer & appendStringLiteral(std::wstring s);
 };
 
 
