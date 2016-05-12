@@ -91,6 +91,30 @@ void Debugger::writeErrorMessage(ulong requestId, std::wstring msg) {
 		writeStdout(msg);
 }
 
+static const wchar_t * HELP_MSGS[] = {
+	L"mago-mi tries to implement GDB and GDB-MI interfaces for MAGO debugger.",
+	L"",
+	L"run                     - start program execution",
+	L"continue                - continue program execution",
+	L"Type quit to exit.",
+	NULL
+};
+
+static const wchar_t * HELP_MSGS_MI[] = {
+	L"mago-mi tries to implement GDB and GDB-MI interfaces for MAGO debugger.",
+	L"",
+	L"-exec-run               - start program execution",
+	L"-exec-continue          - continue program execution",
+	L"Type quit to exit.",
+	NULL
+};
+
+void Debugger::showHelp() {
+	const wchar_t **msgs = params.miMode ? HELP_MSGS_MI : HELP_MSGS;
+	for (int i = 0; msgs[i]; i++)
+	    writeDebuggerMessage(std::wstring(msgs[i]));
+}
+
 /// called on new input line
 void Debugger::onInputLine(std::wstring &s) {
 	CRLog::debug("Input line: %s", toUtf8(s).c_str());
@@ -106,7 +130,7 @@ void Debugger::onInputLine(std::wstring &s) {
 		writeOutput("Quit requested");
 	}
 	else if (cmd.commandName == L"help") {
-		writeDebuggerMessage(std::wstring(L"Type quit to exit."));
+		showHelp();
 	}
 	else if (cmd.commandName == L"run" || cmd.commandName == L"-exec-run") {
 		run(cmd.requestId);

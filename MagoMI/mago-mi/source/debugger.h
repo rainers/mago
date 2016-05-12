@@ -54,6 +54,7 @@ public:
 	/// called when ctrl+c or ctrl+break is called
 	virtual void onCtrlBreak();
 
+	virtual void showHelp();
 	virtual int enterCommandLoop();
 
 	// load executable
