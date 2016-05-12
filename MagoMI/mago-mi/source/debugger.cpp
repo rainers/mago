@@ -22,7 +22,7 @@ Debugger::Debugger()
 	, _stopped(false)
 {
 	Log::Enable(false);
-	_verbose = executableInfo.verbose;
+	_verbose = params.verbose;
 	_engine = new MIEngine();
 	//InitDebug();
 	_cmdinput.setCallback(this);
@@ -109,16 +109,16 @@ void Debugger::onCtrlBreak() {
 
 int Debugger::enterCommandLoop() {
 	writeOutput("Entering command loop");
-	if (!executableInfo.exename.empty()) {
-		if (!fileExists(executableInfo.exename)) {
-			fprintf(stderr, "%s: no such file or directory", executableInfo.exename);
+	if (!params.exename.empty()) {
+		if (!fileExists(params.exename)) {
+			fprintf(stderr, "%s: no such file or directory", params.exename);
 			return 4;
 		}
 
 		HRESULT hr = _engine->Launch(
-			executableInfo.exename.c_str(), //LPCOLESTR             pszExe,
+			params.exename.c_str(), //LPCOLESTR             pszExe,
 			NULL, //LPCOLESTR             pszArgs,
-			executableInfo.dir.c_str() //LPCOLESTR             pszDir,
+			params.dir.c_str() //LPCOLESTR             pszDir,
 			);
 		if (FAILED(hr)) {
 			writeOutput("Failed to load debuggee\n");

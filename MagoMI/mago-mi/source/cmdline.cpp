@@ -5,18 +5,24 @@
 #include <windows.h>
 #include "miutils.h"
 
-ExecutableInfo executableInfo;
-ExecutableInfo::ExecutableInfo() : paramCount(0), verbose(false) {
+// global object
+ExecutableInfo params;
+
+ExecutableInfo::ExecutableInfo() 
+	: argCount(0)
+	, verbose(false) 
+	, miMode(false)
+{
 	setDir(getCurrentDirectory());
 }
 
 void ExecutableInfo::clear() {
 	exename.clear();
 	dir.clear();
-	for (int i = 0; i < paramCount; i++) {
-		params[i].clear();
+	for (int i = 0; i < argCount; i++) {
+		args[i].clear();
 	}
-	paramCount = 0;
+	argCount = 0;
 }
 
 ExecutableInfo::~ExecutableInfo() {
@@ -41,21 +47,21 @@ void ExecutableInfo::setDir(std::wstring directory) {
 	dir = relativeToAbsolutePath(tmp);
 }
 
-void ExecutableInfo::addParam(std::wstring param) {
-	if (paramCount >= MAX_PARAM_COUNT) {
+void ExecutableInfo::addArg(std::wstring param) {
+	if (argCount >= MAX_PARAM_COUNT) {
 		fprintf(stderr, "Too many executable file parameters");
 		exit(3);
 	}
-	params[paramCount++] = param;
+	args[argCount++] = param;
 }
 
 void ExecutableInfo::dumpParams() {
 	if (!exename.empty()) {
 		wprintf(L"Executable file: %s\n", exename.c_str());
-		if (paramCount) {
+		if (argCount) {
 			wprintf(L"Inferior arguments: ");
-			for (int i = 0; i < paramCount; i++) {
-				wprintf(L"%s ", params[i].c_str());
+			for (int i = 0; i < argCount; i++) {
+				wprintf(L"%s ", args[i].c_str());
 			}
 			wprintf(L"\n");
 		}
@@ -124,48 +130,49 @@ static void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
 		fprintf(stderr, "Only mi2 interpreter is supported");
 		exit(2);
 	}
+	params.miMode = true;
 }
 
 static bool argsFound = false;
 
 static void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
-	if (!executableInfo.exename.empty()) {
+	if (!params.exename.empty()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
 	}
-	executableInfo.setExecutable(value);
+	params.setExecutable(value);
 	argsFound = true;
 }
 
 static void handleExec(CmdLineParamDef * param, const wchar_t * value) {
-	if (!executableInfo.exename.empty()) {
+	if (!params.exename.empty()) {
 		fprintf(stderr, "Executable file already specified");
 		exit(3);
 	}
-	executableInfo.setExecutable(std::wstring(value));
+	params.setExecutable(std::wstring(value));
 }
 
 static void handleDir(CmdLineParamDef * param, const wchar_t * value) {
-	executableInfo.setDir(value);
+	params.setDir(value);
 }
 
 static void handleVerbose(CmdLineParamDef * param, const wchar_t * value) {
-	executableInfo.verbose = true;
+	params.verbose = true;
 }
 
 void nonParamHandler(const wchar_t * value) {
-	if (executableInfo.exename.empty()) {
-		executableInfo.setExecutable(std::wstring(value));
+	if (params.exename.empty()) {
+		params.setExecutable(std::wstring(value));
 		return;
 	}
 	if (!argsFound) {
 		fprintf(stderr, "Use --args to provide inferior arguments");
 		exit(3);
 	}
-	executableInfo.addParam(std::wstring(value));
+	params.addArg(std::wstring(value));
 }
 
-CmdLineParamDef params[] = {
+CmdLineParamDef paramDefs[] = {
 	CmdLineParamDef("Selection of debuggee and its files"),
 	CmdLineParamDef(NULL, "--args", STRING_PARAM, "Arguments after executable-file are passed to inferior", NULL, &handleArgs),
 	CmdLineParamDef(NULL, "--exec=EXECFILE", STRING_PARAM, "Use EXECFILE as the executable.", NULL, &handleExec),
@@ -181,44 +188,44 @@ CmdLineParamDef params[] = {
 };
 
 void dumpParameterHelp() {
-	for (int i = 0; !params[i].isLast(); i++) {
-		if (params[i].isHelpSection()) {
-			printf("\n%s:\n\n", params[i].description);
+	for (int i = 0; !paramDefs[i].isLast(); i++) {
+		if (paramDefs[i].isHelpSection()) {
+			printf("\n%s:\n\n", paramDefs[i].description);
 		} else {
-			if (params[i].longName)
-				printf("  %-16s %s\n", params[i].longName, params[i].description);
-			if (params[i].shortName)
-				printf("  %-16s %s\n", params[i].shortName, params[i].description);
+			if (paramDefs[i].longName)
+				printf("  %-16s %s\n", paramDefs[i].longName, paramDefs[i].description);
+			if (paramDefs[i].shortName)
+				printf("  %-16s %s\n", paramDefs[i].shortName, paramDefs[i].description);
 		}
 	}
 }
 
 CmdLineParamDef * findParam(const wchar_t * &name) {
 	if (name[0] == '-' && name[1] != '-') {
-		for (int i = 0; !params[i].isLast(); i++) {
-			if (params[i].isHelpSection())
+		for (int i = 0; !paramDefs[i].isLast(); i++) {
+			if (paramDefs[i].isHelpSection())
 				continue;
-			if (!params[i].shortName)
+			if (!paramDefs[i].shortName)
 				continue;
-			if (params[i].shortName[1] == name[1]) {
+			if (paramDefs[i].shortName[1] == name[1]) {
 				name += 2;
-				return &params[i];
+				return &paramDefs[i];
 			}
 		}
 	} else if (name[0] == '-' && name[1] == '-') {
-		for (int i = 0; !params[i].isLast(); i++) {
-			if (params[i].isHelpSection())
+		for (int i = 0; !paramDefs[i].isLast(); i++) {
+			if (paramDefs[i].isHelpSection())
 				continue;
-			if (!params[i].longName)
+			if (!paramDefs[i].longName)
 				continue;
 			int j = 0;
-			for (; name[j] && params[i].longName[j] && (params[i].longName[j] != '=') && name[j] == params[i].longName[j]; j++)
+			for (; name[j] && paramDefs[i].longName[j] && (paramDefs[i].longName[j] != '=') && name[j] == paramDefs[i].longName[j]; j++)
 				;
-			if ((!params[i].longName[j] || params[i].longName[j] == '=') && (!name[j] || name[j] == '=')) {
+			if ((!paramDefs[i].longName[j] || paramDefs[i].longName[j] == '=') && (!name[j] || name[j] == '=')) {
 				name += j;
 				if (name[0] == '=')
 					name++;
-				return &params[i];
+				return &paramDefs[i];
 			}
 		}
 	}
