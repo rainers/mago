@@ -19,6 +19,10 @@ class Debugger : public MIEventCallback, public CmdInputCallback {
 	RefPtr<MIEngine> _engine;
 	bool _quitRequested;
 	bool _verbose;
+	bool _loaded;
+	bool _started;
+	bool _paused;
+	bool _stopped;
 public:
 	Debugger();
 	virtual ~Debugger();
@@ -33,6 +37,12 @@ public:
 	virtual void writeStringMessage(wchar_t ch, std::wstring msg);
 	// MI interface stdout output: ~"msg_text"
 	virtual void writeDebuggerMessage(std::wstring msg);
+	// MI interface stdout output: [##requestId##]^result[,"msg"]
+	virtual void writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg);
+	// MI interface stdout output: [##requestId##]^result[,"msg"]
+	virtual void writeResultMessage(ulong requestId, const wchar_t * status, const wchar_t * msg) { writeResultMessage(requestId, status, std::wstring(msg ? msg : L"")); }
+	// MI interface stdout output: [##requestId##]^error[,"msg"]
+	virtual void writeErrorMessage(ulong requestId, std::wstring msg) { writeResultMessage(requestId, L"error", msg); }
 
 	// CmdInputCallback interface handlers
 
@@ -43,6 +53,10 @@ public:
 
 	virtual int enterCommandLoop();
 
+	// start execution
+	virtual bool run(uint64_t requestId);
+	// resume paused execution
+	virtual bool resume(uint64_t requestId);
 
 	// MIEventCallback interface
 	virtual HRESULT OnDebugEngineCreated(IDebugEngine2 *pEngine,

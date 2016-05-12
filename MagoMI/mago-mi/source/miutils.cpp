@@ -76,6 +76,14 @@ std::wstring toUtf16(const std::string s) {
 	return buf.wstr();
 }
 
+// appends number
+WstringBuffer & WstringBuffer::appendUlongLiteral(uint64_t n) {
+	wchar_t buf[32];
+	wsprintf(buf, L"%lld", n);
+	append(buf);
+	return *this;
+}
+
 WstringBuffer & WstringBuffer::appendStringLiteral(std::wstring s) {
 	append('\"');
 	for (size_t i = 0; i < s.length(); i++) {
@@ -103,6 +111,61 @@ WstringBuffer & WstringBuffer::appendStringLiteral(std::wstring s) {
 	}
 	append('\"');
 	return *this;
+}
+
+MICommand::MICommand() 
+	: requestId(UNSPECIFIED_REQUEST_ID) 
+	, miCommand(false)
+{
+
+}
+MICommand::~MICommand() {
+	
+}
+
+/// trying to parse beginning of string as unsigned long; if found sequence of digits, trims beginning digits from s, puts parsed number into n, and returns true.
+bool parseUlong(std::wstring & s, uint64_t &value) {
+	if (s.empty())
+		return false;
+	uint64_t n = 0;
+	size_t i = 0;
+	for (; i < s.length() && s[i] >= '0' && s[i] <= '9'; i++)
+		n = n * 10 + (unsigned)(s[i] - '0');
+	if (i == 0)
+		return false;
+	value = n;
+	s = s.substr(i, s.length() - i);
+}
+
+bool isValidIdentChar(wchar_t ch) {
+	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch == '_') || (ch == '-');
+}
+
+/// parse beginning of string as identifier, allowed chars: a..z, A..Z, _, - (if successful, removes ident from s and puts it to value, and returns true)
+bool parseIdentifier(std::wstring & s, std::wstring & value) {
+	if (s.empty())
+		return false;
+	size_t i = 0;
+	bool foundLetters = false;
+	for (; i < s.length() && isValidIdentChar(s[i]); i++) {
+		if (s[i] != '-' && s[i] != '_')
+			foundLetters = true;
+	}
+	if (!i || !foundLetters)
+		return false;
+	value = s.substr(0, i);
+	s = s.substr(i, s.length() - i);
+	return true;
+}
+
+bool MICommand::parse(std::wstring s) {
+	requestId = UNSPECIFIED_REQUEST_ID;
+	parseUlong(s, requestId);
+	if (!parseIdentifier(s, commandName))
+		return false;
+	if (commandName[0] == '-' && commandName[1] != '-')
+		miCommand = true;
+	return true;
 }
 
 std::wstring unquoteString(std::wstring s) {

@@ -13,7 +13,14 @@ void InitDebug()
 	//SetLocalMemWorkingSetLimit( 550 );
 }
 
-Debugger::Debugger() : _quitRequested(false), _verbose(false) {
+Debugger::Debugger() 
+	: _quitRequested(false)
+	, _verbose(false)
+	, _loaded(false)
+	, _started(false)
+	, _paused(false)
+	, _stopped(false)
+{
 	Log::Enable(false);
 	_verbose = executableInfo.verbose;
 	_engine = new MIEngine();
@@ -57,12 +64,42 @@ void Debugger::writeDebuggerMessage(std::wstring msg) {
 	writeStringMessage('~', msg);
 }
 
+// MI interface stdout output: [##requestId##]^result[,"msg"]
+void Debugger::writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg) {
+	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(requestId);
+	buf.append('^');
+	buf.append(status);
+	if (!msg.empty()) {
+		buf.append(L",");
+		buf.appendStringLiteral(msg);
+	}
+	writeStdout(buf.wstr());
+}
+
 /// called on new input line
 void Debugger::onInputLine(std::wstring &s) {
-	writeStdout(L"Input line: %s\n", s.c_str());
-	if (s == L"quit") {
+	CRLog::debug("Input line: %s", toUtf8(s).c_str());
+	if (s.empty())
+		return;
+	MICommand cmd;
+	if (!cmd.parse(s)) {
+		writeErrorMessage(cmd.requestId, std::wstring(L"invalid command syntax: ") + s);
+		return;
+	}
+	if (cmd.commandName == L"quit") {
 		_quitRequested = true;
 		writeOutput("Quit requested");
+	}
+	else if (cmd.commandName == L"run" || cmd.commandName == L"-exec-run") {
+		run(cmd.requestId);
+	}
+	else
+	{
+		if (cmd.miCommand)
+			writeErrorMessage(cmd.requestId, std::wstring(L"Undefined MI command: ") + s);
+		else
+			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s);
 	}
 }
 /// called when ctrl+c or ctrl+break is called
@@ -97,7 +134,47 @@ int Debugger::enterCommandLoop() {
 }
 
 
+// start execution
+bool Debugger::run(uint64_t requestId) {
+	if (_started) {
+		writeErrorMessage(requestId, std::wstring(L"Process is already started"));
+		return false;
+	}
+	if (_stopped) {
+		writeErrorMessage(requestId, std::wstring(L"Process is finished"));
+		return false;
+	}
+	if (FAILED(_engine->ResumeProcess())) {
+		writeErrorMessage(requestId, std::wstring(L"Failed to start process"));
+		_stopped = true;
+		return false;
+	}
+	writeResultMessage(requestId, L"running", NULL);
+	return true;
+}
 
+// resume paused execution
+bool Debugger::resume(uint64_t requestId) {
+	if (!_started) {
+		writeErrorMessage(requestId, std::wstring(L"Process is not started"));
+		return false;
+	}
+	if (_stopped) {
+		writeErrorMessage(requestId, std::wstring(L"Process is finished"));
+		return false;
+	}
+	if (!_paused) {
+		writeErrorMessage(requestId, std::wstring(L"Process is already running"));
+		return false;
+	}
+	if (FAILED(_engine->ResumeProcess())) {
+		writeErrorMessage(requestId, std::wstring(L"Failed to resume process"));
+		_stopped = true;
+		return false;
+	}
+	writeResultMessage(requestId, L"running", NULL);
+	return true;
+}
 
 #undef DUMP_EVENT
 #define DUMP_EVENT(x) \
@@ -138,6 +215,7 @@ HRESULT Debugger::OnDebugProgramDestroy(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugProgramDestroyEvent2 * pEvent) 
 {
+	_stopped = true;
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Program destroyed"));
 	else
@@ -150,6 +228,7 @@ HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugLoadCompleteEvent2 * pEvent) 
 {
+	_loaded = true;
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Load complete"));
 	else
@@ -162,6 +241,7 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugEntryPointEvent2 * pEvent) 
 {
+	_loaded = true;
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Entry point"));
 	else
@@ -201,6 +281,7 @@ HRESULT Debugger::OnDebugStepComplete(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugStepCompleteEvent2 * pEvent) 
 {
+	_paused = true;
 	DUMP_EVENT(OnDebugStepComplete);
 	return S_OK;
 }
@@ -248,6 +329,7 @@ HRESULT Debugger::OnDebugBreakpoint(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugBreakpointEvent2 * pEvent) 
 {
+	_paused = true;
 	DUMP_EVENT(OnDebugBreakpoint);
 	return S_OK;
 }

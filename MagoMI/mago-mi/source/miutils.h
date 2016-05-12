@@ -1,7 +1,12 @@
 #pragma once
 
 #include <string>
+#include <stdint.h>
 #include "logger.h"
+
+typedef unsigned __int64 ulong;
+// magic constant for non-specified MI request id
+const uint64_t UNSPECIFIED_REQUEST_ID = 0xFFFFFFFFFFFFFFFEull;
 
 template <typename T>
 struct Buffer {
@@ -134,6 +139,7 @@ struct StringBuffer : public Buffer<char> {
 	std::wstring wstr() { return toUtf16(str()); }
 };
 
+
 struct WstringBuffer : public Buffer<wchar_t> {
 	WstringBuffer & operator = (const std::wstring & s) { assign(s.c_str(), s.length()); return *this; }
 	WstringBuffer & operator += (const std::wstring & s) { append(s.c_str(), s.length()); return *this; }
@@ -142,9 +148,30 @@ struct WstringBuffer : public Buffer<wchar_t> {
 	std::wstring wstr() { return std::wstring(c_str(), length()); }
 	// appends double quoted string, e.g. "Some message.\n"
 	WstringBuffer & appendStringLiteral(std::wstring s);
+	// appends number
+	WstringBuffer & appendUlongLiteral(uint64_t n);
+	// appends number if non zero
+	WstringBuffer & appendUlongIfNonEmpty(uint64_t n) { if (n != UNSPECIFIED_REQUEST_ID) appendUlongLiteral(n); return *this; }
 };
 
+/// trying to parse beginning of string as unsigned long; if found sequence of digits, trims beginning digits from s, puts parsed number into n, and returns true.
+bool parseUlong(std::wstring & s, uint64_t &value);
+/// parse beginning of string as identifier, allowed chars: a..z, A..Z, _, - (if successful, removes ident from s and puts it to value, and returns true)
+bool parseIdentifier(std::wstring & s, std::wstring & value);
 
+
+struct MICommand {
+	uint64_t requestId;
+	/// true if command is prefixed with single -
+	bool miCommand;
+	/// command name string
+	std::wstring commandName;
+
+	MICommand();
+	~MICommand();
+	// parse MI command, returns true if successful
+	bool parse(std::wstring line);
+};
 
 bool fileExists(std::wstring fname);
 std::wstring unquoteString(std::wstring s);
