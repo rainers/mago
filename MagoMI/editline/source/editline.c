@@ -47,6 +47,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "el_globals.h"
 #include <tchar.h>
 #include <wincon.h>
+//#include "../../mago-mi/source/logger.h"
 
 #define MY_DEBUG(x) fprintf(stderr, x);
 
@@ -130,7 +131,7 @@ char *_el_w2mb(wchar_t *w, char **mb)
   
   
   len_mb = WideCharToMultiByte(CP_UTF8, 0, w, -1, NULL, 0, NULL, NULL);
-  if ((*mb = realloc(*mb, len_mb))) {
+  if ((*mb = (char*)realloc(*mb, len_mb))) {
     WideCharToMultiByte(CP_UTF8, 0, w, -1, *mb, len_mb, NULL, NULL);
   }
   
@@ -628,11 +629,6 @@ int _el_print_string(wchar_t *string)
     padded_len = _el_pad(&sbInfo, _el_temp_print);
     if (!WriteConsoleW(_el_h_out, _el_temp_print,
       padded_len, &n_chars, NULL)) {
-		int err = GetLastError();
-		if (!WriteConsole(_el_h_out, L"привет", 6, &n_chars, NULL)) {
-			err = GetLastError();
-		}
-		wprintf("%s\n", L"привет");
       return -1;
     }
     /*
@@ -946,20 +942,20 @@ typedef struct ReadlineState_ {
 } ReadlineState;
 
 /* readline splitting : init part, returns nonzero if success */
-void ReadlineState_init(ReadlineState * this) {
-	this->array = NULL;
-	this->ret_string = NULL;
-	this->start = 0;
-	this->end = 0;
-	this->compl_pos = -1;
-	this->index = 0;
-	this->len = 0;
-	this->line_len = 0;
-	this->old_width = 0;
-	this->width = 0;
-	this->ctrl = 0;
-	this->special = 0;
-	this->count = 0;
+void ReadlineState_init(ReadlineState * pthis) {
+	pthis->array = NULL;
+	pthis->ret_string = NULL;
+	pthis->start = 0;
+	pthis->end = 0;
+	pthis->compl_pos = -1;
+	pthis->index = 0;
+	pthis->len = 0;
+	pthis->line_len = 0;
+	pthis->old_width = 0;
+	pthis->width = 0;
+	pthis->ctrl = 0;
+	pthis->special = 0;
+	pthis->count = 0;
 
 	/* init globals */
 	_el_ctrl_c_pressed = FALSE;
@@ -983,13 +979,13 @@ void ReadlineState_init(ReadlineState * this) {
 	_el_h_out = NULL;
 	wcscpy_s(_el_basic_file_break_characters,
 		_EL_MAX_FILE_BREAK_CHARACTERS, _EL_BASIC_FILE_BREAK_CHARACTERS);
-	memset(&this->coord, 0, sizeof(COORD));
-	memset(this->buf, 0, _EL_CONSOLE_BUF_LEN * sizeof(wchar_t));
-	memset(&this->irBuffer, 0, sizeof(INPUT_RECORD));
+	memset(&pthis->coord, 0, sizeof(COORD));
+	memset(pthis->buf, 0, _EL_CONSOLE_BUF_LEN * sizeof(wchar_t));
+	memset(&pthis->irBuffer, 0, sizeof(INPUT_RECORD));
 }
 
 /* readline splitting : init part, returns nonzero if success */
-int ReadlineState_prepare(ReadlineState * this, const char * prompt) {
+int ReadlineState_prepare(ReadlineState * pthis, const char * prompt) {
 	/*
 	allocate buffers
 	*/
@@ -1060,7 +1056,7 @@ int ReadlineState_prepare(ReadlineState * this, const char * prompt) {
 
 
 /* readline splitting : init part, returns nonzero if success */
-int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_interrupted) {
+int ReadlineState_poll(ReadlineState * pthis, wchar_t ** ret_string, int was_interrupted) {
 	int n;
 	CONSOLE_SCREEN_BUFFER_INFO sbInfo;
 
@@ -1068,7 +1064,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 		return READLINE_ERROR;
 	}
 	*ret_string = NULL;
-	while ((this->buf[0] != VK_RETURN)
+	while ((pthis->buf[0] != VK_RETURN)
 		&& (!_el_ctrl_c_pressed) && _el_line_buffer) {
 		/*
 		get screen buffer info from the current console
@@ -1078,7 +1074,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 			return READLINE_ERROR;
 		}
 		_el_temp_print_size = sbInfo.dwSize.X + 1;
-		if (!(_el_temp_print = realloc(_el_temp_print,
+		if (!(_el_temp_print = (wchar_t*)realloc(_el_temp_print,
 			_el_temp_print_size * sizeof(wchar_t)))) {
 			_el_clean_exit();
 			return READLINE_ERROR;
@@ -1087,18 +1083,18 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 		/*
 		compute the current visible console width
 		*/
-		this->width = sbInfo.srWindow.Right - sbInfo.srWindow.Left + 1;
+		pthis->width = sbInfo.srWindow.Right - sbInfo.srWindow.Left + 1;
 		/*
 		if the user has changed the window size
 		update the view
 		*/
-		if (this->old_width != this->width || was_interrupted) {
-			this->line_len = (int)wcslen(_el_line_buffer);
+		if (pthis->old_width != pthis->width || was_interrupted) {
+			pthis->line_len = (int)wcslen(_el_line_buffer);
 			sbInfo.dwCursorPosition.X = 0;
-			if (this->old_width && !was_interrupted) {
-				n = (_el_prompt_len + this->line_len - 1) / this->old_width;
+			if (pthis->old_width && !was_interrupted) {
+				n = (_el_prompt_len + pthis->line_len - 1) / pthis->old_width;
 				sbInfo.dwCursorPosition.Y -= (SHORT)n;
-				this->coord.Y = sbInfo.dwCursorPosition.Y;
+				pthis->coord.Y = sbInfo.dwCursorPosition.Y;
 			}
 			if (!SetConsoleCursorPosition(_el_h_out,
 				sbInfo.dwCursorPosition)) {
@@ -1117,57 +1113,58 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 				_el_clean_exit();
 				return READLINE_ERROR;
 			}
-			if (_el_set_cursor(this->line_len)) {
+			if (_el_set_cursor(pthis->line_len)) {
 				_el_clean_exit();
 				return READLINE_ERROR;
 			}
-			if (this->old_width && (this->old_width < this->width)) {
-				this->coord.X = 0;
-				this->coord.Y += (SHORT)((_el_prompt_len + this->line_len - 1) / this->width + 1);
+			if (pthis->old_width && (pthis->old_width < pthis->width)) {
+				pthis->coord.X = 0;
+				pthis->coord.Y += (SHORT)((_el_prompt_len + pthis->line_len - 1) / pthis->width + 1);
 				FillConsoleOutputCharacter(_el_h_out, _T(' '),
-					sbInfo.dwSize.X * (n + 2), this->coord, &this->count);
+					sbInfo.dwSize.X * (n + 2), pthis->coord, &pthis->count);
 			}
-			if (_el_set_cursor(rl_point - this->line_len)) { //  
+			if (_el_set_cursor(rl_point - pthis->line_len)) { //  
 				_el_clean_exit();
 				return READLINE_ERROR;
 			}
 		}
-		this->old_width = this->width;
+		pthis->old_width = pthis->width;
 		/*
 		wait for console events
 		*/
-		if (!PeekConsoleInput(_el_h_in, &this->irBuffer, 1, &this->count)) {
+
+		if (!PeekConsoleInput(_el_h_in, &pthis->irBuffer, 1, &pthis->count)) {
 			_el_clean_exit();
 			return READLINE_ERROR;
 		}
-		if (this->count) {
-			if ((this->irBuffer.EventType == KEY_EVENT) && this->irBuffer.Event.KeyEvent.bKeyDown) {
+		if (pthis->count) {
+			if ((pthis->irBuffer.EventType == KEY_EVENT) && pthis->irBuffer.Event.KeyEvent.bKeyDown) {
 				/*
 				the user pressed a key
 				*/
-				this->ctrl = (this->irBuffer.Event.KeyEvent.dwControlKeyState
+				pthis->ctrl = (pthis->irBuffer.Event.KeyEvent.dwControlKeyState
 					& (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED));
-				if (this->irBuffer.Event.KeyEvent.uChar.UnicodeChar == _T('\n')) {
-					if (!ReadConsoleInput(_el_h_in, &this->irBuffer, 1, &this->count)) {
+				if (pthis->irBuffer.Event.KeyEvent.uChar.UnicodeChar == _T('\n')) {
+					if (!ReadConsoleInput(_el_h_in, &pthis->irBuffer, 1, &pthis->count)) {
 						_el_clean_exit();
 						return READLINE_ERROR;
 					}
-					this->buf[0] = VK_RETURN;
+					pthis->buf[0] = VK_RETURN;
 					continue;
 				}
-				if (this->irBuffer.Event.KeyEvent.uChar.UnicodeChar == _T('\0')) {
+				if (pthis->irBuffer.Event.KeyEvent.uChar.UnicodeChar == _T('\0')) {
 					/*
 					if it is a special key, just remove it from the buffer
 					*/
-					if (!ReadConsoleInput(_el_h_in, &this->irBuffer, 1, &this->count)) {
+					if (!ReadConsoleInput(_el_h_in, &pthis->irBuffer, 1, &pthis->count)) {
 						_el_clean_exit();
 						return READLINE_ERROR;
 					}
-					this->special = this->irBuffer.Event.KeyEvent.wVirtualKeyCode;
+					pthis->special = pthis->irBuffer.Event.KeyEvent.wVirtualKeyCode;
 					/*
 					parse the special key
 					*/
-					switch (this->special) {
+					switch (pthis->special) {
 						/*
 						arrow left, arrow right
 						HOME and END keys
@@ -1176,7 +1173,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 					case VK_RIGHT:
 					case VK_HOME:
 					case VK_END:
-						if (_el_move_cursor(this->special, this->ctrl)) {
+						if (_el_move_cursor(pthis->special, pthis->ctrl)) {
 							_el_clean_exit();
 							return READLINE_ERROR;
 						}
@@ -1236,7 +1233,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 								return READLINE_ERROR;
 							}
 							_el_compl_index = 0;
-							this->compl_pos = -1;
+							pthis->compl_pos = -1;
 						}
 						break;
 					}
@@ -1245,22 +1242,22 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 					/*
 					if it is a normal key, remove it from the buffer
 					*/
-					memset(this->buf, 0, _EL_CONSOLE_BUF_LEN * sizeof(wchar_t));
-					if (!ReadConsole(_el_h_in, this->buf, 1, &this->count, NULL)) {
+					memset(pthis->buf, 0, _EL_CONSOLE_BUF_LEN * sizeof(wchar_t));
+					if (!ReadConsole(_el_h_in, pthis->buf, 1, &pthis->count, NULL)) {
 						_el_clean_exit();
 						return READLINE_ERROR;
 					}
 					/*
 					then parse it
 					*/
-					switch (this->buf[0]) {
+					switch (pthis->buf[0]) {
 						/*
 						backspace
 						*/
 					case VK_BACK:
 						if (rl_point) {
 							_el_compl_index = 0;
-							this->compl_pos = -1;
+							pthis->compl_pos = -1;
 							if (_el_delete_char(VK_BACK, 1)) {
 								_el_clean_exit();
 								return READLINE_ERROR;
@@ -1272,14 +1269,14 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 						TAB: do completion
 						*/
 					case VK_TAB:
-						if ((!this->array) || (rl_point != this->compl_pos)) {
-							_el_free_array(this->array);
-							this->index = 0;
+						if ((!pthis->array) || (rl_point != pthis->compl_pos)) {
+							_el_free_array(pthis->array);
+							pthis->index = 0;
 							if (_el_text) {
 								free(_el_text);
 								_el_text = NULL;
 							}
-							if (!(_el_text = _el_get_compl_text(&this->start, &this->end))) {
+							if (!(_el_text = _el_get_compl_text(&pthis->start, &pthis->end))) {
 								_el_clean_exit();
 								return READLINE_ERROR;
 							}
@@ -1294,58 +1291,58 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 								_el_clean_exit();
 								return READLINE_ERROR;
 							}
-							this->array = (rl_attempted_completion_function
-								? rl_attempted_completion_function(_el_text_mb, this->start, this->end)
+							pthis->array = (rl_attempted_completion_function
+								? rl_attempted_completion_function(_el_text_mb, pthis->start, pthis->end)
 								: rl_completion_matches(_el_text_mb, (rl_completion_entry_function
 									? rl_completion_entry_function : rl_filename_completion_function)));
-							if (!this->array) {
+							if (!pthis->array) {
 								_el_clean_exit();
 								return READLINE_ERROR;
 							}
 						}
-						if (!this->array[this->index]) {
-							this->index = 0;
+						if (!pthis->array[pthis->index]) {
+							pthis->index = 0;
 						}
-						if (this->array[this->index]) {
-							if (!_el_mb2w(this->array[this->index], &_el_next_compl)) {
+						if (pthis->array[pthis->index]) {
+							if (!_el_mb2w(pthis->array[pthis->index], &_el_next_compl)) {
 								_el_clean_exit();
 								return READLINE_ERROR;
 							}
-							this->len = 0;
+							pthis->len = 0;
 							if (_el_old_arg) {
-								this->len = (int)wcslen(_el_old_arg);
+								pthis->len = (int)wcslen(_el_old_arg);
 #if 0
 								fwprintf(stderr, _T("VK_TAB) _el_old_arg = '%s', len = %d\n"), _el_old_arg, len);
 								fflush(stderr);
 #endif
 							}
-							if (!this->len) {
-								this->len = (int)wcslen(_el_text);
+							if (!pthis->len) {
+								pthis->len = (int)wcslen(_el_text);
 							}
-							if (this->len) {
-								if (_el_delete_char(VK_BACK, this->len)) {
+							if (pthis->len) {
+								if (_el_delete_char(VK_BACK, pthis->len)) {
 									_el_clean_exit();
 									return READLINE_ERROR;
 								}
 							}
-							this->len = (int)wcslen(_el_next_compl);
-							if (!(_el_old_arg = realloc(_el_old_arg,
-								(this->len + 1) * sizeof(wchar_t)))) {
+							pthis->len = (int)wcslen(_el_next_compl);
+							if (!(_el_old_arg = (wchar_t*)realloc(_el_old_arg,
+								(pthis->len + 1) * sizeof(wchar_t)))) {
 								return READLINE_ERROR;
 							}
-							_el_old_arg[this->len] = _T('\0');
-							memcpy(_el_old_arg, _el_next_compl, this->len * sizeof(wchar_t));
-							this->line_len = (int)wcslen(_el_line_buffer);
-							if (_el_insert_char(_el_next_compl, this->len)) {
+							_el_old_arg[pthis->len] = _T('\0');
+							memcpy(_el_old_arg, _el_next_compl, pthis->len * sizeof(wchar_t));
+							pthis->line_len = (int)wcslen(_el_line_buffer);
+							if (_el_insert_char(_el_next_compl, pthis->len)) {
 								_el_clean_exit();
 								return READLINE_ERROR;
 							}
 							free(_el_next_compl);
 							_el_next_compl = NULL;
-							this->compl_pos = ((rl_point && (!wcschr(_el_completer_word_break_characters
+							pthis->compl_pos = ((rl_point && (!wcschr(_el_completer_word_break_characters
 								? _el_completer_word_break_characters : _el_basic_word_break_characters,
 								_el_line_buffer[rl_point - 1]))) ? rl_point : -1);
-							++this->index;
+							++pthis->index;
 						}
 						break;
 
@@ -1364,7 +1361,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 						delete word
 						*/
 					case 0x17:  /* CTRL + W */
-						if (this->ctrl) {
+						if (pthis->ctrl) {
 							if (!rl_point) {
 								break;
 							}
@@ -1381,7 +1378,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 								--n;
 							}
 							_el_compl_index = 0;
-							this->compl_pos = -1;
+							pthis->compl_pos = -1;
 							if (_el_delete_char(VK_BACK, n)) {
 								_el_clean_exit();
 								return READLINE_ERROR;
@@ -1393,12 +1390,12 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 						delete until end of line
 						*/
 					case 0x0B:  /* CTRL + K */
-						if (this->ctrl) {
-							this->line_len = (int)wcslen(_el_line_buffer);
-							if (rl_point < this->line_len) {
+						if (pthis->ctrl) {
+							pthis->line_len = (int)wcslen(_el_line_buffer);
+							if (rl_point < pthis->line_len) {
 								_el_compl_index = 0;
-								this->compl_pos = -1;
-								if (_el_delete_char(VK_DELETE, this->line_len - rl_point)) {
+								pthis->compl_pos = -1;
+								if (_el_delete_char(VK_DELETE, pthis->line_len - rl_point)) {
 									_el_clean_exit();
 									return READLINE_ERROR;
 								}
@@ -1476,7 +1473,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 								return READLINE_ERROR;
 							}
 							_el_compl_index = 0;
-							this->compl_pos = -1;
+							pthis->compl_pos = -1;
 						}
 						break;
 
@@ -1489,8 +1486,8 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 					default:
 						/*if (iswprint(buf[0])) {*/
 						_el_compl_index = 0;
-						this->compl_pos = -1;
-						if (_el_insert_char(this->buf, 1)) {
+						pthis->compl_pos = -1;
+						if (_el_insert_char(pthis->buf, 1)) {
 							_el_clean_exit();
 							return READLINE_ERROR;
 						}
@@ -1501,7 +1498,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 			/*
 			if it was not a keyboard event, just remove it from buffer
 			*/
-			else if (!ReadConsoleInput(_el_h_in, &this->irBuffer, 1, &this->count)) {
+			else if (!ReadConsoleInput(_el_h_in, &pthis->irBuffer, 1, &pthis->count)) {
 				_el_clean_exit();
 				return READLINE_ERROR;
 			}
@@ -1512,7 +1509,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 			*/
 			WaitForSingleObject(_el_h_in, 2); //INFINITE
 		}
-		if (this->buf[0] == VK_RETURN || _el_ctrl_c_pressed)
+		if (pthis->buf[0] == VK_RETURN || _el_ctrl_c_pressed)
 			break;
 		if (!_el_line_buffer) {
 			return READLINE_ERROR;
@@ -1542,7 +1539,7 @@ int ReadlineState_poll(ReadlineState * this, wchar_t ** ret_string, int was_inte
 		}
 	}
 	_el_clean_exit();
-	return _el_ctrl_c_pressed ? READLINE_CTRL_C : READLINE_READY; // this->ret_string;
+	return _el_ctrl_c_pressed ? READLINE_CTRL_C : READLINE_READY; // pthis->ret_string;
 }
 
 static ReadlineState read_line_state;
@@ -1550,6 +1547,8 @@ static int _readline_new_is_interrupted = 0;
 static int _readline_new_last_state = READLINE_READY;
 
 void readline_interrupt() {
+	if (!_el_line_buffer)
+		return;
 	CONSOLE_SCREEN_BUFFER_INFO sbInfo;
 	int cursor_y_offset = 0;
 	int editor_lines = 1;
@@ -1586,9 +1585,6 @@ int readline_poll(const char * prompt, wchar_t ** result_string) {
 	_readline_new_last_state = ReadlineState_poll(&read_line_state, result_string, _readline_new_is_interrupted);
 	_el_ctrl_c_pressed = 0;
 	_readline_new_is_interrupted = 0;
-	if (_readline_new_last_state == READLINE_ERROR) {
-		_readline_new_is_interrupted = 2;
-	}
 	return _readline_new_last_state;
 }
 
@@ -1711,7 +1707,7 @@ char *readline(const char *prompt)
       return NULL;
     }
     _el_temp_print_size = sbInfo.dwSize.X + 1;
-    if (!(_el_temp_print = realloc(_el_temp_print,
+    if (!(_el_temp_print = (wchar_t*)realloc(_el_temp_print,
       _el_temp_print_size * sizeof(wchar_t)))) {
       _el_clean_exit();
       return NULL;
@@ -1958,7 +1954,7 @@ char *readline(const char *prompt)
                 }
               }
               len = (int)wcslen(_el_next_compl);
-              if (!(_el_old_arg = realloc(_el_old_arg,
+              if (!(_el_old_arg = (wchar_t*)realloc(_el_old_arg,
                 (len + 1) * sizeof(wchar_t)))) {
                 return NULL;
               }

@@ -323,7 +323,9 @@ std::wstring getModuleName(IDebugModule2 * pModule) {
 		return std::wstring();
 	MODULE_INFO info;
 	pModule->GetInfo(MIF_NAME, &info);
-	return std::wstring(info.m_bstrName);
+	std::wstring res = std::wstring(info.m_bstrName);
+	SysFreeString(info.m_bstrName);
+	return res;
 }
 
 HRESULT Debugger::OnDebugModuleLoad(IDebugEngine2 *pEngine,
@@ -360,6 +362,7 @@ HRESULT Debugger::OnDebugSymbolSearch(IDebugEngine2 *pEngine,
 		moduleName.c_str(), moduleName.c_str(), moduleName.c_str(),
 		loaded ? 1 : 0
 		);
+	pModule->Release();
 	return S_OK;
 }
 HRESULT Debugger::OnDebugBreakpoint(IDebugEngine2 *pEngine,

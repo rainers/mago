@@ -34,6 +34,7 @@ public:
 			_buf = NULL;
 		}
 	}
+	T * ptr() { return _buf; }
 	void reserve(int sz) {
 		// ensure there is sz free items in buffer
 		int newSize = _len + sz + 1;
@@ -110,9 +111,6 @@ public:
 	/// return item by index, or 0 if index out of bounds
 	T operator[] (int index) { return (index >= 0 && index < _len) ? _buf[index] : 0; }
 	const T * c_str() const {
-		return _buf;
-	}
-	T * ptr() {
 		return _buf;
 	}
 	bool empty() const { return _length == 0; }
