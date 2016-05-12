@@ -13,6 +13,7 @@ class MIDebugPort;
 
 //#define DUMP_EVENT(x) printf("%s\n", #x)
 #define DUMP_EVENT(x) writeStdout("Event: %s\n", #x); CRLog::debug("Event: %s", #x)
+#define UNUSED_EVENT_PARAMS UNREFERENCED_PARAMETER(pEngine); UNREFERENCED_PARAMETER(pProcess); UNREFERENCED_PARAMETER(pProgram); UNREFERENCED_PARAMETER(pThread); UNREFERENCED_PARAMETER(pEvent)
 
 class MIEventCallback {
 public:
@@ -21,6 +22,7 @@ public:
 			IDebugProgram2 *pProgram,
 			IDebugThread2 *pThread,
 			IDebugEngineCreateEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugEngineCreated);
 		return S_OK; 
 	}
@@ -29,6 +31,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugProgramCreateEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugProgramCreated);
 		return S_OK;
 	}
@@ -37,6 +40,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugProgramDestroyEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugProgramDestroy);
 		return S_OK;
 	}
@@ -45,6 +49,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugLoadCompleteEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugLoadComplete);
 		return S_OK;
 	}
@@ -53,6 +58,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugEntryPointEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugEntryPoint);
 		return S_OK;
 	}
@@ -61,6 +67,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugThreadCreateEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugThreadCreate);
 		return S_OK;
 	}
@@ -71,6 +78,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugThreadDestroyEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugThreadDestroy);
 		return S_OK;
 	}
@@ -80,6 +88,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugStepCompleteEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugStepComplete);
 		return S_OK;
 	}
@@ -88,6 +97,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugBreakEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugBreak);
 		return S_OK;
 	}
@@ -96,6 +106,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugOutputStringEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugOutputString);
 		return S_OK;
 	}
@@ -104,6 +115,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugModuleLoadEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugModuleLoad);
 		return S_OK;
 	}
@@ -112,6 +124,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugSymbolSearchEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugSymbolSearch);
 		return S_OK;
 	}
@@ -120,6 +133,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugBreakpointEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugBreakpoint);
 		return S_OK;
 	}
@@ -128,6 +142,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugBreakpointBoundEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugBreakpointBound);
 		return S_OK;
 	}
@@ -136,6 +151,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugBreakpointErrorEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugBreakpointError);
 		return S_OK;
 	}
@@ -144,6 +160,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugBreakpointUnboundEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugBreakpointUnbound);
 		return S_OK;
 	}
@@ -152,6 +169,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugExceptionEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugException);
 		return S_OK;
 	}
@@ -160,6 +178,7 @@ public:
 		IDebugProgram2 *pProgram,
 		IDebugThread2 *pThread,
 		IDebugMessageEvent2 * pEvent) {
+		UNUSED_EVENT_PARAMS;
 		DUMP_EVENT(OnDebugMessage);
 		return S_OK;
 	}

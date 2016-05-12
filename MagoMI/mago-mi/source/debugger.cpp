@@ -232,6 +232,7 @@ HRESULT Debugger::OnDebugEngineCreated(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugEngineCreateEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Debug engine created"));
 	else
@@ -244,6 +245,7 @@ HRESULT Debugger::OnDebugProgramCreated(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugProgramCreateEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	_pProcess = pProcess;
 	_pProgram = pProgram;
 	writeStdout(L"=thread-group-added,id=\"i1\"");
@@ -257,6 +259,7 @@ HRESULT Debugger::OnDebugProgramDestroy(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugProgramDestroyEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	DWORD exitCode = 0;
 	pEvent->GetExitCode(&exitCode);
 	writeStdout(L"=thread-group-exited,id=\"i1\",exit-code=\"%d\"", exitCode);
@@ -271,6 +274,7 @@ HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugLoadCompleteEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	_loaded = true;
 	_started = true;
 	_paused = true;
@@ -286,6 +290,7 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugEntryPointEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	_loaded = true;
 	_paused = true;
 	if (_verbose)
@@ -311,6 +316,7 @@ HRESULT Debugger::OnDebugThreadCreate(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugThreadCreateEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	writeStdout(L"=thread-created,id=\"%d\",group-id=\"i1\"", getThreadId(pThread));
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Thread created"));
@@ -326,6 +332,7 @@ HRESULT Debugger::OnDebugThreadDestroy(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugThreadDestroyEvent2 * pEvent)
 {
+	UNUSED_EVENT_PARAMS;
 	writeStdout(L"=thread-exited,id=\"%d\",group-id=\"i1\"", getThreadId(pThread));
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Thread destroyed"));
@@ -340,6 +347,7 @@ HRESULT Debugger::OnDebugStepComplete(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugStepCompleteEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	_paused = true;
 	DUMP_EVENT(OnDebugStepComplete);
 	return S_OK;
@@ -350,6 +358,7 @@ HRESULT Debugger::OnDebugBreak(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugBreakEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugBreak);
 	return S_OK;
 }
@@ -360,6 +369,7 @@ HRESULT Debugger::OnDebugOutputString(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugOutputStringEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugOutputString);
 	return S_OK;
 }
@@ -380,6 +390,7 @@ HRESULT Debugger::OnDebugModuleLoad(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugModuleLoadEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	//DUMP_EVENT(OnDebugModuleLoad);
 	IDebugModule2 * pModule = NULL;
 	BOOL pbLoad = FALSE;
@@ -397,6 +408,7 @@ HRESULT Debugger::OnDebugSymbolSearch(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugSymbolSearchEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	//DUMP_EVENT(OnDebugSymbolSearch);
 
 	IDebugModule3 * pModule = NULL;
@@ -417,6 +429,7 @@ HRESULT Debugger::OnDebugBreakpoint(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugBreakpointEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	_paused = true;
 	DUMP_EVENT(OnDebugBreakpoint);
 	return S_OK;
@@ -428,6 +441,7 @@ HRESULT Debugger::OnDebugBreakpointBound(IDebugEngine2 *pEngine,
 	IDebugThread2 *pThread,
 	IDebugBreakpointBoundEvent2 * pEvent) 
 {
+	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugBreakpointBound);
 	return S_OK;
 }
@@ -436,7 +450,9 @@ HRESULT Debugger::OnDebugBreakpointError(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
-	IDebugBreakpointErrorEvent2 * pEvent) {
+	IDebugBreakpointErrorEvent2 * pEvent) 
+{
+	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugBreakpointError);
 	return S_OK;
 }
@@ -445,7 +461,9 @@ HRESULT Debugger::OnDebugBreakpointUnbound(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
-	IDebugBreakpointUnboundEvent2 * pEvent) {
+	IDebugBreakpointUnboundEvent2 * pEvent) 
+{
+	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugBreakpointUnbound);
 	return S_OK;
 }
@@ -454,7 +472,9 @@ HRESULT Debugger::OnDebugException(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
-	IDebugExceptionEvent2 * pEvent) {
+	IDebugExceptionEvent2 * pEvent) 
+{
+	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugException);
 	return S_OK;
 }
@@ -463,8 +483,9 @@ HRESULT Debugger::OnDebugMessage(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
-	IDebugMessageEvent2 * pEvent) {
-
+	IDebugMessageEvent2 * pEvent) 
+{
+	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugMessage);
 	return S_OK;
 }

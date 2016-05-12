@@ -11,6 +11,7 @@
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface( \
 		/* [in] */ REFIID riid, \
 		/* [iid_is][out] */ _COM_Outptr_ void __RPC_FAR *__RPC_FAR *ppvObject) { \
+		UNREFERENCED_PARAMETER(riid); \
 		*ppvObject = NULL; \
 		return E_NOINTERFACE; \
 	} \
@@ -42,27 +43,32 @@ public:
 	// IUnknown
 	IUNKNOWN_STUB()
 
-		//IDebugProcess2
-		virtual HRESULT STDMETHODCALLTYPE GetInfo(
+	//IDebugProcess2
+	virtual HRESULT STDMETHODCALLTYPE GetInfo(
 			/* [in] */ PROCESS_INFO_FIELDS Fields,
 			/* [out] */ __RPC__out PROCESS_INFO *pProcessInfo) {
+		UNREFERENCED_PARAMETER(Fields);
+		UNREFERENCED_PARAMETER(pProcessInfo);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE EnumPrograms(
 		/* [out] */ __RPC__deref_out_opt IEnumDebugPrograms2 **ppEnum) {
+		UNREFERENCED_PARAMETER(ppEnum);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetName(
 		/* [in] */ GETNAME_TYPE gnType,
 		/* [out] */ __RPC__deref_out_opt BSTR *pbstrName) {
-		*pbstrName = (wchar_t*)L"DebugProcess";
+		UNREFERENCED_PARAMETER(gnType);
+		*pbstrName = SysAllocString(L"DebugProcess");
 		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetServer(
 		/* [out] */ __RPC__deref_out_opt IDebugCoreServer2 **ppServer) {
+		UNREFERENCED_PARAMETER(ppServer);
 		return E_NOTIMPL;
 	}
 
@@ -75,6 +81,10 @@ public:
 		/* [size_is][in] */ __RPC__in_ecount_full(celtSpecificEngines) GUID *rgguidSpecificEngines,
 		/* [in] */ DWORD celtSpecificEngines,
 		/* [length_is][size_is][out] */ __RPC__out_ecount_part(celtSpecificEngines, celtSpecificEngines) HRESULT *rghrEngineAttach) {
+		UNREFERENCED_PARAMETER(pCallback);
+		UNREFERENCED_PARAMETER(rgguidSpecificEngines);
+		UNREFERENCED_PARAMETER(celtSpecificEngines);
+		UNREFERENCED_PARAMETER(rghrEngineAttach);
 		return E_NOTIMPL;
 	}
 
@@ -94,16 +104,19 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE GetProcessId(
 		/* [out] */ __RPC__out GUID *pguidProcessId) {
+		UNREFERENCED_PARAMETER(pguidProcessId);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetAttachedSessionName(
 		/* [out] */ __RPC__deref_out_opt BSTR *pbstrSessionName) {
+		UNREFERENCED_PARAMETER(pbstrSessionName);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE EnumThreads(
 		/* [out] */ __RPC__deref_out_opt IEnumDebugThreads2 **ppEnum) {
+		UNREFERENCED_PARAMETER(ppEnum);
 		return E_NOTIMPL;
 	}
 
@@ -143,13 +156,15 @@ public:
 	ADDREF_RELEASE_STUB()
 
 
-		virtual HRESULT STDMETHODCALLTYPE GetPortName(
+	virtual HRESULT STDMETHODCALLTYPE GetPortName(
 			/* [out] */ __RPC__deref_out_opt BSTR *pbstrName) {
+		UNREFERENCED_PARAMETER(pbstrName);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetPortId(
 		/* [out] */ __RPC__out GUID *pguidPort) {
+		UNREFERENCED_PARAMETER(pguidPort);
 		return E_NOTIMPL;
 	}
 
@@ -186,6 +201,7 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE EnumProcesses(
 		/* [out] */ __RPC__deref_out_opt IEnumDebugProcesses2 **ppEnum) {
+		UNREFERENCED_PARAMETER(ppEnum);
 		return E_NOTIMPL;
 	}
 
@@ -199,6 +215,7 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE GetServer(
 		/* [out] */ __RPC__deref_out_opt IDebugCoreServer3 **ppServer) {
+		UNREFERENCED_PARAMETER(ppServer);
 		return E_NOTIMPL;
 	}
 
@@ -210,33 +227,40 @@ public:
 	//IDebugPortNotify2
 	virtual HRESULT STDMETHODCALLTYPE AddProgramNode(
 		/* [in] */ __RPC__in_opt IDebugProgramNode2 *pProgramNode) {
+		UNREFERENCED_PARAMETER(pProgramNode);
 		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE RemoveProgramNode(
 		/* [in] */ __RPC__in_opt IDebugProgramNode2 *pProgramNode) {
+		UNREFERENCED_PARAMETER(pProgramNode);
 		return S_OK;
 	}
 
 	//IDebugPortSupplier2
 	virtual HRESULT STDMETHODCALLTYPE GetPortSupplierName(
 		/* [out] */ __RPC__deref_out_opt BSTR *pbstrName) {
+		UNREFERENCED_PARAMETER(pbstrName);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetPortSupplierId(
 		/* [out] */ __RPC__out GUID *pguidPortSupplier) {
+		UNREFERENCED_PARAMETER(pguidPortSupplier);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetPort(
 		/* [in] */ __RPC__in REFGUID guidPort,
 		/* [out] */ __RPC__deref_out_opt IDebugPort2 **ppPort) {
+		UNREFERENCED_PARAMETER(guidPort);
+		UNREFERENCED_PARAMETER(ppPort);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE EnumPorts(
 		/* [out] */ __RPC__deref_out_opt IEnumDebugPorts2 **ppEnum) {
+		UNREFERENCED_PARAMETER(ppEnum);
 		return E_NOTIMPL;
 	}
 
@@ -247,11 +271,14 @@ public:
 	virtual HRESULT STDMETHODCALLTYPE AddPort(
 		/* [in] */ __RPC__in_opt IDebugPortRequest2 *pRequest,
 		/* [out] */ __RPC__deref_out_opt IDebugPort2 **ppPort) {
+		UNREFERENCED_PARAMETER(pRequest);
+		UNREFERENCED_PARAMETER(ppPort);
 		return E_NOTIMPL;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE RemovePort(
 		/* [in] */ __RPC__in_opt IDebugPort2 *pPort) {
+		UNREFERENCED_PARAMETER(pPort);
 		return E_NOTIMPL;
 	}
 };
@@ -282,6 +309,7 @@ MIEngine::~MIEngine() {
 HRESULT STDMETHODCALLTYPE MIEngine::QueryInterface(
 	/* [in] */ REFIID riid,
 	/* [iid_is][out] */ _COM_Outptr_ void __RPC_FAR *__RPC_FAR *ppvObject) {
+	UNREFERENCED_PARAMETER(riid);
 	*ppvObject = NULL;
 	return E_NOINTERFACE;
 }
@@ -299,8 +327,10 @@ HRESULT STDMETHODCALLTYPE MIEngine::Event(
 	/* [in] */ __RPC__in_opt IDebugThread2 *pThread,
 	/* [in] */ __RPC__in_opt IDebugEvent2 *pEvent,
 	/* [in] */ __RPC__in REFIID riidEvent,
-	/* [in] */ DWORD dwAttrib) {
+	/* [in] */ DWORD dwAttrib) 
+{
 	// Event
+	UNREFERENCED_PARAMETER(dwAttrib);
 	if (!memcmp(&riidEvent, &IID_IDebugEngineCreateEvent2, sizeof(IID))) {
 		IDebugEngineCreateEvent2 * pevent = NULL;
 		if (SUCCEEDED(pEvent->QueryInterface(IID_IDebugEngineCreateEvent2, (void**)&pevent))) {
@@ -431,14 +461,14 @@ HRESULT STDMETHODCALLTYPE MIEngine::Event(
 	return S_OK;
 }
 
-HRESULT MIEngine::Init(MIEventCallback * callback) {
+HRESULT MIEngine::Init(MIEventCallback * eventCallback) {
 	HRESULT hr = S_OK;
 	CComObject<Mago::Engine> * pengine = NULL;
 	hr = CComObject<Mago::Engine>::CreateInstance(&pengine);
 	if (FAILED(hr))
 		return hr;
 	this->engine = pengine;
-	this->callback = callback;
+	this->callback = eventCallback;
 	this->debugPort = new MIDebugPort();
 	return S_OK;
 }
@@ -472,8 +502,8 @@ HRESULT MIEngine::Launch(const wchar_t * pszExe,
 	public:
 		Mago::Program* program;
 		ProgramGetter() : program(NULL) {}
-		virtual bool    AcceptProgram(Mago::Program* program) {
-			this->program = program;
+		virtual bool AcceptProgram(Mago::Program* programItem) {
+			this->program = programItem;
 			return true;
 		}
 	};
