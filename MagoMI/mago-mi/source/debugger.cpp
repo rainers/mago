@@ -16,6 +16,7 @@ void InitDebug()
 Debugger::Debugger() 
 	: _pProcess(NULL)
 	, _pProgram(NULL)
+	, _pThread(NULL)
 	, _quitRequested(false)
 	, _verbose(false)
 	, _loadCalled(false)
@@ -138,6 +139,24 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"continue" || cmd.commandName == L"-exec-continue") {
 		resume(cmd.requestId);
 	}
+	else if (cmd.commandName == L"interrupt" || cmd.commandName == L"-exec-interrupt") {
+		causeBreak(cmd.requestId);
+	}
+	else if (cmd.commandName == L"finish" || cmd.commandName == L"-exec-finish") {
+		step(STEP_OUT, STEP_LINE, 0, cmd.requestId);
+	}
+	else if (cmd.commandName == L"next" || cmd.commandName == L"-exec-next") {
+		step(STEP_OVER, STEP_LINE, 0, cmd.requestId);
+	}
+	else if (cmd.commandName == L"nexti" || cmd.commandName == L"-exec-next-instruction") {
+		step(STEP_OVER, STEP_INSTRUCTION, 0, cmd.requestId);
+	}
+	else if (cmd.commandName == L"step" || cmd.commandName == L"-exec-step") {
+		step(STEP_INTO, STEP_LINE, 0, cmd.requestId);
+	}
+	else if (cmd.commandName == L"stepi" || cmd.commandName == L"-exec-step-instruction") {
+		step(STEP_INTO, STEP_LINE, 0, cmd.requestId);
+	}
 	else
 	{
 		if (cmd.miCommand)
@@ -146,9 +165,11 @@ void Debugger::onInputLine(std::wstring &s) {
 			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s);
 	}
 }
+
 /// called when ctrl+c or ctrl+break is called
 void Debugger::onCtrlBreak() {
-	writeOutput("Ctrl+Break is pressed");
+	CRLog::info("Ctrl+Break is pressed");
+	causeBreak();
 }
 
 // load executable
@@ -241,6 +262,103 @@ bool Debugger::resume(uint64_t requestId) {
 	return true;
 }
 
+// break program if running
+bool Debugger::causeBreak(uint64_t requestId) {
+	if (!_started || !_loaded || _paused || !_pProgram) {
+		if (requestId != UNSPECIFIED_REQUEST_ID)
+			writeErrorMessage(requestId, std::wstring(L"Cannot break: program is not running"));
+		return false;
+	}
+	if (FAILED(_pProgram->CauseBreak())) {
+		writeErrorMessage(requestId, std::wstring(L"Failed to break program"));
+		return false;
+	}
+	_paused = true;
+	return true;
+}
+
+// find current program's thread by id
+IDebugThread2 * Debugger::findThreadById(DWORD threadId) {
+	IDebugThread2 * res = NULL;
+	if (!_pProgram) {
+		CRLog::warn("Cannot find thread: no current program");
+		return NULL;
+	}
+	IEnumDebugThreads2* pThreadList = NULL;
+	if (FAILED(_pProgram->EnumThreads(&pThreadList)) || !pThreadList) {
+		CRLog::error("Cannot find thread: cannot enum threads");
+		return NULL;
+	}
+	ULONG count = 0;
+	if (FAILED(pThreadList->GetCount(&count))) {
+		CRLog::error("Cannot find thread: cannot enum threads");
+		pThreadList->Release();
+		return NULL;
+	}
+	IDebugThread2 * threads[1];
+	for (ULONG i = 0; i < count; i++) {
+		IDebugThread2 * thread = NULL;
+		ULONG fetched = 0;
+		if (FAILED(pThreadList->Next(1, &thread, &fetched)) || fetched != 1 || !threads[0]) {
+			break;
+		}
+		DWORD id = 0;
+		if (SUCCEEDED(thread->GetThreadId(&id))) {
+			if (id == threadId || (threadId == 0 && count == 1)) {
+				thread->Release();
+				res = thread;
+				break;
+			}
+		}
+		thread->Release();
+	}
+	pThreadList->Release();
+	return res;
+}
+
+// step paused program
+bool Debugger::step(STEPKIND stepKind, STEPUNIT stepUnit, DWORD threadId, uint64_t requestId) {
+	if (!_started || !_loaded || !_pProgram) {
+		if (requestId != UNSPECIFIED_REQUEST_ID)
+			writeErrorMessage(requestId, std::wstring(L"Cannot step: program is not running"));
+		return false;
+	}
+	if (!_paused) {
+		writeErrorMessage(requestId, std::wstring(L"Cannot step: program is not stopped"));
+		return false;
+	}
+	IDebugThread2 * pThread = findThreadById(threadId);
+	return stepInternal(stepKind, stepUnit, pThread, requestId);
+}
+
+// step paused program
+bool Debugger::stepInternal(STEPKIND stepKind, STEPUNIT stepUnit, IDebugThread2 * pThread, uint64_t requestId) {
+	CRLog::trace("Debugger::step(kind=%d, unit=%d", stepKind, stepUnit);
+	if (!_started || !_loaded || !_pProgram) {
+		if (requestId != UNSPECIFIED_REQUEST_ID)
+			writeErrorMessage(requestId, std::wstring(L"Cannot step: program is not running"));
+		return false;
+	}
+	if (!_paused) {
+		writeErrorMessage(requestId, std::wstring(L"Cannot step: program is not stopped"));
+		return false;
+	}
+	if (!pThread)
+		pThread = _pThread;
+	if (!pThread) {
+		writeErrorMessage(requestId, std::wstring(L"Cannot step: thread is not specified"));
+		return false;
+	}
+	if (FAILED(_pProgram->Step(pThread, stepKind, stepUnit))) {
+		writeErrorMessage(requestId, std::wstring(L"Step failed"));
+		return false;
+	}
+	_paused = false;
+	if (params.miMode)
+		writeStdout(L"^running");
+	return true;
+}
+
 #undef DUMP_EVENT
 #define DUMP_EVENT(x) \
 	if (_verbose) \
@@ -315,6 +433,7 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 	IDebugEntryPointEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
+	_pThread = pThread;
 	_loaded = true;
 	_paused = true;
 	if (_verbose)
@@ -372,6 +491,7 @@ HRESULT Debugger::OnDebugStepComplete(IDebugEngine2 *pEngine,
 	IDebugStepCompleteEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
+	_pThread = pThread;
 	_paused = true;
 	DUMP_EVENT(OnDebugStepComplete);
 	return S_OK;
@@ -383,6 +503,7 @@ HRESULT Debugger::OnDebugBreak(IDebugEngine2 *pEngine,
 	IDebugBreakEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
+	_pThread = pThread;
 	DUMP_EVENT(OnDebugBreak);
 	return S_OK;
 }
@@ -454,6 +575,7 @@ HRESULT Debugger::OnDebugBreakpoint(IDebugEngine2 *pEngine,
 	IDebugBreakpointEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
+	_pThread = pThread;
 	_paused = true;
 	DUMP_EVENT(OnDebugBreakpoint);
 	return S_OK;
@@ -499,6 +621,7 @@ HRESULT Debugger::OnDebugException(IDebugEngine2 *pEngine,
 	IDebugExceptionEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
+	_pThread = pThread;
 	DUMP_EVENT(OnDebugException);
 	return S_OK;
 }

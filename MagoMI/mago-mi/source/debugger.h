@@ -19,6 +19,7 @@ class Debugger : public MIEventCallback, public CmdInputCallback {
 	RefPtr<MIEngine> _engine;
 	IDebugProcess2 * _pProcess;
 	IDebugProgram2 *_pProgram;
+	IDebugThread2 *_pThread;
 	bool _quitRequested;
 	bool _verbose;
 	bool _loadCalled;
@@ -60,9 +61,17 @@ public:
 	// load executable
 	virtual bool load();
 	// start execution
-	virtual bool run(uint64_t requestId);
+	virtual bool run(uint64_t requestId = UNSPECIFIED_REQUEST_ID);
 	// resume paused execution
-	virtual bool resume(uint64_t requestId);
+	virtual bool resume(uint64_t requestId = UNSPECIFIED_REQUEST_ID);
+	// break program if running
+	virtual bool causeBreak(uint64_t requestId = UNSPECIFIED_REQUEST_ID);
+	// step paused program
+	virtual bool step(STEPKIND stepKind, STEPUNIT stepUnit, DWORD threadId = 0, uint64_t requestId = UNSPECIFIED_REQUEST_ID);
+	// step paused program
+	virtual bool stepInternal(STEPKIND stepKind, STEPUNIT stepUnit, IDebugThread2 * pThread, uint64_t requestId = UNSPECIFIED_REQUEST_ID);
+	// find current program's thread by id
+	IDebugThread2 * findThreadById(DWORD threadId);
 
 	// MIEventCallback interface
 	virtual HRESULT OnDebugEngineCreated(IDebugEngine2 *pEngine,
