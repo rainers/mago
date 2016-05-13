@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <array>
+#include <vector>
 #include <stdint.h>
 #include "logger.h"
 
@@ -195,12 +197,28 @@ bool parseUlong(std::wstring & s, uint64_t &value);
 bool parseIdentifier(std::wstring & s, std::wstring & value);
 
 
+typedef std::vector<std::wstring> wstring_vector;
+
+typedef std::pair<std::wstring, std::wstring> wstring_pair;
+typedef std::vector<wstring_pair> param_vector;
+
 struct MICommand {
 	uint64_t requestId;
 	/// true if command is prefixed with single -
 	bool miCommand;
 	/// command name string
 	std::wstring commandName;
+	/// tail after command till end of line
+	std::wstring tail;
+	/// individual parameters from tail
+	wstring_vector params;
+	/// named parameters - pairs (key, value)
+	param_vector namedParams;
+	/// parameters with values w/o names
+	wstring_vector unnamedValues;
+
+	// debug dump
+	std::wstring dumpCommand();
 
 	MICommand();
 	~MICommand();
@@ -237,3 +255,6 @@ struct StackFrameInfo {
 	}
 	void dumpMIFrame(WstringBuffer & buf);
 };
+
+typedef std::vector<StackFrameInfo> StackFrameInfoVector;
+

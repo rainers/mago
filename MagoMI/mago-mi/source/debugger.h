@@ -50,6 +50,8 @@ public:
 
 	// CmdInputCallback interface handlers
 
+	// called to handle breakpoint command
+	virtual void handleBreakpointInsertCommand(MICommand & cmd);
 	/// called on new input line
 	virtual void onInputLine(std::wstring &s);
 	/// called when ctrl+c or ctrl+break is called

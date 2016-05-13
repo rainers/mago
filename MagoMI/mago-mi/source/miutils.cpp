@@ -79,7 +79,7 @@ std::wstring toUtf16(const std::string s) {
 // appends number
 WstringBuffer & WstringBuffer::appendUlongLiteral(uint64_t n) {
 	wchar_t buf[32];
-	wsprintf(buf, L"%lld", n);
+	wsprintf(buf, L"%I64d", n);
 	append(buf);
 	return *this;
 }
@@ -176,14 +176,193 @@ bool parseIdentifier(std::wstring & s, std::wstring & value) {
 	return true;
 }
 
+void skipWhiteSpace(std::wstring &s) {
+	size_t i = 0;
+	for (; i < s.length() && (s[i] == ' ' || s[i] == '\t'); i++) {
+	}
+	if (i > 0) {
+		if (i < s.length())
+			s = s.substr(i, s.length() - i);
+		else
+			s = std::wstring();
+	}
+}
+
+void splitSpaceSeparatedParams(std::wstring s, wstring_vector & items) {
+	size_t start = 0;
+	size_t i = 0;
+	bool insideStringLiteral = false;
+	for (; i < s.length(); i++) {
+		wchar_t ch = s[i];
+		wchar_t nextch = i + 1 < s.length() ? s[i + 1] : 0;
+		if ((ch == ' ' || ch == '\t') && !insideStringLiteral) {
+			if (i > start)
+				items.push_back(s.substr(start, i - start));
+			start = i + 1;
+		}
+		if (ch == '\"') {
+			insideStringLiteral = !insideStringLiteral;
+		}
+		else if (insideStringLiteral && ch == '\\' && nextch == '\"') {
+			i++;
+		}
+	}
+	if (i > start)
+		items.push_back(s.substr(start, i - start));
+}
+
+bool isShortParamName(std::wstring & s) {
+	return s.length() > 1 && s[0] == '-' && s[1] != '-' && isValidIdentChar(s[1]);
+}
+bool isLongParamName(std::wstring & s) {
+	return s.length() > 2 && s[0] == '-' && s[1] == '-' && s[2] != '-' && isValidIdentChar(s[2]);
+}
+bool isParamName(std::wstring & s) {
+	return isShortParamName(s) || isLongParamName(s);
+}
+
+bool splitByChar(std::wstring & s, wchar_t ch, std::wstring & before, std::wstring & after) {
+	for (size_t i = 0; i < s.length(); i++) {
+		if (s[i] == ch) {
+			if (i > 0)
+				before = s.substr(0, i);
+			else
+				before.clear();
+			if (i + 1 < s.length())
+				after = s.substr(i + 1, s.length() - i - 1);
+			else
+				after.clear();
+			return true;
+		}
+	}
+	before = s;
+	after.clear();
+	return false;
+}
+
+// returns true if embedded value is found
+bool splitParamAndValue(std::wstring & s, std::wstring & name, std::wstring & value) {
+	if (isShortParamName(s)) {
+		if (s.length() == 2) {
+			// -c
+			name = s;
+			value.clear();
+			return false;
+		}
+		else {
+			// -cvalue
+			name = s.substr(0, 2);
+			value = s.substr(2, s.length() - 2);
+			return true;
+		}
+	}
+	else if (isLongParamName(s)) {
+		// --paramname or --paramname=value
+		return splitByChar(s, '=', name, value);
+	}
+	else {
+		// not a parameter - put into value
+		name.clear();
+		value = s;
+		return false;
+	}
+}
+
+void collapseParams(wstring_vector & items, param_vector & namedParams) {
+	for (size_t i = 0; i < items.size(); i++) {
+		std::wstring item = items[i];
+		std::wstring next = i + 1 < items.size() ? items[i + 1] : std::wstring();
+		std::wstring name;
+		std::wstring value;
+		if (isParamName(item)) {
+			if (splitParamAndValue(item, name, value)) {
+				// has both name and value
+				wstring_pair pair;
+				pair.first = name;
+				pair.second = value;
+				namedParams.push_back(pair);
+			}
+			else {
+				if (isParamName(next) || next.empty()) {
+					// no value
+					wstring_pair pair;
+					pair.first = name;
+					namedParams.push_back(pair);
+				}
+				else {
+					// next item is value for this param
+					wstring_pair pair;
+					pair.first = name;
+					pair.second = next;
+					namedParams.push_back(pair);
+					// skip one item - it's already used as value
+					i++;
+				}
+			}
+
+		}
+		else {
+			wstring_pair pair;
+			pair.second = item;
+			namedParams.push_back(pair);
+		}
+
+	}
+}
+
 bool MICommand::parse(std::wstring s) {
 	requestId = UNSPECIFIED_REQUEST_ID;
+	commandName.clear();
+	tail.clear();
+	params.clear();
+	namedParams.clear();
+	unnamedValues.clear();
 	parseUlong(s, requestId);
 	if (!parseIdentifier(s, commandName))
 		return false;
 	if (commandName[0] == '-' && commandName[1] != '-')
 		miCommand = true;
+	skipWhiteSpace(s);
+	tail = s;
+	splitSpaceSeparatedParams(s, params);
+	collapseParams(params, namedParams);
+	for (size_t i = 0; i < namedParams.size(); i++) {
+		if (namedParams[i].first.empty() && !namedParams[i].second.empty())
+			unnamedValues.push_back(namedParams[i].second);
+	}
 	return true;
+}
+
+// debug dump
+std::wstring MICommand::dumpCommand() {
+	WstringBuffer buf;
+	buf.append(L"MICommand {");
+	buf.appendStringParam(L"commandName", commandName);
+	buf.append(L" params=[ ");
+	for (size_t i = 0; i < params.size(); i++) {
+		buf.append(L"`");
+		buf += params[i];
+		buf.append(L"` ");
+	}
+	buf.append(L"] ");
+	buf.append(L" namedParams={");
+	for (size_t i = 0; i < namedParams.size(); i++) {
+		buf.append(L"`");
+		buf += namedParams[i].first;
+		buf.append(L"`=`");
+		buf += namedParams[i].second;
+		buf.append(L"` ");
+	}
+	buf.append(L"} ");
+	buf.append(L" unnamedValues=[ ");
+	for (size_t i = 0; i < unnamedValues.size(); i++) {
+		buf.append(L"`");
+		buf += unnamedValues[i];
+		buf.append(L"` ");
+	}
+	buf.append(L"] ");
+	buf.append(L"}");
+	return buf.wstr();
 }
 
 std::wstring unquoteString(std::wstring s) {

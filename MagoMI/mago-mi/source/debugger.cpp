@@ -131,7 +131,7 @@ void Debugger::onInputLine(std::wstring &s) {
 		return;
 	MICommand cmd;
 	if (!cmd.parse(s)) {
-		writeErrorMessage(cmd.requestId, std::wstring(L"invalid command syntax: ") + s);
+		writeErrorMessage(cmd.requestId, std::wstring(L"invalid command syntax: ") + s, L"undefined-command");
 		return;
 	}
 	if (cmd.commandName == L"quit") {
@@ -166,13 +166,22 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"stepi" || cmd.commandName == L"-exec-step-instruction") {
 		step(STEP_INTO, STEP_INSTRUCTION, 0, cmd.requestId);
 	}
+	else if (cmd.commandName == L"break" || cmd.commandName == L"-break-insert") {
+		//step(STEP_INTO, STEP_INSTRUCTION, 0, cmd.requestId);
+		handleBreakpointInsertCommand(cmd);
+	}
 	else
 	{
 		if (cmd.miCommand)
-			writeErrorMessage(cmd.requestId, std::wstring(L"Undefined MI command: ") + s);
+			writeErrorMessage(cmd.requestId, std::wstring(L"Undefined MI command: ") + s, L"undefined-command");
 		else
-			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s);
+			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s, L"undefined-command");
 	}
+}
+
+// called to handle breakpoint command
+void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
+	writeDebuggerMessage(cmd.dumpCommand());
 }
 
 /// called when ctrl+c or ctrl+break is called
