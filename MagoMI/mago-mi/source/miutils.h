@@ -191,16 +191,36 @@ struct WstringBuffer : public Buffer<wchar_t> {
 	}
 };
 
+typedef std::vector<std::wstring> wstring_vector;
+typedef std::pair<std::wstring, std::wstring> wstring_pair;
+typedef std::vector<wstring_pair> param_vector;
+
+// various parsing utility functions
+
 /// trying to parse beginning of string as unsigned long; if found sequence of digits, trims beginning digits from s, puts parsed number into n, and returns true.
 bool parseUlong(std::wstring & s, uint64_t &value);
 /// parse beginning of string as identifier, allowed chars: a..z, A..Z, _, - (if successful, removes ident from s and puts it to value, and returns true)
 bool parseIdentifier(std::wstring & s, std::wstring & value);
+// trim spaces and tabs from beginning of string
+void skipWhiteSpace(std::wstring &s);
+// split space separated parameters (properly handling spaces inside "double quotes")
+void splitSpaceSeparatedParams(std::wstring s, wstring_vector & items);
+// returns true if string is like -v -pvalue
+bool isShortParamName(std::wstring & s);
+// returns true if string is like --param --param=value
+bool isLongParamName(std::wstring & s);
+// returns true if string is like -v -pvalue --param --param=value
+bool isParamName(std::wstring & s);
+// split line into two parts (before,after) by specified character, returns true if character is found, otherwise s will be placed into before
+bool splitByChar(std::wstring & s, wchar_t ch, std::wstring & before, std::wstring & after);
 
-
-typedef std::vector<std::wstring> wstring_vector;
-
-typedef std::pair<std::wstring, std::wstring> wstring_pair;
-typedef std::vector<wstring_pair> param_vector;
+/// returns true if value ends with ending
+inline bool endsWith(std::wstring const & value, std::wstring const & ending)
+{
+	if (ending.size() > value.size()) 
+		return false;
+	return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
 
 struct MICommand {
 	uint64_t requestId;
@@ -225,6 +245,28 @@ struct MICommand {
 	// parse MI command, returns true if successful
 	bool parse(std::wstring line);
 };
+
+struct BreakpointInfo {
+	uint64_t id;
+	uint64_t requestId;
+	std::wstring address;
+	std::wstring functionName;
+	std::wstring fileName;
+	std::wstring labelName;
+	int line;
+	bool enabled;
+	bool pending;
+	bool temporary;
+	BreakpointInfo();
+	~BreakpointInfo() {}
+
+	bool fromCommand(MICommand & cmd);
+	bool parametersAreSet();
+	// debug dump
+	std::wstring dumpParams();
+};
+
+// file related helper functions
 
 bool fileExists(std::wstring fname);
 std::wstring unquoteString(std::wstring s);

@@ -176,6 +176,7 @@ bool parseIdentifier(std::wstring & s, std::wstring & value) {
 	return true;
 }
 
+// trim spaces and tabs from beginning of string
 void skipWhiteSpace(std::wstring &s) {
 	size_t i = 0;
 	for (; i < s.length() && (s[i] == ' ' || s[i] == '\t'); i++) {
@@ -188,6 +189,7 @@ void skipWhiteSpace(std::wstring &s) {
 	}
 }
 
+// split space separated parameters (properly handling spaces inside "double quotes")
 void splitSpaceSeparatedParams(std::wstring s, wstring_vector & items) {
 	size_t start = 0;
 	size_t i = 0;
@@ -211,16 +213,20 @@ void splitSpaceSeparatedParams(std::wstring s, wstring_vector & items) {
 		items.push_back(s.substr(start, i - start));
 }
 
+// returns true if string is like -v -pvalue
 bool isShortParamName(std::wstring & s) {
 	return s.length() > 1 && s[0] == '-' && s[1] != '-' && isValidIdentChar(s[1]);
 }
+// returns true if string is like --param --param=value
 bool isLongParamName(std::wstring & s) {
 	return s.length() > 2 && s[0] == '-' && s[1] == '-' && s[2] != '-' && isValidIdentChar(s[2]);
 }
+// returns true if string is like -v -pvalue --param --param=value
 bool isParamName(std::wstring & s) {
 	return isShortParamName(s) || isLongParamName(s);
 }
 
+// split line into two parts (before,after) by specified character, returns true if character is found, otherwise s will be placed into before
 bool splitByChar(std::wstring & s, wchar_t ch, std::wstring & before, std::wstring & after) {
 	for (size_t i = 0; i < s.length(); i++) {
 		if (s[i] == ch) {
@@ -364,6 +370,125 @@ std::wstring MICommand::dumpCommand() {
 	buf.append(L"}");
 	return buf.wstr();
 }
+
+// debug dump
+std::wstring BreakpointInfo::dumpParams() {
+	WstringBuffer buf;
+	buf.append(L"BreakpointInfo {");
+	buf.appendStringParamIfNonEmpty(L"fileName", fileName);
+	buf.appendStringParamIfNonEmpty(L"functionName", functionName);
+	buf.appendStringParamIfNonEmpty(L"labelName", labelName);
+	buf.appendStringParamIfNonEmpty(L"address", address);
+	if (line)
+		buf.appendUlongParam(L"line", line);
+	buf.append(L"}");
+	return buf.wstr();
+}
+
+BreakpointInfo::BreakpointInfo() 
+	: id(0)
+	, requestId(0)
+	, line(0)
+	, enabled(true)
+	, pending(false)
+	, temporary(false)
+{
+}
+
+static const wchar_t * sourceFileExtensions[] = {
+	L".d",
+	L".di",
+	L".h",
+	L".c",
+	L".cpp",
+	L".hpp",
+	NULL
+};
+
+/// returns true if s is most likely file name
+bool looksLikeFileName(std::wstring s) {
+	for (unsigned i = 0; sourceFileExtensions[i]; i++)
+		if (endsWith(s, std::wstring(sourceFileExtensions[i])))
+			return true;
+	for (unsigned i = 0; i < s.length(); i++) {
+		if (s[i] == '/' || s[i] == '\\')
+			return true;
+	}
+	return false;
+}
+
+bool BreakpointInfo::parametersAreSet() {
+	if (!fileName.empty() && line) // file:line
+		return true;
+	if (!functionName.empty()) // function or file:function
+		return true;
+	return false;
+}
+
+bool BreakpointInfo::fromCommand(MICommand & cmd) {
+	// try named params
+	for (size_t i = 0; i < cmd.namedParams.size(); i++) {
+		std::wstring name = cmd.namedParams[i].first;
+		std::wstring value = cmd.namedParams[i].second;
+		if (name == L"--source")
+			fileName = value;
+		else if (name == L"--function")
+			functionName = value;
+		else if (name == L"--label")
+			labelName = value;
+		else if (name == L"--line") {
+			uint64_t n = 0;
+			if (parseUlong(value, n) && value.empty())
+				line = (int)n;
+		} else if (name == L"-t") // temporary
+			temporary = true;
+		else if (name == L"-f")
+			pending = true; // create pending if location is not found
+		else if (name == L"-d")
+			enabled = false; // create disabled
+	}
+	// try unnamed params
+	for (size_t i = 0; i < cmd.unnamedValues.size(); i++) {
+		std::wstring value = cmd.unnamedValues[i];
+		uint64_t n = 0;
+		std::wstring tmp = value;
+		if (parseUlong(tmp, n) && tmp.empty()) {
+			// it was just a line number
+			line = (int)n;
+		}
+		else {
+			std::wstring part1, part2;
+			if (splitByChar(value, ':', part1, part2)) {
+				// there was : char
+				tmp = part2;
+				if (parseUlong(tmp, n) && tmp.empty()) {
+					// there was a number after :
+					// filename:line
+					fileName = part1;
+					line = (int)n;
+				}
+				else {
+					// filename:function or filename:label
+					if (looksLikeFileName(part1)) {
+						fileName = part1;
+						functionName = part2;
+					}
+					else {
+						functionName = part1;
+						labelName = part2;
+					}
+				}
+			}
+			else {
+				functionName = value;
+			}
+
+		}
+
+	}
+	return parametersAreSet();
+}
+
 
 std::wstring unquoteString(std::wstring s) {
 	if (s.empty())

@@ -182,6 +182,9 @@ void Debugger::onInputLine(std::wstring &s) {
 // called to handle breakpoint command
 void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
 	writeDebuggerMessage(cmd.dumpCommand());
+	BreakpointInfo bp;
+	bp.fromCommand(cmd);
+	writeDebuggerMessage(bp.dumpParams());
 }
 
 /// called when ctrl+c or ctrl+break is called
