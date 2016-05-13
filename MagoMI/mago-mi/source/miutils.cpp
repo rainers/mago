@@ -425,6 +425,20 @@ bool BreakpointInfo::parametersAreSet() {
 	return false;
 }
 
+BreakpointInfo & BreakpointInfo::operator = (const BreakpointInfo & v) {
+	id = v.id;
+	requestId = v.requestId;
+	address = std::wstring(v.address);
+	functionName = std::wstring(v.functionName);
+	fileName = std::wstring(v.fileName);
+	labelName = std::wstring(v.labelName);
+	line = v.line;
+	enabled = v.enabled;
+	pending = v.pending;
+	temporary = v.temporary;
+	return *this;
+}
+
 bool BreakpointInfo::fromCommand(MICommand & cmd) {
 	// try named params
 	for (size_t i = 0; i < cmd.namedParams.size(); i++) {

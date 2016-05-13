@@ -260,6 +260,7 @@ struct BreakpointInfo {
 	BreakpointInfo();
 	~BreakpointInfo() {}
 
+	BreakpointInfo & operator = (const BreakpointInfo & v);
 	bool fromCommand(MICommand & cmd);
 	bool parametersAreSet();
 	// debug dump

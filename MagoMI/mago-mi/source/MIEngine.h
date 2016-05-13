@@ -2,6 +2,7 @@
 
 #include "../../DebugEngine/MagoNatDE/Common.h"
 #include "cmdinput.h"
+#include "miutils.h"
 
 namespace Mago {
 	class Engine;
@@ -213,4 +214,5 @@ public:
 		const wchar_t * pszDir
 		);
 	HRESULT ResumeProcess();
+	HRESULT CreatePendingBreakpoint(BreakpointInfo * bp, IDebugPendingBreakpoint2** ppPendingBP);
 };

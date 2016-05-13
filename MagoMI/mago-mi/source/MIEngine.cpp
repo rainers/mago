@@ -534,3 +534,56 @@ HRESULT MIEngine::ResumeProcess() {
 	}
 	return hr;
 }
+
+class MIBreakpointRequest
+	: public CComObjectRootEx<CComMultiThreadModel>, public IDebugBreakpointRequest2
+{
+	BreakpointInfo bpInfo;
+	BP_LOCATION_TYPE pBPLocationType;
+public:
+	MIBreakpointRequest() {
+		pBPLocationType = BPLT_NONE;
+	}
+	~MIBreakpointRequest() {
+
+	}
+
+	DECLARE_NOT_AGGREGATABLE(MIBreakpointRequest)
+
+	BEGIN_COM_MAP(MIBreakpointRequest)
+		COM_INTERFACE_ENTRY(IDebugBreakpointRequest2)
+	END_COM_MAP()
+
+	//IDebugBreakpointRequest2
+	virtual HRESULT STDMETHODCALLTYPE GetLocationType(
+		/* [out] */ __RPC__out BP_LOCATION_TYPE *pBPLocationType) {
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetRequestInfo(
+		/* [in] */ BPREQI_FIELDS dwFields,
+		/* [out] */ __RPC__out BP_REQUEST_INFO *pBPRequestInfo) {
+		return S_OK;
+	}
+
+
+	void init(BreakpointInfo * bp) {
+		bpInfo = *bp;
+	}
+};
+
+HRESULT MIEngine::CreatePendingBreakpoint(BreakpointInfo * bp, IDebugPendingBreakpoint2** ppPendingBP) {
+	RefPtr<MIBreakpointRequest> request;
+	HRESULT hr = MakeCComObject(request);
+	if (FAILED(hr)) {
+		CRLog::error("Pending breakpoint request creation failed");
+		return hr;
+	}
+	hr = engine->CreatePendingBreakpoint(request.Get(), ppPendingBP);
+	if (FAILED(hr)) {
+		CRLog::error("Pending breakpoint creation failed");
+		return hr;
+	}
+	request->init(bp);
+	return S_OK;
+}
