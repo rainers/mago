@@ -85,9 +85,17 @@ void Debugger::writeResultMessage(ulong requestId, const wchar_t * status, std::
 }
 
 // MI interface stdout output: [##requestId##]^error[,"msg"]
-void Debugger::writeErrorMessage(ulong requestId, std::wstring msg) {
-	if (params.miMode)
-		writeResultMessage(requestId, L"error", msg);
+void Debugger::writeErrorMessage(ulong requestId, std::wstring msg, const wchar_t * errorCode) {
+	if (params.miMode) {
+		WstringBuffer buf;
+		buf.appendUlongIfNonEmpty(requestId);
+		buf.append('^');
+		buf.append(L"error");
+		buf.appendStringParam(L"msg", msg);
+		if (errorCode && errorCode[0])
+			buf.appendStringParam(L"msg", std::wstring(errorCode));
+		writeStdout(buf.wstr());
+	}
 	else
 		writeStdout(msg);
 }
@@ -128,7 +136,8 @@ void Debugger::onInputLine(std::wstring &s) {
 	}
 	if (cmd.commandName == L"quit") {
 		_quitRequested = true;
-		writeOutput("Quit requested");
+		writeStringMessage('^', std::wstring(L"exit"));
+		Sleep(1);
 	}
 	else if (cmd.commandName == L"help") {
 		showHelp();
@@ -345,7 +354,8 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 		buf.append(L",frame=");
 		frameInfo.dumpMIFrame(buf);
 	}
-	buf.appendUlongParam(L"thread-id", getThreadId(pThread), ',');
+
+	buf.appendUlongParamAsString(L"thread-id", getThreadId(pThread), ',');
 	buf.appendStringParam(L"stopped-threads", std::wstring(L"all"), ',');
 	buf.appendStringParam(L"core", std::wstring(L"1"), ',');
 	writeStdout(buf.wstr());

@@ -46,7 +46,7 @@ public:
 	// MI interface stdout output: [##requestId##]^result[,"msg"]
 	virtual void writeResultMessage(ulong requestId, const wchar_t * status, const wchar_t * msg) { writeResultMessage(requestId, status, std::wstring(msg ? msg : L"")); }
 	// MI interface stdout output: [##requestId##]^error[,"msg"]
-	virtual void writeErrorMessage(ulong requestId, std::wstring msg);
+	virtual void writeErrorMessage(ulong requestId, std::wstring msg, const wchar_t * errorCode = NULL);
 
 	// CmdInputCallback interface handlers
 

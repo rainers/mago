@@ -166,6 +166,14 @@ struct WstringBuffer : public Buffer<wchar_t> {
 		appendUlongLiteral(value);
 		return *this;
 	}
+	WstringBuffer & appendUlongParamAsString(const wchar_t * paramName, uint64_t value, wchar_t appendCommaIfNotThisChar = '{') {
+		if (last() != appendCommaIfNotThisChar)
+			append(',');
+		append(paramName);
+		append('=');
+		appendStringLiteral(std::to_wstring(value));
+		return *this;
+	}
 	WstringBuffer & appendStringParam(const wchar_t * paramName, std::wstring value, wchar_t appendCommaIfNotThisChar = '{') {
 		if (last() != appendCommaIfNotThisChar)
 			append(',');
