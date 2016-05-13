@@ -101,19 +101,35 @@ void Debugger::writeErrorMessage(ulong requestId, std::wstring msg, const wchar_
 }
 
 static const wchar_t * HELP_MSGS[] = {
-	L"mago-mi tries to implement GDB and GDB-MI interfaces for MAGO debugger.",
+	L"mago-mi implements GDB and GDB-MI compatible interfaces for MAGO debugger.",
 	L"",
 	L"run                     - start program execution",
 	L"continue                - continue program execution",
+	L"interrupt               - interrupt program execution",
+	L"next                    - step over",
+	L"nexti                   - step over by instruction",
+	L"step                    - step into",
+	L"stepi                   - step into by instruction",
+	L"finish                  - step out of current function",
+	L"break                   - add breakpoint",
+	L"",
 	L"Type quit to exit.",
 	NULL
 };
 
 static const wchar_t * HELP_MSGS_MI[] = {
-	L"mago-mi tries to implement GDB and GDB-MI interfaces for MAGO debugger.",
+	L"mago-mi implements GDB and GDB-MI compatible interfaces for MAGO debugger.",
 	L"",
 	L"-exec-run               - start program execution",
 	L"-exec-continue          - continue program execution",
+	L"-exec-interrupt         - interrupt program which is being running",
+	L"-exec-next              - step over",
+	L"-exec-next-instruction  - step over by instruction",
+	L"-exec-step              - step into",
+	L"-exec-step-instruction  - step into by instruction",
+	L"-exec-finish            - exit function",
+	L"-break-insert           - add breakpoint",
+	L"",
 	L"Type quit to exit.",
 	NULL
 };

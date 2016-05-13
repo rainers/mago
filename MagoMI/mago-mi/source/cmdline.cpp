@@ -115,7 +115,7 @@ void dumpParameterHelp();
 static void showHelp(CmdLineParamDef * param, const wchar_t * value) {
 	UNREFERENCED_PARAMETER(param);
 	UNREFERENCED_PARAMETER(value);
-	printf("This is Mago debugger. Usage:\n");
+	printf("This is Mago debugger command line interface. Usage:\n");
 	printf("    mago-mi [options] [executable-file]\n");
 	printf("    mago-mi [options] --args executable-file [inferior-arguments ...]\n");
 	dumpParameterHelp();
@@ -193,7 +193,7 @@ CmdLineParamDef paramDefs[] = {
 	CmdLineParamDef(NULL, "--args", STRING_PARAM, "Arguments after executable-file are passed to inferior", NULL, &handleArgs),
 	CmdLineParamDef(NULL, "--exec=EXECFILE", STRING_PARAM, "Use EXECFILE as the executable.", NULL, &handleExec),
 	CmdLineParamDef("Output and user interface control"),
-	CmdLineParamDef(NULL, "--interpreter=INTERP", STRING_PARAM, "Print this message and then exit", NULL, &handleInterpreter),
+	CmdLineParamDef(NULL, "--interpreter=mi2", STRING_PARAM, "Turn on GDB MI interface mode", NULL, &handleInterpreter),
 	CmdLineParamDef("Operating modes"),
 	CmdLineParamDef(NULL, "--help", NO_PARAMS, "Print this message and then exit", NULL, &showHelp),
 	CmdLineParamDef(NULL, "--version", NO_PARAMS, "Print version information and then exit", NULL, &showVersion),

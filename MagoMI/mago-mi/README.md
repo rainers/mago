@@ -1,5 +1,6 @@
-Mago debugger MI commandline interface
-======================================
+Mago debugger GDB MI compatible command line interface project
+==============================================================
+
 
 Mago is Windows debug engine for D programming language. Used in VisualD MS Visual Studio plugin.
 
@@ -45,7 +46,37 @@ Command line parameters
 	  --cd=DIR         Change current directory to DIR.
 
 
+Supported subset of GDB commands
+================================
+
+	mago-mi implements GDB and GDB-MI compatible interfaces for MAGO debugger.
+	
+	run                     - start program execution
+	continue                - continue program execution
+	interrupt               - interrupt program execution
+	next                    - step over
+	nexti                   - step over by instruction
+	step                    - step into
+	stepi                   - step into by instruction
+	finish                  - step out of current function
+	break                   - add breakpoint
+	
+	Type quit to exit.
 
 Supported subset of GDB MI commands
 ===================================
+
+	mago-mi implements GDB and GDB-MI compatible interfaces for MAGO debugger.
+	
+	-exec-run               - start program execution
+	-exec-continue          - continue program execution
+	-exec-interrupt         - interrupt program which is being running
+	-exec-next              - step over
+	-exec-next-instruction  - step over by instruction
+	-exec-step              - step into
+	-exec-step-instruction  - step into by instruction
+	-exec-finish            - exit function
+	-break-insert           - add breakpoint
+	
+	Type quit to exit.
 
