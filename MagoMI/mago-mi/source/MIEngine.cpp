@@ -578,6 +578,10 @@ public:
 			}
 
 		}
+		if (dwFields & BPREQI_FLAGS) {
+			pBPRequestInfo->dwFields |= BPREQI_FLAGS;
+			//pBPRequestInfo->dwFlags |= 
+		}
 		return S_OK;
 	}
 
@@ -653,5 +657,7 @@ HRESULT MIEngine::CreatePendingBreakpoint(BreakpointInfo * bp, IDebugPendingBrea
 		CRLog::error("Pending breakpoint creation failed");
 		return hr;
 	}
+	if (bp->enabled)
+		(*ppPendingBP)->Enable(TRUE);
 	return S_OK;
 }
