@@ -246,6 +246,26 @@ bool splitByChar(std::wstring & s, wchar_t ch, std::wstring & before, std::wstri
 	return false;
 }
 
+// split line into two parts (before,after) by specified character (search from end of s), returns true if character is found, otherwise s will be placed into before
+bool splitByCharRev(std::wstring & s, wchar_t ch, std::wstring & before, std::wstring & after) {
+	for (int i = (int)s.length() - 1; i >= 0; i--) {
+		if (s[i] == ch) {
+			if (i > 0)
+				before = s.substr(0, i);
+			else
+				before.clear();
+			if (i + 1 < s.length())
+				after = s.substr(i + 1, s.length() - i - 1);
+			else
+				after.clear();
+			return true;
+		}
+	}
+	before = s;
+	after.clear();
+	return false;
+}
+
 // returns true if embedded value is found
 bool splitParamAndValue(std::wstring & s, std::wstring & name, std::wstring & value) {
 	if (isShortParamName(s)) {
@@ -472,7 +492,7 @@ bool BreakpointInfo::fromCommand(MICommand & cmd) {
 		}
 		else {
 			std::wstring part1, part2;
-			if (splitByChar(value, ':', part1, part2)) {
+			if (splitByCharRev(value, ':', part1, part2)) {
 				// there was : char
 				tmp = part2;
 				if (parseUlong(tmp, n) && tmp.empty()) {

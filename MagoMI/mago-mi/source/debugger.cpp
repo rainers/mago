@@ -197,10 +197,27 @@ void Debugger::onInputLine(std::wstring &s) {
 
 // called to handle breakpoint command
 void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
+	if (_stopped)
+		return;
 	writeDebuggerMessage(cmd.dumpCommand());
 	BreakpointInfo bp;
 	bp.fromCommand(cmd);
 	writeDebuggerMessage(bp.dumpParams());
+	if (bp.parametersAreSet()) {
+		IDebugPendingBreakpoint2 * pPendingBP = NULL;
+		HRESULT hr = _engine->CreatePendingBreakpoint(&bp, &pPendingBP);
+		if (FAILED(hr)) {
+			writeErrorMessage(cmd.requestId, std::wstring(L"Failed to add breakpoint"));
+			return;
+		}
+		hr = pPendingBP->Bind();
+		if (FAILED(hr)) {
+			writeErrorMessage(cmd.requestId, std::wstring(L"Failed to bind breakpoint"));
+			return;
+		}
+
+		writeDebuggerMessage(std::wstring(L"added pending breakpoint"));
+	}
 }
 
 /// called when ctrl+c or ctrl+break is called

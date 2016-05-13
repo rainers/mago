@@ -213,6 +213,8 @@ bool isLongParamName(std::wstring & s);
 bool isParamName(std::wstring & s);
 // split line into two parts (before,after) by specified character, returns true if character is found, otherwise s will be placed into before
 bool splitByChar(std::wstring & s, wchar_t ch, std::wstring & before, std::wstring & after);
+// split line into two parts (before,after) by specified character (search from end of string), returns true if character is found, otherwise s will be placed into before
+bool splitByCharRev(std::wstring & s, wchar_t ch, std::wstring & before, std::wstring & after);
 
 /// returns true if value ends with ending
 inline bool endsWith(std::wstring const & value, std::wstring const & ending)

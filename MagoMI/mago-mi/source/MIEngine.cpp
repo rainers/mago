@@ -536,13 +536,13 @@ HRESULT MIEngine::ResumeProcess() {
 }
 
 class MIBreakpointRequest
-	: public CComObjectRootEx<CComMultiThreadModel>, public IDebugBreakpointRequest2
+	: public CComObjectRootEx<CComMultiThreadModel>, public IDebugBreakpointRequest2, public IDebugDocumentPosition2, public IDebugFunctionPosition2
 {
 	BreakpointInfo bpInfo;
-	BP_LOCATION_TYPE pBPLocationType;
+	BP_LOCATION_TYPE locationType;
 public:
 	MIBreakpointRequest() {
-		pBPLocationType = BPLT_NONE;
+		locationType = BPLT_NONE;
 	}
 	~MIBreakpointRequest() {
 
@@ -552,23 +552,90 @@ public:
 
 	BEGIN_COM_MAP(MIBreakpointRequest)
 		COM_INTERFACE_ENTRY(IDebugBreakpointRequest2)
+		COM_INTERFACE_ENTRY(IDebugDocumentPosition2)
+		COM_INTERFACE_ENTRY(IDebugFunctionPosition2)
 	END_COM_MAP()
 
 	//IDebugBreakpointRequest2
 	virtual HRESULT STDMETHODCALLTYPE GetLocationType(
 		/* [out] */ __RPC__out BP_LOCATION_TYPE *pBPLocationType) {
+		*pBPLocationType = locationType;
 		return S_OK;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE GetRequestInfo(
 		/* [in] */ BPREQI_FIELDS dwFields,
 		/* [out] */ __RPC__out BP_REQUEST_INFO *pBPRequestInfo) {
+		memset(pBPRequestInfo, 0, sizeof(BP_REQUEST_INFO));
+		if (dwFields & BPREQI_BPLOCATION) {
+			pBPRequestInfo->dwFields |= BPREQI_BPLOCATION;
+			pBPRequestInfo->bpLocation.bpLocationType = locationType;
+			if (locationType == BPLT_CODE_FILE_LINE) {
+				pBPRequestInfo->bpLocation.bpLocation.bplocCodeFileLine.pDocPos = this;
+			}
+			else if (locationType == BPLT_CODE_FUNC_OFFSET) {
+				pBPRequestInfo->bpLocation.bpLocation.bplocCodeFuncOffset.pFuncPos = this;
+			}
+
+		}
 		return S_OK;
 	}
 
+	// IDebugDocumentPosition2
+	virtual HRESULT STDMETHODCALLTYPE GetFileName(
+		/* [out] */ __RPC__deref_out_opt BSTR *pbstrFileName) 
+	{
+		*pbstrFileName = bpInfo.fileName.empty() ? NULL : SysAllocString(bpInfo.fileName.c_str());
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetDocument(
+		/* [out] */ __RPC__deref_out_opt IDebugDocument2 **ppDoc) {
+		ppDoc = NULL;
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE IsPositionInDocument(
+		/* [in] */ __RPC__in_opt IDebugDocument2 *pDoc) {
+		UNREFERENCED_PARAMETER(pDoc);
+		return E_NOTIMPL;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetRange(
+		/* [full][out][in] */ __RPC__inout_opt TEXT_POSITION *pBegPosition,
+		/* [full][out][in] */ __RPC__inout_opt TEXT_POSITION *pEndPosition) {
+		pBegPosition->dwColumn = 1;
+		pBegPosition->dwLine = bpInfo.line;
+		pEndPosition->dwColumn = 1;
+		pEndPosition->dwLine = bpInfo.line;
+		return S_OK;
+	}
+
+	//IDebugFunctionPosition2
+
+	virtual HRESULT STDMETHODCALLTYPE GetFunctionName(
+		/* [out] */ __RPC__deref_out_opt BSTR *pbstrFunctionName) {
+		*pbstrFunctionName = bpInfo.fileName.empty() ? NULL : SysAllocString(bpInfo.functionName.c_str());
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE GetOffset(
+		/* [full][out][in] */ __RPC__inout_opt TEXT_POSITION *pPosition) {
+		pPosition->dwLine = 0;
+		pPosition->dwColumn = 0;
+		return S_OK;
+	}
 
 	void init(BreakpointInfo * bp) {
 		bpInfo = *bp;
+		if (!bpInfo.fileName.empty() && bpInfo.line) {
+			locationType = BPLT_CODE_FILE_LINE;
+		} else if (!bpInfo.functionName.empty()) {
+			locationType = BPLT_CODE_FUNC_OFFSET;
+		}
+		else if (!bpInfo.address.empty()) {
+			locationType = BPLT_CODE_ADDRESS;
+		}
 	}
 };
 
@@ -579,11 +646,12 @@ HRESULT MIEngine::CreatePendingBreakpoint(BreakpointInfo * bp, IDebugPendingBrea
 		CRLog::error("Pending breakpoint request creation failed");
 		return hr;
 	}
+	request->AddRef();
+	request->init(bp);
 	hr = engine->CreatePendingBreakpoint(request.Get(), ppPendingBP);
 	if (FAILED(hr)) {
 		CRLog::error("Pending breakpoint creation failed");
 		return hr;
 	}
-	request->init(bp);
 	return S_OK;
 }
