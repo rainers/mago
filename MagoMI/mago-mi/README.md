@@ -12,7 +12,7 @@ To be used with D language IDEs which support GDB MI interface.
 I'm planning to use it for DlangIDE.
 
 
-[https://sourceware.org/gdb/onlinedocs/gdb/GDB_002fMI.html](GDB MI interface documentation)
+[GDB MI interface documentation](https://sourceware.org/gdb/onlinedocs/gdb/GDB_002fMI.html)
 
 
 Command line parameters

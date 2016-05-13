@@ -1,3 +1,12 @@
+MagoMI fork:
+
+This is fork of Mago debugger which adds support of GDM MI compatible interface.
+
+See MagoMI/mago-mi/README.md for details.
+
+Original project: https://github.com/rainers/mago
+
+
 Versions:
 
 I've built the project with Visual Studio 2008 and 2010 and the VS 2008 SDK; 
