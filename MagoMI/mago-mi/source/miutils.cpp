@@ -123,6 +123,22 @@ MICommand::~MICommand() {
 	
 }
 
+void StackFrameInfo::dumpMIFrame(WstringBuffer & buf) {
+	buf.append('{');
+	if (!functionName.empty()) {
+		buf.appendStringParamIfNonEmpty(L"func", functionName, '{');
+		buf.appendStringParamIfNonEmpty(L"args", std::wstring(L"[]"), '{'); // TODO
+	}
+	else {
+		buf.appendStringParamIfNonEmpty(L"addr", address, '{');
+	}
+	buf.appendStringParamIfNonEmpty(L"file", sourceBaseName, '{');
+	buf.appendStringParamIfNonEmpty(L"fullname", sourceFileName, '{');
+	if (sourceLine != 0)
+		buf.appendUlongParam(L"line", sourceLine, '{');
+	buf.append('}');
+}
+
 /// trying to parse beginning of string as unsigned long; if found sequence of digits, trims beginning digits from s, puts parsed number into n, and returns true.
 bool parseUlong(std::wstring & s, uint64_t &value) {
 	if (s.empty())
@@ -294,3 +310,5 @@ void testEngine() {
 }
 
 #endif
+
+

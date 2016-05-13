@@ -155,7 +155,7 @@ void Debugger::onInputLine(std::wstring &s) {
 		step(STEP_INTO, STEP_LINE, 0, cmd.requestId);
 	}
 	else if (cmd.commandName == L"stepi" || cmd.commandName == L"-exec-step-instruction") {
-		step(STEP_INTO, STEP_LINE, 0, cmd.requestId);
+		step(STEP_INTO, STEP_INSTRUCTION, 0, cmd.requestId);
 	}
 	else
 	{
@@ -316,6 +316,103 @@ IDebugThread2 * Debugger::findThreadById(DWORD threadId) {
 	return res;
 }
 
+void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requestId) {
+	_paused = true;
+	_pThread = pThread;
+	StackFrameInfo frameInfo;
+	bool hasContext = getThreadFrameContext(pThread, frameInfo);
+	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(requestId);
+	buf.append(L"*stopped");
+	std::wstring reasonName;
+	switch (reason) {
+	case PAUSED_BY_BREAKPOINT:
+		reasonName = L"breakpoint-hit";
+		break;
+	case PAUSED_BY_STEP_COMPLETED:
+		reasonName = L"end-stepping-range";
+		break;
+	case PAUSED_BY_EXCEPTION:
+	case PAUSED_BY_BREAK:
+		reasonName = L"signal-received";
+		break;
+	}
+	if (!reasonName.empty()) {
+		buf.append(L",reason=");
+		buf.appendStringLiteral(reasonName);
+	}
+	if (hasContext) {
+		buf.append(L",frame=");
+		frameInfo.dumpMIFrame(buf);
+	}
+	buf.appendUlongParam(L"thread-id", getThreadId(pThread), ',');
+	buf.appendStringParam(L"stopped-threads", std::wstring(L"all"), ',');
+	buf.appendStringParam(L"core", std::wstring(L"1"), ',');
+	writeStdout(buf.wstr());
+}
+
+// gets thread frame contexts
+bool Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & frameInfo) {
+	if (!_paused || _stopped || !pThread) {
+		return false;
+	}
+	IEnumDebugFrameInfo2* pFrames = NULL;
+	if (FAILED(pThread->EnumFrameInfo(FIF_FUNCNAME | FIF_RETURNTYPE | FIF_ARGS | FIF_DEBUG_MODULEP | FIF_DEBUGINFO | FIF_MODULE | FIF_FRAME, 10, &pFrames))) {
+		CRLog::error("cannot get thread frame enum");
+		return false;
+	}
+	ULONG count = 0;
+	pFrames->GetCount(&count);
+	for (ULONG i = 0; i < count; i++) {
+		FRAMEINFO frame;
+		memset(&frame, 0, sizeof(FRAMEINFO));
+		ULONG fetched = 0;
+		if (FAILED(pFrames->Next(1, &frame, &fetched)) || fetched != 1)
+			break;
+		if (frame.m_pFrame) {
+			IDebugCodeContext2 * pCodeContext = NULL;
+			IDebugDocumentContext2 * pDocumentContext = NULL;
+			//IDebugMemoryContext2 * pMemoryContext = NULL;
+			frame.m_pFrame->GetCodeContext(&pCodeContext);
+			frame.m_pFrame->GetDocumentContext(&pDocumentContext);
+			CONTEXT_INFO contextInfo;
+			memset(&contextInfo, 0, sizeof(CONTEXT_INFO));
+			if (pCodeContext)
+				pCodeContext->GetInfo(CIF_ALLFIELDS, &contextInfo);
+			if (contextInfo.bstrAddress)
+				frameInfo.address = contextInfo.bstrAddress;
+			if (contextInfo.bstrFunction)
+				frameInfo.functionName = contextInfo.bstrFunction;
+			if (contextInfo.bstrModuleUrl)
+				frameInfo.moduleName = contextInfo.bstrModuleUrl;
+			frameInfo.sourceLine = contextInfo.posFunctionOffset.dwLine;
+			frameInfo.sourceColumn = contextInfo.posFunctionOffset.dwColumn;
+			TEXT_POSITION srcBegin, srcEnd;
+			memset(&srcBegin, 0, sizeof(srcBegin));
+			memset(&srcEnd, 0, sizeof(srcEnd));
+			if (pDocumentContext) {
+				if (SUCCEEDED(pDocumentContext->GetSourceRange(&srcBegin, &srcEnd))) {
+					//srcBegin.dwLine;
+					//srcBegin.dwColumn;
+				}
+				BSTR pFileName = NULL;
+				BSTR pBaseName = NULL;
+				pDocumentContext->GetName(GN_FILENAME, &pFileName);
+				pDocumentContext->GetName(GN_BASENAME, &pBaseName);
+				if (pFileName) { frameInfo.sourceFileName = pFileName; SysFreeString(pFileName); }
+				if (pBaseName) { frameInfo.sourceBaseName = pBaseName; SysFreeString(pBaseName); }
+			}
+			if (pDocumentContext)
+				pDocumentContext->Release();
+			if (pCodeContext)
+				pCodeContext->Release();
+		}
+		break;
+	}
+	pFrames->Release();
+	return true;
+}
+
 // step paused program
 bool Debugger::step(STEPKIND stepKind, STEPUNIT stepUnit, DWORD threadId, uint64_t requestId) {
 	if (!_started || !_loaded || !_pProgram) {
@@ -419,7 +516,7 @@ HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
 	UNUSED_EVENT_PARAMS;
 	_loaded = true;
 	_started = true;
-	_paused = true;
+	paused(pThread, PAUSED_BY_LOAD_COMPLETED);
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Load complete"));
 	else
@@ -435,22 +532,12 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 	UNUSED_EVENT_PARAMS;
 	_pThread = pThread;
 	_loaded = true;
-	_paused = true;
+	paused(pThread, PAUSED_BY_ENTRY_POINT_REACHED);
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Entry point"));
 	else
 		CRLog::info("Entry point");
 	return S_OK;
-}
-
-// reads thread id from thread
-DWORD getThreadId(IDebugThread2 * pThread) {
-	if (!pThread)
-		return 0;
-	DWORD res = 0;
-	if (FAILED(pThread->GetThreadId(&res)))
-		return 0;
-	return res;
 }
 
 HRESULT Debugger::OnDebugThreadCreate(IDebugEngine2 *pEngine,
@@ -492,7 +579,7 @@ HRESULT Debugger::OnDebugStepComplete(IDebugEngine2 *pEngine,
 {
 	UNUSED_EVENT_PARAMS;
 	_pThread = pThread;
-	_paused = true;
+	paused(pThread, PAUSED_BY_STEP_COMPLETED);
 	DUMP_EVENT(OnDebugStepComplete);
 	return S_OK;
 }
@@ -576,7 +663,7 @@ HRESULT Debugger::OnDebugBreakpoint(IDebugEngine2 *pEngine,
 {
 	UNUSED_EVENT_PARAMS;
 	_pThread = pThread;
-	_paused = true;
+	paused(pThread, PAUSED_BY_BREAKPOINT);
 	DUMP_EVENT(OnDebugBreakpoint);
 	return S_OK;
 }
@@ -621,7 +708,7 @@ HRESULT Debugger::OnDebugException(IDebugEngine2 *pEngine,
 	IDebugExceptionEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
-	_pThread = pThread;
+	paused(pThread, PAUSED_BY_EXCEPTION);
 	DUMP_EVENT(OnDebugException);
 	return S_OK;
 }
@@ -636,3 +723,18 @@ HRESULT Debugger::OnDebugMessage(IDebugEngine2 *pEngine,
 	DUMP_EVENT(OnDebugMessage);
 	return S_OK;
 }
+
+
+// helper functions
+
+
+// reads thread id from thread
+DWORD getThreadId(IDebugThread2 * pThread) {
+	if (!pThread)
+		return 0;
+	DWORD res = 0;
+	if (FAILED(pThread->GetThreadId(&res)))
+		return 0;
+	return res;
+}
+

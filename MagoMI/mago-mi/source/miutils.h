@@ -125,6 +125,14 @@ public:
 		while (last() == '\n' || last() == '\r')
 			truncate(_len - 1);
 	}
+	void appendIfLastItemNotEqual(T itemToAppend, T lastItemNotEqual) {
+		if (last() != lastItemNotEqual)
+			append(itemToAppend);
+	}
+	void appendIfLastItemNotEqual(const T * zitemsToAppend, T lastItemNotEqual) {
+		if (last() != lastItemNotEqual)
+			append(zitemsToAppend);
+	}
 };
 
 std::string toUtf8(const std::wstring s);
@@ -150,6 +158,27 @@ struct WstringBuffer : public Buffer<wchar_t> {
 	WstringBuffer & appendUlongLiteral(uint64_t n);
 	// appends number if non zero
 	WstringBuffer & appendUlongIfNonEmpty(uint64_t n) { if (n != UNSPECIFIED_REQUEST_ID) appendUlongLiteral(n); return *this; }
+	WstringBuffer & appendUlongParam(const wchar_t * paramName, uint64_t value, wchar_t appendCommaIfNotThisChar = '{') {
+		if (last() != appendCommaIfNotThisChar)
+			append(',');
+		append(paramName);
+		append('=');
+		appendUlongLiteral(value);
+		return *this;
+	}
+	WstringBuffer & appendStringParam(const wchar_t * paramName, std::wstring value, wchar_t appendCommaIfNotThisChar = '{') {
+		if (last() != appendCommaIfNotThisChar)
+			append(',');
+		append(paramName);
+		append('=');
+		appendStringLiteral(value);
+		return *this;
+	}
+	WstringBuffer & appendStringParamIfNonEmpty(const wchar_t * paramName, std::wstring value, wchar_t appendCommaIfNotThisChar = '{') {
+		if (!value.empty())
+			appendStringParam(paramName, value, appendCommaIfNotThisChar);
+		return *this;
+	}
 };
 
 /// trying to parse beginning of string as unsigned long; if found sequence of digits, trims beginning digits from s, puts parsed number into n, and returns true.
@@ -178,3 +207,25 @@ bool isAbsolutePath(std::wstring s);
 std::wstring getCurrentDirectory();
 
 void testEngine();
+
+
+struct StackFrameInfo {
+	DWORD threadId;
+	int frameIndex;
+	std::wstring address;
+	std::wstring moduleName;
+	std::wstring functionName;
+	std::wstring sourceFileName;
+	std::wstring sourceBaseName;
+	int sourceLine;
+	int sourceColumn;
+	StackFrameInfo()
+		: threadId(0)
+		, frameIndex(0)
+		, sourceLine(0)
+		, sourceColumn(0)
+	{
+
+	}
+	void dumpMIFrame(WstringBuffer & buf);
+};

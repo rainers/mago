@@ -72,6 +72,17 @@ public:
 	virtual bool stepInternal(STEPKIND stepKind, STEPUNIT stepUnit, IDebugThread2 * pThread, uint64_t requestId = UNSPECIFIED_REQUEST_ID);
 	// find current program's thread by id
 	IDebugThread2 * findThreadById(DWORD threadId);
+	// gets thread frame contexts
+	bool getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & frameInfo);
+	enum PauseReason {
+		PAUSED_BY_LOAD_COMPLETED,
+		PAUSED_BY_ENTRY_POINT_REACHED,
+		PAUSED_BY_STEP_COMPLETED,
+		PAUSED_BY_BREAKPOINT,
+		PAUSED_BY_EXCEPTION,
+		PAUSED_BY_BREAK,
+	};
+	void paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requestId = UNSPECIFIED_REQUEST_ID);
 
 	// MIEventCallback interface
 	virtual HRESULT OnDebugEngineCreated(IDebugEngine2 *pEngine,
@@ -165,3 +176,10 @@ public:
 		IDebugThread2 *pThread,
 		IDebugMessageEvent2 * pEvent);
 };
+
+
+// helper functions
+
+
+// returns thread id or 0 if cannot get it
+DWORD getThreadId(IDebugThread2 * pThread);
