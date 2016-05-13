@@ -24,7 +24,7 @@ public:
 
 	void Lock()
 	{
-		DWORD dwWaitResult = WaitForSingleObject(
+		WaitForSingleObject(
 			_mutex,    // handle to mutex
 			INFINITE);  // no time-out interval
 	}
@@ -75,6 +75,7 @@ public:
 
 private:
 	TimeCheckedGuardedArea& operator =(TimeCheckedGuardedArea& other) {
+		UNREFERENCED_PARAMETER(other);
 		return *this;
 	}
 };
@@ -157,7 +158,7 @@ bool writeStdout(const char * fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 	static char buffer[OUT_BUFFER_SIZE];
-	vsnprintf(buffer, OUT_BUFFER_SIZE - 1, fmt, args);
+	vsnprintf_s(buffer, OUT_BUFFER_SIZE - 1, fmt, args);
 	va_end(args);
 	std::string s = std::string(buffer);
 	std::wstring ws = toUtf16(s);
@@ -169,7 +170,7 @@ bool writeStderr(const char * fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
 	static char buffer[OUT_BUFFER_SIZE];
-	vsnprintf(buffer, OUT_BUFFER_SIZE - 1, fmt, args);
+	vsnprintf_s(buffer, OUT_BUFFER_SIZE - 1, fmt, args);
 	va_end(args);
 	std::string s = std::string(buffer);
 	std::wstring ws = toUtf16(s);
