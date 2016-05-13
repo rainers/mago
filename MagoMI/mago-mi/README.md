@@ -19,30 +19,32 @@ Command line parameters
 =======================
 *mago-mi --help* shows command line parameters help information.
 
-------
-This is Mago debugger. Usage:
-    mago-mi [options] [executable-file]
-    mago-mi [options] --args executable-file [inferior-arguments ...]
 
-Selection of debuggee and its files:
 
-  --args           Arguments after executable-file are passed to inferior
-  --exec=EXECFILE  Use EXECFILE as the executable.
+	This is Mago debugger command line interface. Usage:
+	    mago-mi [options] [executable-file]
+	    mago-mi [options] --args executable-file [inferior-arguments ...]
+	
+	Selection of debuggee and its files:
+	
+	  --args           Arguments after executable-file are passed to inferior
+	  --exec=EXECFILE  Use EXECFILE as the executable.
+	
+	Output and user interface control:
+	
+	  --interpreter=mi2 Turns on GDB MI interface mode
+	
+	Operating modes:
+	
+	  --help           Print this message and then exit
+	  --version        Print version information and then exit
+	  -v               Verbose output
+	
+	Other options:
+	
+	  --cd=DIR         Change current directory to DIR.
 
-Output and user interface control:
 
-  --interpreter=INTERP Print this message and then exit
-
-Operating modes:
-
-  --help           Print this message and then exit
-  --version        Print version information and then exit
-  -v               Verbose output
-
-Other options:
-
-  --cd=DIR         Change current directory to DIR.
-------
 
 Supported subset of GDB MI commands
 ===================================
