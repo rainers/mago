@@ -609,9 +609,9 @@ public:
 		/* [full][out][in] */ __RPC__inout_opt TEXT_POSITION *pBegPosition,
 		/* [full][out][in] */ __RPC__inout_opt TEXT_POSITION *pEndPosition) {
 		pBegPosition->dwColumn = 1;
-		pBegPosition->dwLine = bpInfo.line;
+		pBegPosition->dwLine = bpInfo.line - 1;
 		pEndPosition->dwColumn = 1;
-		pEndPosition->dwLine = bpInfo.line;
+		pEndPosition->dwLine = bpInfo.line - 1;
 		return S_OK;
 	}
 

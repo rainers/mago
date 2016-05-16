@@ -797,8 +797,20 @@ unsigned Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo
 			TEXT_POSITION srcBegin, srcEnd;
 			memset(&srcBegin, 0, sizeof(srcBegin));
 			memset(&srcEnd, 0, sizeof(srcEnd));
+			TEXT_POSITION stmtBegin, stmtEnd;
+			memset(&stmtBegin, 0, sizeof(stmtBegin));
+			memset(&stmtEnd, 0, sizeof(stmtEnd));
 			if (pDocumentContext) {
 				if (SUCCEEDED(pDocumentContext->GetSourceRange(&srcBegin, &srcEnd))) {
+					if (srcBegin.dwLine)
+						frameInfo[outIndex].sourceLine = srcBegin.dwLine + 1;
+					//srcBegin.dwLine;
+					//srcBegin.dwColumn;
+				}
+				if (SUCCEEDED(pDocumentContext->GetStatementRange(&stmtBegin, &stmtEnd))) {
+					if (stmtBegin.dwLine)
+						frameInfo[outIndex].sourceLine = stmtBegin.dwLine + 1;
+
 					//srcBegin.dwLine;
 					//srcBegin.dwColumn;
 				}
@@ -1172,7 +1184,7 @@ HRESULT Debugger::OnDebugBreakpointBound(IDebugEngine2 *pEngine,
 			}
 			TEXT_POSITION beginPos, endPos;
 			if (SUCCEEDED(pSrcCtxt->GetSourceRange(&beginPos, &endPos))) {
-				bp->boundLine = beginPos.dwLine;
+				bp->boundLine = beginPos.dwLine + 1;
 				CRLog::debug("Breakpoint bound to line %d", beginPos.dwLine);
 			}
 			BSTR debugCodeContextName = NULL;

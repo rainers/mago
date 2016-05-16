@@ -324,7 +324,7 @@ bool CmdInput::poll() {
 						}
 					}
 					else {
-						CRLog::trace("no data in stdin, sleeping");
+						//CRLog::trace("no data in stdin, sleeping");
 						Sleep(100);
 						break;
 					}//if (res == WAIT_TIMEOUT) {

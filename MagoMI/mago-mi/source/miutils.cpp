@@ -143,7 +143,7 @@ void StackFrameInfo::dumpMIFrame(WstringBuffer & buf, bool showLevel) {
 	buf.appendStringParamIfNonEmpty(L"file", sourceBaseName, '{');
 	buf.appendStringParamIfNonEmpty(L"fullname", sourceFileName, '{');
 	if (sourceLine != 0)
-		buf.appendUlongParam(L"line", sourceLine, '{');
+		buf.appendUlongParamAsString(L"line", sourceLine, '{');
 	buf.appendStringParamIfNonEmpty(L"from", moduleName, '{');
 	buf.append('}');
 }
