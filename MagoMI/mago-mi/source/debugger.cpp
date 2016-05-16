@@ -200,22 +200,20 @@ void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
 	if (_stopped)
 		return;
 	writeDebuggerMessage(cmd.dumpCommand());
-	BreakpointInfo bp;
-	bp.fromCommand(cmd);
-	writeDebuggerMessage(bp.dumpParams());
-	if (bp.parametersAreSet()) {
-		IDebugPendingBreakpoint2 * pPendingBP = NULL;
-		HRESULT hr = _engine->CreatePendingBreakpoint(&bp, &pPendingBP);
+	BreakpointInfoRef bp = new BreakpointInfo();
+	bp->fromCommand(cmd);
+	writeDebuggerMessage(bp->dumpParams());
+	if (bp->validateParameters()) {
+		HRESULT hr = _engine->CreatePendingBreakpoint(bp);
 		if (FAILED(hr)) {
 			writeErrorMessage(cmd.requestId, std::wstring(L"Failed to add breakpoint"));
 			return;
 		}
-		hr = pPendingBP->Bind();
-		if (FAILED(hr)) {
+		_breakpointList.addItem(bp);
+		if (!bp->bind()) {
 			writeErrorMessage(cmd.requestId, std::wstring(L"Failed to bind breakpoint"));
 			return;
 		}
-
 		writeDebuggerMessage(std::wstring(L"added pending breakpoint"));
 	}
 }
@@ -727,10 +725,68 @@ HRESULT Debugger::OnDebugBreakpointBound(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
 	IDebugThread2 *pThread,
-	IDebugBreakpointBoundEvent2 * pEvent) 
+	IDebugBreakpointBoundEvent2 * pEvent)
 {
 	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugBreakpointBound);
+	IDebugPendingBreakpoint2 * pPendingBP = NULL;
+	if (FAILED(pEvent->GetPendingBreakpoint(&pPendingBP))) {
+		CRLog::error("Cannot get pending breakpoint in OnDebugBreakpointBound");
+		return E_FAIL;
+	}
+	BreakpointInfoRef bp = _breakpointList.findByPendingBreakpoint(pPendingBP);
+	pPendingBP->Release();
+	if (!bp.Get()) {
+		// unknown breakpoint
+		CRLog::error("Unknown breakpoint request in OnDebugBreakpointBound");
+		return E_FAIL;
+	}
+	IEnumDebugBoundBreakpoints2 * pEnum = NULL;
+	if (FAILED(pEvent->EnumBoundBreakpoints(&pEnum))) {
+		CRLog::error("Failed to get enum of bound breakpoints");
+		return E_FAIL;
+	}
+	ULONG count = 0;
+	if (FAILED(pEnum->GetCount(&count)) || count < 1) {
+		pEnum->Release();
+		CRLog::error("Failed to get enum size for bound breakpoints");
+		return E_FAIL;
+	}
+	IDebugBoundBreakpoint2 * boundBp = NULL;
+	ULONG fetched = 0;
+	if (FAILED(pEnum->Next(1, &boundBp, &fetched))) {
+		pEnum->Release();
+		CRLog::error("Failed to get enum size for bound breakpoints");
+		return E_FAIL;
+	}
+	pEnum->Release();
+	IDebugBreakpointResolution2 * pBPResolution = NULL;
+	if (FAILED(boundBp->GetBreakpointResolution(&pBPResolution))) {
+		CRLog::error("no breakpoint resolution");
+		return E_FAIL;
+	}
+	BP_TYPE bpType;
+	pBPResolution->GetBreakpointType(&bpType);
+	BP_RESOLUTION_INFO bpResolutionInfo;
+	memset(&bpResolutionInfo, 0, sizeof(bpResolutionInfo));
+	if (FAILED(pBPResolution->GetResolutionInfo(BPRESI_BPRESLOCATION, &bpResolutionInfo))) {
+		CRLog::error("failed to get breakpoint resolution info");
+		pBPResolution->Release();
+		return E_FAIL;
+	}
+	bp->setBound(boundBp);
+	IDebugCodeContext2* context = bpResolutionInfo.bpResLocation.bpResLocation.bpresCode.pCodeContext;
+	if (context) {
+		IDebugDocumentContext2 * pSrcCtxt = NULL;
+		if (SUCCEEDED(context->GetDocumentContext(&pSrcCtxt))) {
+			TEXT_POSITION beginPos, endPos;
+			if (SUCCEEDED(pSrcCtxt->GetSourceRange(&beginPos, &endPos))) {
+				bp->boundLine = beginPos.dwLine;
+				CRLog::debug("Breakpoint bound to line %d", beginPos.dwLine);
+			}
+		}
+	}
+	pBPResolution->Release();
 	return S_OK;
 }
 
@@ -742,6 +798,28 @@ HRESULT Debugger::OnDebugBreakpointError(IDebugEngine2 *pEngine,
 {
 	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugBreakpointError);
+	IDebugErrorBreakpoint2 * pErrorBp = NULL;
+	if (FAILED(pEvent->GetErrorBreakpoint(&pErrorBp))) {
+		CRLog::error("pEvent->GetErrorBreakpoint failed");
+		return E_FAIL;
+	}
+
+	IDebugPendingBreakpoint2 * pPendingBP = NULL;
+	if (FAILED(pErrorBp->GetPendingBreakpoint(&pPendingBP))) {
+		CRLog::error("Cannot get pending breakpoint in OnDebugBreakpointError");
+		pErrorBp->Release();
+		return E_FAIL;
+	}
+	BreakpointInfoRef bp = _breakpointList.findByPendingBreakpoint(pPendingBP);
+	pPendingBP->Release();
+	if (!bp.Get()) {
+		// unknown breakpoint
+		CRLog::error("Unknown breakpoint request in OnDebugBreakpointBound");
+		pErrorBp->Release();
+		return E_FAIL;
+	}
+	//
+
 	return S_OK;
 }
 

@@ -1,5 +1,7 @@
 #include <windows.h>
 #include "miutils.h"
+#include "MIEngine.h"
+#include "../../DebugEngine/MagoNatDE/PendingBreakpoint.h"
 
 std::string toUtf8(const std::wstring s) {
 	StringBuffer buf;
@@ -254,7 +256,7 @@ bool splitByCharRev(std::wstring & s, wchar_t ch, std::wstring & before, std::ws
 				before = s.substr(0, i);
 			else
 				before.clear();
-			if (i + 1 < s.length())
+			if (i + 1 < (int)s.length())
 				after = s.substr(i + 1, s.length() - i - 1);
 			else
 				after.clear();
@@ -405,14 +407,83 @@ std::wstring BreakpointInfo::dumpParams() {
 	return buf.wstr();
 }
 
+BreakpointInfoRef BreakpointInfoList::findByPendingBreakpoint(IDebugPendingBreakpoint2 * bp) {
+	for (size_t i = 0; i < size(); i++)
+		if (at(i)->getPendingBreakpoint() == bp)
+			return at(i);
+	return BreakpointInfoRef();
+}
+
+BreakpointInfoRef BreakpointInfoList::findById(uint64_t id) {
+	for (size_t i = 0; i < size(); i++)
+		if (at(i)->id == id)
+			return at(i);
+	return BreakpointInfoRef();
+}
+
+bool BreakpointInfoList::removeItem(BreakpointInfoRef & bp) {
+	for (size_t i = 0; i < size(); i++)
+		if (at(i).Get() == bp.Get()) {
+			BreakpointInfoRef found = at(i);
+			erase(begin() + i);
+			return true;
+		}
+	return false;
+}
+
 BreakpointInfo::BreakpointInfo() 
-	: id(0)
+	: _pendingBreakpoint(NULL)
+	, _boundBreakpoint(NULL)
+	, refCount(0)
+	, id(0)
 	, requestId(0)
 	, line(0)
+	, boundLine(0)
 	, enabled(true)
 	, pending(false)
 	, temporary(false)
+	, bound(false)
+	, error(false)
 {
+}
+
+static uint64_t nextBreakpointId = 1;
+
+uint64_t BreakpointInfo::assignId() {
+	id = nextBreakpointId++;
+	return id;
+}
+
+void BreakpointInfo::setPending(IDebugPendingBreakpoint2 * pPendingBp) {
+	_pendingBreakpoint = pPendingBp;
+}
+
+void BreakpointInfo::setBound(IDebugBoundBreakpoint2 * pBoundBp) {
+	_boundBreakpoint = pBoundBp;
+	pending = false;
+	bound = true;
+}
+
+void BreakpointInfo::setBindError() {
+	error = true;
+}
+
+bool BreakpointInfo::bind() {
+	if (!_pendingBreakpoint)
+		return false;
+	HRESULT hr = _pendingBreakpoint->Bind();
+	if (FAILED(hr)) {
+		CRLog::error("pendingBreakpoint->Bind is failed: hr=%d", hr);
+		return false;
+	}
+	return true;
+}
+
+BreakpointInfo::~BreakpointInfo() {
+	if (_pendingBreakpoint)
+		_pendingBreakpoint->Release();
+	if (_boundBreakpoint)
+		_boundBreakpoint->Release();
 }
 
 static const wchar_t * sourceFileExtensions[] = {
@@ -437,11 +508,12 @@ bool looksLikeFileName(std::wstring s) {
 	return false;
 }
 
-bool BreakpointInfo::parametersAreSet() {
+bool BreakpointInfo::validateParameters() {
 	if (!fileName.empty() && line) // file:line
 		return true;
-	if (!functionName.empty()) // function or file:function
-		return true;
+	// only file:line breakpoint is supported by Mago
+	//if (!functionName.empty()) // function or file:function
+	//	return true;
 	return false;
 }
 
@@ -520,7 +592,7 @@ bool BreakpointInfo::fromCommand(MICommand & cmd) {
 		}
 
 	}
-	return parametersAreSet();
+	return validateParameters();
 }
 
 

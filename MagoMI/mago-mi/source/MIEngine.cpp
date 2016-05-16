@@ -643,8 +643,9 @@ public:
 	}
 };
 
-HRESULT MIEngine::CreatePendingBreakpoint(BreakpointInfo * bp, IDebugPendingBreakpoint2** ppPendingBP) {
+HRESULT MIEngine::CreatePendingBreakpoint(BreakpointInfoRef & bp) {
 	RefPtr<MIBreakpointRequest> request;
+	IDebugPendingBreakpoint2* pPendingBP;
 	HRESULT hr = MakeCComObject(request);
 	if (FAILED(hr)) {
 		CRLog::error("Pending breakpoint request creation failed");
@@ -652,12 +653,12 @@ HRESULT MIEngine::CreatePendingBreakpoint(BreakpointInfo * bp, IDebugPendingBrea
 	}
 	request->AddRef();
 	request->init(bp);
-	hr = engine->CreatePendingBreakpoint(request.Get(), ppPendingBP);
+	hr = engine->CreatePendingBreakpoint(request.Get(), &pPendingBP);
 	if (FAILED(hr)) {
 		CRLog::error("Pending breakpoint creation failed");
 		return hr;
 	}
 	if (bp->enabled)
-		(*ppPendingBP)->Enable(TRUE);
+		pPendingBP->Enable(TRUE);
 	return S_OK;
 }

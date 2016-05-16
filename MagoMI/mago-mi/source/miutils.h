@@ -5,6 +5,7 @@
 #include <vector>
 #include <stdint.h>
 #include "logger.h"
+#include "../../Include/SmartPtr.h"
 
 typedef unsigned __int64 ulong;
 // magic constant for non-specified MI request id
@@ -248,7 +249,15 @@ struct MICommand {
 	bool parse(std::wstring line);
 };
 
-struct BreakpointInfo {
+
+struct IDebugBoundBreakpoint2;
+struct IDebugPendingBreakpoint2;
+class BreakpointInfo {
+private:
+	IDebugPendingBreakpoint2 * _pendingBreakpoint;
+	IDebugBoundBreakpoint2 * _boundBreakpoint;
+	int refCount;
+public:
 	uint64_t id;
 	uint64_t requestId;
 	std::wstring address;
@@ -256,17 +265,49 @@ struct BreakpointInfo {
 	std::wstring fileName;
 	std::wstring labelName;
 	int line;
+	int boundLine;
 	bool enabled;
 	bool pending;
 	bool temporary;
+	bool bound;
+	bool error;
 	BreakpointInfo();
-	~BreakpointInfo() {}
+	~BreakpointInfo();
+
+	uint64_t assignId();
 
 	BreakpointInfo & operator = (const BreakpointInfo & v);
 	bool fromCommand(MICommand & cmd);
-	bool parametersAreSet();
+	bool validateParameters();
 	// debug dump
 	std::wstring dumpParams();
+	/// request binding, return true if request is sent ok
+	bool bind();
+
+	void setPending(IDebugPendingBreakpoint2 * pPendingBp);
+	void setBound(IDebugBoundBreakpoint2 * pBoundBp);
+	void setBindError();
+	IDebugPendingBreakpoint2 * getPendingBreakpoint() { return _pendingBreakpoint; }
+	IDebugBoundBreakpoint2 * getBoundBreakpoint() { return _boundBreakpoint; }
+
+	void AddRef() {
+		refCount++;
+	}
+	void Release() {
+		if (--refCount <= 0)
+			delete this;
+	}
+};
+
+typedef RefPtr<BreakpointInfo> BreakpointInfoRef;
+class BreakpointInfoList : public std::vector<BreakpointInfoRef> {
+public:
+	BreakpointInfoList() {}
+	~BreakpointInfoList() {}
+	BreakpointInfoRef findById(uint64_t id);
+	BreakpointInfoRef findByPendingBreakpoint(IDebugPendingBreakpoint2 * bp);
+	bool addItem(BreakpointInfoRef & bp) { push_back(bp); return true;  }
+	bool removeItem(BreakpointInfoRef & bp);
 };
 
 // file related helper functions

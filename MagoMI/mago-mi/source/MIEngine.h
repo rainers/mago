@@ -214,5 +214,5 @@ public:
 		const wchar_t * pszDir
 		);
 	HRESULT ResumeProcess();
-	HRESULT CreatePendingBreakpoint(BreakpointInfo * bp, IDebugPendingBreakpoint2** ppPendingBP);
+	HRESULT CreatePendingBreakpoint(BreakpointInfoRef & bp);
 };

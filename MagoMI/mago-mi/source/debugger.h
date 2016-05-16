@@ -20,6 +20,7 @@ class Debugger : public MIEventCallback, public CmdInputCallback {
 	IDebugProcess2 * _pProcess;
 	IDebugProgram2 *_pProgram;
 	IDebugThread2 *_pThread;
+	BreakpointInfoList _breakpointList;
 	bool _quitRequested;
 	bool _verbose;
 	bool _loadCalled;
