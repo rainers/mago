@@ -119,6 +119,7 @@ static const wchar_t * HELP_MSGS[] = {
 	L"delete N                - delete breakpoint",
 	L"info thread             - thread list with properties",
 	L"info threads            - list of thread ids",
+	L"backtrace               - list thread stack frames",
 	L"",
 	L"Type quit to exit.",
 	NULL
@@ -142,6 +143,8 @@ static const wchar_t * HELP_MSGS_MI[] = {
 	L"-break-delete           - delete breakpoint",
 	L"-thread-info            - thread list with properties",
 	L"-thread-list-ids        - list of thread ids",
+	L"-stack-list-frames      - list thread stack frames",
+	L"-stack-list-variables   - list stack frame variables",
 	L"",
 	L"Type quit to exit.",
 	NULL
@@ -221,6 +224,9 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"backtrace" || cmd.commandName == L"bt" || cmd.commandName == L"-stack-list-frames") {
 		handleStackListFramesCommand(cmd);
 	}
+	else if (cmd.commandName == L"-stack-list-variables") {
+		handleStackListVariablesCommand(cmd);
+	}
 	else
 	{
 		if (cmd.miCommand)
@@ -228,6 +234,21 @@ void Debugger::onInputLine(std::wstring &s) {
 		else
 			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s, L"undefined-command");
 	}
+}
+
+// called to handle -stack-list-variables command
+void Debugger::handleStackListVariablesCommand(MICommand & cmd) {
+	if (!_paused || _stopped) {
+		writeErrorMessage(cmd.requestId, L"Cannot get variables for running or terminated process");
+		return;
+	}
+	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(cmd.requestId);
+	buf.append(L"^done,variables=[");
+	// fake output for testing
+	buf.append(L"{name=\"x\",value=\"11\"},{name=\"s\",value=\"{a = 1, b = 2}\"}");
+	buf.append(L"]");
+	writeStdout(buf.wstr());
 }
 
 #define MAX_FRAMES 100
@@ -258,6 +279,7 @@ void Debugger::handleStackListFramesCommand(MICommand & cmd) {
 		return;
 	}
 	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(cmd.requestId);
 	buf.append(L"^done,stack=[");
 	for (unsigned i = 0; i < frameCount; i++) {
 		if (i > 0)
@@ -279,6 +301,7 @@ void Debugger::handleThreadInfoCommand(MICommand & cmd, bool idsOnly) {
 	if (!idsOnly)
 		toUlong(cmd.tail, threadId);
 	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(cmd.requestId);
 	buf.append(!idsOnly ? L"^done,threads=[" : L"^done,thread-ids={");
 
 
