@@ -102,7 +102,7 @@ void Debugger::writeErrorMessage(ulong requestId, std::wstring msg, const wchar_
 }
 
 static const wchar_t * HELP_MSGS[] = {
-	L"mago-mi implements GDB and GDB-MI compatible interfaces for MAGO debugger.",
+	L"mago-mi: GDB and GDB-MI compatible interfaces for MAGO debugger.",
 	L"",
 	L"run                     - start program execution",
 	L"continue                - continue program execution",
@@ -113,15 +113,19 @@ static const wchar_t * HELP_MSGS[] = {
 	L"stepi                   - step into by instruction",
 	L"finish                  - step out of current function",
 	L"break                   - add breakpoint",
+	L"info break              - list breakpoints",
+	L"enable N                - enable breakpoint",
+	L"disable N               - disable breakpoint",
+	L"delete N                - delete breakpoint",
 	L"",
 	L"Type quit to exit.",
 	NULL
 };
 
 static const wchar_t * HELP_MSGS_MI[] = {
-	L"mago-mi implements GDB and GDB-MI compatible interfaces for MAGO debugger.",
+	L"mago-mi: GDB and GDB-MI compatible interfaces for MAGO debugger.",
 	L"",
-	L"-exec-run               - start program execution",
+	L"-exec-run [--start]     - start program execution",
 	L"-exec-continue          - continue program execution",
 	L"-exec-interrupt         - interrupt program which is being running",
 	L"-exec-next              - step over",
@@ -130,6 +134,10 @@ static const wchar_t * HELP_MSGS_MI[] = {
 	L"-exec-step-instruction  - step into by instruction",
 	L"-exec-finish            - exit function",
 	L"-break-insert           - add breakpoint",
+	L"-break-list             - list breakpoints",
+	L"-break-enable           - enable breakpoint",
+	L"-break-disable          - disable breakpoint",
+	L"-break-delete           - delete breakpoint",
 	L"",
 	L"Type quit to exit.",
 	NULL
