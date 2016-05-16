@@ -73,10 +73,10 @@ void Debugger::writeDebuggerMessage(std::wstring msg) {
 }
 
 // MI interface stdout output: [##requestId##]^result[,"msg"]
-void Debugger::writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg) {
+void Debugger::writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg, wchar_t typeChar) {
 	WstringBuffer buf;
 	buf.appendUlongIfNonEmpty(requestId);
-	buf.append('^');
+	buf.append(typeChar);
 	buf.append(status);
 	if (!msg.empty()) {
 		buf.append(L",");
@@ -94,7 +94,7 @@ void Debugger::writeErrorMessage(ulong requestId, std::wstring msg, const wchar_
 		buf.append(L"error");
 		buf.appendStringParam(L"msg", msg);
 		if (errorCode && errorCode[0])
-			buf.appendStringParam(L"msg", std::wstring(errorCode));
+			buf.appendStringParam(L"code", std::wstring(errorCode));
 		writeStdout(buf.wstr());
 	}
 	else
@@ -161,6 +161,10 @@ void Debugger::onInputLine(std::wstring &s) {
 	CRLog::debug("Input line: %s", toUtf8(s).c_str());
 	if (s.empty())
 		return;
+	if (_entryPointContinuePending) {
+		_entryPointContinuePending = false;
+		resume();
+	}
 	MICommand cmd;
 	if (!cmd.parse(s)) {
 		writeErrorMessage(cmd.requestId, std::wstring(L"invalid command syntax: ") + s, L"undefined-command");
@@ -226,6 +230,10 @@ void Debugger::onInputLine(std::wstring &s) {
 	}
 	else if (cmd.commandName == L"-stack-list-variables") {
 		handleStackListVariablesCommand(cmd);
+	}
+	else if (cmd.commandName == L"handle") {
+		// ignore, reply done
+		writeResultMessage(cmd.requestId, L"done");
 	}
 	else
 	{
@@ -505,6 +513,7 @@ void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
 		}
 		bp->assignId();
 		WstringBuffer buf;
+		buf.appendUlongIfNonEmpty(cmd.requestId);
 		buf.append(L"^done,bkpt=");
 		bp->printBreakpointInfo(buf);
 		writeStdout(buf.wstr());
@@ -557,6 +566,7 @@ bool Debugger::load(uint64_t requestId, bool synchronous) {
 
 int Debugger::enterCommandLoop() {
 	CRLog::info("Entering command loop");
+	CRLog::info("Mode: %s", _cmdinput.inConsole() ? "Console" : "Stream");
 	if (params.hasExecutableSpecified()) {
 		load();
 	}
@@ -594,7 +604,7 @@ bool Debugger::run(uint64_t requestId) {
 	//}
 	_started = true;
 	resume(requestId);
-	writeResultMessage(requestId, L"running", NULL);
+	writeResultMessage(requestId, L"running", NULL, '*');
 	return true;
 }
 
@@ -695,6 +705,8 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 	std::wstring reasonName;
 	switch (reason) {
 	case PAUSED_BY_BREAKPOINT:
+	case PAUSED_BY_ENTRY_POINT_REACHED:
+	case PAUSED_BY_LOAD_COMPLETED:
 		reasonName = L"breakpoint-hit";
 		break;
 	case PAUSED_BY_STEP_COMPLETED:
@@ -837,7 +849,7 @@ bool Debugger::stepInternal(STEPKIND stepKind, STEPUNIT stepUnit, IDebugThread2 
 	}
 	_paused = false;
 	if (params.miMode)
-		writeStdout(L"^running");
+		writeStdout(L"*running");
 	return true;
 }
 
@@ -892,6 +904,7 @@ HRESULT Debugger::OnDebugProgramDestroy(IDebugEngine2 *pEngine,
 	CRLog::info("Program destroyed");
 	return S_OK;
 }
+
 HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
 	IDebugProcess2 *pProcess,
 	IDebugProgram2 *pProgram,
@@ -900,7 +913,9 @@ HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
 {
 	UNUSED_EVENT_PARAMS;
 	_loaded = true;
-	paused(pThread, PAUSED_BY_LOAD_COMPLETED);
+	_pThread = pThread;
+	_paused = true;
+	//paused(pThread, PAUSED_BY_LOAD_COMPLETED);
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Load complete"));
 	else
@@ -926,6 +941,7 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 	else {
 		_paused = true;
 		_entryPointContinuePending = true;
+		CRLog::info("Will continue on next poll");
 		//resume();
 	}
 	return S_OK;

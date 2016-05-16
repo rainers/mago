@@ -44,9 +44,11 @@ public:
 	// MI interface stdout output: ~"msg_text"
 	virtual void writeDebuggerMessage(std::wstring msg);
 	// MI interface stdout output: [##requestId##]^result[,"msg"]
-	virtual void writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg = std::wstring());
+	virtual void writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg = std::wstring(), wchar_t typeChar = '^');
 	// MI interface stdout output: [##requestId##]^result[,"msg"]
-	virtual void writeResultMessage(ulong requestId, const wchar_t * status, const wchar_t * msg) { writeResultMessage(requestId, status, std::wstring(msg ? msg : L"")); }
+	virtual void writeResultMessage(ulong requestId, const wchar_t * status, const wchar_t * msg, wchar_t typeChar = '^') { 
+		writeResultMessage(requestId, status, std::wstring(msg ? msg : L""), typeChar); 
+	}
 	// MI interface stdout output: [##requestId##]^error[,"msg"]
 	virtual void writeErrorMessage(ulong requestId, std::wstring msg, const wchar_t * errorCode = NULL);
 

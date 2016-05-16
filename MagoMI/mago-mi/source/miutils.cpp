@@ -91,6 +91,9 @@ WstringBuffer & WstringBuffer::appendStringLiteral(std::wstring s) {
 	for (size_t i = 0; i < s.length(); i++) {
 		wchar_t ch = s[i];
 		switch (ch) {
+		case '\\':
+			append(L"\\\\");
+			break;
 		case '\"':
 			append(L"\\\"");
 			break;
