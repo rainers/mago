@@ -127,6 +127,10 @@ bool writeStdout(std::wstring s) {
 		DWORD bytesWritten = 0;
 		//printf("line to write: %s", line.c_str());
 		bool res = WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
+		if (res) {
+			FlushFileBuffers(h_out);
+			WriteFile(h_out, line.c_str(), 0, &bytesWritten, NULL);
+		}
 		//res = WriteFile(h_out, "\n", 1, &bytesWritten, NULL) != 0;
 		return res;
 	}
@@ -146,7 +150,12 @@ bool writeStderr(std::wstring s) {
 	}
 	DWORD bytesWritten = 0;
 	CRLog::debug("STDERR: %s", line.c_str());
-	return WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
+	bool res = WriteFile(h_out, line.c_str(), line.length(), &bytesWritten, NULL) != 0;
+	if (res) {
+		FlushFileBuffers(h_out);
+		WriteFile(h_out, line.c_str(), 0, &bytesWritten, NULL);
+	}
+	return res;
 }
 
 // global stdinput object
@@ -282,33 +291,46 @@ bool CmdInput::poll() {
 					}
 				}
 				for (;;) {
-					//printf("Waiting for STDIN input\n");
+					//CRLog::debug("Waiting for STDIN input");
 					//DWORD res = WaitForSingleObject(h_in, 100);
-					//printf("Wait result: %x\n", res);
-					//if (res == WAIT_OBJECT_0) {
-					char ch = 0;
-					DWORD bytesRead = 0;
-					//printf("Reading character from stdin\n");
-					if (ReadFile(h_in, &ch, 1, &bytesRead, NULL)) {
-						// byte is read from stdin
-						if (bytesRead == 1) {
-							//printf("Character read: %c (%d)\n", ch, ch);
-							if (ch != '\r') // ignore \r in \r\n
-								_buf.append(ch);
-							if (ch == '\n')
-								break; // full line is entered
+					//CRLog::debug("Wait result: %x", res);
+
+					DWORD bytesAvailable = 0;
+					PeekNamedPipe(h_in, NULL, 0, NULL, &bytesAvailable, NULL);
+					//CRLog::debug("PeekNamedPipe result: %x", bytesAvailable);
+
+					if (bytesAvailable) {//res == WAIT_OBJECT_0) {
+						char ch = 0;
+						DWORD bytesRead = 0;
+						//CRLog::trace("Reading character from stdin");
+						if (ReadFile(h_in, &ch, 1, &bytesRead, NULL)) {
+							// byte is read from stdin
+							if (bytesRead == 1) {
+								//printf("Character read: %c (%d)", ch, ch);
+								if (ch != '\r') // ignore \r in \r\n
+									_buf.append(ch);
+								if (ch == '\n')
+									break; // full line is entered
+							}
+						}
+						else {
+							//ERROR_OPERATION_ABORTED;
+							DWORD err = GetLastError();
+							if (err == ERROR_BROKEN_PIPE) {
+								_closed = true;
+							}
+							//printf("Reading failed, ch = %d, bytesRead = %d, lastError=%d\n", ch, bytesRead, GetLastError());
+							break;
 						}
 					}
 					else {
-						//ERROR_OPERATION_ABORTED;
-						DWORD err = GetLastError();
-						if (err == ERROR_BROKEN_PIPE) {
-							_closed = true;
-						}
-						//printf("Reading failed, ch = %d, bytesRead = %d, lastError=%d\n", ch, bytesRead, GetLastError());
+						CRLog::trace("no data in stdin, sleeping");
+						Sleep(100);
 						break;
-					}
-					//} else if (res == WAIT_TIMEOUT) {
+					}//if (res == WAIT_TIMEOUT) {
+					//	CRLog::trace("stdin polling timeout");
+					//	break;
+					//}
 					//} else if (res == WAIT_FAILED) {
 					//	_closed = true;
 					//	break;

@@ -161,10 +161,10 @@ void Debugger::onInputLine(std::wstring &s) {
 	CRLog::debug("Input line: %s", toUtf8(s).c_str());
 	if (s.empty())
 		return;
-	if (_entryPointContinuePending) {
-		_entryPointContinuePending = false;
-		resume();
-	}
+	//if (_entryPointContinuePending) {
+	//	_entryPointContinuePending = false;
+	//	resume();
+	//}
 	MICommand cmd;
 	if (!cmd.parse(s)) {
 		writeErrorMessage(cmd.requestId, std::wstring(L"invalid command syntax: ") + s, L"undefined-command");
@@ -173,7 +173,7 @@ void Debugger::onInputLine(std::wstring &s) {
 	if (cmd.commandName == L"quit") {
 		_quitRequested = true;
 		writeStringMessage('^', std::wstring(L"exit"));
-		Sleep(1);
+		Sleep(10);
 	}
 	else if (cmd.commandName == L"help") {
 		showHelp();
@@ -572,11 +572,19 @@ int Debugger::enterCommandLoop() {
 	}
 
 	while (!_cmdinput.isClosed() && !_quitRequested) {
+		//if (_entryPointContinuePending) {
+		//	CRLog::debug("_entryPointContinuePending: calling resume()");
+		//	_entryPointContinuePending = false;
+		//	resume();
+		//}
+		//CRLog::trace("before poll");
+		_cmdinput.poll();
+		//CRLog::trace("after poll");
 		if (_entryPointContinuePending) {
+			CRLog::debug("_entryPointContinuePending: calling resume()");
 			_entryPointContinuePending = false;
 			resume();
 		}
-		_cmdinput.poll();
 	}
 	CRLog::info("Debugger shutdown");
 	CRLog::info("Exiting");
@@ -610,6 +618,7 @@ bool Debugger::run(uint64_t requestId) {
 
 // resume paused execution (continue)
 bool Debugger::resume(uint64_t requestId, DWORD threadId) {
+	CRLog::trace("Debugger::resume()");
 	if (!_loaded) {
 		writeErrorMessage(requestId, std::wstring(L"Process is not loaded"));
 		return false;
@@ -631,6 +640,7 @@ bool Debugger::resume(uint64_t requestId, DWORD threadId) {
 		return false;
 	}
 	IDebugThread2 * pThread = findThreadById(threadId);
+	CRLog::trace("Debugger::resume() : calling pProgram->Continue");
 	if (FAILED(_pProgram->Continue(pThread))) {
 		writeErrorMessage(requestId, std::wstring(L"Failed to continue process"));
 		return false;
@@ -941,7 +951,7 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 	else {
 		_paused = true;
 		_entryPointContinuePending = true;
-		CRLog::info("Will continue on next poll");
+		CRLog::info("Will continue on next poll - setting _entryPointContinuePending");
 		//resume();
 	}
 	return S_OK;
