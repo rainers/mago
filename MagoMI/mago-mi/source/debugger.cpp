@@ -117,6 +117,8 @@ static const wchar_t * HELP_MSGS[] = {
 	L"enable N                - enable breakpoint",
 	L"disable N               - disable breakpoint",
 	L"delete N                - delete breakpoint",
+	L"info thread             - thread list with properties",
+	L"info threads            - list of thread ids",
 	L"",
 	L"Type quit to exit.",
 	NULL
@@ -138,6 +140,8 @@ static const wchar_t * HELP_MSGS_MI[] = {
 	L"-break-enable           - enable breakpoint",
 	L"-break-disable          - disable breakpoint",
 	L"-break-delete           - delete breakpoint",
+	L"-thread-info            - thread list with properties",
+	L"-thread-list-ids        - list of thread ids",
 	L"",
 	L"Type quit to exit.",
 	NULL
@@ -208,6 +212,12 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if ((cmd.commandName == L"info" && cmd.tail == L"break") || cmd.commandName == L"-break-list") {
 		handleBreakpointListCommand(cmd);
 	}
+	else if ((cmd.commandName == L"info" && cmd.tail == L"thread") || cmd.commandName == L"-thread-info") {
+		handleThreadInfoCommand(cmd, false);
+	}
+	else if ((cmd.commandName == L"info" && cmd.tail == L"threads") || cmd.commandName == L"-thread-list-ids") {
+		handleThreadInfoCommand(cmd, true);
+	}
 	else
 	{
 		if (cmd.miCommand)
@@ -215,6 +225,69 @@ void Debugger::onInputLine(std::wstring &s) {
 		else
 			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s, L"undefined-command");
 	}
+}
+
+// called to handle -thread-info command
+void Debugger::handleThreadInfoCommand(MICommand & cmd, bool idsOnly) {
+	if (!_paused || _stopped || !_pThread || !_pProgram) {
+		writeErrorMessage(cmd.requestId, std::wstring(L"Execution is not paused"));
+		return;
+	}
+	uint64_t threadId = 0;
+	if (!idsOnly)
+		toUlong(cmd.tail, threadId);
+	WstringBuffer buf;
+	buf.append(!idsOnly ? L"^done,threads=[" : L"^done,thread-ids={");
+
+
+	IEnumDebugThreads2* pThreadList = NULL;
+	ULONG count = 0;
+	if (SUCCEEDED(_pProgram->EnumThreads(&pThreadList)) && pThreadList && SUCCEEDED(pThreadList->GetCount(&count))) {
+		IDebugThread2 * threads[1];
+		bool firstThread = true;
+		for (ULONG i = 0; i < count; i++) {
+			IDebugThread2 * thread = NULL;
+			ULONG fetched = 0;
+			if (FAILED(pThreadList->Next(1, &thread, &fetched)) || fetched != 1 || !threads[0]) {
+				break;
+			}
+			DWORD id = 0;
+			if (SUCCEEDED(thread->GetThreadId(&id))) {
+				if (idsOnly) {
+					//if (!firstThread)
+					//	buf.append(L",");
+					buf.appendUlongParamAsString(L"thread-id", id);
+					//firstThread = false;
+				} else if (id == threadId || threadId == 0) {
+					StackFrameInfo frameInfo;
+					if (getThreadFrameContext(thread, frameInfo)) {
+						// append thread information
+						if (!firstThread)
+							buf.append(L",");
+						buf.append(L"{");
+						buf.appendUlongParamAsString(L"id", id);
+						buf.appendUlongParamAsString(L"target-id", id);
+						buf.append(L",frame=");
+						frameInfo.dumpMIFrame(buf);
+						buf.append(L",state=\"stopped\"");
+						buf.append(L"}");
+						thread->Release();
+						firstThread = false;
+					}
+				}
+			}
+			thread->Release();
+		}
+		pThreadList->Release();
+	}
+
+	buf.append(idsOnly ? L"}" : L"]");
+	DWORD currentThreadId = 0;
+	_pThread->GetThreadId(&currentThreadId);
+	buf.appendUlongParamAsString(L"current-thread-id", currentThreadId);
+	if (idsOnly)
+		buf.appendUlongParamAsString(L"number-of-threads", count);
+	writeStdout(buf.wstr());
 }
 
 // called to handle breakpoint list command

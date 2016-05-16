@@ -52,6 +52,8 @@ public:
 
 	// CmdInputCallback interface handlers
 
+	// called to handle -thread-info command
+	virtual void handleThreadInfoCommand(MICommand & cmd, bool idsOnly);
 	// called to handle breakpoint list command
 	virtual void handleBreakpointListCommand(MICommand & cmd);
 	// called to handle breakpoint delete command
