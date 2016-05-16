@@ -11,6 +11,8 @@ struct ExecutableInfo {
 	std::wstring dir;
 	bool verbose;
 	bool miMode;
+	bool silent;
+	bool stopOnEntry;
 
 	ExecutableInfo();
 	~ExecutableInfo();

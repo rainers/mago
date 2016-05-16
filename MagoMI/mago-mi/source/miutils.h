@@ -247,6 +247,13 @@ struct MICommand {
 	// debug dump
 	std::wstring dumpCommand();
 
+	/// returns true if there is specified named parameter in cmd
+	bool hasParam(std::wstring name);
+	// find parameter by name
+	std::wstring findParam(std::wstring name);
+	// get parameter --thread-id
+	unsigned getThreadIdParam();
+
 	MICommand();
 	~MICommand();
 	// parse MI command, returns true if successful

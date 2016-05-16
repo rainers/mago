@@ -345,6 +345,33 @@ void collapseParams(wstring_vector & items, param_vector & namedParams) {
 	}
 }
 
+/// returns true if there is specified named parameter in cmd
+bool MICommand::hasParam(std::wstring name) {
+	for (unsigned i = 0; i < namedParams.size(); i++)
+		if (namedParams[i].first == name)
+			return true;
+	return false;
+}
+
+// find parameter by name
+std::wstring MICommand::findParam(std::wstring name) {
+	for (unsigned i = 0; i < namedParams.size(); i++)
+		if (namedParams[i].first == name)
+			return namedParams[i].second;
+	return std::wstring();
+}
+
+// get parameter --thread-id
+unsigned MICommand::getThreadIdParam() {
+	std::wstring v = findParam(L"--thread-id");
+	if (v.empty())
+		return 0;
+	uint64_t tid = 0;
+	if (!toUlong(v, tid))
+		return 0;
+	return (unsigned)tid;
+}
+
 bool MICommand::parse(std::wstring s) {
 	requestId = UNSPECIFIED_REQUEST_ID;
 	commandName.clear();

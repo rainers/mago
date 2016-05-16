@@ -28,6 +28,7 @@ class Debugger : public MIEventCallback, public CmdInputCallback {
 	bool _started;
 	bool _paused;
 	bool _stopped;
+	bool _entryPointContinuePending;
 public:
 	Debugger();
 	virtual ~Debugger();
@@ -66,11 +67,11 @@ public:
 	virtual int enterCommandLoop();
 
 	// load executable
-	virtual bool load();
+	virtual bool load(uint64_t requestId = UNSPECIFIED_REQUEST_ID, bool synchronous = true);
 	// start execution
 	virtual bool run(uint64_t requestId = UNSPECIFIED_REQUEST_ID);
 	// resume paused execution
-	virtual bool resume(uint64_t requestId = UNSPECIFIED_REQUEST_ID);
+	virtual bool resume(uint64_t requestId = UNSPECIFIED_REQUEST_ID, DWORD threadId = 0);
 	// break program if running
 	virtual bool causeBreak(uint64_t requestId = UNSPECIFIED_REQUEST_ID);
 	// step paused program

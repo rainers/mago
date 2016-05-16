@@ -12,6 +12,8 @@ ExecutableInfo::ExecutableInfo()
 	: argCount(0)
 	, verbose(false) 
 	, miMode(false)
+	, silent(false)
+	, stopOnEntry(false)
 {
 	setDir(getCurrentDirectory());
 }
@@ -176,6 +178,12 @@ static void handleVerbose(CmdLineParamDef * param, const wchar_t * value) {
 	params.verbose = true;
 }
 
+static void handleSilent(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
+	UNREFERENCED_PARAMETER(value);
+	params.silent = true;
+}
+
 void nonParamHandler(const wchar_t * value) {
 	if (params.exename.empty()) {
 		params.setExecutable(std::wstring(value));
@@ -198,6 +206,7 @@ CmdLineParamDef paramDefs[] = {
 	CmdLineParamDef(NULL, "--help", NO_PARAMS, "Print this message and then exit", NULL, &showHelp),
 	CmdLineParamDef(NULL, "--version", NO_PARAMS, "Print version information and then exit", NULL, &showVersion),
 	CmdLineParamDef("-v", NULL, NO_PARAMS, "Verbose output", NULL, &handleVerbose),
+	CmdLineParamDef(NULL, "--silent", NO_PARAMS, "Don't print version info on startup", NULL, &handleSilent),
 	CmdLineParamDef("Other options"),
 	CmdLineParamDef(NULL, "--cd=DIR", STRING_PARAM, "Change current directory to DIR.", NULL, &handleDir),
 	CmdLineParamDef()

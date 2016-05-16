@@ -24,6 +24,7 @@ Debugger::Debugger()
 	, _started(false)
 	, _paused(false)
 	, _stopped(false)
+	, _entryPointContinuePending(false)
 {
 	Log::Enable(false);
 	_verbose = params.verbose;
@@ -159,6 +160,8 @@ void Debugger::onInputLine(std::wstring &s) {
 		showHelp();
 	}
 	else if (cmd.commandName == L"run" || cmd.commandName == L"-exec-run") {
+		if (cmd.hasParam(std::wstring(L"--start")))
+			params.stopOnEntry = true;
 		run(cmd.requestId);
 	}
 	else if (cmd.commandName == L"continue" || cmd.commandName == L"-exec-continue") {
@@ -168,19 +171,19 @@ void Debugger::onInputLine(std::wstring &s) {
 		causeBreak(cmd.requestId);
 	}
 	else if (cmd.commandName == L"finish" || cmd.commandName == L"-exec-finish") {
-		step(STEP_OUT, STEP_LINE, 0, cmd.requestId);
+		step(STEP_OUT, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
 	}
 	else if (cmd.commandName == L"next" || cmd.commandName == L"-exec-next") {
-		step(STEP_OVER, STEP_LINE, 0, cmd.requestId);
+		step(STEP_OVER, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
 	}
 	else if (cmd.commandName == L"nexti" || cmd.commandName == L"-exec-next-instruction") {
-		step(STEP_OVER, STEP_INSTRUCTION, 0, cmd.requestId);
+		step(STEP_OVER, STEP_INSTRUCTION, cmd.getThreadIdParam(), cmd.requestId);
 	}
 	else if (cmd.commandName == L"step" || cmd.commandName == L"-exec-step") {
-		step(STEP_INTO, STEP_LINE, 0, cmd.requestId);
+		step(STEP_INTO, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
 	}
 	else if (cmd.commandName == L"stepi" || cmd.commandName == L"-exec-step-instruction") {
-		step(STEP_INTO, STEP_INSTRUCTION, 0, cmd.requestId);
+		step(STEP_INTO, STEP_INSTRUCTION, cmd.getThreadIdParam(), cmd.requestId);
 	}
 	else if (cmd.commandName == L"break" || cmd.commandName == L"-break-insert") {
 		handleBreakpointInsertCommand(cmd);
@@ -312,13 +315,14 @@ void Debugger::onCtrlBreak() {
 }
 
 // load executable
-bool Debugger::load() {
+bool Debugger::load(uint64_t requestId, bool synchronous) {
 	if (!params.hasExecutableSpecified()) {
-		writeErrorMessage(UNSPECIFIED_REQUEST_ID, std::wstring(L"Executable file not specified. Use file or exec-file"));
+		writeErrorMessage(requestId, std::wstring(L"Executable file not specified. Use file or exec-file"));
+		return false;
 	}
 	writeDebuggerMessage(std::wstring(L"Starting program: ") + params.exename);
 	if (!fileExists(params.exename)) {
-		writeErrorMessage(UNSPECIFIED_REQUEST_ID, std::wstring(L"Executable file not found: ") + params.exename);
+		writeErrorMessage(requestId, std::wstring(L"Executable file not found: ") + params.exename);
 		return false;
 	}
 	HRESULT hr = _engine->Launch(
@@ -327,11 +331,22 @@ bool Debugger::load() {
 		params.dir.c_str() //LPCOLESTR             pszDir,
 		);
 	if (FAILED(hr)) {
-		writeErrorMessage(UNSPECIFIED_REQUEST_ID, std::wstring(L"Failed to start debugging of ") + params.exename);
+		writeErrorMessage(requestId, std::wstring(L"Failed to start debugging of ") + params.exename);
 		return false;
 	}
 	else {
 		_loadCalled = true;
+		if (synchronous) {
+			CRLog::info("Waiting for load completion");
+			for (;;) {
+				Sleep(10);
+				if (_loaded || _stopped)
+					break;
+			}
+			if (_loaded) {
+				writeDebuggerMessage(std::wstring(L"Loaded."));
+			}
+		}
 	}
 	return true;
 }
@@ -343,13 +358,16 @@ int Debugger::enterCommandLoop() {
 	}
 
 	while (!_cmdinput.isClosed() && !_quitRequested) {
+		if (_entryPointContinuePending) {
+			_entryPointContinuePending = false;
+			resume();
+		}
 		_cmdinput.poll();
 	}
 	CRLog::info("Debugger shutdown");
 	CRLog::info("Exiting");
 	return 0;
 }
-
 
 // start execution
 bool Debugger::run(uint64_t requestId) {
@@ -365,17 +383,23 @@ bool Debugger::run(uint64_t requestId) {
 		writeErrorMessage(requestId, std::wstring(L"Process is finished"));
 		return false;
 	}
-	if (FAILED(_engine->ResumeProcess())) {
-		writeErrorMessage(requestId, std::wstring(L"Failed to start process"));
-		_stopped = true;
-		return false;
-	}
+	//if (FAILED(_engine->ResumeProcess())) {
+	//	writeErrorMessage(requestId, std::wstring(L"Failed to start process"));
+	//	_stopped = true;
+	//	return false;
+	//}
+	_started = true;
+	resume(requestId);
 	writeResultMessage(requestId, L"running", NULL);
 	return true;
 }
 
 // resume paused execution (continue)
-bool Debugger::resume(uint64_t requestId) {
+bool Debugger::resume(uint64_t requestId, DWORD threadId) {
+	if (!_loaded) {
+		writeErrorMessage(requestId, std::wstring(L"Process is not loaded"));
+		return false;
+	}
 	if (!_started) {
 		writeErrorMessage(requestId, std::wstring(L"Process is not started"));
 		return false;
@@ -392,11 +416,12 @@ bool Debugger::resume(uint64_t requestId) {
 		writeErrorMessage(requestId, std::wstring(L"Process is not started"));
 		return false;
 	}
-	if (FAILED(_pProgram->Continue(NULL))) {
+	IDebugThread2 * pThread = findThreadById(threadId);
+	if (FAILED(_pProgram->Continue(pThread))) {
 		writeErrorMessage(requestId, std::wstring(L"Failed to continue process"));
 		return false;
 	}
-	writeResultMessage(requestId, L"running", NULL);
+	//writeResultMessage(requestId, L"running", NULL);
 	_paused = false;
 	return true;
 }
@@ -657,7 +682,6 @@ HRESULT Debugger::OnDebugLoadComplete(IDebugEngine2 *pEngine,
 {
 	UNUSED_EVENT_PARAMS;
 	_loaded = true;
-	_started = true;
 	paused(pThread, PAUSED_BY_LOAD_COMPLETED);
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Load complete"));
@@ -674,11 +698,18 @@ HRESULT Debugger::OnDebugEntryPoint(IDebugEngine2 *pEngine,
 	UNUSED_EVENT_PARAMS;
 	_pThread = pThread;
 	_loaded = true;
-	paused(pThread, PAUSED_BY_ENTRY_POINT_REACHED);
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Entry point"));
 	else
 		CRLog::info("Entry point");
+	if (params.stopOnEntry) {
+		paused(pThread, PAUSED_BY_ENTRY_POINT_REACHED);
+	}
+	else {
+		_paused = true;
+		_entryPointContinuePending = true;
+		//resume();
+	}
 	return S_OK;
 }
 
