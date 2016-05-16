@@ -211,10 +211,20 @@ void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
 		}
 		_breakpointList.addItem(bp);
 		if (!bp->bind()) {
-			writeErrorMessage(cmd.requestId, std::wstring(L"Failed to bind breakpoint"));
-			return;
+			if (!bp->pending) {
+				writeErrorMessage(cmd.requestId, std::wstring(L"Failed to bind breakpoint"));
+				return;
+			}
 		}
-		writeDebuggerMessage(std::wstring(L"added pending breakpoint"));
+		if (!bp->bound && !bp->pending) {
+			writeErrorMessage(cmd.requestId, std::wstring(L"Failed to bind breakpoint"));
+		}
+		bp->assignId();
+		WstringBuffer buf;
+		buf.append(L"^done,bkpt=");
+		bp->printBreakpointInfo(buf);
+		writeStdout(buf.wstr());
+		//writeDebuggerMessage(std::wstring(L"added pending breakpoint"));
 	}
 }
 
@@ -434,7 +444,9 @@ bool Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & f
 				pCodeContext->GetInfo(CIF_ALLFIELDS, &contextInfo);
 			if (contextInfo.bstrAddress)
 				frameInfo.address = contextInfo.bstrAddress;
-			if (contextInfo.bstrFunction)
+			if (contextInfo.bstrFunction && contextInfo.bstrAddressOffset)
+				frameInfo.functionName = std::wstring(contextInfo.bstrFunction) + std::wstring(contextInfo.bstrAddressOffset);
+			else if (contextInfo.bstrFunction)
 				frameInfo.functionName = contextInfo.bstrFunction;
 			if (contextInfo.bstrModuleUrl)
 				frameInfo.moduleName = contextInfo.bstrModuleUrl;
@@ -779,12 +791,52 @@ HRESULT Debugger::OnDebugBreakpointBound(IDebugEngine2 *pEngine,
 	if (context) {
 		IDebugDocumentContext2 * pSrcCtxt = NULL;
 		if (SUCCEEDED(context->GetDocumentContext(&pSrcCtxt))) {
+			IDebugDocument2 * pDoc = NULL;
+			if (SUCCEEDED(pSrcCtxt->GetDocument(&pDoc))) {
+				BSTR fname = NULL;
+				BSTR fullfname = NULL;
+				pDoc->GetName(GN_FILENAME, &fullfname);
+				pDoc->GetName(GN_BASENAME, &fname);
+				if (fullfname) SysFreeString(fullfname);
+				if (fname) SysFreeString(fname);
+				pDoc->Release();
+			}
 			TEXT_POSITION beginPos, endPos;
 			if (SUCCEEDED(pSrcCtxt->GetSourceRange(&beginPos, &endPos))) {
 				bp->boundLine = beginPos.dwLine;
 				CRLog::debug("Breakpoint bound to line %d", beginPos.dwLine);
 			}
+			BSTR debugCodeContextName = NULL;
+			context->GetName(&debugCodeContextName);
+			if (debugCodeContextName) {
+				SysFreeString(debugCodeContextName);
+			}
+			BSTR pSrcName = NULL;
+			context->GetName(&pSrcName);
+			if (pSrcName) {
+				SysFreeString(pSrcName);
+			}
+			pSrcCtxt->Release();
 		}
+		CONTEXT_INFO info;
+		memset(&info, 0, sizeof(info));
+		if (SUCCEEDED(context->GetInfo(CIF_ALLFIELDS, &info))) {
+			int fnLine = info.posFunctionOffset.dwLine;
+			if (info.bstrFunction && info.bstrAddressOffset)
+				bp->functionName = std::wstring(info.bstrFunction) + std::wstring(info.bstrAddressOffset);
+			else if (info.bstrFunction)
+				bp->functionName = info.bstrFunction;
+			if (info.bstrAddress)
+				bp->address = info.bstrAddress;
+			if (info.bstrModuleUrl)
+				bp->moduleName = info.bstrModuleUrl;
+			if (info.bstrModuleUrl) SysFreeString(info.bstrModuleUrl);
+			if (info.bstrAddress) SysFreeString(info.bstrAddress);
+			if (info.bstrAddressAbsolute) SysFreeString(info.bstrAddressAbsolute);
+			if (info.bstrAddressOffset) SysFreeString(info.bstrAddressOffset);
+			if (info.bstrFunction) SysFreeString(info.bstrFunction);
+		}
+		context->Release();
 	}
 	pBPResolution->Release();
 	return S_OK;
@@ -812,6 +864,7 @@ HRESULT Debugger::OnDebugBreakpointError(IDebugEngine2 *pEngine,
 	}
 	BreakpointInfoRef bp = _breakpointList.findByPendingBreakpoint(pPendingBP);
 	pPendingBP->Release();
+	bp->error = true;
 	if (!bp.Get()) {
 		// unknown breakpoint
 		CRLog::error("Unknown breakpoint request in OnDebugBreakpointBound");
@@ -819,7 +872,23 @@ HRESULT Debugger::OnDebugBreakpointError(IDebugEngine2 *pEngine,
 		return E_FAIL;
 	}
 	//
-
+	IDebugErrorBreakpointResolution2 * pResolution = NULL;
+	if (FAILED(pErrorBp->GetBreakpointResolution(&pResolution))) {
+		pErrorBp->Release();
+		return E_FAIL;
+	}
+	pErrorBp->Release();
+	BP_ERROR_RESOLUTION_INFO info;
+	memset(&info, 0, sizeof(info));
+	if (SUCCEEDED(pResolution->GetResolutionInfo(BPERESI_TYPE | BPERESI_MESSAGE, &info))) {
+		std::wstring msg = info.bstrMessage;
+		SysFreeString(info.bstrMessage);
+		bp->errorMessage = msg;
+		writeErrorMessage(bp->requestId, msg);
+		writeDebuggerMessage(std::wstring(L"Breakpoint binding error: ") + msg);
+	}
+	pResolution->Release();
+	_breakpointList.removeItem(bp);
 	return S_OK;
 }
 

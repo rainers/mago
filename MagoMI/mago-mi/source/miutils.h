@@ -229,6 +229,8 @@ struct MICommand {
 	uint64_t requestId;
 	/// true if command is prefixed with single -
 	bool miCommand;
+	/// original command text
+	std::wstring commandText;
 	/// command name string
 	std::wstring commandName;
 	/// tail after command till end of line
@@ -260,17 +262,21 @@ private:
 public:
 	uint64_t id;
 	uint64_t requestId;
+	std::wstring insertCommandText;
 	std::wstring address;
 	std::wstring functionName;
 	std::wstring fileName;
 	std::wstring labelName;
+	std::wstring moduleName;
 	int line;
 	int boundLine;
+	int times;
 	bool enabled;
 	bool pending;
 	bool temporary;
 	bool bound;
 	bool error;
+	std::wstring errorMessage;
 	BreakpointInfo();
 	~BreakpointInfo();
 
@@ -281,6 +287,8 @@ public:
 	bool validateParameters();
 	// debug dump
 	std::wstring dumpParams();
+	/// print mi2 breakpoint info
+	void printBreakpointInfo(WstringBuffer & buf);
 	/// request binding, return true if request is sent ok
 	bool bind();
 
@@ -317,6 +325,8 @@ std::wstring unquoteString(std::wstring s);
 std::wstring relativeToAbsolutePath(std::wstring s);
 bool isAbsolutePath(std::wstring s);
 std::wstring getCurrentDirectory();
+/// get base name for file name, e.g. for "/dir/subdir/file.ext" return "file.ext"
+std::wstring getBaseName(std::wstring fname);
 
 void testEngine();
 

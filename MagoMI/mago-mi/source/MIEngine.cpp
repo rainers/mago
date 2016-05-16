@@ -660,5 +660,6 @@ HRESULT MIEngine::CreatePendingBreakpoint(BreakpointInfoRef & bp) {
 	}
 	if (bp->enabled)
 		pPendingBP->Enable(TRUE);
+	bp->setPending(pPendingBP);
 	return S_OK;
 }

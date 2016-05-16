@@ -345,6 +345,7 @@ bool MICommand::parse(std::wstring s) {
 	params.clear();
 	namedParams.clear();
 	unnamedValues.clear();
+	commandText = s;
 	parseUlong(s, requestId);
 	if (!parseIdentifier(s, commandName))
 		return false;
@@ -407,6 +408,39 @@ std::wstring BreakpointInfo::dumpParams() {
 	return buf.wstr();
 }
 
+/// get base name for file name, e.g. for "/dir/subdir/file.ext" return "file.ext"
+std::wstring getBaseName(std::wstring fname) {
+	if (fname.empty())
+		return fname;
+	int i = ((int)fname.length()) - 1;
+	for (; i >= 0; i--) {
+		if (fname[i] == '/' || fname[i] == '\\')
+			return fname.substr(i + 1, fname.length() - i - 1);
+	}
+	return fname;
+}
+
+/// print mi2 breakpoint info
+void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
+	buf.append(L"{");
+	buf.appendUlongParamAsString(L"number", id);
+	buf.appendStringParam(L"type", std::wstring(L"breakpoint"));
+	buf.appendStringParamIfNonEmpty(L"addr", address);
+	buf.appendStringParam(L"disp", temporary ? std::wstring(L"del") : std::wstring(L"keep"));
+	buf.appendStringParam(L"disp", enabled ? std::wstring(L"y") : std::wstring(L"n"));
+	buf.appendStringParamIfNonEmpty(L"filename", getBaseName(fileName));
+	buf.appendStringParamIfNonEmpty(L"fullname", fileName);
+	if (boundLine || line)
+		buf.appendUlongParamAsString(L"line", boundLine ? boundLine : line);
+	buf.appendStringParamIfNonEmpty(L"func", functionName);
+	if (pending)
+		buf.appendStringParam(L"pending", insertCommandText);
+	if (times)
+		buf.appendUlongParamAsString(L"times", times);
+	//buf.appendStringParam(L"thread-groups", std::wstring(L"breakpoint"));
+	buf.append(L"}");
+}
+
 BreakpointInfoRef BreakpointInfoList::findByPendingBreakpoint(IDebugPendingBreakpoint2 * bp) {
 	for (size_t i = 0; i < size(); i++)
 		if (at(i)->getPendingBreakpoint() == bp)
@@ -439,6 +473,7 @@ BreakpointInfo::BreakpointInfo()
 	, requestId(0)
 	, line(0)
 	, boundLine(0)
+	, times(0)
 	, enabled(true)
 	, pending(false)
 	, temporary(false)
@@ -532,6 +567,7 @@ BreakpointInfo & BreakpointInfo::operator = (const BreakpointInfo & v) {
 }
 
 bool BreakpointInfo::fromCommand(MICommand & cmd) {
+	insertCommandText = cmd.commandText;
 	// try named params
 	for (size_t i = 0; i < cmd.namedParams.size(); i++) {
 		std::wstring name = cmd.namedParams[i].first;
