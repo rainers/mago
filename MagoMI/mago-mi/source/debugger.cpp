@@ -218,6 +218,9 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if ((cmd.commandName == L"info" && cmd.tail == L"threads") || cmd.commandName == L"-thread-list-ids") {
 		handleThreadInfoCommand(cmd, true);
 	}
+	else if (cmd.commandName == L"backtrace" || cmd.commandName == L"bt" || cmd.commandName == L"-stack-list-frames") {
+		handleStackListFramesCommand(cmd);
+	}
 	else
 	{
 		if (cmd.miCommand)
@@ -225,6 +228,45 @@ void Debugger::onInputLine(std::wstring &s) {
 		else
 			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s, L"undefined-command");
 	}
+}
+
+#define MAX_FRAMES 100
+// called to handle -stack-list-frames command
+void Debugger::handleStackListFramesCommand(MICommand & cmd) {
+	if (!_paused || _stopped) {
+		writeErrorMessage(cmd.requestId, L"Cannot get frames info for running or terminated process");
+		return;
+	}
+	DWORD tid = (DWORD)cmd.getUlongParam(L"--thread");
+	IDebugThread2 * pThread = findThreadById(tid);
+	StackFrameInfo frameInfos[MAX_FRAMES];
+	unsigned minIndex = 0;
+	unsigned maxIndex = MAX_FRAMES - 1;
+	if (cmd.unnamedValues.size() >= 2) {
+		uint64_t n1 = 0;
+		uint64_t n2 = 0;
+		if (toUlong(cmd.unnamedValues[0], n1) && toUlong(cmd.unnamedValues[0], n2)) {
+			minIndex = (int)n1;
+			maxIndex = (int)n2;
+			if (maxIndex >= minIndex + MAX_FRAMES)
+				maxIndex = minIndex + MAX_FRAMES - 1;
+		}
+	}
+	unsigned frameCount = getThreadFrameContext(pThread, frameInfos, minIndex, maxIndex);
+	if (!frameCount) {
+		writeErrorMessage(cmd.requestId, L"Cannot get frames info");
+		return;
+	}
+	WstringBuffer buf;
+	buf.append(L"^done,stack=[");
+	for (unsigned i = 0; i < frameCount; i++) {
+		if (i > 0)
+			buf.append(L",");
+		buf.append(L"frame=");
+		frameInfos[i].dumpMIFrame(buf, true);
+	}
+	buf.append(L"]");
+	writeStdout(buf.wstr());
 }
 
 // called to handle -thread-info command
@@ -260,7 +302,7 @@ void Debugger::handleThreadInfoCommand(MICommand & cmd, bool idsOnly) {
 					//firstThread = false;
 				} else if (id == threadId || threadId == 0) {
 					StackFrameInfo frameInfo;
-					if (getThreadFrameContext(thread, frameInfo)) {
+					if (getThreadFrameContext(thread, &frameInfo)) {
 						// append thread information
 						if (!firstThread)
 							buf.append(L",");
@@ -623,7 +665,7 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 	_paused = true;
 	_pThread = pThread;
 	StackFrameInfo frameInfo;
-	bool hasContext = getThreadFrameContext(pThread, frameInfo);
+	bool hasContext = getThreadFrameContext(pThread, &frameInfo) == 1;
 	WstringBuffer buf;
 	buf.appendUlongIfNonEmpty(requestId);
 	buf.append(L"*stopped");
@@ -660,8 +702,12 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 }
 
 // gets thread frame contexts
-bool Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & frameInfo) {
+unsigned Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo * frameInfo, unsigned minFrame, unsigned maxFrame) {
 	if (!_paused || _stopped || !pThread) {
+		return false;
+	}
+	if (maxFrame < minFrame) {
+		CRLog::error("getThreadFrameContext -- invalid frame range");
 		return false;
 	}
 	IEnumDebugFrameInfo2* pFrames = NULL;
@@ -669,6 +715,7 @@ bool Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & f
 		CRLog::error("cannot get thread frame enum");
 		return false;
 	}
+	unsigned outIndex = 0;
 	ULONG count = 0;
 	pFrames->GetCount(&count);
 	for (ULONG i = 0; i < count; i++) {
@@ -676,6 +723,10 @@ bool Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & f
 		memset(&frame, 0, sizeof(FRAMEINFO));
 		ULONG fetched = 0;
 		if (FAILED(pFrames->Next(1, &frame, &fetched)) || fetched != 1)
+			break;
+		if (i < minFrame)
+			continue;
+		if (i > maxFrame)
 			break;
 		if (frame.m_pFrame) {
 			IDebugCodeContext2 * pCodeContext = NULL;
@@ -685,18 +736,19 @@ bool Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & f
 			frame.m_pFrame->GetDocumentContext(&pDocumentContext);
 			CONTEXT_INFO contextInfo;
 			memset(&contextInfo, 0, sizeof(CONTEXT_INFO));
+			frameInfo[outIndex].frameIndex = i;
 			if (pCodeContext)
 				pCodeContext->GetInfo(CIF_ALLFIELDS, &contextInfo);
 			if (contextInfo.bstrAddress)
-				frameInfo.address = contextInfo.bstrAddress;
+				frameInfo[outIndex].address = contextInfo.bstrAddress;
 			if (contextInfo.bstrFunction && contextInfo.bstrAddressOffset)
-				frameInfo.functionName = std::wstring(contextInfo.bstrFunction) + std::wstring(contextInfo.bstrAddressOffset);
+				frameInfo[outIndex].functionName = std::wstring(contextInfo.bstrFunction) + std::wstring(contextInfo.bstrAddressOffset);
 			else if (contextInfo.bstrFunction)
-				frameInfo.functionName = contextInfo.bstrFunction;
+				frameInfo[outIndex].functionName = contextInfo.bstrFunction;
 			if (contextInfo.bstrModuleUrl)
-				frameInfo.moduleName = contextInfo.bstrModuleUrl;
-			frameInfo.sourceLine = contextInfo.posFunctionOffset.dwLine;
-			frameInfo.sourceColumn = contextInfo.posFunctionOffset.dwColumn;
+				frameInfo[outIndex].moduleName = contextInfo.bstrModuleUrl;
+			frameInfo[outIndex].sourceLine = contextInfo.posFunctionOffset.dwLine;
+			frameInfo[outIndex].sourceColumn = contextInfo.posFunctionOffset.dwColumn;
 			TEXT_POSITION srcBegin, srcEnd;
 			memset(&srcBegin, 0, sizeof(srcBegin));
 			memset(&srcEnd, 0, sizeof(srcEnd));
@@ -709,18 +761,18 @@ bool Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & f
 				BSTR pBaseName = NULL;
 				pDocumentContext->GetName(GN_FILENAME, &pFileName);
 				pDocumentContext->GetName(GN_BASENAME, &pBaseName);
-				if (pFileName) { frameInfo.sourceFileName = pFileName; SysFreeString(pFileName); }
-				if (pBaseName) { frameInfo.sourceBaseName = pBaseName; SysFreeString(pBaseName); }
+				if (pFileName) { frameInfo[outIndex].sourceFileName = pFileName; SysFreeString(pFileName); }
+				if (pBaseName) { frameInfo[outIndex].sourceBaseName = pBaseName; SysFreeString(pBaseName); }
 			}
 			if (pDocumentContext)
 				pDocumentContext->Release();
 			if (pCodeContext)
 				pCodeContext->Release();
+			outIndex++;
 		}
-		break;
 	}
 	pFrames->Release();
-	return true;
+	return outIndex;
 }
 
 // step paused program

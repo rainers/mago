@@ -254,7 +254,9 @@ struct MICommand {
 	// find parameter by name
 	std::wstring findParam(std::wstring name);
 	// get parameter --thread-id
-	unsigned getThreadIdParam();
+	uint64_t getUlongParam(std::wstring name, uint64_t defValue = 0);
+	// get parameter --thread-id
+	unsigned getThreadIdParam() { return (unsigned)getUlongParam(L"--thread-id"); }
 
 	MICommand();
 	~MICommand();
@@ -362,7 +364,7 @@ struct StackFrameInfo {
 	{
 
 	}
-	void dumpMIFrame(WstringBuffer & buf);
+	void dumpMIFrame(WstringBuffer & buf, bool showLevel = false);
 };
 
 typedef std::vector<StackFrameInfo> StackFrameInfoVector;

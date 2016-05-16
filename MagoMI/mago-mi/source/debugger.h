@@ -52,7 +52,9 @@ public:
 
 	// CmdInputCallback interface handlers
 
-	// called to handle -thread-info command
+	// called to handle -stack-list-frames command
+	virtual void handleStackListFramesCommand(MICommand & cmd);
+	// called to handle -thread-info and -thread-list-ids commands
 	virtual void handleThreadInfoCommand(MICommand & cmd, bool idsOnly);
 	// called to handle breakpoint list command
 	virtual void handleBreakpointListCommand(MICommand & cmd);
@@ -84,8 +86,8 @@ public:
 	virtual bool stepInternal(STEPKIND stepKind, STEPUNIT stepUnit, IDebugThread2 * pThread, uint64_t requestId = UNSPECIFIED_REQUEST_ID);
 	// find current program's thread by id
 	IDebugThread2 * findThreadById(DWORD threadId);
-	// gets thread frame contexts
-	bool getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo & frameInfo);
+	// gets thread frame contexts, return count of frames read
+	unsigned getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo * frameInfo, unsigned minFrame = 0, unsigned maxFrame = 0);
 	enum PauseReason {
 		PAUSED_BY_LOAD_COMPLETED,
 		PAUSED_BY_ENTRY_POINT_REACHED,

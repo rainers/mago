@@ -125,8 +125,11 @@ MICommand::~MICommand() {
 	
 }
 
-void StackFrameInfo::dumpMIFrame(WstringBuffer & buf) {
+void StackFrameInfo::dumpMIFrame(WstringBuffer & buf, bool showLevel) {
 	buf.append('{');
+	if (showLevel) {
+		buf.appendUlongParamAsString(L"level", frameIndex);
+	}
 	if (!functionName.empty()) {
 		buf.appendStringParamIfNonEmpty(L"func", functionName, '{');
 		buf.appendStringParamIfNonEmpty(L"args", std::wstring(L"[]"), '{'); // TODO
@@ -369,14 +372,14 @@ std::wstring MICommand::findParam(std::wstring name) {
 }
 
 // get parameter --thread-id
-unsigned MICommand::getThreadIdParam() {
-	std::wstring v = findParam(L"--thread-id");
+uint64_t MICommand::getUlongParam(std::wstring name, uint64_t defValue) {
+	std::wstring v = findParam(name);
 	if (v.empty())
-		return 0;
+		return defValue;
 	uint64_t tid = 0;
 	if (!toUlong(v, tid))
-		return 0;
-	return (unsigned)tid;
+		return defValue;
+	return tid;
 }
 
 bool MICommand::parse(std::wstring s) {
