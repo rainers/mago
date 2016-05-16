@@ -461,7 +461,7 @@ void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
 	buf.appendStringParam(L"type", std::wstring(L"breakpoint"));
 	buf.appendStringParamIfNonEmpty(L"addr", address);
 	buf.appendStringParam(L"disp", temporary ? std::wstring(L"del") : std::wstring(L"keep"));
-	buf.appendStringParam(L"disp", enabled ? std::wstring(L"y") : std::wstring(L"n"));
+	buf.appendStringParam(L"enabled", enabled ? std::wstring(L"y") : std::wstring(L"n"));
 	buf.appendStringParamIfNonEmpty(L"filename", getBaseName(fileName));
 	buf.appendStringParamIfNonEmpty(L"fullname", fileName);
 	if (boundLine || line)

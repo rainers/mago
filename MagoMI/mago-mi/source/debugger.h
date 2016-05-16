@@ -58,6 +58,8 @@ public:
 	virtual void handleBreakpointDeleteCommand(MICommand & cmd);
 	// called to handle breakpoint insert command
 	virtual void handleBreakpointInsertCommand(MICommand & cmd);
+	// called to handle breakpoint enable/disable commands
+	virtual void handleBreakpointEnableCommand(MICommand & cmd, bool enable);
 	/// called on new input line
 	virtual void onInputLine(std::wstring &s);
 	/// called when ctrl+c or ctrl+break is called

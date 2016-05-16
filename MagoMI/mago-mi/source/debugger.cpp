@@ -191,6 +191,12 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"delete" || cmd.commandName == L"-break-delete") {
 		handleBreakpointDeleteCommand(cmd);
 	}
+	else if (cmd.commandName == L"enable" || cmd.commandName == L"-break-enable") {
+		handleBreakpointEnableCommand(cmd, true);
+	}
+	else if (cmd.commandName == L"disable" || cmd.commandName == L"-break-disable") {
+		handleBreakpointEnableCommand(cmd, false);
+	}
 	else if ((cmd.commandName == L"info" && cmd.tail == L"break") || cmd.commandName == L"-break-list") {
 		handleBreakpointListCommand(cmd);
 	}
@@ -226,6 +232,53 @@ void Debugger::handleBreakpointListCommand(MICommand & cmd) {
 	}
 	buf.append(L"]}");
 	writeStdout(buf.wstr());
+}
+
+// called to handle breakpoint enable/disable commands
+void Debugger::handleBreakpointEnableCommand(MICommand & cmd, bool enable) {
+	// check all ids
+	bool foundValidIds = false;
+	bool foundErrors = false;
+	for (unsigned i = 0; i < cmd.unnamedValues.size(); i++) {
+		uint64_t id;
+		BreakpointInfoRef bp;
+		if (toUlong(cmd.unnamedValues[i], id)) {
+			bp = _breakpointList.findById(id);
+			if (bp.Get()) {
+				// OK
+				foundValidIds = true;
+			}
+			else {
+				writeErrorMessage(cmd.requestId, std::wstring(L"Breakpoint not found: ") + cmd.unnamedValues[i]);
+				foundErrors = true;
+			}
+		}
+		else {
+			writeErrorMessage(cmd.requestId, std::wstring(L"Invalid breakpoint number: ") + cmd.unnamedValues[i]);
+			foundErrors = true;
+		}
+	}
+	if (foundErrors)
+		return;
+	if (!foundValidIds) {
+		writeErrorMessage(cmd.requestId, std::wstring(enable ? L"No breakpoints to enable" : L"No breakpoints to disable"));
+		return;
+	}
+
+	for (unsigned i = 0; i < cmd.unnamedValues.size(); i++) {
+		uint64_t id;
+		BreakpointInfoRef bp;
+		if (toUlong(cmd.unnamedValues[i], id)) {
+			bp = _breakpointList.findById(id);
+			if (bp.Get() && bp->getBoundBreakpoint()) {
+				if (FAILED(bp->getBoundBreakpoint()->Enable(enable ? TRUE : FALSE))) {
+					CRLog::error("Failed to enable/disable breakpoint");
+				}
+				bp->enabled = enable;
+			}
+		}
+	}
+	writeResultMessage(cmd.requestId, L"done");
 }
 
 // called to handle breakpoint delete command
