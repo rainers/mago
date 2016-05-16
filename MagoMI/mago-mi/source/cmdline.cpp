@@ -139,11 +139,16 @@ void defParamHandler(CmdLineParamDef * param, const wchar_t * value) {
 
 static void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
 	UNREFERENCED_PARAMETER(param);
-	if (wcscmp(value, L"mi2")) {
-		fprintf(stderr, "Only mi2 interpreter is supported");
-		exit(2);
+	if (!wcscmp(value, L"mi2") || !wcscmp(value, L"mi") || !wcscmp(value, L"mi1")) {
+		params.miMode = true;
+		return;
 	}
-	params.miMode = true;
+	if (!wcscmp(value, L"console")) {
+		params.miMode = false;
+		return;
+	}
+	fprintf(stderr, "Unknown interpreter is specified");
+	exit(-3);
 }
 
 static bool argsFound = false;
