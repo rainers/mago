@@ -43,7 +43,7 @@ public:
 	// MI interface stdout output: ~"msg_text"
 	virtual void writeDebuggerMessage(std::wstring msg);
 	// MI interface stdout output: [##requestId##]^result[,"msg"]
-	virtual void writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg);
+	virtual void writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg = std::wstring());
 	// MI interface stdout output: [##requestId##]^result[,"msg"]
 	virtual void writeResultMessage(ulong requestId, const wchar_t * status, const wchar_t * msg) { writeResultMessage(requestId, status, std::wstring(msg ? msg : L"")); }
 	// MI interface stdout output: [##requestId##]^error[,"msg"]
@@ -51,7 +51,11 @@ public:
 
 	// CmdInputCallback interface handlers
 
-	// called to handle breakpoint command
+	// called to handle breakpoint list command
+	virtual void handleBreakpointListCommand(MICommand & cmd);
+	// called to handle breakpoint delete command
+	virtual void handleBreakpointDeleteCommand(MICommand & cmd);
+	// called to handle breakpoint insert command
 	virtual void handleBreakpointInsertCommand(MICommand & cmd);
 	/// called on new input line
 	virtual void onInputLine(std::wstring &s);

@@ -142,6 +142,13 @@ void StackFrameInfo::dumpMIFrame(WstringBuffer & buf) {
 	buf.append('}');
 }
 
+/// parse whole string as ulong, return false if failed
+bool toUlong(std::wstring s, uint64_t &value) {
+	if (!parseUlong(s, value))
+		return false;
+	return s.empty();
+}
+
 /// trying to parse beginning of string as unsigned long; if found sequence of digits, trims beginning digits from s, puts parsed number into n, and returns true.
 bool parseUlong(std::wstring & s, uint64_t &value) {
 	if (s.empty())

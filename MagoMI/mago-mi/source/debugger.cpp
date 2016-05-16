@@ -183,8 +183,13 @@ void Debugger::onInputLine(std::wstring &s) {
 		step(STEP_INTO, STEP_INSTRUCTION, 0, cmd.requestId);
 	}
 	else if (cmd.commandName == L"break" || cmd.commandName == L"-break-insert") {
-		//step(STEP_INTO, STEP_INSTRUCTION, 0, cmd.requestId);
 		handleBreakpointInsertCommand(cmd);
+	}
+	else if (cmd.commandName == L"delete" || cmd.commandName == L"-break-delete") {
+		handleBreakpointDeleteCommand(cmd);
+	}
+	else if ((cmd.commandName == L"info" && cmd.tail == L"break") || cmd.commandName == L"-break-list") {
+		handleBreakpointListCommand(cmd);
 	}
 	else
 	{
@@ -195,14 +200,86 @@ void Debugger::onInputLine(std::wstring &s) {
 	}
 }
 
+// called to handle breakpoint list command
+void Debugger::handleBreakpointListCommand(MICommand & cmd) {
+	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(cmd.requestId);
+	buf.append(L"^done,");
+	buf.append(L"BreakpointTable={");
+	buf.appendUlongParamAsString(L"nr_rows", _breakpointList.size());
+	buf.appendUlongParamAsString(L"nr_cols", 6);
+	buf.append(L",");
+	buf.append(L"hdr = [{width = \"3\", alignment = \"-1\", col_name = \"number\", colhdr = \"Num\"},");
+	buf.append(L"{ width = \"14\",alignment = \"-1\",col_name = \"type\",colhdr = \"Type\" },");
+	buf.append(L"{ width = \"4\",alignment = \"-1\",col_name = \"disp\",colhdr = \"Disp\" },");
+	buf.append(L"{ width = \"3\",alignment = \"-1\",col_name = \"enabled\",colhdr = \"Enb\" },");
+	buf.append(L"{ width = \"10\",alignment = \"-1\",col_name = \"addr\",colhdr = \"Address\" },");
+	buf.append(L"{ width = \"40\",alignment = \"2\",col_name = \"what\",colhdr = \"What\" }],");
+	buf.append(L",body=[");
+	for (unsigned i = 0; i < _breakpointList.size(); i++) {
+		if (i > 0)
+			buf.append(L",");
+		_breakpointList[i]->printBreakpointInfo(buf);
+	}
+	buf.append(L"]}");
+	writeStdout(buf.wstr());
+}
+
+// called to handle breakpoint delete command
+void Debugger::handleBreakpointDeleteCommand(MICommand & cmd) {
+	// check all ids
+	bool foundValidIds = false;
+	bool foundErrors = false;
+	for (unsigned i = 0; i < cmd.unnamedValues.size(); i++) {
+		uint64_t id;
+		BreakpointInfoRef bp;
+		if (toUlong(cmd.unnamedValues[i], id)) {
+			bp = _breakpointList.findById(id);
+			if (bp.Get()) {
+				// OK
+				foundValidIds = true;
+			}
+			else {
+				writeErrorMessage(cmd.requestId, std::wstring(L"Breakpoint not found: ") + cmd.unnamedValues[i]);
+				foundErrors = true;
+			}
+		}
+		else {
+			writeErrorMessage(cmd.requestId, std::wstring(L"Invalid breakpoint number: ") + cmd.unnamedValues[i]);
+			foundErrors = true;
+		}
+	}
+	if (foundErrors)
+		return;
+	if (!foundValidIds) {
+		writeErrorMessage(cmd.requestId, std::wstring(L"No breakpoints to delete"));
+		return;
+	}
+
+	for (unsigned i = 0; i < cmd.unnamedValues.size(); i++) {
+		uint64_t id;
+		BreakpointInfoRef bp;
+		if (toUlong(cmd.unnamedValues[i], id)) {
+			bp = _breakpointList.findById(id);
+			if (bp.Get()) {
+				if (FAILED(bp->getBoundBreakpoint()->Delete())) {
+					CRLog::error("Failed to delete breakpoint");
+				}
+				_breakpointList.removeItem(bp);
+			}
+		}
+	}
+	writeResultMessage(cmd.requestId, L"done");
+}
+
 // called to handle breakpoint command
 void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
 	if (_stopped)
 		return;
-	writeDebuggerMessage(cmd.dumpCommand());
+	//writeDebuggerMessage(cmd.dumpCommand());
 	BreakpointInfoRef bp = new BreakpointInfo();
 	bp->fromCommand(cmd);
-	writeDebuggerMessage(bp->dumpParams());
+	//writeDebuggerMessage(bp->dumpParams());
 	if (bp->validateParameters()) {
 		HRESULT hr = _engine->CreatePendingBreakpoint(bp);
 		if (FAILED(hr)) {
@@ -216,8 +293,8 @@ void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
 				return;
 			}
 		}
-		if (!bp->bound && !bp->pending) {
-			writeErrorMessage(cmd.requestId, std::wstring(L"Failed to bind breakpoint"));
+		if ((!bp->bound && !bp->pending) || bp->error) {
+			writeErrorMessage(cmd.requestId, bp->errorMessage.empty() ? std::wstring(L"Failed to bind breakpoint") : bp->errorMessage);
 		}
 		bp->assignId();
 		WstringBuffer buf;

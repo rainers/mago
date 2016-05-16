@@ -200,6 +200,8 @@ typedef std::vector<wstring_pair> param_vector;
 
 /// trying to parse beginning of string as unsigned long; if found sequence of digits, trims beginning digits from s, puts parsed number into n, and returns true.
 bool parseUlong(std::wstring & s, uint64_t &value);
+/// parse whole string as ulong, return false if failed
+bool toUlong(std::wstring s, uint64_t &value);
 /// parse beginning of string as identifier, allowed chars: a..z, A..Z, _, - (if successful, removes ident from s and puts it to value, and returns true)
 bool parseIdentifier(std::wstring & s, std::wstring & value);
 // trim spaces and tabs from beginning of string
