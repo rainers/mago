@@ -202,6 +202,8 @@ typedef std::vector<wstring_pair> param_vector;
 bool parseUlong(std::wstring & s, uint64_t &value);
 /// parse whole string as ulong, return false if failed
 bool toUlong(std::wstring s, uint64_t &value);
+/// convert number to string
+std::wstring toWstring(uint64_t n);
 /// parse beginning of string as identifier, allowed chars: a..z, A..Z, _, - (if successful, removes ident from s and puts it to value, and returns true)
 bool parseIdentifier(std::wstring & s, std::wstring & value);
 // trim spaces and tabs from beginning of string
@@ -277,6 +279,7 @@ public:
 	std::wstring fileName;
 	std::wstring labelName;
 	std::wstring moduleName;
+	std::wstring originalLocation;
 	int line;
 	int boundLine;
 	int times;
@@ -323,6 +326,7 @@ public:
 	~BreakpointInfoList() {}
 	BreakpointInfoRef findById(uint64_t id);
 	BreakpointInfoRef findByPendingBreakpoint(IDebugPendingBreakpoint2 * bp);
+	BreakpointInfoRef findByBoundBreakpoint(IDebugBoundBreakpoint2 * bp);
 	bool addItem(BreakpointInfoRef & bp) { push_back(bp); return true;  }
 	bool removeItem(BreakpointInfoRef & bp);
 };

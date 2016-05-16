@@ -142,6 +142,13 @@ void StackFrameInfo::dumpMIFrame(WstringBuffer & buf) {
 	buf.append('}');
 }
 
+/// convert number to string
+std::wstring toWstring(uint64_t n) {
+	WstringBuffer buf;
+	buf.appendUlongLiteral(n);
+	return buf.wstr();
+}
+
 /// parse whole string as ulong, return false if failed
 bool toUlong(std::wstring s, uint64_t &value) {
 	if (!parseUlong(s, value))
@@ -459,7 +466,7 @@ void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
 	buf.append(L"{");
 	buf.appendUlongParamAsString(L"number", id);
 	buf.appendStringParam(L"type", std::wstring(L"breakpoint"));
-	buf.appendStringParamIfNonEmpty(L"addr", address);
+	buf.appendStringParamIfNonEmpty(L"addr", (pending && address.empty()) ? std::wstring(L"<PENDING>") : address);
 	buf.appendStringParam(L"disp", temporary ? std::wstring(L"del") : std::wstring(L"keep"));
 	buf.appendStringParam(L"enabled", enabled ? std::wstring(L"y") : std::wstring(L"n"));
 	buf.appendStringParamIfNonEmpty(L"filename", getBaseName(fileName));
@@ -469,6 +476,7 @@ void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
 	buf.appendStringParamIfNonEmpty(L"func", functionName);
 	if (pending)
 		buf.appendStringParam(L"pending", insertCommandText);
+	buf.appendStringParamIfNonEmpty(L"original-location", originalLocation);
 	if (times)
 		buf.appendUlongParamAsString(L"times", times);
 	//buf.appendStringParam(L"thread-groups", std::wstring(L"breakpoint"));
@@ -478,6 +486,13 @@ void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
 BreakpointInfoRef BreakpointInfoList::findByPendingBreakpoint(IDebugPendingBreakpoint2 * bp) {
 	for (size_t i = 0; i < size(); i++)
 		if (at(i)->getPendingBreakpoint() == bp)
+			return at(i);
+	return BreakpointInfoRef();
+}
+
+BreakpointInfoRef BreakpointInfoList::findByBoundBreakpoint(IDebugBoundBreakpoint2 * bp) {
+	for (size_t i = 0; i < size(); i++)
+		if (at(i)->getBoundBreakpoint() == bp)
 			return at(i);
 	return BreakpointInfoRef();
 }
@@ -601,7 +616,7 @@ BreakpointInfo & BreakpointInfo::operator = (const BreakpointInfo & v) {
 }
 
 bool BreakpointInfo::fromCommand(MICommand & cmd) {
-	insertCommandText = cmd.commandText;
+	insertCommandText = cmd.tail; // commandText;
 	// try named params
 	for (size_t i = 0; i < cmd.namedParams.size(); i++) {
 		std::wstring name = cmd.namedParams[i].first;
@@ -662,6 +677,9 @@ bool BreakpointInfo::fromCommand(MICommand & cmd) {
 		}
 
 	}
+
+	if (!fileName.empty() && line)
+		originalLocation = fileName + L":" + toWstring(line);
 	return validateParameters();
 }
 

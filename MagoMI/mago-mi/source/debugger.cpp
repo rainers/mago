@@ -283,9 +283,14 @@ void Debugger::handleBreakpointEnableCommand(MICommand & cmd, bool enable) {
 					CRLog::error("Failed to enable/disable breakpoint");
 				}
 				bp->enabled = enable;
+				WstringBuffer buf;
+				buf.append(L"=breakpoint-modified,bkpt=");
+				bp->printBreakpointInfo(buf);
+				writeStdout(buf.wstr());
 			}
 		}
 	}
+
 	writeResultMessage(cmd.requestId, L"done");
 }
 
@@ -541,7 +546,7 @@ IDebugThread2 * Debugger::findThreadById(DWORD threadId) {
 	return res;
 }
 
-void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requestId) {
+void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requestId, BreakpointInfo * bp) {
 	_paused = true;
 	_pThread = pThread;
 	StackFrameInfo frameInfo;
@@ -565,6 +570,10 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 	if (!reasonName.empty()) {
 		buf.append(L",reason=");
 		buf.appendStringLiteral(reasonName);
+	}
+	if (reason == PAUSED_BY_BREAKPOINT && bp) {
+		buf.appendStringParam(L"disp", std::wstring(bp->temporary ? L"del" : L"keep"));
+		buf.appendUlongParamAsString(L"bkptno", bp->id);
 	}
 	if (hasContext) {
 		buf.append(L",frame=");
@@ -896,9 +905,26 @@ HRESULT Debugger::OnDebugBreakpoint(IDebugEngine2 *pEngine,
 	IDebugBreakpointEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
-	_pThread = pThread;
-	paused(pThread, PAUSED_BY_BREAKPOINT);
 	DUMP_EVENT(OnDebugBreakpoint);
+	_pThread = pThread;
+	BreakpointInfoRef bp;
+	IEnumDebugBoundBreakpoints2 * pEnum = NULL;
+	if (SUCCEEDED(pEvent->EnumBreakpoints(&pEnum))) {
+		ULONG count = 0;
+		if (SUCCEEDED(pEnum->GetCount(&count)) && count > 0) {
+			IDebugBoundBreakpoint2 * pBoundBP = NULL;
+			ULONG fetched = 0;
+			if (SUCCEEDED(pEnum->Next(1, &pBoundBP, &fetched)) && fetched == 1) {
+				bp = _breakpointList.findByBoundBreakpoint(pBoundBP);
+				pBoundBP->Release();
+			}
+		}
+		pEnum->Release();
+	}
+	if (!bp.Get()) {
+		CRLog::warn("OnDebugBreakpoint: Breakpoint not found");
+	}
+	paused(pThread, PAUSED_BY_BREAKPOINT, UNSPECIFIED_REQUEST_ID, bp.Get());
 	return S_OK;
 }
 
