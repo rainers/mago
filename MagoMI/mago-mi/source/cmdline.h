@@ -9,6 +9,8 @@ struct ExecutableInfo {
 	int argCount;
 	std::wstring  args[MAX_PARAM_COUNT];
 	std::wstring dir;
+	std::wstring logFile;
+	std::wstring logLevel;
 	bool verbose;
 	bool miMode;
 	bool silent;

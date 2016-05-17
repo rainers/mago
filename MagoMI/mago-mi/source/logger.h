@@ -38,6 +38,8 @@ public:
 	static void trace(const char * msg, ...);
 	/// sets logger instance
 	static void setLogger(CRLog * logger);
+	/// returns true if logger is set
+	static bool isLoggerSet();
 	virtual ~CRLog();
 
 	/// write log to specified file, flush after every message if autoFlush parameter is true

@@ -4,6 +4,8 @@
 #include <string.h>
 #include <windows.h>
 #include "miutils.h"
+#include "logger.h"
+#include "miutils.h"
 
 // global object
 ExecutableInfo params;
@@ -63,17 +65,16 @@ void ExecutableInfo::addArg(std::wstring param) {
 
 void ExecutableInfo::dumpParams() {
 	if (!exename.empty()) {
-		wprintf(L"Executable file: %s\n", exename.c_str());
+		CRLog::info("Executable file: %s\n", toUtf8(exename).c_str());
 		if (argCount) {
-			wprintf(L"Inferior arguments: ");
+			CRLog::info("Inferior arguments:");
 			for (int i = 0; i < argCount; i++) {
-				wprintf(L"%s ", args[i].c_str());
+				CRLog::info("[%d] %s", i, toUtf8(args[i]).c_str());
 			}
-			wprintf(L"\n");
 		}
 	}
 	if (!dir.empty())
-		wprintf(L"Directory: %s\n", dir.c_str());
+		CRLog::info("Directory: %s\n", toUtf8(dir).c_str());
 }
 
 enum CmdLineParamType {
@@ -177,6 +178,16 @@ static void handleDir(CmdLineParamDef * param, const wchar_t * value) {
 	params.setDir(value);
 }
 
+static void handleLogFile(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
+	params.logFile = value;
+}
+
+static void handleLogLevel(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
+	params.logLevel = value;
+}
+
 static void handleVerbose(CmdLineParamDef * param, const wchar_t * value) {
 	UNREFERENCED_PARAMETER(param);
 	UNREFERENCED_PARAMETER(value);
@@ -214,6 +225,8 @@ CmdLineParamDef paramDefs[] = {
 	CmdLineParamDef(NULL, "--silent", NO_PARAMS, "Don't print version info on startup", NULL, &handleSilent),
 	CmdLineParamDef("Other options"),
 	CmdLineParamDef(NULL, "--cd=DIR", STRING_PARAM, "Change current directory to DIR.", NULL, &handleDir),
+	CmdLineParamDef(NULL, "--log-file=FILE", STRING_PARAM, "Set log file for debugger internal logging.", NULL, &handleLogFile),
+	CmdLineParamDef(NULL, "--log-LEVEL=FATAL|ERROR|WARN|INFO|DEBUG|TRACE", STRING_PARAM, "Set log level for debugger internal logging.", NULL, &handleLogLevel),
 	CmdLineParamDef()
 };
 
@@ -298,4 +311,19 @@ void parseCommandLine(int argc, wchar_t *argv[]) {
 			nonParamHandler(v);
 		}
 	}
+	// handle logging
+	if (!params.logFile.empty()) {
+		CRLog::log_level level = CRLog::LL_INFO;
+		if (params.logLevel == L"FATAL")
+			level = CRLog::LL_FATAL;
+		else if (params.logLevel == L"ERROR")
+			level = CRLog::LL_ERROR;
+		else if (params.logLevel == L"DEBUG")
+			level = CRLog::LL_DEBUG;
+		else if (params.logLevel == L"TRACE")
+			level = CRLog::LL_TRACE;
+		CRLog::setFileLogger(toUtf8(params.logFile).c_str(), true);
+		CRLog::setLogLevel(level);
+	}
+	params.dumpParams();
 }

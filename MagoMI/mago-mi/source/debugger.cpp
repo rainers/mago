@@ -145,6 +145,7 @@ static const wchar_t * HELP_MSGS_MI[] = {
 	L"-thread-list-ids        - list of thread ids",
 	L"-stack-list-frames      - list thread stack frames",
 	L"-stack-list-variables   - list stack frame variables",
+	L"-gdb-exit               - quit debugger",
 	L"",
 	L"Type quit to exit.",
 	NULL
@@ -170,10 +171,13 @@ void Debugger::onInputLine(std::wstring &s) {
 		writeErrorMessage(cmd.requestId, std::wstring(L"invalid command syntax: ") + s, L"undefined-command");
 		return;
 	}
-	if (cmd.commandName == L"quit") {
+	if (cmd.commandName == L"quit" || cmd.commandName == L"-gdb-exit") {
+		CRLog::info("quit requested");
 		_quitRequested = true;
-		writeStringMessage('^', std::wstring(L"exit"));
-		Sleep(10);
+		if (params.miMode) {
+			writeStdout(L"^exit");
+			Sleep(10);
+		}
 	}
 	else if (cmd.commandName == L"help") {
 		showHelp();
@@ -564,9 +568,26 @@ bool Debugger::load(uint64_t requestId, bool synchronous) {
 	return true;
 }
 
+#define MAGO_MI_VERSION L"0.1.0"
 int Debugger::enterCommandLoop() {
 	CRLog::info("Entering command loop");
 	CRLog::info("Mode: %s", _cmdinput.inConsole() ? "Console" : "Stream");
+	if (!params.miMode && !params.silent) {
+
+		// some software detect GDB by "GNU gdb..." line
+		writeStdout(L"GNU gdb compatible debugger mago-mi " MAGO_MI_VERSION);
+		writeStdout(L"This is text (gdb MI) interface for Mago debugger: https://github.com/rainers/mago");
+		writeStdout(L"Mago-MI project page: https://github.com/buggins/mago");
+
+		writeStdout(L"Developer: Vadim Lopatin <" L"coolreader.org" /* anti */ L"@" /* spam */ L"gmail.com>");
+		writeStdout(L"Supports subset of GDB commands. Type help to see list of available commands.");
+
+	}
+	else if (params.miMode && !params.silent) {
+		// some software detect GDB by "GNU gdb..." line
+		writeDebuggerMessage(L"GNU gdb compatible debugger mago-mi " MAGO_MI_VERSION L"\n");
+
+	}
 	if (params.hasExecutableSpecified()) {
 		load();
 	}

@@ -8,6 +8,13 @@
 #include <windows.h>
 
 CRLog * CRLog::CRLOG = NULL;
+
+/// returns true if logger is set
+bool CRLog::isLoggerSet()
+{
+	return CRLog::CRLOG != NULL;
+}
+
 void CRLog::setLogger(CRLog * logger)
 {
 	if (CRLOG != NULL) {
