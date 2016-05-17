@@ -90,6 +90,14 @@ public:
 	virtual bool stepInternal(STEPKIND stepKind, STEPUNIT stepUnit, IDebugThread2 * pThread, uint64_t requestId = UNSPECIFIED_REQUEST_ID);
 	// find current program's thread by id
 	IDebugThread2 * findThreadById(DWORD threadId);
+
+
+	// returns stack frame if found
+	virtual IDebugStackFrame2 * getStackFrame(DWORD threadId, unsigned frameIndex);
+	// returns stack frame if found
+	virtual IDebugStackFrame2 * getStackFrame(IDebugThread2 * pThread, unsigned frameIndex);
+	// retrieves list of local variables from debug frame
+	virtual bool getLocalVariables(IDebugStackFrame2 * frame, LocalVariableList &list, bool includeArgs);
 	// gets thread frame contexts, return count of frames read
 	unsigned getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo * frameInfo, unsigned minFrame = 0, unsigned maxFrame = 0);
 	enum PauseReason {

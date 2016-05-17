@@ -128,6 +128,16 @@ MICommand::~MICommand() {
 	
 }
 
+/// helper function converts BSTR string to std::wstring and frees original string
+std::wstring fromBSTR(BSTR & bstr) {
+	if (!bstr)
+		return std::wstring();
+	std::wstring res = bstr;
+	SysFreeString(bstr);
+	bstr = NULL;
+	return res;
+}
+
 void StackFrameInfo::dumpMIFrame(WstringBuffer & buf, bool showLevel) {
 	buf.append('{');
 	if (showLevel) {
@@ -467,6 +477,14 @@ std::wstring getBaseName(std::wstring fname) {
 	return fname;
 }
 
+void LocalVariableInfo::dumpMiVariable(WstringBuffer & buf, bool includeTypes, bool includeValues) {
+	buf.append(L"{");
+	buf.appendStringParam(L"name", varName);
+	buf.appendStringParam(L"type", varType);
+	buf.appendStringParam(L"value", varValue);
+	buf.append(L"}");
+}
+
 /// print mi2 breakpoint info
 void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
 	buf.append(L"{");
@@ -523,7 +541,6 @@ bool BreakpointInfoList::removeItem(BreakpointInfoRef & bp) {
 BreakpointInfo::BreakpointInfo() 
 	: _pendingBreakpoint(NULL)
 	, _boundBreakpoint(NULL)
-	, refCount(0)
 	, id(0)
 	, requestId(0)
 	, line(0)
@@ -815,5 +832,4 @@ void testEngine() {
 }
 
 #endif
-
 

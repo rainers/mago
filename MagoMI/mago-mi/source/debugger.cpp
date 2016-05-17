@@ -254,11 +254,33 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd) {
 		writeErrorMessage(cmd.requestId, L"Cannot get variables for running or terminated process");
 		return;
 	}
+
 	WstringBuffer buf;
 	buf.appendUlongIfNonEmpty(cmd.requestId);
+	// start list
 	buf.append(L"^done,variables=[");
-	// fake output for testing
-	buf.append(L"{name=\"x\",value=\"11\"},{name=\"s\",value=\"{a = 1, b = 2}\"}");
+
+	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
+	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+
+	// returns stack frame if found
+	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
+	if (!frame) {
+		writeErrorMessage(cmd.requestId, L"cannot find specified thread or stack frame");
+		return;
+	}
+	bool includeArgs = true;
+	LocalVariableList list;
+	if (frame && getLocalVariables(frame, list, includeArgs)) {
+		for (unsigned i = 0; i < list.size(); i++) {
+			list[i]->dumpMiVariable(buf, true, true);
+		}
+	}
+
+	//// fake output for testing
+	//buf.append(L"{name=\"x\",value=\"11\"},{name=\"s\",value=\"{a = 1, b = 2}\"}");
+
+	// end of list
 	buf.append(L"]");
 	writeStdout(buf.wstr());
 }
@@ -765,6 +787,88 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 	buf.appendStringParam(L"stopped-threads", std::wstring(L"all"), ',');
 	buf.appendStringParam(L"core", std::wstring(L"1"), ',');
 	writeStdout(buf.wstr());
+}
+
+
+// returns stack frame if found
+IDebugStackFrame2 * Debugger::getStackFrame(DWORD threadId, unsigned frameIndex) {
+	if (!_paused || _stopped) {
+		return NULL;
+	}
+	IDebugThread2 * pThread = findThreadById(threadId);
+	if (!pThread)
+		return NULL;
+	return getStackFrame(pThread, frameIndex);
+}
+
+// returns stack frame if found
+IDebugStackFrame2 * Debugger::getStackFrame(IDebugThread2 * pThread, unsigned frameIndex) {
+	if (!_paused || _stopped || !pThread) {
+		return NULL;
+	}
+	IEnumDebugFrameInfo2* pFrames = NULL;
+	if (FAILED(pThread->EnumFrameInfo(FIF_FUNCNAME | FIF_RETURNTYPE | FIF_ARGS | FIF_DEBUG_MODULEP | FIF_DEBUGINFO | FIF_MODULE | FIF_FRAME, 10, &pFrames))) {
+		CRLog::error("cannot get thread frame enum");
+		return false;
+	}
+	unsigned outIndex = 0;
+	ULONG count = 0;
+	pFrames->GetCount(&count);
+	for (ULONG i = 0; i < count; i++) {
+		FRAMEINFO frame;
+		memset(&frame, 0, sizeof(FRAMEINFO));
+		ULONG fetched = 0;
+		if (FAILED(pFrames->Next(1, &frame, &fetched)) || fetched != 1)
+			break;
+		if (i != frameIndex) {
+			if (frame.m_pFrame)
+				frame.m_pFrame->Release();
+			continue;
+		}
+		if (frame.m_pFrame) {
+			pFrames->Release();
+			return frame.m_pFrame;
+		}
+	}
+	pFrames->Release();
+	return NULL;
+}
+
+// retrieves list of local variables from debug frame
+bool Debugger::getLocalVariables(IDebugStackFrame2 * frame, LocalVariableList &list, bool includeArgs) {
+	if (!frame)
+		return NULL;
+	ULONG count = 0;
+	IEnumDebugPropertyInfo2* pEnum = NULL;
+	if (SUCCEEDED(frame->EnumProperties(DEBUGPROP_INFO_FULLNAME | DEBUGPROP_INFO_NAME | DEBUGPROP_INFO_TYPE | DEBUGPROP_INFO_VALUE | DEBUGPROP_INFO_ATTRIB | DEBUGPROP_INFO_VALUE_AUTOEXPAND,
+		10, includeArgs ? guidFilterAllLocalsPlusArgs : guidFilterAllLocals, 1000, &count, &pEnum)) && pEnum) {
+		// get info
+		for (unsigned i = 0; i < count; i++) {
+			ULONG fetched = 0;
+			DEBUG_PROPERTY_INFO prop;
+			memset(&prop, 0, sizeof(prop));
+			if (SUCCEEDED(pEnum->Next(1, &prop, &fetched)) && fetched == 1) {
+				LocalVariableInfoRef item = new LocalVariableInfo();
+				if (prop.dwFields & DEBUGPROP_INFO_FULLNAME)
+					item->varFullName = fromBSTR(prop.bstrFullName);
+				if (prop.dwFields & DEBUGPROP_INFO_NAME)
+					item->varName = fromBSTR(prop.bstrName);
+				if (prop.dwFields & DEBUGPROP_INFO_TYPE)
+					item->varType = fromBSTR(prop.bstrType);
+				if (prop.dwFields & DEBUGPROP_INFO_VALUE)
+					item->varValue = fromBSTR(prop.bstrValue);
+				if (prop.dwFields & DEBUGPROP_INFO_ATTRIB) {
+					if (prop.dwAttrib & DBG_ATTRIB_OBJ_IS_EXPANDABLE)
+						item->expandable = true;
+				}
+				list.push_back(item);
+			}
+		}
+	}
+	if (pEnum)
+		pEnum->Release();
+	frame->Release();
+	return true;
 }
 
 // gets thread frame contexts

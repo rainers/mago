@@ -265,13 +265,27 @@ struct MICommand {
 };
 
 
+class RefCountedBase {
+private:
+	int refCount;
+public:
+	RefCountedBase() : refCount(0) {}
+	virtual ~RefCountedBase() {}
+	void AddRef() {
+		refCount++;
+	}
+	void Release() {
+		if (--refCount <= 0)
+			delete this;
+	}
+};
+
 struct IDebugBoundBreakpoint2;
 struct IDebugPendingBreakpoint2;
-class BreakpointInfo {
+class BreakpointInfo : public RefCountedBase {
 private:
 	IDebugPendingBreakpoint2 * _pendingBreakpoint;
 	IDebugBoundBreakpoint2 * _boundBreakpoint;
-	int refCount;
 public:
 	uint64_t id;
 	uint64_t requestId;
@@ -292,7 +306,7 @@ public:
 	bool error;
 	std::wstring errorMessage;
 	BreakpointInfo();
-	~BreakpointInfo();
+	virtual ~BreakpointInfo();
 
 	uint64_t assignId();
 
@@ -312,13 +326,6 @@ public:
 	IDebugPendingBreakpoint2 * getPendingBreakpoint() { return _pendingBreakpoint; }
 	IDebugBoundBreakpoint2 * getBoundBreakpoint() { return _boundBreakpoint; }
 
-	void AddRef() {
-		refCount++;
-	}
-	void Release() {
-		if (--refCount <= 0)
-			delete this;
-	}
 };
 
 typedef RefPtr<BreakpointInfo> BreakpointInfoRef;
@@ -369,3 +376,33 @@ struct StackFrameInfo {
 
 typedef std::vector<StackFrameInfo> StackFrameInfoVector;
 
+enum LocalVariableKind {
+	VAR_KIND_UNKNOWN, // unknown type
+	VAR_KIND_THIS, // this pointer
+	VAR_KIND_ARG, // function argument
+	VAR_KIND_LOCAL, // stack variable
+};
+
+/// helper function converts BSTR string to std::wstring and frees original string
+std::wstring fromBSTR(BSTR & bstr);
+
+class LocalVariableInfo : public RefCountedBase {
+private:
+public:
+	LocalVariableKind varKind;
+	std::wstring varFullName;
+	std::wstring varName;
+	std::wstring varType;
+	std::wstring varValue;
+	bool expandable;
+	void dumpMiVariable(WstringBuffer & buf, bool includeTypes, bool includeValues);
+	LocalVariableInfo() : varKind(VAR_KIND_UNKNOWN), expandable(false) {}
+	virtual ~LocalVariableInfo() {}
+};
+
+typedef RefPtr<LocalVariableInfo> LocalVariableInfoRef;
+class LocalVariableList : public std::vector<LocalVariableInfoRef> {
+public:
+	LocalVariableList() {}
+	~LocalVariableList() {}
+};
