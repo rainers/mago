@@ -273,6 +273,8 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd) {
 	LocalVariableList list;
 	if (frame && getLocalVariables(frame, list, includeArgs)) {
 		for (unsigned i = 0; i < list.size(); i++) {
+			if (i != 0)
+				buf.append(L",");
 			list[i]->dumpMiVariable(buf, true, true);
 		}
 	}

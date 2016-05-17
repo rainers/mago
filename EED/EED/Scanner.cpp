@@ -72,7 +72,7 @@ namespace MagoEE
             *mCurNodes = mTok;
         }
 
-#ifdef _DEBUG
+#ifdef SCANNER_DEBUG
         printf( "%d ", mTok.Code );
 #endif
         return mTok.Code;
