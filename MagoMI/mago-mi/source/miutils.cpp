@@ -726,6 +726,17 @@ bool BreakpointInfo::fromCommand(MICommand & cmd) {
 }
 
 
+std::wstring fixPathDelimiters(std::wstring s) {
+	WstringBuffer buf;
+	for (unsigned i = 0; i < s.length(); i++) {
+		wchar_t ch = s[i];
+		if (ch == '/')
+			ch = '\\';
+		buf.append(ch);
+	}
+	return buf.wstr();
+}
+
 std::wstring unquoteString(std::wstring s) {
 	if (s.empty())
 		return s;

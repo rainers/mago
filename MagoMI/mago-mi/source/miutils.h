@@ -346,6 +346,7 @@ public:
 
 bool fileExists(std::wstring fname);
 std::wstring unquoteString(std::wstring s);
+std::wstring fixPathDelimiters(std::wstring s);
 std::wstring relativeToAbsolutePath(std::wstring s);
 bool isAbsolutePath(std::wstring s);
 std::wstring getCurrentDirectory();

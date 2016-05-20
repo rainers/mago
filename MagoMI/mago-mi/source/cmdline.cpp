@@ -54,8 +54,9 @@ void ExecutableInfo::setExecutable(std::wstring  exe) {
 		exename.clear();
 		return;
 	}
-	std::wstring tmp = unquoteString(exe);
+	std::wstring tmp = fixPathDelimiters(unquoteString(exe));
 	exename = relativeToAbsolutePath(tmp);
+	CRLog::info("exename is set: %s", toUtf8z(exename));
 }
 
 void ExecutableInfo::setDir(std::wstring directory) {
@@ -63,8 +64,9 @@ void ExecutableInfo::setDir(std::wstring directory) {
 		dir.clear();
 		return;
 	}
-	std::wstring tmp = unquoteString(directory);
+	std::wstring tmp = fixPathDelimiters(unquoteString(directory));
 	dir = relativeToAbsolutePath(tmp);
+	CRLog::info("dir is set: %s", toUtf8z(dir));
 }
 
 void ExecutableInfo::addArg(std::wstring param) {

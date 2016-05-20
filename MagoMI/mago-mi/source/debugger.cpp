@@ -159,7 +159,7 @@ void Debugger::showHelp() {
 
 /// called on new input line
 void Debugger::onInputLine(std::wstring &s) {
-	CRLog::debug("Input line: %s", toUtf8(s).c_str());
+	CRLog::trace("Input line: %s", toUtf8(s).c_str());
 	if (s.empty())
 		return;
 	//if (_entryPointContinuePending) {
@@ -252,10 +252,22 @@ void Debugger::onInputLine(std::wstring &s) {
 			return;
 		}
 		std::wstring dir = unquoteString(cmd.unnamedValues[0]);
-		params.dir = dir;
-		CRLog::info("Changing current directory to %s", toUtf8z(dir));
+		params.setDir(dir);
+		CRLog::info("Changing current directory to %s", toUtf8z(params.dir));
 		if (SetCurrentDirectoryW(dir.c_str()) != TRUE)
-			CRLog::error("Cannot change current directory to %s", toUtf8z(dir));
+			CRLog::error("Cannot change current directory to %s", toUtf8z(params.dir));
+		writeResultMessage(cmd.requestId, L"done");
+	}
+	else if (cmd.commandName == L"-gdb-set") { // breakpoint pending on
+		writeResultMessage(cmd.requestId, L"done");
+	}
+	else if (cmd.commandName == L"-file-exec-and-symbols") {
+		if (cmd.unnamedValues.size() != 1) {
+			writeErrorMessage(cmd.requestId, L"directory name parameter required");
+			return;
+		}
+		std::wstring fn = unquoteString(cmd.unnamedValues[0]);
+		params.setExecutable(fn);
 		writeResultMessage(cmd.requestId, L"done");
 	}
 	else if (cmd.commandName == L"handle") {
