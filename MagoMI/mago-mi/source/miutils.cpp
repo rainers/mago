@@ -465,6 +465,18 @@ std::wstring BreakpointInfo::dumpParams() {
 	return buf.wstr();
 }
 
+/// get directory name for file, e.g. for "/dir/subdir/file.ext" return "/dir/subdir"
+std::wstring getDirName(std::wstring fname) {
+	if (fname.empty())
+		return fname;
+	int i = ((int)fname.length()) - 1;
+	for (; i >= 0; i--) {
+		if (fname[i] == '/' || fname[i] == '\\')
+			return i > 0 ? fname.substr(0, i) : std::wstring();
+	}
+	return fname;
+}
+
 /// get base name for file name, e.g. for "/dir/subdir/file.ext" return "file.ext"
 std::wstring getBaseName(std::wstring fname) {
 	if (fname.empty())

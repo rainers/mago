@@ -10,7 +10,19 @@
 // global object
 ExecutableInfo params;
 
-ExecutableInfo::ExecutableInfo() 
+static void fatalError(const char * msg, int errCode) {
+	fprintf(stderr, "%s\n", msg);
+	CRLog::error("%s", msg);
+	exit(errCode);
+}
+
+static void fatalError(std::wstring msg, int errCode) {
+	fwprintf(stderr, L"%s\n", msg.c_str());
+	CRLog::error("%s", toUtf8(msg).c_str());
+	exit(errCode);
+}
+
+ExecutableInfo::ExecutableInfo()
 	: argCount(0)
 	, verbose(false) 
 	, miMode(false)
@@ -57,8 +69,7 @@ void ExecutableInfo::setDir(std::wstring directory) {
 
 void ExecutableInfo::addArg(std::wstring param) {
 	if (argCount >= MAX_PARAM_COUNT) {
-		fprintf(stderr, "Too many executable file parameters");
-		exit(3);
+		fatalError("Too many executable file parameters", 3);
 	}
 	args[argCount++] = param;
 }
@@ -129,6 +140,9 @@ static void showHelp(CmdLineParamDef * param, const wchar_t * value) {
 static void showVersion(CmdLineParamDef * param, const wchar_t * value) {
 	UNREFERENCED_PARAMETER(param);
 	UNREFERENCED_PARAMETER(value);
+	//if (params.miMode)
+	//	printf("~\"%s\\n%s\\n\"", toUtf8(VERSION_STRING).c_str(), toUtf8(VERSION_EXPLANATION_STRING).c_str());
+	//else
 	printf("%s\n%s\n", toUtf8(VERSION_STRING).c_str(), toUtf8(VERSION_EXPLANATION_STRING).c_str());
 	exit(0);
 }
@@ -149,8 +163,7 @@ static void handleInterpreter(CmdLineParamDef * param, const wchar_t * value) {
 		params.miMode = false;
 		return;
 	}
-	fprintf(stderr, "Unknown interpreter is specified");
-	exit(-3);
+	fatalError("Unknown interpreter is specified", -3);
 }
 
 static bool argsFound = false;
@@ -158,8 +171,7 @@ static bool argsFound = false;
 static void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
 	UNREFERENCED_PARAMETER(param);
 	if (params.hasExecutableSpecified()) {
-		fprintf(stderr, "Executable file already specified");
-		exit(3);
+		fatalError("Executable file already specified", 3);
 	}
 	params.setExecutable(value);
 	argsFound = true;
@@ -168,14 +180,19 @@ static void handleArgs(CmdLineParamDef * param, const wchar_t * value) {
 static void handleExec(CmdLineParamDef * param, const wchar_t * value) {
 	UNREFERENCED_PARAMETER(param);
 	if (params.hasExecutableSpecified()) {
-		fprintf(stderr, "Executable file already specified");
-		exit(3);
+		fatalError("Executable file already specified", 3);
 	}
 	params.setExecutable(std::wstring(value));
 }
 
 static void handleDir(CmdLineParamDef * param, const wchar_t * value) {
 	UNREFERENCED_PARAMETER(param);
+	params.setDir(value);
+}
+
+static void handleNx(CmdLineParamDef * param, const wchar_t * value) {
+	UNREFERENCED_PARAMETER(param);
+	UNREFERENCED_PARAMETER(value);
 	params.setDir(value);
 }
 
@@ -207,8 +224,7 @@ void nonParamHandler(const wchar_t * value) {
 		return;
 	}
 	if (!argsFound) {
-		fprintf(stderr, "Use --args to provide inferior arguments");
-		exit(3);
+		fatalError("Use --args to provide inferior arguments", 3);
 	}
 	params.addArg(std::wstring(value));
 }
@@ -226,6 +242,7 @@ CmdLineParamDef paramDefs[] = {
 	CmdLineParamDef(NULL, "--silent", NO_PARAMS, "Don't print version info on startup", NULL, &handleSilent),
 	CmdLineParamDef("Other options"),
 	CmdLineParamDef(NULL, "--cd=DIR", STRING_PARAM, "Change current directory to DIR.", NULL, &handleDir),
+	CmdLineParamDef(NULL, "--nx", NO_PARAMS, "Do not execute commands found in any initializaton file", NULL, &handleNx),
 	CmdLineParamDef(NULL, "--log-file=FILE", STRING_PARAM, "Set log file for debugger internal logging.", NULL, &handleLogFile),
 	CmdLineParamDef(NULL, "--log-level=FATAL|ERROR|WARN|INFO|DEBUG|TRACE", STRING_PARAM, "Set log level for debugger internal logging.", NULL, &handleLogLevel),
 	CmdLineParamDef()
@@ -283,14 +300,12 @@ void parseCommandLine(int argc, wchar_t *argv[]) {
 			const wchar_t * value = v;
 			CmdLineParamDef * param = findParam(value);
 			if (!param) {
-				fwprintf(stderr, L"Unknown command line parameter %s", v);
-				exit(1);
+				fatalError(std::wstring(L"Unknown command line parameter ") + v, 1);
 			}
 			if (param->paramType != NO_PARAMS) {
 				if (!value[0]) {
 					if (i == argc - 1) {
-						fwprintf(stderr, L"Value not specified for parameter %s", v);
-						exit(1);
+						fatalError(std::wstring(L"Value not specified for parameter ") + v, 1);
 					}
 					i++;
 					value = argv[i];
@@ -298,8 +313,7 @@ void parseCommandLine(int argc, wchar_t *argv[]) {
 			}
 			else {
 				if (value[0]) {
-					fwprintf(stderr, L"Value not allowed for parameter %s", v);
-					exit(1);
+					fatalError(std::wstring(L"Value not allowed for parameter ") + v, 1);
 				}
 			}
 			if (param->handler) {

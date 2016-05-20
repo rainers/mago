@@ -349,6 +349,8 @@ bool isAbsolutePath(std::wstring s);
 std::wstring getCurrentDirectory();
 /// get base name for file name, e.g. for "/dir/subdir/file.ext" return "file.ext"
 std::wstring getBaseName(std::wstring fname);
+/// get directory name for file, e.g. for "/dir/subdir/file.ext" return "/dir/subdir"
+std::wstring getDirName(std::wstring fname);
 
 void testEngine();
 
