@@ -64,6 +64,7 @@ void ExecutableInfo::addArg(std::wstring param) {
 }
 
 void ExecutableInfo::dumpParams() {
+	CRLog::info("%s", toUtf8(VERSION_STRING).c_str());
 	if (!exename.empty()) {
 		CRLog::info("Executable file: %s\n", toUtf8(exename).c_str());
 		if (argCount) {
@@ -128,7 +129,7 @@ static void showHelp(CmdLineParamDef * param, const wchar_t * value) {
 static void showVersion(CmdLineParamDef * param, const wchar_t * value) {
 	UNREFERENCED_PARAMETER(param);
 	UNREFERENCED_PARAMETER(value);
-	printf("mago-mi debugger v0.1\n");
+	printf("%s\n%s\n", toUtf8(VERSION_STRING).c_str(), toUtf8(VERSION_EXPLANATION_STRING).c_str());
 	exit(0);
 }
 
@@ -226,7 +227,7 @@ CmdLineParamDef paramDefs[] = {
 	CmdLineParamDef("Other options"),
 	CmdLineParamDef(NULL, "--cd=DIR", STRING_PARAM, "Change current directory to DIR.", NULL, &handleDir),
 	CmdLineParamDef(NULL, "--log-file=FILE", STRING_PARAM, "Set log file for debugger internal logging.", NULL, &handleLogFile),
-	CmdLineParamDef(NULL, "--log-LEVEL=FATAL|ERROR|WARN|INFO|DEBUG|TRACE", STRING_PARAM, "Set log level for debugger internal logging.", NULL, &handleLogLevel),
+	CmdLineParamDef(NULL, "--log-level=FATAL|ERROR|WARN|INFO|DEBUG|TRACE", STRING_PARAM, "Set log level for debugger internal logging.", NULL, &handleLogLevel),
 	CmdLineParamDef()
 };
 

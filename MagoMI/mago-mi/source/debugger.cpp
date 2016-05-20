@@ -592,14 +592,14 @@ bool Debugger::load(uint64_t requestId, bool synchronous) {
 	return true;
 }
 
-#define MAGO_MI_VERSION L"0.1.0"
 int Debugger::enterCommandLoop() {
 	CRLog::info("Entering command loop");
 	CRLog::info("Mode: %s", _cmdinput.inConsole() ? "Console" : "Stream");
 	if (!params.miMode && !params.silent) {
 
 		// some software detect GDB by "GNU gdb..." line
-		writeStdout(L"GNU gdb compatible debugger mago-mi " MAGO_MI_VERSION);
+		writeStdout(VERSION_STRING);
+		writeStdout(VERSION_EXPLANATION_STRING);
 		writeStdout(L"This is text (gdb MI) interface for Mago debugger: https://github.com/rainers/mago");
 		writeStdout(L"Mago-MI project page: https://github.com/buggins/mago");
 
