@@ -220,6 +220,16 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"disable" || cmd.commandName == L"-break-disable") {
 		handleBreakpointEnableCommand(cmd, false);
 	}
+	else if (cmd.commandName == L"-list-thread-groups") {
+		WstringBuffer buf;
+		buf.appendUlongIfNonEmpty(cmd.requestId);
+		buf.append(L"^done,groups=[{");
+		buf.appendStringParam(L"id", L"i1");
+		buf.appendStringParam(L"type", L"process");
+		buf.appendStringParam(L"executable", params.exename);
+		buf.append(L"}]");
+		writeStdout(buf.wstr());
+	}
 	else if ((cmd.commandName == L"info" && cmd.tail == L"break") || cmd.commandName == L"-break-list") {
 		handleBreakpointListCommand(cmd);
 	}
@@ -268,6 +278,7 @@ void Debugger::onInputLine(std::wstring &s) {
 		}
 		std::wstring fn = unquoteString(cmd.unnamedValues[0]);
 		params.setExecutable(fn);
+		load(cmd.requestId, true);
 		writeResultMessage(cmd.requestId, L"done");
 	}
 	else if (cmd.commandName == L"handle") {
@@ -552,12 +563,16 @@ void Debugger::handleBreakpointDeleteCommand(MICommand & cmd) {
 
 // called to handle breakpoint command
 void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
-	if (_stopped)
+	if (_stopped) {
+		writeErrorMessage(cmd.requestId, L"Application is stopped");
 		return;
+	}
 	//writeDebuggerMessage(cmd.dumpCommand());
 	BreakpointInfoRef bp = new BreakpointInfo();
 	bp->fromCommand(cmd);
 	//writeDebuggerMessage(bp->dumpParams());
+	CRLog::debug("new breakpoint cmd: %s", toUtf8z(cmd.dumpCommand()));
+	CRLog::debug("new breakpoint params: %s", toUtf8z(bp->dumpParams()));
 	if (bp->validateParameters()) {
 		HRESULT hr = _engine->CreatePendingBreakpoint(bp);
 		if (FAILED(hr)) {
@@ -581,6 +596,9 @@ void Debugger::handleBreakpointInsertCommand(MICommand & cmd) {
 		bp->printBreakpointInfo(buf);
 		writeStdout(buf.wstr());
 		//writeDebuggerMessage(std::wstring(L"added pending breakpoint"));
+	}
+	else {
+		writeErrorMessage(cmd.requestId, L"Invalid breakpoint parameters");
 	}
 }
 

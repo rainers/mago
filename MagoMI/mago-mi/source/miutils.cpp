@@ -305,6 +305,19 @@ bool splitByCharRev(std::wstring & s, wchar_t ch, std::wstring & before, std::ws
 	return false;
 }
 
+// return true if value is required
+bool doesParameterRequireValue(std::wstring p) {
+	static const wchar_t * KNOWN_PARAMS_WITH_VALUES_LIST[] = {
+		L"--thread-group",
+		L"--thread",
+		L"--frame",
+		NULL
+	};
+	for (int i = 0; KNOWN_PARAMS_WITH_VALUES_LIST[i]; i++)
+		if (p == KNOWN_PARAMS_WITH_VALUES_LIST[i])
+			return true;
+}
+
 // returns true if embedded value is found
 bool splitParamAndValue(std::wstring & s, std::wstring & name, std::wstring & value) {
 	if (isShortParamName(s)) {
@@ -340,28 +353,38 @@ void collapseParams(wstring_vector & items, param_vector & namedParams) {
 		std::wstring name;
 		std::wstring value;
 		if (isParamName(item)) {
+			// --param or -p
 			if (splitParamAndValue(item, name, value)) {
-				// has both name and value
+				// has both name and value: --param=value or -pvalue
 				wstring_pair pair;
 				pair.first = name;
 				pair.second = value;
 				namedParams.push_back(pair);
 			}
 			else {
-				if (isParamName(next) || next.empty()) {
+				// separate values for params not supported
+				if (!doesParameterRequireValue(item)) {
 					// no value
 					wstring_pair pair;
 					pair.first = name;
 					namedParams.push_back(pair);
 				}
 				else {
-					// next item is value for this param
-					wstring_pair pair;
-					pair.first = name;
-					pair.second = next;
-					namedParams.push_back(pair);
-					// skip one item - it's already used as value
-					i++;
+					if (isParamName(next) || next.empty()) { // short params cannot have separate values
+						// no value
+						wstring_pair pair;
+						pair.first = name;
+						namedParams.push_back(pair);
+					}
+					else {
+						// next item is value for this param
+						wstring_pair pair;
+						pair.first = name;
+						pair.second = next;
+						namedParams.push_back(pair);
+						// skip one item - it's already used as value
+						i++;
+					}
 				}
 			}
 
