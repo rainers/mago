@@ -316,6 +316,7 @@ bool doesParameterRequireValue(std::wstring p) {
 	for (int i = 0; KNOWN_PARAMS_WITH_VALUES_LIST[i]; i++)
 		if (p == KNOWN_PARAMS_WITH_VALUES_LIST[i])
 			return true;
+	return false;
 }
 
 // returns true if embedded value is found
