@@ -235,6 +235,12 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"-stack-list-variables") {
 		handleStackListVariablesCommand(cmd);
 	}
+	else if (cmd.commandName == L"-list-features") {
+		WstringBuffer buf;
+		buf.appendUlongIfNonEmpty(cmd.requestId);
+		buf.append(L"^done,features=[\"thread-info\",\"breakpoint-notifications\",\"undefined-command-error-code\",\"exec-run-start-option\"]");
+		writeStdout(buf.wstr());
+	}
 	else if (cmd.commandName == L"handle") {
 		// ignore, reply done
 		writeResultMessage(cmd.requestId, L"done");
