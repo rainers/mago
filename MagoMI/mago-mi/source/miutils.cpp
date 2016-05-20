@@ -228,6 +228,26 @@ void skipWhiteSpace(std::wstring &s) {
 	}
 }
 
+std::wstring processQuotedChars(std::wstring s) {
+	WstringBuffer buf;
+	for (unsigned i = 0; i < s.length(); i++) {
+		wchar_t ch = s[i];
+		wchar_t nextch = i + 1 < s.length() ? s[i + 1] : 0;
+		if (ch == '\\' && nextch == '\\') {
+			buf.append('\\');
+			i++;
+		}
+		else if (ch == '\\' && nextch == 't') {
+			buf.append('\\');
+			i++;
+		}
+		else {
+			buf.append(ch);
+		}
+	}
+	return buf.wstr();
+}
+
 // split space separated parameters (properly handling spaces inside "double quotes")
 void splitSpaceSeparatedParams(std::wstring s, wstring_vector & items) {
 	size_t start = 0;
@@ -238,18 +258,22 @@ void splitSpaceSeparatedParams(std::wstring s, wstring_vector & items) {
 		wchar_t nextch = i + 1 < s.length() ? s[i + 1] : 0;
 		if ((ch == ' ' || ch == '\t') && !insideStringLiteral) {
 			if (i > start)
-				items.push_back(s.substr(start, i - start));
+				items.push_back(processQuotedChars(s.substr(start, i - start)));
 			start = i + 1;
 		}
-		if (ch == '\"') {
+		else if (ch == '\"') {
 			insideStringLiteral = !insideStringLiteral;
 		}
 		else if (insideStringLiteral && ch == '\\' && nextch == '\"') {
 			i++;
 		}
+		else if (ch == '\\' && nextch == '\\') {
+			// convert double backslashes to single backslashes (CDT support)
+			i++;
+		}
 	}
 	if (i > start)
-		items.push_back(s.substr(start, i - start));
+		items.push_back(processQuotedChars(s.substr(start, i - start)));
 }
 
 // returns true if string is like -v -pvalue

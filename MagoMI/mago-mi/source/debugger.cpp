@@ -72,6 +72,19 @@ void Debugger::writeDebuggerMessage(std::wstring msg) {
 		writeStringMessage('~', msg);
 }
 
+// MI interface stdout output: [##requestId##]^result[,msg] -- same as writeResultMessage but msg is raw string
+void Debugger::writeResultMessageRaw(ulong requestId, const wchar_t * status, std::wstring msg, wchar_t typeChar) {
+	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(requestId);
+	buf.append(typeChar);
+	buf.append(status);
+	if (!msg.empty()) {
+		buf.append(L",");
+		buf.append(msg.c_str());
+	}
+	writeStdout(buf.wstr());
+}
+
 // MI interface stdout output: [##requestId##]^result[,"msg"]
 void Debugger::writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg, wchar_t typeChar) {
 	WstringBuffer buf;
@@ -268,7 +281,49 @@ void Debugger::onInputLine(std::wstring &s) {
 			CRLog::error("Cannot change current directory to %s", toUtf8z(params.dir));
 		writeResultMessage(cmd.requestId, L"done");
 	}
+	else if (cmd.commandName == L"-gdb-show") { // language
+		if (cmd.unnamedValue(0) == L"language") {
+			writeResultMessageRaw(cmd.requestId, L"done", L"value=\"auto\"");
+			writeResultMessage(cmd.requestId, L"done");
+			return;
+		}
+		CRLog::warn("command -gdb-show is not implemented");
+		writeResultMessage(cmd.requestId, L"done");
+	}
+	else if (cmd.commandName == L"-interpreter-exec") {
+		if (cmd.unnamedValue(0) == L"console") {
+			if (unquoteString(cmd.unnamedValue(1)) == L"show endian") {
+				writeDebuggerMessage(L"The target endianness is set automatically (currently little endian)");
+				writeResultMessage(cmd.requestId, L"done");
+				return;
+			}
+			if (unquoteString(cmd.unnamedValue(1)) == L"p/x (char)-1") {
+				writeDebuggerMessage(L"$1 = 0xff");
+				writeResultMessage(cmd.requestId, L"done");
+				return;
+			}
+		}
+		CRLog::warn("command -interpreter-exec is not implemented");
+		writeResultMessage(cmd.requestId, L"done");
+	}
+	else if (cmd.commandName == L"-data-evaluate-expression") {
+		if (cmd.unnamedValue(0) == L"sizeof (void*)") {
+			writeResultMessageRaw(cmd.requestId, L"done", L"value=\"4\"");
+			return;
+		}
+		CRLog::warn("command -data-evaluate-expression is not implemented");
+		writeResultMessage(cmd.requestId, L"done");
+	}
 	else if (cmd.commandName == L"-gdb-set") { // breakpoint pending on
+		CRLog::warn("command -gdb-set is not implemented");
+		writeResultMessage(cmd.requestId, L"done");
+	}
+	else if (cmd.commandName == L"-enable-pretty-printing") {
+		CRLog::warn("command -enable-pretty-printing is not implemented");
+		writeResultMessage(cmd.requestId, L"done");
+	}
+	else if (cmd.commandName == L"source") {
+		CRLog::warn("command source is not implemented");
 		writeResultMessage(cmd.requestId, L"done");
 	}
 	else if (cmd.commandName == L"-file-exec-and-symbols") {
@@ -745,6 +800,7 @@ bool Debugger::resume(uint64_t requestId, DWORD threadId) {
 	}
 	//writeResultMessage(requestId, L"running", NULL);
 	_paused = false;
+	_cmdinput.enable(false);
 	return true;
 }
 
@@ -842,6 +898,7 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 	buf.appendStringParam(L"stopped-threads", std::wstring(L"all"), ',');
 	buf.appendStringParam(L"core", std::wstring(L"1"), ',');
 	writeStdout(buf.wstr());
+	_cmdinput.enable(true);
 }
 
 
@@ -1104,6 +1161,7 @@ HRESULT Debugger::OnDebugProgramDestroy(IDebugEngine2 *pEngine,
 	writeStdout(L"*stopped,reason=\"exited-normally\"", exitCode);
 	_stopped = true;
 	CRLog::info("Program destroyed");
+	_cmdinput.enable(true);
 	return S_OK;
 }
 
@@ -1412,6 +1470,7 @@ HRESULT Debugger::OnDebugBreakpointError(IDebugEngine2 *pEngine,
 	UNUSED_EVENT_PARAMS;
 	DUMP_EVENT(OnDebugBreakpointError);
 	IDebugErrorBreakpoint2 * pErrorBp = NULL;
+	_cmdinput.enable(true);
 	if (FAILED(pEvent->GetErrorBreakpoint(&pErrorBp))) {
 		CRLog::error("pEvent->GetErrorBreakpoint failed");
 		return E_FAIL;

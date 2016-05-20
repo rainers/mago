@@ -20,11 +20,14 @@ private:
 	CmdInputCallback * _callback;
 	bool _inConsole;
 	bool _closed;
+	bool _enabled;
 	StringBuffer _buf;
 	void lineCompleted();
 public:
 	CmdInput();
 	~CmdInput();
+	void enable(bool enabled);
+	void showPrompt();
 	bool inConsole() { return _inConsole; }
 	/// sets input callback
 	void setCallback(CmdInputCallback * callback) {

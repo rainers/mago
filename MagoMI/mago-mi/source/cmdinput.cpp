@@ -86,7 +86,7 @@ static CmdInput * _instance = NULL;
 
 static Mutex _consoleGuard;
 
-CmdInput::CmdInput() : _callback(NULL), _closed(false)
+CmdInput::CmdInput() : _callback(NULL), _closed(false), _enabled(true)
 {
 	_instance = this;
 	_inConsole = isInConsole() != 0;
@@ -97,8 +97,31 @@ CmdInput::~CmdInput() {
 	free_history();
 }
 
+
 static bool _readlineEditActive = false;
 static bool _readlinePromptShown = false;
+
+void CmdInput::showPrompt() {
+	if (_inConsole)
+		return;
+	TimeCheckedGuardedArea area(_consoleGuard, "stdin poll");
+	if (_enabled && !_readlinePromptShown) {
+		HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+		DWORD bytesWritten = 0;
+		CRLog::debug("STDOUT: (gdb)");
+		if (!WriteFile(h_out, "(gdb)\n", 6, &bytesWritten, NULL)) {
+			DWORD err = GetLastError();
+			CRLog::error("ReadFile error %d", err);
+			_closed = true;
+		}
+		_readlinePromptShown = true;
+	}
+}
+
+void CmdInput::enable(bool enabled) {
+	_enabled = enabled;
+	showPrompt();
+}
 
 /// write line to stdout
 bool writeStdout(std::wstring s) {
@@ -282,13 +305,7 @@ bool CmdInput::poll() {
 
 			if (h_in && h_in != INVALID_HANDLE_VALUE) {
 				{
-					TimeCheckedGuardedArea area(_consoleGuard, "stdin poll");
-					if (!_readlinePromptShown) {
-						HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
-						DWORD bytesWritten = 0;
-						WriteFile(h_out, "(gdb)\n", 6, &bytesWritten, NULL);
-						_readlinePromptShown = true;
-					}
+					showPrompt();
 				}
 				for (;;) {
 					//CRLog::debug("Waiting for STDIN input");
@@ -296,7 +313,12 @@ bool CmdInput::poll() {
 					//CRLog::debug("Wait result: %x", res);
 
 					DWORD bytesAvailable = 0;
-					PeekNamedPipe(h_in, NULL, 0, NULL, &bytesAvailable, NULL);
+					if (!PeekNamedPipe(h_in, NULL, 0, NULL, &bytesAvailable, NULL)) {
+						DWORD err = GetLastError();
+						CRLog::error("PeekNamedPipe error %d", err);
+						_closed = true;
+						break;
+					}
 					//CRLog::debug("PeekNamedPipe result: %x", bytesAvailable);
 
 					if (bytesAvailable) {//res == WAIT_OBJECT_0) {
@@ -316,6 +338,7 @@ bool CmdInput::poll() {
 						else {
 							//ERROR_OPERATION_ABORTED;
 							DWORD err = GetLastError();
+							CRLog::error("ReadFile error %d", err);
 							if (err == ERROR_BROKEN_PIPE) {
 								_closed = true;
 							}
@@ -341,6 +364,9 @@ bool CmdInput::poll() {
 		if (_buf.endsWith('\n')) {
 			lineCompleted();
 		}
+	}
+	if (isClosed()) {
+		CRLog::trace("input is closed");
 	}
 	return !isClosed();
 }

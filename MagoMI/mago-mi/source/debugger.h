@@ -45,6 +45,8 @@ public:
 	virtual void writeDebuggerMessage(std::wstring msg);
 	// MI interface stdout output: [##requestId##]^result[,"msg"]
 	virtual void writeResultMessage(ulong requestId, const wchar_t * status, std::wstring msg = std::wstring(), wchar_t typeChar = '^');
+	// MI interface stdout output: [##requestId##]^result[,msg] -- same as writeResultMessage but msg is raw string
+	virtual void writeResultMessageRaw(ulong requestId, const wchar_t * status, std::wstring msg = std::wstring(), wchar_t typeChar = '^');
 	// MI interface stdout output: [##requestId##]^result[,"msg"]
 	virtual void writeResultMessage(ulong requestId, const wchar_t * status, const wchar_t * msg, wchar_t typeChar = '^') { 
 		writeResultMessage(requestId, status, std::wstring(msg ? msg : L""), typeChar); 

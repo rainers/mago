@@ -255,6 +255,7 @@ struct MICommand {
 	bool hasParam(std::wstring name);
 	// find parameter by name
 	std::wstring findParam(std::wstring name);
+	std::wstring unnamedValue(unsigned index = 0) { return index < unnamedValues.size() ? unnamedValues[index] : std::wstring(); }
 	// get parameter --thread-id
 	uint64_t getUlongParam(std::wstring name, uint64_t defValue = 0);
 	// get parameter --thread-id
