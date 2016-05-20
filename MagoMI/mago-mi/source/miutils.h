@@ -140,6 +140,8 @@ public:
 
 std::string toUtf8(const std::wstring s);
 std::wstring toUtf16(const std::string s);
+#define toUtf8z(x) toUtf8(x).c_str()
+#define toUtf16z(x) toUtf16(x).c_str()
 
 struct StringBuffer : public Buffer<char> {
 	StringBuffer & operator = (const std::string & s) { assign(s.c_str(), s.length()); return *this; }

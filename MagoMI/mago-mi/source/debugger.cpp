@@ -246,6 +246,18 @@ void Debugger::onInputLine(std::wstring &s) {
 		writeStdout(L"~\"" VERSION_EXPLANATION_STRING L"\"");
 		writeResultMessage(cmd.requestId, L"done");
 	}
+	else if (cmd.commandName == L"-environment-cd") {
+		if (cmd.unnamedValues.size() != 1) {
+			writeErrorMessage(cmd.requestId, L"directory name parameter required");
+			return;
+		}
+		std::wstring dir = unquoteString(cmd.unnamedValues[0]);
+		params.dir = dir;
+		CRLog::info("Changing current directory to %s", toUtf8z(dir));
+		if (SetCurrentDirectoryW(dir.c_str()) != TRUE)
+			CRLog::error("Cannot change current directory to %s", toUtf8z(dir));
+		writeResultMessage(cmd.requestId, L"done");
+	}
 	else if (cmd.commandName == L"handle") {
 		// ignore, reply done
 		writeResultMessage(cmd.requestId, L"done");

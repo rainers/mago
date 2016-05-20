@@ -3,6 +3,13 @@
 #include "MIEngine.h"
 #include "../../DebugEngine/MagoNatDE/PendingBreakpoint.h"
 
+//const char * toUtf8z(const std::wstring s) { 
+//	return toUtf8(s).c_str(); 
+//}
+//const wchar_t * toUtf16z(const std::string s) { 
+//	return toUtf16(s).c_str(); 
+//}
+
 std::string toUtf8(const std::wstring s) {
 	StringBuffer buf;
 	for (unsigned i = 0; i < s.length(); i++) {
