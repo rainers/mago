@@ -241,6 +241,11 @@ void Debugger::onInputLine(std::wstring &s) {
 		buf.append(L"^done,features=[\"thread-info\",\"breakpoint-notifications\",\"undefined-command-error-code\",\"exec-run-start-option\"]");
 		writeStdout(buf.wstr());
 	}
+	else if (cmd.commandName == L"-gdb-version") {
+		writeStdout(L"~\"" VERSION_STRING L"\"");
+		writeStdout(L"~\"" VERSION_EXPLANATION_STRING L"\"");
+		writeResultMessage(cmd.requestId, L"done");
+	}
 	else if (cmd.commandName == L"handle") {
 		// ignore, reply done
 		writeResultMessage(cmd.requestId, L"done");
