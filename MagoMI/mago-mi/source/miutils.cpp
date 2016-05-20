@@ -150,12 +150,11 @@ void StackFrameInfo::dumpMIFrame(WstringBuffer & buf, bool showLevel) {
 	if (showLevel) {
 		buf.appendUlongParamAsString(L"level", frameIndex);
 	}
+	buf.appendStringParamIfNonEmpty(L"addr", address, '{');
 	if (!functionName.empty()) {
 		buf.appendStringParamIfNonEmpty(L"func", functionName, '{');
-		buf.appendStringParamIfNonEmpty(L"args", std::wstring(L"[]"), '{'); // TODO
-	}
-	else {
-		buf.appendStringParamIfNonEmpty(L"addr", address, '{');
+		buf.append(L",args=[{name=\"a\",value=\"5\"}]");
+		//buf.appendStringParamIfNonEmpty(L"args", std::wstring(L"[]"), '{'); // TODO
 	}
 	buf.appendStringParamIfNonEmpty(L"file", sourceBaseName, '{');
 	buf.appendStringParamIfNonEmpty(L"fullname", sourceFileName, '{');
@@ -557,19 +556,20 @@ void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
 	buf.append(L"{");
 	buf.appendUlongParamAsString(L"number", id);
 	buf.appendStringParam(L"type", std::wstring(L"breakpoint"));
-	buf.appendStringParamIfNonEmpty(L"addr", (pending && address.empty()) ? std::wstring(L"<PENDING>") : address);
 	buf.appendStringParam(L"disp", temporary ? std::wstring(L"del") : std::wstring(L"keep"));
 	buf.appendStringParam(L"enabled", enabled ? std::wstring(L"y") : std::wstring(L"n"));
-	buf.appendStringParamIfNonEmpty(L"filename", getBaseName(fileName));
+	buf.appendStringParamIfNonEmpty(L"addr", (pending && address.empty()) ? std::wstring(L"<PENDING>") : address);
+	buf.appendStringParamIfNonEmpty(L"func", functionName);
+	buf.appendStringParamIfNonEmpty(L"file", getBaseName(fileName));
 	buf.appendStringParamIfNonEmpty(L"fullname", fileName);
 	if (boundLine || line)
 		buf.appendUlongParamAsString(L"line", boundLine ? boundLine : line);
-	buf.appendStringParamIfNonEmpty(L"func", functionName);
 	if (pending)
 		buf.appendStringParam(L"pending", insertCommandText);
-	buf.appendStringParamIfNonEmpty(L"original-location", originalLocation);
-	if (times)
+	buf.append(L",thread-groups=[\"i1\"]");
+	//if (times)
 		buf.appendUlongParamAsString(L"times", times);
+	buf.appendStringParamIfNonEmpty(L"original-location", originalLocation);
 	//buf.appendStringParam(L"thread-groups", std::wstring(L"breakpoint"));
 	buf.append(L"}");
 }

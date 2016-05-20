@@ -239,7 +239,7 @@ void Debugger::onInputLine(std::wstring &s) {
 		buf.append(L"^done,groups=[{");
 		buf.appendStringParam(L"id", L"i1");
 		buf.appendStringParam(L"type", L"process");
-		buf.appendStringParam(L"executable", params.exename);
+		buf.appendStringParamIfNonEmpty(L"executable", params.exename);
 		buf.append(L"}]");
 		writeStdout(buf.wstr());
 	}
@@ -284,7 +284,6 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"-gdb-show") { // language
 		if (cmd.unnamedValue(0) == L"language") {
 			writeResultMessageRaw(cmd.requestId, L"done", L"value=\"auto\"");
-			writeResultMessage(cmd.requestId, L"done");
 			return;
 		}
 		CRLog::warn("command -gdb-show is not implemented");
@@ -293,7 +292,7 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"-interpreter-exec") {
 		if (cmd.unnamedValue(0) == L"console") {
 			if (unquoteString(cmd.unnamedValue(1)) == L"show endian") {
-				writeDebuggerMessage(L"The target endianness is set automatically (currently little endian)");
+				writeDebuggerMessage(L"The target endianness is set automatically (currently little endian)\\n");
 				writeResultMessage(cmd.requestId, L"done");
 				return;
 			}
@@ -765,7 +764,8 @@ bool Debugger::run(uint64_t requestId) {
 	//}
 	_started = true;
 	resume(requestId);
-	writeResultMessage(requestId, L"running", NULL, '*');
+	writeResultMessage(requestId, L"running", NULL, '^');
+	writeResultMessage(UNSPECIFIED_REQUEST_ID, L"running,thread-id=\"all\"", NULL, '*');
 	return true;
 }
 
@@ -862,8 +862,16 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 	_paused = true;
 	_pThread = pThread;
 	StackFrameInfo frameInfo;
+	DWORD threadId = getThreadId(pThread);
 	bool hasContext = getThreadFrameContext(pThread, &frameInfo) == 1;
+
+
 	WstringBuffer buf;
+	buf.append(L"=thread-selected");
+	buf.appendUlongParamAsString(L"id", threadId);
+	writeStdout(buf.wstr());
+
+	buf.reset();
 	buf.appendUlongIfNonEmpty(requestId);
 	buf.append(L"*stopped");
 	std::wstring reasonName;
@@ -894,7 +902,7 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 		frameInfo.dumpMIFrame(buf);
 	}
 
-	buf.appendUlongParamAsString(L"thread-id", getThreadId(pThread), ',');
+	buf.appendUlongParamAsString(L"thread-id", threadId, ',');
 	buf.appendStringParam(L"stopped-threads", std::wstring(L"all"), ',');
 	buf.appendStringParam(L"core", std::wstring(L"1"), ',');
 	writeStdout(buf.wstr());
@@ -1107,8 +1115,11 @@ bool Debugger::stepInternal(STEPKIND stepKind, STEPUNIT stepUnit, IDebugThread2 
 		return false;
 	}
 	_paused = false;
-	if (params.miMode)
-		writeStdout(L"*running");
+
+	if (params.miMode) {
+		writeResultMessage(requestId, L"running", NULL, '^');
+		writeResultMessage(UNSPECIFIED_REQUEST_ID, L"running,thread-id=\"all\"", NULL, '*');
+	}
 	return true;
 }
 
