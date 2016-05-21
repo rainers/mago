@@ -107,7 +107,7 @@ HRESULT ProgramValueEnv::StartProgram()
     callback = new EventCallback();
     callback->SetExec( exec.get() );
 
-    hr = exec->Init( callback );
+    hr = exec->Init( callback, nullptr );
     if ( FAILED( hr ) )
         return hr;
 
@@ -541,11 +541,11 @@ HRESULT ProgramValueEnv::LoadSymbols( DWORD64 loadAddr )
     if ( FAILED( hr ) )
         return hr;
 
-    hr = dataSource->LoadDataForExe( mProgPath.c_str(), NULL, NULL );
+    hr = dataSource->LoadDataForExe( mProgPath.c_str(), NULL );
     if ( FAILED( hr ) )
         return hr;
 
-    hr = dataSource->InitDebugInfo();
+    hr = dataSource->InitDebugInfo( mProgPath.c_str(), NULL );
     if ( FAILED( hr ) )
         return hr;
 
