@@ -14,7 +14,7 @@ namespace Mago
 {
     class Thread;
     class IRegisterSet;
-
+    class DRuntime;
 
     class ExprContext : 
         public CComObjectRootEx<CComMultiThreadModel>,
@@ -94,18 +94,27 @@ namespace Mago
             MagoEE::Type* type, 
             const MagoEE::DataValue& value );
 
+        virtual HRESULT GetSession( MagoST::ISession*& session );
+
         virtual HRESULT ReadMemory( 
             MagoEE::Address addr, 
             uint32_t sizeToRead, 
             uint32_t& sizeRead, 
             uint8_t* buffer );
 
-        //////////////////////////////////////////////////////////// 
-        // IMagoSymStore 
+        virtual HRESULT WriteMemory( 
+            MagoEE::Address addr, 
+            uint32_t sizeToWrite, 
+            uint32_t& sizeWritten, 
+            uint8_t* buffer );
 
-        STDMETHOD( GetAddress )( Address64& address ) { _ASSERT( false ); return E_NOTIMPL; }
-        STDMETHOD( GetSession )( MagoST::ISession*& session );
+        virtual HRESULT GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value );
 
+        virtual Address64 GetTebBase();
+
+        virtual DRuntime* GetDRuntime();
+
+        ////////////////////////////////////////////////////////////
         MagoEE::ITypeEnv* GetTypeEnv();
         MagoEE::NameTable* GetStringTable();
         MagoST::SymHandle GetFunctionSH();
@@ -202,7 +211,5 @@ namespace Mago
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo,
             MagoEE::Type*& type );
-
-        HRESULT GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value );
     };
 }

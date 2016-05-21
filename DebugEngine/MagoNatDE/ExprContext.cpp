@@ -76,7 +76,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = MagoEE::EED::ParseText( pszCode, mTypeEnv, mStrTable, parsedExpr.Ref() );
+        hr = MagoEE::ParseText( pszCode, GetTypeEnv(), GetStringTable(), parsedExpr.Ref() );
         if ( FAILED( hr ) )
         {
             MagoEE::EED::GetErrorString( hr, *pbstrError );
@@ -133,7 +133,7 @@ namespace Mago
         RefPtr<MagoEE::Declaration> origDecl;
         MagoEE::UdtKind             udtKind = MagoEE::Udt_Struct;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
         hr = Utf16To8( name, wcslen( name ), u8Name.m_p, u8NameLen );
@@ -297,15 +297,12 @@ namespace Mago
                 Address64       tlsArrayPtrAddr = 0;
                 Address64       tlsArrayAddr = 0;
                 Address64       tlsBufAddr = 0;
-                IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
-                ICoreProcess*   coreProc = mThread->GetCoreProcess();
-                ArchData*       archData = coreProc->GetArchData();
-                uint32_t        ptrSize = archData->GetPointerSize();
+                uint32_t        ptrSize = mTypeEnv->GetPointerSize();
 
                 if ( !sym->GetAddressOffset( offset ) )
                     return E_FAIL;
 
-                tebAddr = mThread->GetCoreThread()->GetTebBase();
+                tebAddr = GetTebBase();
 
                 if ( ptrSize == sizeof( UINT64 ) )
                     tlsArrayPtrAddr = tebAddr + offsetof( TEB64, ThreadLocalStoragePointer );
@@ -313,18 +310,15 @@ namespace Mago
                     tlsArrayPtrAddr = tebAddr + offsetof( TEB32, ThreadLocalStoragePointer );
 
                 uint32_t    lenRead = 0;
-                uint32_t    lenUnreadable = 0;
 
 #if !defined( _M_IX86 )
 #error Mago doesn't implement a debugger engine for the current architecture.
 #endif
                 // read the pointer straight into a long address, even if the pointer is short
-                hr = debuggerProxy->ReadMemory( 
-                    mThread->GetCoreProcess(), 
+                hr = ReadMemory( 
                     tlsArrayPtrAddr, 
                     ptrSize, 
                     lenRead, 
-                    lenUnreadable, 
                     (uint8_t*) &tlsArrayAddr );
                 if ( FAILED( hr ) )
                     return hr;
@@ -341,12 +335,10 @@ namespace Mago
                 }
 
                 // assuming TLS slot 0
-                hr = debuggerProxy->ReadMemory( 
-                    mThread->GetCoreProcess(), 
+                hr = ReadMemory( 
                     tlsArrayAddr, 
                     ptrSize, 
                     lenRead, 
-                    lenUnreadable, 
                     (uint8_t*) &tlsBufAddr );
                 if ( FAILED( hr ) )
                     return hr;
@@ -439,8 +431,6 @@ namespace Mago
         uint8_t         targetBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
         size_t          targetSize = type->GetSize();
         uint32_t        lenRead = 0;
-        uint32_t        lenUnreadable = 0;
-        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
         // no value to get for complex/aggregate types
         if ( !type->IsScalar() 
@@ -453,12 +443,10 @@ namespace Mago
         if ( targetSize > sizeof targetBuf )
             return E_UNEXPECTED;
 
-        hr = debuggerProxy->ReadMemory( 
-            mThread->GetCoreProcess(), 
+        hr = ReadMemory( 
             (Address64) addr, 
             targetSize, 
             lenRead, 
-            lenUnreadable, 
             targetBuf );
         if ( FAILED( hr ) )
             return hr;
@@ -473,17 +461,12 @@ namespace Mago
         const MagoEE::DataObject& key, 
         MagoEE::Address& valueAddr )
     {
-        Program* prog = mThread->GetProgram();
-        DRuntime* druntime = prog->GetDRuntime();
-
-        return druntime->GetValue( aArrayAddr, key, valueAddr );
+        return GetDRuntime()->GetValue( aArrayAddr, key, valueAddr );
     }
 
     int ExprContext::GetAAVersion()
     {
-        Program* prog = mThread->GetProgram();
-        DRuntime* druntime = prog->GetDRuntime();
-        return druntime->GetAAVersion();
+        return GetDRuntime()->GetAAVersion();
     }
 
     HRESULT ExprContext::SetValue( 
@@ -551,7 +534,6 @@ namespace Mago
         uint8_t         sourceBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
         size_t          sourceSize = type->GetSize();
         uint32_t        lenWritten = 0;
-        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
 
         // no value to set for complex/aggregate types
         if ( !type->IsScalar() 
@@ -630,8 +612,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = debuggerProxy->WriteMemory( 
-            mThread->GetCoreProcess(), 
+        hr = WriteMemory( 
             (Address64) addr, 
             sourceSize, 
             lenWritten, 
@@ -671,6 +652,30 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT ExprContext::WriteMemory( 
+        MagoEE::Address addr, 
+        uint32_t sizeToWrite, 
+        uint32_t& sizeWritten, 
+        uint8_t* buffer )
+    {
+        HRESULT         hr = S_OK;
+        uint32_t        len = sizeToWrite;
+        uint32_t        lenWritten = 0;
+        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
+
+        hr = debuggerProxy->WriteMemory(
+            mThread->GetCoreProcess(),
+            (Address64) addr,
+            len,
+            lenWritten,
+            buffer );
+        if ( FAILED( hr ) )
+            return hr;
+
+        sizeWritten = lenWritten;
+
+        return S_OK;
+    }
 
     ////////////////////////////////////////////////////////////////////////////// 
 
@@ -721,7 +726,7 @@ namespace Mago
     {
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
         HRESULT hr = E_FAIL;
@@ -738,7 +743,7 @@ namespace Mago
     {
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
         HRESULT hr = FindGlobalSymbol( session, name, nameLen, globalSH );
@@ -850,7 +855,7 @@ namespace Mago
         RefPtr<MagoST::ISession>    session;
         MagoST::TypeIndex           typeIndex;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
         hr = session->GetSymbolInfo( handle, infoData, symInfo );
@@ -901,7 +906,7 @@ namespace Mago
         MagoST::ISymbolInfo*        symInfo = NULL;
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
         hr = session->GetTypeInfo( handle, infoData, symInfo );
@@ -1002,7 +1007,7 @@ namespace Mago
         RefPtr<MagoEE::Type>    refType;
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
         if ( !symInfo->GetType( typeIndex ) )
@@ -1166,7 +1171,7 @@ namespace Mago
         MagoST::ISymbolInfo*    symInfo = NULL;
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( GetSession( session.Ref() ) != S_OK )
             return E_FAIL;
 
         if ( !session->GetTypeFromTypeIndex( typeIndex, typeTH ) )
@@ -1289,7 +1294,7 @@ namespace Mago
         std::vector<MagoST::TypeIndex> paramTIs;
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
         if ( !symInfo->GetType( retTI ) )
@@ -1605,5 +1610,15 @@ namespace Mago
         }
 
         return S_OK;
+    }
+
+    Address64 ExprContext::GetTebBase()
+    {
+        return mThread->GetCoreThread()->GetTebBase();
+    }
+
+    DRuntime* ExprContext::GetDRuntime()
+    {
+        return mThread->GetProgram()->GetDRuntime();
     }
 }

@@ -80,7 +80,6 @@ namespace Mago
         HRESULT LoadSymbols( bool sendEvent );
         bool    Contains( Address64 addr );
 
-    private:
         RefPtr<MagoST::ISession>    GetSession();
         void    SetSession( MagoST::ISession* session );
     };
