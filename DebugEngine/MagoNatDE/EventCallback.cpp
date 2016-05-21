@@ -711,6 +711,8 @@ namespace Mago
                     symInfo->GetLength( length );
 
                     uint64_t addr = session->GetVAFromSecOffset( section, offset );
+                    if ( addr == 0 )
+                        return false;
                     thunkRange.Begin = (Address64) addr;
                     thunkRange.End = (Address64) addr + length - 1;
                     return true;

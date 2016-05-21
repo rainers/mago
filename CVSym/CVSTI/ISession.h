@@ -35,8 +35,8 @@ namespace MagoST
 
         // mapping addresses
 
-        virtual uint32_t GetRVAFromSecOffset( uint16_t secIndex, uint32_t offset ) = 0;
-        virtual uint64_t GetVAFromSecOffset( uint16_t secIndex, uint32_t offset ) = 0;
+        virtual uint32_t GetRVAFromSecOffset( uint16_t secIndex, uint32_t offset ) = 0; // ~0 on failure
+        virtual uint64_t GetVAFromSecOffset( uint16_t secIndex, uint32_t offset ) = 0;  // 0 on failure
         virtual uint16_t GetSecOffsetFromRVA( uint32_t rva, uint32_t& offset ) = 0;
         virtual uint16_t GetSecOffsetFromVA( uint64_t va, uint32_t& offset ) = 0;
 

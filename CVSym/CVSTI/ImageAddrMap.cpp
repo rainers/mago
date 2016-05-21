@@ -35,7 +35,7 @@ namespace MagoST
     uint32_t ImageAddrMap::MapSecOffsetToRVA( uint16_t secIndex, uint32_t offset )
     {
         if ( (secIndex == 0) || (secIndex > mSecCount) )
-            return 0;
+            return ~0;
 
         uint16_t    zSec = secIndex - 1;    // zero-based section index
 

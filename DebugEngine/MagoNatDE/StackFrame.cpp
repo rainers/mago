@@ -387,6 +387,8 @@ namespace Mago
             info.LineEnd.dwColumn--;
 
         info.Address = (Address64) session->GetVAFromSecOffset( line.Section, line.Offset );
+        if( info.Address )
+            return E_FAIL;
 
         MagoST::FileInfo    fileInfo = { 0 };
         hr = session->GetFileInfo( line.CompilandIndex, line.FileIndex, fileInfo );
@@ -514,7 +516,7 @@ namespace Mago
         fullName.AppendChar( L')' );
 
         bool hasLineInfo = false;
-        Address64 baseAddr = 0;
+        Address64 baseAddr = mPC;
 
         if ( (flags & FIF_FUNCNAME_LINES) != 0 )
         {
@@ -539,6 +541,8 @@ namespace Mago
             symInfo->GetAddressSegment( sec );
             symInfo->GetAddressOffset( offset );
             baseAddr = (Address64) session->GetVAFromSecOffset( sec, offset );
+            if ( baseAddr == 0 )
+                return E_FAIL;
         }
 
         if ( ((flags & FIF_FUNCNAME_OFFSET) != 0) && (mPC != baseAddr) )
@@ -618,15 +622,15 @@ namespace Mago
             if ( (flags & FIF_FUNCNAME_ARGS_VALUES) != 0 )
             {
                 MagoEE::DataObject resultObj = { 0 };
-                CComBSTR valueBstr;
 
                 hr = mExprContext->Evaluate( decl, resultObj );
                 if ( hr == S_OK )
                 {
-                    hr = MagoEE::EED::FormatValue( mExprContext, resultObj, radix, valueBstr.m_str );
+                    std::wstring valueStr;
+                    hr = MagoEE::FormatValue( mExprContext, resultObj, radix, valueStr );
                     if ( hr == S_OK )
                     {
-                        outputStr.AppendFormat( L" = %.*s", valueBstr.Length(), valueBstr.m_str );
+                        outputStr.AppendFormat( L" = %.*s", valueStr.size(), valueStr.c_str() );
                     }
                 }
             }

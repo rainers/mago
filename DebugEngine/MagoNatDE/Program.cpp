@@ -236,8 +236,11 @@ namespace Mago
 
             for( std::list<MagoST::LineNumber>::iterator it = lines.begin(); it != lines.end(); ++it )
             {
+                MagoEE::Address addr = session->GetVAFromSecOffset( it->Section, it->Offset );
+                if ( addr == 0 )
+                    continue;
                 bindings.push_back( AddressBinding() );
-                bindings.back().Addr = session->GetVAFromSecOffset( it->Section, it->Offset );
+                bindings.back().Addr = addr;
                 bindings.back().Mod = mod;
             }
         }

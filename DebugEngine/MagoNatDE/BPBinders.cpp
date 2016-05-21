@@ -91,7 +91,7 @@ namespace Mago
             if ( FAILED( hr ) )
                 continue;
 
-            UINT64  addr = addr = session->GetVAFromSecOffset( it->Section, it->Offset );
+            UINT64  addr = session->GetVAFromSecOffset( it->Section, it->Offset );
             maker->AddBoundBP( addr, mod, binding );
         }
 
