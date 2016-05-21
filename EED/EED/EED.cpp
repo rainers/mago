@@ -248,4 +248,47 @@ namespace MagoEE
 
         return S_OK;
     }
+
+    static const wchar_t    gCommonErrStr[] = L": Error: ";
+
+    static const wchar_t*   gErrStrs[] = 
+    {
+        L"Expression couldn't be evaluated",
+        L"Syntax error",
+        L"Incompatible types for operator",
+        L"Value expected",
+        L"Expression has no type",
+        L"Type resolve failed",
+        L"Bad cast",
+        L"Expression has no address",
+        L"L-value expected",
+        L"Can't cast to bool",
+        L"Divide by zero",
+        L"Bad indexing operation",
+        L"Symbol not found",
+        L"Element not found",
+    };
+
+    // returns: S_FALSE on error not found
+
+    HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr )
+    {
+        DWORD   fac = HRESULT_FACILITY( hresult );
+        DWORD   code = HRESULT_CODE( hresult );
+
+        if ( fac != MagoEE::HR_FACILITY )
+            return S_FALSE;
+
+        if ( code >= _countof( gErrStrs ) )
+            code = 0;
+
+        wchar_t codeStr[10];
+        swprintf_s( codeStr, 10, L"D%04d", code + 1 );
+        outStr = codeStr;
+        outStr.append( gCommonErrStr );
+        outStr.append( gErrStrs[code] );
+
+        return S_OK;
+    }
+
 }

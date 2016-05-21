@@ -156,7 +156,7 @@ namespace Mago
         RefPtr<EnumDebugPropertyInfo2>  enumProps;
         RefPtr<MagoEE::IEEDEnumValues>  enumVals;
 
-        hr = MagoEE::EED::EnumValueChildren( 
+        hr = MagoEE::EnumValueChildren( 
             mExprContext, 
             mFullExprText, 
             mObjVal.ObjVal, 
@@ -271,7 +271,7 @@ namespace Mago
     {
         OutputDebugStringA( "Property::GetStringCharLength\n" );
 
-        return MagoEE::EED::GetRawStringLength( mExprContext, mObjVal.ObjVal, *(uint32_t*) pLen );
+        return MagoEE::GetRawStringLength( mExprContext, mObjVal.ObjVal, *(uint32_t*) pLen );
     }
     
     HRESULT Property::GetStringChars( 
@@ -281,7 +281,7 @@ namespace Mago
     {
         OutputDebugStringA( "Property::GetStringChars\n" );
 
-        return MagoEE::EED::FormatRawString(
+        return MagoEE::FormatRawString(
             mExprContext,
             mObjVal.ObjVal,
             bufLen,

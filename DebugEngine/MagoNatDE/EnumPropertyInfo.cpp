@@ -143,14 +143,14 @@ namespace Mago
         const wchar_t* fullName, 
         IDebugProperty2** ppResult )
     {
-        HRESULT     hr = S_OK;
-        CComBSTR    errStr;
+        HRESULT      hr = S_OK;
+        std::wstring errStr;
 
-        hr = MagoEE::EED::GetErrorString( hrErr, errStr.m_str );
+        hr = MagoEE::GetErrorString( hrErr, errStr );
 
         // use a general error, if original error couldn't be found
         if ( hr == S_FALSE )
-            hr = MagoEE::EED::GetErrorString( E_MAGOEE_BASE, errStr.m_str );
+            hr = MagoEE::GetErrorString( E_MAGOEE_BASE, errStr );
 
         if ( hr == S_OK )
         {
@@ -159,7 +159,7 @@ namespace Mago
             hr = MakeCComObject( errProp );
             if ( SUCCEEDED( hr ) )
             {
-                hr = errProp->Init( name, fullName, errStr );
+                hr = errProp->Init( name, fullName, errStr.c_str() );
                 if ( hr == S_OK )
                 {
                     *ppResult = errProp.Detach();
