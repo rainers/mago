@@ -18,6 +18,8 @@ struct IDiaSourceFile;
 
 namespace MagoST
 {
+    class IAddressMap;
+
     class PDBDebugStore : public IDebugStore
     {
 
@@ -26,6 +28,7 @@ namespace MagoST
         virtual ~PDBDebugStore();
 
         HRESULT InitDebugInfo( BYTE* buffer, DWORD size, const wchar_t* filename, const wchar_t* searchPath );
+        HRESULT InitDebugInfo( IDiaSession* session );
         void CloseDebugInfo();
         IDiaSession* getSession() const { return mSession; }
 
@@ -82,6 +85,7 @@ namespace MagoST
         HRESULT findCompilandAndFile( IDiaSymbol *pCompiland, IDiaSourceFile *pSourceFile, uint16_t& compIndex, uint16_t& fileIndex );
         HRESULT setLineNumber( IDiaLineNumber* pLineNumber, uint16_t lineIndex, LineNumber& lineNumber );
         uint32_t getCompilandCount();
+        HRESULT initSession();
 
         bool mInit;
         IDiaDataSource  *mSource;

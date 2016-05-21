@@ -538,14 +538,34 @@ namespace MagoST
         if ( FAILED( hr ) )
             return hr;
 #endif
-
         // Open a session for querying symbols
         hr = mSource->openSession( &mSession );
         if ( FAILED( hr ) )
             return hr;
 
+        return initSession();
+    }
+
+    HRESULT PDBDebugStore::InitDebugInfo( IDiaSession* session )
+    {
+        if ( mInit )
+            return E_ALREADY_INIT;
+
+        HRESULT hr = CoInitializeEx( NULL, COINIT_MULTITHREADED );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mInit = true;
+        mSession = session;
+        mSession->AddRef();
+
+        return initSession();
+    }
+
+    HRESULT PDBDebugStore::initSession()
+    {
         // Retrieve a reference to the global scope
-        hr = mSession->get_globalScope( &mGlobal );
+        HRESULT hr = mSession->get_globalScope( &mGlobal );
         if ( hr != S_OK )
             return hr;
 

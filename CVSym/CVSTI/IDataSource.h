@@ -7,9 +7,11 @@
 
 #pragma once
 
+struct IDiaSession;
 
 namespace MagoST
 {
+    class IAddressMap;
     class ISession;
     class ILoadCallback;
 
@@ -25,6 +27,8 @@ namespace MagoST
             ILoadCallback* callback ) = 0;
 
         virtual HRESULT InitDebugInfo( const wchar_t* filename, const wchar_t* searchPath ) = 0;
+
+        virtual HRESULT InitDebugInfo( IDiaSession* session, IAddressMap* addrMap ) = 0;
 
         virtual HRESULT OpenSession( ISession*& session ) = 0;
     };
