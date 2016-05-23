@@ -153,7 +153,7 @@ void StackFrameInfo::dumpMIFrame(WstringBuffer & buf, bool showLevel) {
 	buf.appendStringParamIfNonEmpty(L"addr", address, '{');
 	if (!functionName.empty()) {
 		buf.appendStringParamIfNonEmpty(L"func", functionName, '{');
-		buf.append(L",args=[{name=\"a\",value=\"5\"}]");
+		buf.append(L",args=[]"); //{name=\"a\",value=\"5\"}
 		//buf.appendStringParamIfNonEmpty(L"args", std::wstring(L"[]"), '{'); // TODO
 	}
 	buf.appendStringParamIfNonEmpty(L"file", sourceBaseName, '{');
@@ -559,6 +559,13 @@ void LocalVariableInfo::dumpMiVariable(WstringBuffer & buf, bool includeTypes, b
 	}
 }
 
+void VariableObject::dumpVariableInfo(WstringBuffer & buf) {
+	buf.appendStringParam(L"name", name);
+	buf.appendStringParam(L"type", type);
+	buf.appendStringParam(L"value", value);
+	buf.appendStringParam(L"numchild", L"0");
+}
+
 /// print mi2 breakpoint info
 void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
 	buf.append(L"{");
@@ -790,6 +797,14 @@ std::wstring fixPathDelimiters(std::wstring s) {
 			ch = '\\';
 		buf.append(ch);
 	}
+	return buf.wstr();
+}
+
+std::wstring quoteString(std::wstring s) {
+	if (s.empty())
+		return L"\"\"";
+	WstringBuffer buf;
+	buf.appendStringLiteral(s);
 	return buf.wstr();
 }
 

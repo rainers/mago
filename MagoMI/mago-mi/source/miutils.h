@@ -427,6 +427,7 @@ public:
 
 bool fileExists(std::wstring fname);
 std::wstring unquoteString(std::wstring s);
+std::wstring quoteString(std::wstring s);
 std::wstring fixPathDelimiters(std::wstring s);
 std::wstring relativeToAbsolutePath(std::wstring s);
 bool isAbsolutePath(std::wstring s);
@@ -491,4 +492,24 @@ class LocalVariableList : public std::vector<LocalVariableInfoRef> {
 public:
 	LocalVariableList() {}
 	~LocalVariableList() {}
+};
+
+class VariableObject : public RefCountedBase {
+private:
+public:
+	std::wstring name;
+	std::wstring frame;
+	std::wstring expr;
+	std::wstring type;
+	std::wstring value;
+	void dumpVariableInfo(WstringBuffer & buf);
+	VariableObject() {}
+	virtual ~VariableObject() {}
+};
+
+typedef RefPtr<VariableObject> VariableObjectRef;
+class VariableObjectList : public std::vector<VariableObjectRef> {
+public:
+	VariableObjectList() {}
+	~VariableObjectList() {}
 };

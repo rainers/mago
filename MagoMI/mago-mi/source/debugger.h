@@ -21,6 +21,7 @@ class Debugger : public MIEventCallback, public CmdInputCallback {
 	IDebugProgram2 *_pProgram;
 	IDebugThread2 *_pThread;
 	BreakpointInfoList _breakpointList;
+	VariableObjectList _varList;
 	bool _quitRequested;
 	bool _verbose;
 	bool _loadCalled;
@@ -70,6 +71,8 @@ public:
 	virtual void handleBreakpointInsertCommand(MICommand & cmd);
 	// called to handle breakpoint enable/disable commands
 	virtual void handleBreakpointEnableCommand(MICommand & cmd, bool enable);
+	// called to handle variable commands
+	virtual void handleVariableCommand(MICommand & cmd);
 	/// called on new input line
 	virtual void onInputLine(std::wstring &s);
 	/// called when ctrl+c or ctrl+break is called

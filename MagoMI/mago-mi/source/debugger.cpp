@@ -274,6 +274,9 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"-stack-list-locals") {
 		handleStackListVariablesCommand(cmd, true);
 	}
+	else if (cmd.commandName == L"-var-create") {
+		handleVariableCommand(cmd);
+	}
 	else if (cmd.commandName == L"-list-features") {
 		WstringBuffer buf;
 		buf.appendUlongIfNonEmpty(cmd.requestId);
@@ -377,6 +380,64 @@ void Debugger::onInputLine(std::wstring &s) {
 	}
 }
 
+static uint64_t nextVarId = 1;
+
+// called to handle variable commands
+void Debugger::handleVariableCommand(MICommand & cmd) {
+	std::wstring name = cmd.unnamedValue(0);
+	std::wstring addr = cmd.unnamedValue(1);
+	std::wstring expr = cmd.unnamedValue(2);
+	if (name == L"-")
+		name = std::wstring(L"var") + toWstring(nextVarId++);
+
+	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
+	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+	// returns stack frame if found
+	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
+	if (!frame) {
+		writeErrorMessage(cmd.requestId, L"cannot find specified thread or stack frame");
+		return;
+	}
+	StackFrameInfo frameInfo;
+	bool hasContext = getThreadFrameContext(findThreadById(threadId), &frameInfo) == 1;
+
+	LocalVariableList list;
+	bool found = false;
+	VariableObjectRef var = new VariableObject();
+	if (frame && getLocalVariables(frame, list, true)) {
+		for (unsigned i = 0; i < list.size(); i++) {
+			if (list[i]->varName != expr)
+				continue;
+			found = true;
+			if (addr == L"*") {
+				addr = frameInfo.address;
+			}
+			var->type = list[0]->varType;
+			var->value = list[0]->varValue;
+			break;
+		}
+	}
+
+	if (!found) {
+		writeErrorMessage(cmd.requestId, std::wstring(L"No symbol ") + quoteString(expr));
+		return;
+	}
+
+	if (name.empty() || addr.empty() || expr.empty()) {
+		writeErrorMessage(cmd.requestId, L"Invalid -var-create command");
+		return;
+	}
+	var->name = name;
+	var->frame = addr;
+	var->expr = expr;
+	_varList.push_back(var);
+	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(cmd.requestId);
+	buf.append(L"^done");
+	var->dumpVariableInfo(buf);
+	writeStdout(buf.wstr());
+}
+
 // called to handle -stack-list-variables command
 void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly) {
 	if (!_paused || _stopped) {
@@ -418,7 +479,7 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly)
 			list[i]->dumpMiVariable(buf, level ? true : false, level ? true : false);
 		}
 	}
-
+	
 	//// fake output for testing
 	//buf.append(L"{name=\"x\",value=\"11\"},{name=\"s\",value=\"{a = 1, b = 2}\"}");
 
