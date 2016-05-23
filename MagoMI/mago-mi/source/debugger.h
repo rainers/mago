@@ -57,6 +57,8 @@ public:
 
 	// CmdInputCallback interface handlers
 
+	// called to handle -data-evaluate-expression command
+	virtual void handleDataEvaluateExpressionCommand(MICommand & cmd);
 	// called to handle -stack-list-variables command
 	virtual void handleStackListVariablesCommand(MICommand & cmd, bool localsOnly = false);
 	// called to handle -stack-list-frames command

@@ -334,12 +334,7 @@ void Debugger::onInputLine(std::wstring &s) {
 		writeResultMessage(cmd.requestId, L"done");
 	}
 	else if (cmd.commandName == L"-data-evaluate-expression") {
-		if (cmd.unnamedValue(0) == L"sizeof (void*)" || cmd.unnamedValue(0) == L"\"sizeof (void*)\"") {
-			writeResultMessageRaw(cmd.requestId, L"done", L"value=\"4\"");
-			return;
-		}
-		CRLog::warn("command -data-evaluate-expression is not implemented");
-		writeResultMessage(cmd.requestId, L"done");
+		handleDataEvaluateExpressionCommand(cmd);
 	}
 	else if (cmd.commandName == L"-gdb-set") { // breakpoint pending on
 		CRLog::warn("command -gdb-set is not implemented");
@@ -385,6 +380,39 @@ void Debugger::onInputLine(std::wstring &s) {
 }
 
 static uint64_t nextVarId = 1;
+
+// called to handle -data-evaluate-expression command
+void Debugger::handleDataEvaluateExpressionCommand(MICommand & cmd) {
+	WstringBuffer buf;
+	buf.appendUlongIfNonEmpty(cmd.requestId);
+	if (cmd.unnamedValue(0) == L"sizeof (void*)" || cmd.unnamedValue(0) == L"\"sizeof (void*)\"") {
+		writeResultMessageRaw(cmd.requestId, L"done", L"value=\"4\"");
+		return;
+	}
+	std::wstring expr = cmd.unnamedValue(0);
+	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
+	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+	// returns stack frame if found
+	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
+	if (!frame) {
+		writeErrorMessage(cmd.requestId, L"cannot find specified thread or stack frame");
+		return;
+	}
+	StackFrameInfo frameInfo;
+	bool hasContext = getThreadFrameContext(findThreadById(threadId), &frameInfo) == 1;
+	LocalVariableList list;
+	if (frame && getLocalVariables(frame, list, true)) {
+		for (unsigned i = 0; i < list.size(); i++) {
+			if (list[i]->varName != expr)
+				continue;
+			buf.append(L"^done");
+			buf.appendStringParam(L"value", list[i]->varValue);
+			writeStdout(buf.wstr());
+			return;
+		}
+	}
+	writeErrorMessage(cmd.requestId, std::wstring(L"Cannot evaluate ") + quoteString(expr));
+}
 
 // called to handle variable commands
 void Debugger::handleVariableCommand(MICommand & cmd) {
@@ -463,6 +491,8 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 			if (var.Get()) {
 				var->type = list[i]->varType;
 				var->value = list[i]->varValue;
+				if (isVarUpdate)
+					var->inScope = var->frame == addr;
 				updatedVarsList.push_back(var);
 				if (!allVars)
 					break;
@@ -485,7 +515,7 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 		var->frame = addr;
 		var->expr = expr;
 		_varList.push_back(var);
-		var->dumpVariableInfo(buf);
+		var->dumpVariableInfo(buf, false);
 	}
 	else if (isVarUpdate) {
 		buf.append(L",changelist=[");
@@ -494,7 +524,7 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 			if (i > 0)
 				buf.append(L",");
 			buf.append(L"{");
-			var->dumpVariableInfo(buf);
+			var->dumpVariableInfo(buf, true);
 			buf.append(L"}");
 		}
 		buf.append(L"]");

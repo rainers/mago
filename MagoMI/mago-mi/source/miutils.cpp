@@ -559,11 +559,15 @@ void LocalVariableInfo::dumpMiVariable(WstringBuffer & buf, bool includeTypes, b
 	}
 }
 
-void VariableObject::dumpVariableInfo(WstringBuffer & buf) {
+void VariableObject::dumpVariableInfo(WstringBuffer & buf, bool forUpdate) {
 	buf.appendStringParam(L"name", name);
 	buf.appendStringParam(L"type", type);
 	buf.appendStringParam(L"value", value);
 	buf.appendStringParam(L"numchild", L"0");
+	if (forUpdate) {
+		buf.appendStringParam(L"in_scope", inScope ? L"true" : L"false");
+		buf.appendStringParam(L"type_changed", L"false");
+	}
 }
 
 VariableObjectRef VariableObjectList::find(std::wstring name, int * pvarIndex) {

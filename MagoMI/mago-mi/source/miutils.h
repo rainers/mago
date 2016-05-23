@@ -502,8 +502,9 @@ public:
 	std::wstring expr;
 	std::wstring type;
 	std::wstring value;
-	void dumpVariableInfo(WstringBuffer & buf);
-	VariableObject() {}
+	bool inScope;
+	void dumpVariableInfo(WstringBuffer & buf, bool forUpdate);
+	VariableObject() : inScope(true) {}
 	virtual ~VariableObject() {}
 };
 
