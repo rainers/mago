@@ -269,7 +269,10 @@ void Debugger::onInputLine(std::wstring &s) {
 		handleStackListFramesCommand(cmd, true);
 	}
 	else if (cmd.commandName == L"-stack-list-variables") {
-		handleStackListVariablesCommand(cmd);
+		handleStackListVariablesCommand(cmd, false);
+	}
+	else if (cmd.commandName == L"-stack-list-locals") {
+		handleStackListVariablesCommand(cmd, true);
 	}
 	else if (cmd.commandName == L"-list-features") {
 		WstringBuffer buf;
@@ -309,10 +312,14 @@ void Debugger::onInputLine(std::wstring &s) {
 				writeDebuggerMessage(L"The target endianness is set automatically (currently little endian)\n");
 				writeResultMessage(cmd.requestId, L"done");
 				return;
-			}
-			if (unquoteString(cmd.unnamedValue(1)) == L"p/x (char)-1") {
+			} 
+			else if (unquoteString(cmd.unnamedValue(1)) == L"p/x (char)-1") {
 				writeDebuggerMessage(L"$1 = 0xff\n");
 				writeResultMessage(cmd.requestId, L"done");
+				return;
+			}
+			else if (unquoteString(cmd.unnamedValue(1)) == L"kill") {
+				stop(cmd.requestId);
 				return;
 			}
 		}
@@ -371,7 +378,7 @@ void Debugger::onInputLine(std::wstring &s) {
 }
 
 // called to handle -stack-list-variables command
-void Debugger::handleStackListVariablesCommand(MICommand & cmd) {
+void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly) {
 	if (!_paused || _stopped) {
 		writeErrorMessage(cmd.requestId, L"Cannot get variables for running or terminated process");
 		return;
@@ -385,19 +392,27 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd) {
 	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
 	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
 
+	int level = 0;
+	std::wstring plevel = cmd.unnamedValue(0);
+	if (plevel == L"--all-values" || plevel == L"1")
+		level = 2;
+	if (plevel == L"--simple-values" || plevel == L"2")
+		level = 1;
+
+
 	// returns stack frame if found
 	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
 	if (!frame) {
 		writeErrorMessage(cmd.requestId, L"cannot find specified thread or stack frame");
 		return;
 	}
-	bool includeArgs = true;
+	bool includeArgs = !localsOnly;
 	LocalVariableList list;
 	if (frame && getLocalVariables(frame, list, includeArgs)) {
 		for (unsigned i = 0; i < list.size(); i++) {
 			if (i != 0)
 				buf.append(L",");
-			list[i]->dumpMiVariable(buf, true, true);
+			list[i]->dumpMiVariable(buf, level ? true : false, level ? true : false);
 		}
 	}
 
@@ -853,6 +868,16 @@ bool Debugger::resume(uint64_t requestId, DWORD threadId) {
 	return true;
 }
 
+/// stop program execution
+bool Debugger::stop(uint64_t requestId) {
+	if (FAILED(_pProgram->Terminate())) {
+		writeErrorMessage(requestId, std::wstring(L"Failed to terminate process"));
+		return false;
+	}
+	writeResultMessage(requestId, L"done");
+	return true;
+}
+
 // break program if running
 bool Debugger::causeBreak(uint64_t requestId) {
 	if (!_started || !_loaded || _paused || !_pProgram) {
@@ -1010,7 +1035,7 @@ bool Debugger::getLocalVariables(IDebugStackFrame2 * frame, LocalVariableList &l
 	ULONG count = 0;
 	IEnumDebugPropertyInfo2* pEnum = NULL;
 	if (SUCCEEDED(frame->EnumProperties(DEBUGPROP_INFO_FULLNAME | DEBUGPROP_INFO_NAME | DEBUGPROP_INFO_TYPE | DEBUGPROP_INFO_VALUE | DEBUGPROP_INFO_ATTRIB | DEBUGPROP_INFO_VALUE_AUTOEXPAND,
-		10, includeArgs ? guidFilterAllLocalsPlusArgs : guidFilterAllLocals, 1000, &count, &pEnum)) && pEnum) {
+		10, guidFilterAllLocalsPlusArgs, 1000, &count, &pEnum)) && pEnum) { //guidFilterAllLocals
 		// get info
 		for (unsigned i = 0; i < count; i++) {
 			ULONG fetched = 0;

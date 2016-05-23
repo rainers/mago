@@ -57,7 +57,7 @@ public:
 	// CmdInputCallback interface handlers
 
 	// called to handle -stack-list-variables command
-	virtual void handleStackListVariablesCommand(MICommand & cmd);
+	virtual void handleStackListVariablesCommand(MICommand & cmd, bool localsOnly = false);
 	// called to handle -stack-list-frames command
 	virtual void handleStackListFramesCommand(MICommand & cmd, bool depthOnly = false);
 	// called to handle -thread-info and -thread-list-ids commands
@@ -86,6 +86,8 @@ public:
 	virtual bool resume(uint64_t requestId = UNSPECIFIED_REQUEST_ID, DWORD threadId = 0);
 	// break program if running
 	virtual bool causeBreak(uint64_t requestId = UNSPECIFIED_REQUEST_ID);
+	/// stop program execution
+	virtual bool stop(uint64_t requestId);
 	// step paused program
 	virtual bool step(STEPKIND stepKind, STEPUNIT stepUnit, DWORD threadId = 0, uint64_t requestId = UNSPECIFIED_REQUEST_ID);
 	// step paused program

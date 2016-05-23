@@ -544,11 +544,19 @@ std::wstring getBaseName(std::wstring fname) {
 }
 
 void LocalVariableInfo::dumpMiVariable(WstringBuffer & buf, bool includeTypes, bool includeValues) {
-	buf.append(L"{");
-	buf.appendStringParam(L"name", varName);
-	buf.appendStringParam(L"type", varType);
-	buf.appendStringParam(L"value", varValue);
-	buf.append(L"}");
+	if (!includeTypes && !includeValues) {
+		//if (buf.last() != '[')
+		buf.appendStringLiteral(varName);
+	}
+	else {
+		buf.append(L"{");
+		buf.appendStringParam(L"name", varName);
+		if (includeTypes)
+			buf.appendStringParam(L"type", varType);
+		if (includeValues)
+			buf.appendStringParam(L"value", varValue);
+		buf.append(L"}");
+	}
 }
 
 /// print mi2 breakpoint info
