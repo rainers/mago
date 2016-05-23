@@ -274,7 +274,7 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"-stack-list-locals") {
 		handleStackListVariablesCommand(cmd, true);
 	}
-	else if (cmd.commandName == L"-var-create") {
+	else if (cmd.commandName == L"-var-create" || cmd.commandName == L"-var-update" || cmd.commandName == L"-var-delete") {
 		handleVariableCommand(cmd);
 	}
 	else if (cmd.commandName == L"-var-set-format") {
@@ -388,11 +388,39 @@ static uint64_t nextVarId = 1;
 
 // called to handle variable commands
 void Debugger::handleVariableCommand(MICommand & cmd) {
+	bool isVarCreate = cmd.commandName == L"-var-create";
+	bool isVarDelete = cmd.commandName == L"-var-delete";
+	bool isVarUpdate = cmd.commandName == L"-var-update";
+	VariableObjectRef var;
 	std::wstring name = cmd.unnamedValue(0);
-	std::wstring addr = cmd.unnamedValue(1);
-	std::wstring expr = cmd.unnamedValue(2);
-	if (name == L"-")
-		name = std::wstring(L"var") + toWstring(nextVarId++);
+	std::wstring addr;
+	std::wstring expr;
+
+	int varIndex = -1;
+	if (isVarDelete || isVarUpdate) {
+		if (isVarDelete)
+			name = cmd.unnamedValue(0);
+		else
+			name = cmd.unnamedValue(1);
+		for (unsigned i = 0; i < _varList.size(); i++) {
+			if (_varList[i]->name == name) {
+				var = _varList[i];
+				varIndex = i;
+			}
+		}
+		if (varIndex == -1) {
+			writeErrorMessage(cmd.requestId, std::wstring(L"No variable ") + quoteString(expr));
+			return;
+		}
+	}
+
+	if (isVarCreate) {
+		name = cmd.unnamedValue(0);
+		addr = cmd.unnamedValue(1);
+		expr = cmd.unnamedValue(2);
+		if (name == L"-")
+			name = std::wstring(L"var") + toWstring(nextVarId++);
+	}
 
 	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
 	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
@@ -407,17 +435,22 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 
 	LocalVariableList list;
 	bool found = false;
-	VariableObjectRef var = new VariableObject();
+	if (isVarCreate)
+		var = new VariableObject();
 	if (frame && getLocalVariables(frame, list, true)) {
 		for (unsigned i = 0; i < list.size(); i++) {
 			if (list[i]->varName != expr)
 				continue;
 			found = true;
-			if (addr == L"*") {
-				addr = frameInfo.address;
+			if (isVarCreate) {
+				if (addr == L"*") {
+					addr = frameInfo.address;
+				}
 			}
-			var->type = list[i]->varType;
-			var->value = list[i]->varValue;
+			if (isVarCreate || isVarUpdate) {
+				var->type = list[i]->varType;
+				var->value = list[i]->varValue;
+			}
 			break;
 		}
 	}
@@ -431,14 +464,22 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 		writeErrorMessage(cmd.requestId, L"Invalid -var-create command");
 		return;
 	}
-	var->name = name;
-	var->frame = addr;
-	var->expr = expr;
-	_varList.push_back(var);
 	WstringBuffer buf;
 	buf.appendUlongIfNonEmpty(cmd.requestId);
 	buf.append(L"^done");
-	var->dumpVariableInfo(buf);
+	if (isVarCreate) {
+		var->name = name;
+		var->frame = addr;
+		var->expr = expr;
+		_varList.push_back(var);
+		var->dumpVariableInfo(buf);
+	}
+	else if (isVarDelete) {
+		_varList.erase(_varList.begin() + varIndex);
+	}
+	else if (isVarUpdate) {
+		var->dumpVariableInfo(buf);
+	}
 	writeStdout(buf.wstr());
 }
 
