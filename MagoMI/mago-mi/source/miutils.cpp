@@ -566,6 +566,33 @@ void VariableObject::dumpVariableInfo(WstringBuffer & buf) {
 	buf.appendStringParam(L"numchild", L"0");
 }
 
+VariableObjectRef VariableObjectList::find(std::wstring name, int * pvarIndex) {
+	for (unsigned i = 0; i < size(); i++) {
+		if (at(i)->name == name) {
+			if (pvarIndex)
+				*pvarIndex = (int)i;
+			return at(i);
+		}
+	}
+	if (pvarIndex)
+		*pvarIndex = -1;
+	return VariableObjectRef();
+}
+
+VariableObjectRef VariableObjectList::find(std::wstring frameAddress, std::wstring expr, int * pvarIndex) {
+	for (unsigned i = 0; i < size(); i++) {
+		if (at(i)->frame == frameAddress && at(i)->expr == expr) {
+			if (pvarIndex)
+				*pvarIndex = (int)i;
+			return at(i);
+		}
+	}
+	if (pvarIndex)
+		*pvarIndex = -1;
+	return VariableObjectRef();
+}
+
+
 /// print mi2 breakpoint info
 void BreakpointInfo::printBreakpointInfo(WstringBuffer & buf) {
 	buf.append(L"{");

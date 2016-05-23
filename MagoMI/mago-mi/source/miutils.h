@@ -512,4 +512,6 @@ class VariableObjectList : public std::vector<VariableObjectRef> {
 public:
 	VariableObjectList() {}
 	~VariableObjectList() {}
+	VariableObjectRef find(std::wstring frameAddress, std::wstring expr, int * pvarIndex = NULL);
+	VariableObjectRef find(std::wstring name, int * pvarIndex = NULL);
 };
