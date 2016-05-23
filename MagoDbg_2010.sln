@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DebugEngine", "DebugEngine", "{A26599FF-EE45-48FF-BF60-AED141AB2325}"
 EndProject
@@ -79,6 +79,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mago-mi", "MagoMI\mago-mi\m
 		{11BDC5B8-31E1-4127-A313-5B599EF506FC} = {11BDC5B8-31E1-4127-A313-5B599EF506FC}
 		{76C10ABF-B392-4DBD-8658-8D36AE7EA571} = {76C10ABF-B392-4DBD-8658-8D36AE7EA571}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gdblogger", "MagoMI\gdblogger\gdblogger.vcxproj", "{18D48136-46C3-461F-958C-E5D5D86CBEC4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -244,6 +246,12 @@ Global
 		{00AE5920-ED5F-4A33-9330-48D1C3F2B802}.Release|Win32.Build.0 = Release|Win32
 		{00AE5920-ED5F-4A33-9330-48D1C3F2B802}.Release|x64.ActiveCfg = Release|x64
 		{00AE5920-ED5F-4A33-9330-48D1C3F2B802}.Release|x64.Build.0 = Release|x64
+		{18D48136-46C3-461F-958C-E5D5D86CBEC4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{18D48136-46C3-461F-958C-E5D5D86CBEC4}.Debug|Win32.Build.0 = Debug|Win32
+		{18D48136-46C3-461F-958C-E5D5D86CBEC4}.Debug|x64.ActiveCfg = Debug|Win32
+		{18D48136-46C3-461F-958C-E5D5D86CBEC4}.Release|Win32.ActiveCfg = Release|Win32
+		{18D48136-46C3-461F-958C-E5D5D86CBEC4}.Release|Win32.Build.0 = Release|Win32
+		{18D48136-46C3-461F-958C-E5D5D86CBEC4}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -274,5 +282,6 @@ Global
 		{E101E50F-5E93-4519-825A-6B19D988DA77} = {A26599FF-EE45-48FF-BF60-AED141AB2325}
 		{0F8AB97B-1363-4DF6-90C0-BA3F34393A40} = {A1310BA0-21B6-478C-AEF4-D512DEE6E4B2}
 		{00AE5920-ED5F-4A33-9330-48D1C3F2B802} = {A1310BA0-21B6-478C-AEF4-D512DEE6E4B2}
+		{18D48136-46C3-461F-958C-E5D5D86CBEC4} = {A1310BA0-21B6-478C-AEF4-D512DEE6E4B2}
 	EndGlobalSection
 EndGlobal
