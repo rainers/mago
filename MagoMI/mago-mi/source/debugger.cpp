@@ -277,6 +277,10 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"-var-create") {
 		handleVariableCommand(cmd);
 	}
+	else if (cmd.commandName == L"-var-set-format") {
+		CRLog::warn("command -gdb-show is not implemented");
+		writeResultMessage(cmd.requestId, L"done");
+	}
 	else if (cmd.commandName == L"-list-features") {
 		WstringBuffer buf;
 		buf.appendUlongIfNonEmpty(cmd.requestId);
@@ -412,8 +416,8 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 			if (addr == L"*") {
 				addr = frameInfo.address;
 			}
-			var->type = list[0]->varType;
-			var->value = list[0]->varValue;
+			var->type = list[i]->varType;
+			var->value = list[i]->varValue;
 			break;
 		}
 	}
