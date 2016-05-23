@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <windows.h>
+#include "miutils.h"
 
 CRLog * CRLog::CRLOG = NULL;
 
@@ -121,11 +122,13 @@ CRLog::~CRLog()
 class CRFileLogger : public CRLog
 {
 protected:
+	Mutex _mutex;
 	FILE * f;
 	bool autoClose;
 	bool autoFlush;
 	virtual void log(const char * level, const char * msg, va_list args)
 	{
+		TimeCheckedGuardedArea guard(_mutex, "logger");
 		if (!f)
 			return;
 #ifdef LINUX

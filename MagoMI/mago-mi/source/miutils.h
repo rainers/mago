@@ -11,6 +11,86 @@ typedef unsigned __int64 ulong;
 // magic constant for non-specified MI request id
 const uint64_t UNSPECIFIED_REQUEST_ID = 0xFFFFFFFFFFFFFFFEull;
 
+
+#define DEFAULT_GUARD_TIMEOUT 50
+#ifdef _DEBUG
+#define DEBUG_LOCK_WAIT 1
+#endif
+
+class Mutex {
+	HANDLE _mutex;
+public:
+	Mutex()
+	{
+		_mutex = CreateMutex(NULL, FALSE, NULL);
+	}
+
+	~Mutex()
+	{
+		CloseHandle(_mutex);
+	}
+
+	void Lock()
+	{
+		WaitForSingleObject(
+			_mutex,    // handle to mutex
+			INFINITE);  // no time-out interval
+	}
+
+	void Unlock()
+	{
+		ReleaseMutex(_mutex);
+	}
+};
+
+class TimeCheckedGuardedArea
+{
+	Mutex&  mGuard;
+#ifdef DEBUG_LOCK_WAIT
+	const char * lockName;
+	uint64_t warnTimeout;
+	uint64_t startWaitLock;
+	uint64_t endWaitLock;
+	uint64_t endLock;
+#endif
+public:
+	explicit TimeCheckedGuardedArea(Mutex& guard, const char * name, uint64_t timeout = DEFAULT_GUARD_TIMEOUT)
+		: mGuard(guard)
+#ifdef DEBUG_LOCK_WAIT
+		, lockName(name), warnTimeout(timeout), startWaitLock(0), endWaitLock(0), endLock(0)
+#endif
+	{
+#ifdef DEBUG_LOCK_WAIT
+		startWaitLock = GetCurrentTimeMillis();
+#endif
+		mGuard.Lock();
+#ifdef DEBUG_LOCK_WAIT
+		endWaitLock = GetCurrentTimeMillis();
+		if (endWaitLock - startWaitLock > warnTimeout)
+			CRLog::warn("Lock wait timeout exceeded for guard %s: %llu ms", lockName, endWaitLock - startWaitLock);
+#endif
+	}
+
+	~TimeCheckedGuardedArea()
+	{
+		mGuard.Unlock();
+#ifdef DEBUG_LOCK_WAIT
+		endLock = GetCurrentTimeMillis();
+		if (endLock - endWaitLock > warnTimeout)
+			CRLog::warn("Lock hold timeout exceeded for guard %s: %llu ms", lockName, endLock - endWaitLock);
+#endif
+	}
+
+private:
+	TimeCheckedGuardedArea& operator =(TimeCheckedGuardedArea& other) {
+		UNREFERENCED_PARAMETER(other);
+		return *this;
+	}
+};
+
+
+
+
 template <typename T>
 struct Buffer {
 private:
