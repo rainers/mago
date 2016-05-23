@@ -59,7 +59,7 @@ public:
 	// called to handle -stack-list-variables command
 	virtual void handleStackListVariablesCommand(MICommand & cmd);
 	// called to handle -stack-list-frames command
-	virtual void handleStackListFramesCommand(MICommand & cmd);
+	virtual void handleStackListFramesCommand(MICommand & cmd, bool depthOnly = false);
 	// called to handle -thread-info and -thread-list-ids commands
 	virtual void handleThreadInfoCommand(MICommand & cmd, bool idsOnly);
 	// called to handle breakpoint list command

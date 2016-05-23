@@ -263,7 +263,10 @@ void Debugger::onInputLine(std::wstring &s) {
 		handleThreadInfoCommand(cmd, true);
 	}
 	else if (cmd.commandName == L"backtrace" || cmd.commandName == L"bt" || cmd.commandName == L"-stack-list-frames") {
-		handleStackListFramesCommand(cmd);
+		handleStackListFramesCommand(cmd, false);
+	}
+	else if (cmd.commandName == L"-stack-info-depth") {
+		handleStackListFramesCommand(cmd, true);
 	}
 	else if (cmd.commandName == L"-stack-list-variables") {
 		handleStackListVariablesCommand(cmd);
@@ -407,11 +410,18 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd) {
 }
 
 #define MAX_FRAMES 100
-// called to handle -stack-list-frames command
-void Debugger::handleStackListFramesCommand(MICommand & cmd) {
+// called to handle -stack-list-frames command and -stack-info-depth
+void Debugger::handleStackListFramesCommand(MICommand & cmd, bool depthOnly) {
 	if (!_paused || _stopped) {
 		writeErrorMessage(cmd.requestId, L"Cannot get frames info for running or terminated process");
 		return;
+	}
+	int maxDepth = 0;
+	int depth = 0;
+	if (depthOnly) {
+		uint64_t n = 0;
+		if (toUlong(cmd.unnamedValue(0), n))
+			maxDepth = (int)n;
 	}
 	DWORD tid = (DWORD)cmd.getUlongParam(L"--thread");
 	IDebugThread2 * pThread = findThreadById(tid);
@@ -435,14 +445,23 @@ void Debugger::handleStackListFramesCommand(MICommand & cmd) {
 	}
 	WstringBuffer buf;
 	buf.appendUlongIfNonEmpty(cmd.requestId);
-	buf.append(L"^done,stack=[");
-	for (unsigned i = 0; i < frameCount; i++) {
-		if (i > 0)
-			buf.append(L",");
-		buf.append(L"frame=");
-		frameInfos[i].dumpMIFrame(buf, true);
+	buf.append(L"^done");
+	if (depthOnly) {
+		depth = frameCount;
+		if (maxDepth && depth > maxDepth)
+			depth = maxDepth;
+		buf.appendUlongParamAsString(L"depth", depth);
 	}
-	buf.append(L"]");
+	else {
+		buf.append(L",stack=[");
+		for (unsigned i = 0; i < frameCount; i++) {
+			if (i > 0)
+				buf.append(L",");
+			buf.append(L"frame=");
+			frameInfos[i].dumpMIFrame(buf, true);
+		}
+		buf.append(L"]");
+	}
 	writeStdout(buf.wstr());
 }
 
