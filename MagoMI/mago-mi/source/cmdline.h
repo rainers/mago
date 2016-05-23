@@ -1,6 +1,6 @@
 #include <string>
 
-#define EMULATED_GDB_VERSION L"7.11"
+#define EMULATED_GDB_VERSION L"7.1.90"
 #define MAGO_MI_VERSION L"0.1.1"
 #define VERSION_STRING L"GNU gdb (mago-mi " MAGO_MI_VERSION L") " EMULATED_GDB_VERSION
 #define VERSION_EXPLANATION_STRING L"(Actually it's mago-mi debugger. Version shows GDB for Eclipse CDT compatibility)"

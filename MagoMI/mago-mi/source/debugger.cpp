@@ -234,11 +234,21 @@ void Debugger::onInputLine(std::wstring &s) {
 		handleBreakpointEnableCommand(cmd, false);
 	}
 	else if (cmd.commandName == L"-list-thread-groups") {
+		if (!_paused && (cmd.unnamedValue(0) == L"i1" || cmd.hasParam(L"--available"))) {
+			writeErrorMessage(cmd.requestId, L"Can not fetch data now.\n");
+			return;
+		}
+		if (cmd.unnamedValue(0) == L"i1") {
+			handleThreadInfoCommand(cmd, false);
+			return;
+		}
 		WstringBuffer buf;
 		buf.appendUlongIfNonEmpty(cmd.requestId);
-		buf.append(L"^done,groups=[{");
+		buf.append(L"^done");
+		buf.append(L",groups=[{");
 		buf.appendStringParam(L"id", L"i1");
 		buf.appendStringParam(L"type", L"process");
+		buf.appendStringParam(L"pid", L"123"); // todo: add real PID
 		buf.appendStringParamIfNonEmpty(L"executable", params.exename);
 		buf.append(L"}]");
 		writeStdout(buf.wstr());
@@ -261,12 +271,13 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"-list-features") {
 		WstringBuffer buf;
 		buf.appendUlongIfNonEmpty(cmd.requestId);
-		buf.append(L"^done,features=[\"thread-info\",\"breakpoint-notifications\",\"undefined-command-error-code\",\"exec-run-start-option\"]");
+		buf.append(L"^done,features=[\"frozen - varobjs\",\"pending - breakpoints\",\"thread-info\"]");
+		//,\"breakpoint-notifications\",\"undefined-command-error-code\",\"exec-run-start-option\"
 		writeStdout(buf.wstr());
 	}
 	else if (cmd.commandName == L"-gdb-version") {
-		writeStdout(L"~\"" VERSION_STRING L"\"");
-		writeStdout(L"~\"" VERSION_EXPLANATION_STRING L"\"");
+		writeStdout(L"~\"" VERSION_STRING L"\\n\"");
+		writeStdout(L"~\"" VERSION_EXPLANATION_STRING L"\\n\"");
 		writeResultMessage(cmd.requestId, L"done");
 	}
 	else if (cmd.commandName == L"-environment-cd") {
@@ -292,12 +303,12 @@ void Debugger::onInputLine(std::wstring &s) {
 	else if (cmd.commandName == L"-interpreter-exec") {
 		if (cmd.unnamedValue(0) == L"console") {
 			if (unquoteString(cmd.unnamedValue(1)) == L"show endian") {
-				writeDebuggerMessage(L"The target endianness is set automatically (currently little endian)\\n");
+				writeDebuggerMessage(L"The target endianness is set automatically (currently little endian)\n");
 				writeResultMessage(cmd.requestId, L"done");
 				return;
 			}
 			if (unquoteString(cmd.unnamedValue(1)) == L"p/x (char)-1") {
-				writeDebuggerMessage(L"$1 = 0xff");
+				writeDebuggerMessage(L"$1 = 0xff\n");
 				writeResultMessage(cmd.requestId, L"done");
 				return;
 			}
@@ -306,7 +317,7 @@ void Debugger::onInputLine(std::wstring &s) {
 		writeResultMessage(cmd.requestId, L"done");
 	}
 	else if (cmd.commandName == L"-data-evaluate-expression") {
-		if (cmd.unnamedValue(0) == L"sizeof (void*)") {
+		if (cmd.unnamedValue(0) == L"sizeof (void*)" || cmd.unnamedValue(0) == L"\"sizeof (void*)\"") {
 			writeResultMessageRaw(cmd.requestId, L"done", L"value=\"4\"");
 			return;
 		}
@@ -317,13 +328,21 @@ void Debugger::onInputLine(std::wstring &s) {
 		CRLog::warn("command -gdb-set is not implemented");
 		writeResultMessage(cmd.requestId, L"done");
 	}
+	else if (cmd.commandName == L"maintenance") { // breakpoint pending on
+		CRLog::warn("command maintenance is not implemented");
+		writeStdout(L"&\"%s\\n\"", cmd.commandText.c_str());
+		writeResultMessage(cmd.requestId, L"done");
+	}
 	else if (cmd.commandName == L"-enable-pretty-printing") {
 		CRLog::warn("command -enable-pretty-printing is not implemented");
 		writeResultMessage(cmd.requestId, L"done");
 	}
 	else if (cmd.commandName == L"source") {
 		CRLog::warn("command source is not implemented");
-		writeResultMessage(cmd.requestId, L"done");
+		writeStdout(L"&\"source.gdbinit\\n\"");
+		writeStdout(L"&\".gdbinit: No such file or directory.\\n\"");
+		writeErrorMessage(cmd.requestId, L".gdbinit: No such file or directory.");
+		//writeResultMessage(cmd.requestId, L"done");
 	}
 	else if (cmd.commandName == L"-file-exec-and-symbols") {
 		if (cmd.unnamedValues.size() != 1) {
@@ -702,6 +721,11 @@ bool Debugger::load(uint64_t requestId, bool synchronous) {
 int Debugger::enterCommandLoop() {
 	CRLog::info("Entering command loop");
 	CRLog::info("Mode: %s", _cmdinput.inConsole() ? "Console" : "Stream");
+	writeStdout(L"=thread-group-added,id=\"i1\"");
+	if (params.miMode && !params.silent) {
+		writeStdout(L"~\"" VERSION_STRING L"\\n\"");
+		writeStdout(L"~\"" VERSION_EXPLANATION_STRING L"\\n\"");
+	}
 	if (!params.miMode && !params.silent) {
 
 		// some software detect GDB by "GNU gdb..." line
@@ -716,7 +740,7 @@ int Debugger::enterCommandLoop() {
 	}
 	else if (params.miMode && !params.silent) {
 		// some software detect GDB by "GNU gdb..." line
-		writeDebuggerMessage(L"GNU gdb compatible debugger mago-mi " MAGO_MI_VERSION L"\n");
+		//writeDebuggerMessage(L"GNU gdb compatible debugger mago-mi " MAGO_MI_VERSION L"\n");
 
 	}
 	if (params.hasExecutableSpecified()) {
@@ -764,8 +788,14 @@ bool Debugger::run(uint64_t requestId) {
 	//}
 	_started = true;
 	resume(requestId);
+
+
+	writeStdout(L"=thread-group-started,id=\"i1\",pid=\"123\""); // TODO: proper PID
+	writeStdout(L"=thread-created,id=\"%d\",group-id=\"i1\"", getThreadId(NULL));
+
 	writeResultMessage(requestId, L"running", NULL, '^');
 	writeResultMessage(UNSPECIFIED_REQUEST_ID, L"running,thread-id=\"all\"", NULL, '*');
+	writeStdout(L"(gdb) "); // TODO: proper PID
 	return true;
 }
 
@@ -1154,7 +1184,7 @@ HRESULT Debugger::OnDebugProgramCreated(IDebugEngine2 *pEngine,
 	UNUSED_EVENT_PARAMS;
 	_pProcess = pProcess;
 	_pProgram = pProgram;
-	writeStdout(L"=thread-group-added,id=\"i1\"");
+	//writeStdout(L"=thread-group-added,id=\"i1\"");
 	CRLog::info("Program created");
 	return S_OK;
 }
@@ -1225,11 +1255,14 @@ HRESULT Debugger::OnDebugThreadCreate(IDebugEngine2 *pEngine,
 	IDebugThreadCreateEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
-	writeStdout(L"=thread-created,id=\"%d\",group-id=\"i1\"", getThreadId(pThread));
+	//writeStdout(L"=thread-created,id=\"%d\",group-id=\"i1\"", getThreadId(pThread));
 	if (_verbose)
 		writeDebuggerMessage(std::wstring(L"Thread created"));
 	else
 		CRLog::info("Thread created");
+	DWORD threadId = getThreadId(pThread);
+	if (_started)
+		writeStdout(L"=thread-created,id=\"%d\",group-id=\"i1\"", threadId);
 	return S_OK;
 }
 

@@ -63,24 +63,24 @@ public:
 		_hThread = CreateThread(NULL, 16384, &threadProc, this, 0, &_idThread);
 	}
 	bool poll() {
-		char buf;
+		char buf[4096];
 		DWORD bytesRead = 0;
 		DWORD bytesAvail = 0;
 		DWORD bytesLeftThisMessage = 0;
 		DWORD res = WaitForSingleObject(_hin, INFINITE);
 		if (res != WAIT_OBJECT_0)
 			return false;
-		if (!ReadFile(_hin, &buf, 1, &bytesRead, NULL)) {
+		if (!ReadFile(_hin, buf, 4095, &bytesRead, NULL)) {
 			return false;
 		}
 		if (bytesRead) {
 			DWORD bytesWritten = 0;
-			if (!WriteFile(_hout, &buf, 1, &bytesWritten, NULL))
+			if (!WriteFile(_hout, buf, bytesRead, &bytesWritten, NULL) || bytesWritten != bytesRead)
 				return false;
 			if (!bytesWritten)
 				return false;
 			if (_logfile) {
-				fwrite(&buf, 1, 1, _logfile);
+				fwrite(buf, bytesRead, 1, _logfile);
 				fflush(_logfile);
 			}
 		}
@@ -245,19 +245,34 @@ int main(int argc, const char ** argv) {
 
 #ifdef _DEBUG
 	if (!gdbexe) {
-		static char buf[1024];
-		getDirName(argv[0], buf);
-		strcat(buf, "mago-mi.exe");
-		gdbexe = buf; // "mago-mi.exe";
+		char settings[4096];
+		strcpy(settings, logdir);
+		strcat(settings, "gdblogger.ini");
+		FILE * settingsFile = fopen(settings, "rt");
+		if (settingsFile) {
+			static char tmp[4096];
+			if (fscanf(settingsFile, "%s\n", &tmp) == 1) {
+				if (fileExists(tmp))
+					gdbexe = tmp;
+			}
+			fclose(settingsFile);
+		}
+
+		if (!gdbexe) {
+			static char buf[1024];
+			getDirName(argv[0], buf);
+			strcat(buf, "mago-mi.exe");
+			gdbexe = buf; // "mago-mi.exe";
+		}
 	}
 #endif
 
 	if (!gdbexe) {
-		fprintf(stderr, "Please specify GDB_EXECUTABLE environment variable pointing to GDB debugger executable");
+		fprintf(stderr, "Please specify GDB_EXECUTABLE environment variable pointing to GDB debugger executable or put its name to file gdblogger.ini");
 		return 1;
 	}
 	if (!fileExists(gdbexe)) {
-		fprintf(stderr, "File %s specified by GDB_EXECUTABLE environment variable cannot be found", gdbexe);
+		fprintf(stderr, "File %s cannot be found", gdbexe);
 		return 2;
 	}
 	Process process(gdbexe, argc, argv, logdir);

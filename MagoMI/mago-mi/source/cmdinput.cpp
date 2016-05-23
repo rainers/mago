@@ -31,8 +31,8 @@ void CmdInput::showPrompt() {
 	if (_enabled && !_readlinePromptShown) {
 		HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
 		DWORD bytesWritten = 0;
-		CRLog::debug("STDOUT: (gdb)");
-		if (!WriteFile(h_out, "(gdb)\n", 6, &bytesWritten, NULL)) {
+		CRLog::debug("STDOUT: (gdb) ");
+		if (!WriteFile(h_out, "(gdb) \r\n", 8, &bytesWritten, NULL)) {
 			DWORD err = GetLastError();
 			CRLog::error("ReadFile error %d", err);
 			_closed = true;
@@ -54,7 +54,7 @@ bool writeStdout(std::wstring s) {
 	std::string lineNoEol = toUtf8(s);
 	CRLog::debug("STDOUT: %s", lineNoEol.c_str());
 	buf = s;
-	buf += L"\n";
+	buf += L"\r\n";
 	if (_cmdinput.inConsole()) {
 		if (_readlineEditActive) {
 			readline_interrupt();
@@ -88,7 +88,7 @@ bool writeStderr(std::wstring s) {
 	HANDLE h_out = GetStdHandle(STD_ERROR_HANDLE);
 	WstringBuffer buf;
 	buf = s;
-	buf += L"\n";
+	buf += L"\r\n";
 	std::string line = toUtf8(buf.wstr());
 	if (_cmdinput.inConsole()) {
 		// erase current edit line
