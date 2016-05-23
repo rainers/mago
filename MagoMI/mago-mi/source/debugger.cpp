@@ -387,7 +387,10 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly)
 	WstringBuffer buf;
 	buf.appendUlongIfNonEmpty(cmd.requestId);
 	// start list
-	buf.append(L"^done,variables=[");
+	if (localsOnly)
+		buf.append(L"^done,locals=[");
+	else
+		buf.append(L"^done,variables=[");
 
 	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
 	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
