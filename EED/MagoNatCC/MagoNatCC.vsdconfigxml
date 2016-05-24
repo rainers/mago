@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+This file is used to describe the MagoNatCC component. This file is run through 
+vsdconfigtool.exe as part of the build, which generates two other files:
+
+* MagoNatCC.Contract.h contains a C++ class header, and ensures that the code and 
+configuration stay in sync.
+
+* MagoNatCC.vsdconfig is a binary version of this file which is deployed along with 
+MagoNatCC.dll. MagoNatCC.vsdconfig is then read by he component loading system at runtime.
+
+For more information about this file, see https://github.com/Microsoft/ConcordExtensibilitySamples/wiki/Component-discovery-and-configuration
+-->
+
+<Configuration xmlns="http://schemas.microsoft.com/vstudio/vsdconfig/2008">
+
+  <DefineGuid Name="guidDLanguageId" Value="002a2de9-8bb6-484d-9800-7e4ad4084715"/>
+  
+  <NativeComponent
+    ComponentId="333AA828-A680-4D96-8B3A-222282E5C9E2"
+    ComponentLevel="9992500"
+    ModuleName="MagoNatCC.dll">
+    <!--above "IDE Expression Evaluation". For more information on ComponentLevel, 
+        see https://github.com/Microsoft/ConcordExtensibilitySamples/wiki/Component-Levels -->
+
+    <Class Name="CMagoNatCCService" ClassId="79D64CBC-37AE-4CFD-81C6-4ADDB76B8C49">
+      <Implements>
+        <InterfaceGroup>
+          <Filter>
+            <LanguageId RequiredValue="guidDLanguageId"/>
+          </Filter>
+          <Interface Name="IDkmLanguageExpressionEvaluator"/>
+        </InterfaceGroup>
+      </Implements>
+    </Class>
+    
+  </NativeComponent>
+</Configuration>
