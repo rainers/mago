@@ -60,6 +60,8 @@ public:
 		, lockName(name), warnTimeout(timeout), startWaitLock(0), endWaitLock(0), endLock(0)
 #endif
 	{
+		UNREFERENCED_PARAMETER(timeout);
+		UNREFERENCED_PARAMETER(name);
 #ifdef DEBUG_LOCK_WAIT
 		startWaitLock = GetCurrentTimeMillis();
 #endif
@@ -440,29 +442,6 @@ std::wstring getDirName(std::wstring fname);
 void testEngine();
 
 
-struct StackFrameInfo {
-	DWORD threadId;
-	int frameIndex;
-	std::wstring address;
-	std::wstring moduleName;
-	std::wstring functionName;
-	std::wstring sourceFileName;
-	std::wstring sourceBaseName;
-	int sourceLine;
-	int sourceColumn;
-	StackFrameInfo()
-		: threadId(0)
-		, frameIndex(0)
-		, sourceLine(0)
-		, sourceColumn(0)
-	{
-
-	}
-	void dumpMIFrame(WstringBuffer & buf, bool showLevel = false);
-};
-
-typedef std::vector<StackFrameInfo> StackFrameInfoVector;
-
 enum LocalVariableKind {
 	VAR_KIND_UNKNOWN, // unknown type
 	VAR_KIND_THIS, // this pointer
@@ -482,8 +461,9 @@ public:
 	std::wstring varType;
 	std::wstring varValue;
 	bool expandable;
+	bool readonly;
 	void dumpMiVariable(WstringBuffer & buf, bool includeTypes, bool includeValues);
-	LocalVariableInfo() : varKind(VAR_KIND_UNKNOWN), expandable(false) {}
+	LocalVariableInfo() : varKind(VAR_KIND_UNKNOWN), expandable(false), readonly(false) {}
 	virtual ~LocalVariableInfo() {}
 };
 
@@ -493,6 +473,31 @@ public:
 	LocalVariableList() {}
 	~LocalVariableList() {}
 };
+
+struct StackFrameInfo {
+	DWORD threadId;
+	int frameIndex;
+	std::wstring address;
+	std::wstring moduleName;
+	std::wstring functionName;
+	std::wstring sourceFileName;
+	std::wstring sourceBaseName;
+	int sourceLine;
+	int sourceColumn;
+	LocalVariableList args;
+	StackFrameInfo()
+		: threadId(0)
+		, frameIndex(0)
+		, sourceLine(0)
+		, sourceColumn(0)
+	{
+
+	}
+	void dumpMIFrame(WstringBuffer & buf, bool showLevel = false);
+};
+
+typedef std::vector<StackFrameInfo> StackFrameInfoVector;
+
 
 class VariableObject : public RefCountedBase {
 private:

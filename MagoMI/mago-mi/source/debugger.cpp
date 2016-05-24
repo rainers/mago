@@ -1212,6 +1212,8 @@ bool Debugger::getLocalVariables(IDebugStackFrame2 * frame, LocalVariableList &l
 				if (prop.dwFields & DEBUGPROP_INFO_ATTRIB) {
 					if (prop.dwAttrib & DBG_ATTRIB_OBJ_IS_EXPANDABLE)
 						item->expandable = true;
+					if (prop.dwAttrib & DBG_ATTRIB_VALUE_READONLY)
+						item->readonly = true;
 				}
 				list.push_back(item);
 			}

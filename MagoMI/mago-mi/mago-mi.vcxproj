@@ -96,7 +96,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>editline.lib;MagoNatDE.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;CVSym.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;BinImage.lib;EED.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>editline.lib;MagoNatDE.lib;libudis86.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;CVSym.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;BinImage.lib;EED.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)\</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile>
@@ -118,7 +118,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>editline.lib;MagoNatDE.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>editline.lib;MagoNatDE.lib;libudis86.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)\</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile>
@@ -141,7 +141,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>editline.lib;MagoNatDE.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;CVSym.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;BinImage.lib;EED.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>editline.lib;MagoNatDE.lib;libudis86.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;CVSym.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;BinImage.lib;EED.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)\</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile>
@@ -164,7 +164,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>editline.lib;MagoNatDE.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>editline.lib;MagoNatDE.lib;libudis86.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)\</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile>
