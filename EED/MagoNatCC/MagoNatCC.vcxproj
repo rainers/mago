@@ -1,0 +1,190 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{C072136B-57E1-4F94-B72E-9BC71AFC1595}</ProjectGuid>
+    <RootNamespace>MagoNatCC</RootNamespace>
+    <Keyword>AtlProj</Keyword>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ConcordSDKDir>$(VSSDK120Install)\VisualStudioIntegration\</ConcordSDKDir>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfAtl>Dynamic</UseOfAtl>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfAtl>Dynamic</UseOfAtl>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\PropSheets\MagoDbg_properties.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\PropSheets\MagoDbg_properties.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>..\..\EED\EED;..\..\EED\include;..\..\include;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <RegisterOutput>false</RegisterOutput>
+      <AdditionalDependencies>rpcrt4.lib;ad2de.lib;dbghelp.lib;$(ConcordSDKDir)Common\lib\$(PlatformTarget)\vsdebugeng.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>.\MagoNatCC.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <DelayLoadDLLs>udis86.dll</DelayLoadDLLs>
+    </Link>
+    <PostBuildEvent>
+      <Command>"$(ConcordSDKDir)Tools\Bin\vsdconfigtool.exe" MagoNatCC.vsdconfigxml "$(TargetPath)" "$(TargetDir)$(TargetName).vsdconfig"
+if errorlevel 1 exit /B 1
+</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <GenerateStublessProxies>true</GenerateStublessProxies>
+      <TypeLibraryName>$(IntDir)MagoNatCC.tlb</TypeLibraryName>
+      <HeaderFileName>MagoNatCC_i.h</HeaderFileName>
+      <DllDataFileName>
+      </DllDataFileName>
+      <InterfaceIdentifierFileName>MagoNatCC_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>MagoNatCC_p.c</ProxyFileName>
+      <ValidateAllParameters>true</ValidateAllParameters>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories>..\..\EED\EED;..\..\EED\include;..\..\include;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Link>
+      <RegisterOutput>false</RegisterOutput>
+      <AdditionalDependencies>rpcrt4.lib;ad2de.lib;dbghelp.lib;$(ConcordSDKDir)Common\lib\$(PlatformTarget)\vsdebugeng.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>.\MagoNatCC.def</ModuleDefinitionFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+      <DelayLoadDLLs>udis86.dll</DelayLoadDLLs>
+    </Link>
+    <PostBuildEvent>
+      <Command>"$(ConcordSDKDir)Tools\Bin\vsdconfigtool.exe" MagoNatCC.vsdconfigxml "$(TargetPath)" "$(TargetDir)$(TargetName).vsdconfig"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="MagoNatCCService.cpp" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MagoNatCC.def" />
+    <CustomBuild Include="MagoNatCC.vsdconfigxml">
+      <FileType>Document</FileType>
+      <Command>"$(ConcordSDKDir)Tools\Bin\vsdconfigtool.exe" "%(Identity)" "$(OutputPath)$(AssemblyName).dll" "$(OutputPath)%(Filename).vsdconfig"
+if errorlevel 1 exit /B 1
+"$(ConcordSDKDir)Tools\Bin\vsdconfigtool.exe" "%(Identity)" "$(OutputPath)$(AssemblyName).dll" "$(IntDir)$(ProjectName).Contract.h"
+</Command>
+      <Outputs>$(OutputPath)%(Filename).vsdconfig;$(IntDir)$(ProjectName).Contract.h</Outputs>
+      <SubType>Designer</SubType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(ConcordSDKDir)Tools\Bin\vsdconfigtool.exe" "%(Identity)" "$(IntDir)$(ProjectName).Contract.h"
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)$(ProjectName).Contract.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(ConcordSDKDir)Tools\Bin\vsdconfigtool.exe" "%(Identity)" "$(IntDir)$(ProjectName).Contract.h"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)$(ProjectName).Contract.h</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MagoNatCCService.h" />
+    <ClInclude Include="dllmain.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="$(IntDir)MagoNatCC.Contract.h" />
+    <ClInclude Include="$(ConcordSDKDir)Common\inc\vsdebugeng.h" />
+    <ClInclude Include="$(ConcordSDKDir)Common\inc\vsdebugeng.templates.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="MagoNatCC.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CVSym\BinImage\BinImage.vcxproj">
+      <Project>{50220f87-0f20-49b1-b111-a25e1a6c98d9}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\CVSym\CVSTI\CVSTI.vcxproj">
+      <Project>{18e6fa8b-62c6-42d7-964b-4c34c797075b}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\CVSym\CVSym\CVSym.vcxproj">
+      <Project>{d4de19ae-33ef-4b61-bffe-784582bc68c1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\DebugEngine\MagoNatDE\MagoNatDE.vcxproj">
+      <Project>{11bdc5b8-31e1-4127-a313-5b599ef506fc}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\EED\EED\EED.vcxproj">
+      <Project>{c600b88c-b39f-4475-9144-595a14067e32}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MagoNatEE\MagoNatEE.vcxproj">
+      <Project>{6c8df626-4a5e-47d9-a36f-abad63c4d1bb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Real\Real.vcxproj">
+      <Project>{76c10abf-b392-4dbd-8658-8d36ae7ea571}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

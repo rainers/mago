@@ -411,6 +411,8 @@ namespace Mago
         if( !symInfo->GetAddressSegment( seg ) )
             return false;
         uint64_t addr = session->GetVAFromSecOffset( seg, off );
+        if ( addr == 0 )
+            return false;
 
         offset = (uint32_t) ( mAddr - addr );
         return true;

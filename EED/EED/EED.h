@@ -73,4 +73,6 @@ namespace MagoEE
         ITypeEnv* typeEnv,
         NameTable* strTable,
         IEEDEnumValues*& enumerator );
+
+    HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr );
 }

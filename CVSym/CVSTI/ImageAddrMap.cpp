@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "ImageAddrMap.h"
 
+#include <dia2.h>
 
 namespace MagoST
 {
@@ -35,7 +36,7 @@ namespace MagoST
     uint32_t ImageAddrMap::MapSecOffsetToRVA( uint16_t secIndex, uint32_t offset )
     {
         if ( (secIndex == 0) || (secIndex > mSecCount) )
-            return 0;
+            return ~0U;
 
         uint16_t    zSec = secIndex - 1;    // zero-based section index
 
@@ -107,5 +108,55 @@ namespace MagoST
         }
 
         return S_OK;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    static IDiaEnumSegments* GetEnumSegments(IDiaSession *pSession)
+    {
+        IDiaEnumSegments* pUnknown  = NULL;
+        IDiaEnumTables* pEnumTables = NULL;
+        IDiaTable*      pTable      = NULL;
+        ULONG           celt        = 0;
+
+        if ( pSession->getEnumTables(&pEnumTables) != S_OK )
+            return nullptr;
+
+        while (pEnumTables->Next(1, &pTable, &celt) == S_OK && celt == 1)
+        {
+            // There is only one table that matches the given iid
+            HRESULT hr = pTable->QueryInterface(__uuidof(IDiaEnumSegments), (void**)&pUnknown);
+            pTable->Release();
+            if (hr == S_OK)
+                break;
+        }
+        pEnumTables->Release();
+        return pUnknown;
+    }
+
+    HRESULT ImageAddrMap::LoadFromDiaSession( IDiaSession* session )
+    {
+        if ( auto pEnumSections = GetEnumSegments( session ) )
+        {
+            LONG count;
+            if(pEnumSections->get_Count(&count) == S_OK && count < UINT16_MAX)
+            {
+                mSections.Attach( new Section[ count ] );
+                mSecCount = (uint16_t) count;
+                IDiaSegment* pSegment;
+                ULONG celt = 0;
+                for (int i = 0; i < count && pEnumSections->Next(1, &pSegment, &celt) == S_OK && celt == 1; i++)
+                {
+                    DWORD seg;
+                    pSegment->get_addressSection(&seg);
+                    pSegment->get_relativeVirtualAddress((DWORD*) &mSections[i].RVA);
+                    pSegment->get_length((DWORD*) &mSections[i].Size);
+                    // no name
+                    pSegment->Release();
+                }
+            }
+            pEnumSections->Release(); 
+            return S_OK;
+        }
+        return S_FALSE;
     }
 }

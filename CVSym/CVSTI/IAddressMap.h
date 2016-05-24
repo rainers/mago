@@ -16,7 +16,7 @@ namespace MagoST
         virtual void AddRef() = 0;
         virtual void Release() = 0;
 
-        // returns 0 on section not found
+        // returns ~0 on section not found
         virtual uint32_t MapSecOffsetToRVA( uint16_t secIndex, uint32_t offset ) = 0;
         virtual uint16_t MapRVAToSecOffset( uint32_t rva, uint32_t& offset ) = 0;
         virtual uint16_t FindSection( const char* name ) = 0;

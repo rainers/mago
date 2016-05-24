@@ -9,7 +9,6 @@
 
 #include "IDataSource.h"
 
-
 namespace MagoST
 {
     class IDebugContainer;
@@ -39,6 +38,8 @@ namespace MagoST
             ILoadCallback* callback );
 
         virtual HRESULT InitDebugInfo( const wchar_t* filename, const wchar_t* searchPath );
+
+        virtual HRESULT InitDebugInfo( IDiaSession* session, IAddressMap* addrMap );
 
         virtual HRESULT OpenSession( ISession*& session );
 

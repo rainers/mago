@@ -79,6 +79,11 @@ namespace MagoEE
         }
     }
 
+    int TypeEnv::GetPointerSize()
+    {
+        return mPtrSize;
+    }
+
     Type* TypeEnv::GetType( ENUMTY ty )
     {
         if ( (ty < 0) || (ty >= TMAX) )

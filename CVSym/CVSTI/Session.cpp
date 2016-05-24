@@ -63,7 +63,7 @@ namespace MagoST
     {
         uint32_t    rva = mAddrMap->MapSecOffsetToRVA( secIndex, offset );
 
-        if ( rva == 0 )
+        if ( rva == ~0 )
             return 0;
 
         return mLoadAddr + rva;
@@ -176,14 +176,14 @@ namespace MagoST
         ISymbolInfo*    symInfo = NULL;
         uint16_t        funcSeg = 0;
 
+        handles.resize( 0 );
+
         hr = mStore->GetSymbolInfo( parentHandle, infoData, symInfo );
         if ( FAILED( hr ) )
             return hr;
 
         if ( !symInfo->GetAddressSegment( funcSeg ) || (funcSeg != segment) )
             return E_FAIL;
-
-        handles.resize( 0 );
 
         // recursing down the block children has to stop somewhere
         for ( int i = 0; i < USHRT_MAX; i++ )

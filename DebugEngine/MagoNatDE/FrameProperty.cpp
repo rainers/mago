@@ -149,7 +149,7 @@ namespace Mago
         fullName.clear();
         fullName.append( name );
 
-        hr = MagoEE::EED::ParseText( 
+        hr = MagoEE::ParseText( 
             fullName.c_str(), 
             mExprContext->GetTypeEnv(), 
             mExprContext->GetStringTable(), 

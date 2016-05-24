@@ -217,7 +217,7 @@ int _tmain( int argc, _TCHAR* argv[] )
 
     callback.SetExec( &exec );
 
-    hr = exec.Init( &callback );
+    hr = exec.Init( &callback, nullptr );
     if ( FAILED( hr ) )
         goto Error;
     

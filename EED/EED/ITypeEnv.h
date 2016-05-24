@@ -24,6 +24,7 @@ namespace MagoEE
         virtual void AddRef() = 0;
         virtual void Release() = 0;
 
+        virtual int GetPointerSize() = 0;
         virtual Type* GetType( ENUMTY ty ) = 0;
         virtual Type* GetVoidPointerType() = 0;
         virtual Type* GetAliasType( ALIASTY ty ) = 0;

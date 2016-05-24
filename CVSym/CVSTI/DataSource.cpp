@@ -107,6 +107,16 @@ namespace MagoST
         return hr;
     }
 
+    HRESULT DataSource::InitDebugInfo( IDiaSession* session, IAddressMap* addrMap )
+    {
+        PDBDebugStore* pdbStore = new PDBDebugStore;
+        HRESULT hr = pdbStore->InitDebugInfo( session );
+        mStore = pdbStore;
+        mAddrMap = addrMap;
+
+        return hr;
+    }
+
     HRESULT DataSource::OpenSession( ISession*& session )
     {
         RefPtr<Session> newSession = new Session( this );

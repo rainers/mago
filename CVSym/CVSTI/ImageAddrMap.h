@@ -9,6 +9,7 @@
 
 #include "IAddressMap.h"
 
+struct IDiaSession;
 
 namespace MagoST
 {
@@ -36,5 +37,7 @@ namespace MagoST
         virtual uint16_t FindSection( const char* name );
 
         HRESULT LoadFromSections( uint16_t count, const IMAGE_SECTION_HEADER* secHeaders );
+
+        HRESULT LoadFromDiaSession( IDiaSession* session );
     };
 }

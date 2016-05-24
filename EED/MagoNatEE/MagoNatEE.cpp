@@ -98,49 +98,18 @@ namespace MagoEE
             return MagoEE::FormatRawString( binder, objVal, bufCharLen, bufCharLenWritten, buf );
         }
 
-
-        static const wchar_t    gCommonErrStr[] = L": Error: ";
-
-        static const wchar_t*   gErrStrs[] = 
-        {
-            L"Expression couldn't be evaluated",
-            L"Syntax error",
-            L"Incompatible types for operator",
-            L"Value expected",
-            L"Expression has no type",
-            L"Type resolve failed",
-            L"Bad cast",
-            L"Expression has no address",
-            L"L-value expected",
-            L"Can't cast to bool",
-            L"Divide by zero",
-            L"Bad indexing operation",
-            L"Symbol not found",
-            L"Element not found",
-        };
-
         // returns: S_FALSE on error not found
 
         HRESULT GetErrorString( HRESULT hresult, BSTR& outStr )
         {
-            DWORD   fac = HRESULT_FACILITY( hresult );
-            DWORD   code = HRESULT_CODE( hresult );
+            std::wstring errStr;
+            HRESULT hr = MagoEE::GetErrorString( hresult, errStr );
+            if ( hr != S_OK )
+                return hr;
 
-            if ( fac != MagoEE::HR_FACILITY )
-                return S_FALSE;
-
-            if ( code >= _countof( gErrStrs ) )
-                code = 0;
-
-            size_t  len = wcslen( gErrStrs[code] );
-            size_t  commonLen = wcslen( gCommonErrStr );
-            size_t  totalLen = 5 + commonLen + len;     // "D0000"
-
-            outStr = SysAllocStringLen( NULL, totalLen );
+            outStr = SysAllocStringLen( errStr.c_str(), errStr.size() );
             if ( outStr == NULL )
                 return E_OUTOFMEMORY;
-
-            swprintf_s( outStr, totalLen + 1, L"D%04d%ls%ls", code + 1, gCommonErrStr, gErrStrs[code] );
 
             return S_OK;
         }

@@ -341,6 +341,8 @@ namespace Mago
         DWORD   len = 0;
 
         addrBegin = session->GetVAFromSecOffset( sec, line.Offset );
+        if( addrBegin == 0 )
+            return E_FAIL;
         len = line.Length;
 
         addrRange.Begin = (Address64) addrBegin;

@@ -15,6 +15,7 @@ namespace Mago
     class ExprContext;
 
 
+    [uuid("4CA5A9D1-40F1-4DCE-A758-8EF32EDB4D9A")] 
     class Property : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProperty3
@@ -34,6 +35,7 @@ namespace Mago
     BEGIN_COM_MAP(Property)
         COM_INTERFACE_ENTRY(IDebugProperty2)
         COM_INTERFACE_ENTRY(IDebugProperty3)
+        COM_INTERFACE_ENTRY(Property)
     END_COM_MAP()
 
         //////////////////////////////////////////////////////////// 

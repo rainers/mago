@@ -77,10 +77,10 @@ namespace Mago
 
     HRESULT Expr::MakeErrorPropertyOrReturnOriginalError( HRESULT hrErr, IDebugProperty2** ppResult )
     {
-        HRESULT     hr = S_OK;
-        CComBSTR    errStr;
+        HRESULT      hr = S_OK;
+        std::wstring errStr;
 
-        hr = MagoEE::EED::GetErrorString( hrErr, errStr.m_str );
+        hr = MagoEE::GetErrorString( hrErr, errStr );
         if ( hr == S_OK )
         {
             RefPtr<ErrorProperty>   errProp;
@@ -88,7 +88,7 @@ namespace Mago
             hr = MakeCComObject( errProp );
             if ( SUCCEEDED( hr ) )
             {
-                hr = errProp->Init( mExprText, mExprText, errStr );
+                hr = errProp->Init( mExprText, mExprText, errStr.c_str() );
                 if ( hr == S_OK )
                 {
                     *ppResult = errProp.Detach();

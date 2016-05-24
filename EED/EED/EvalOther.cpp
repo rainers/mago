@@ -693,7 +693,10 @@ namespace MagoEE
             obj.Addr = thisAddr + offset;
         }
         else
-            Decl->GetAddress( obj.Addr );
+        {
+            if( !Decl->GetAddress( obj.Addr ) )
+                return E_MAGOEE_NO_ADDRESS;
+        }
 
         if ( mode == EvalMode_Address )
         {
