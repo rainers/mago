@@ -91,6 +91,26 @@ namespace Mago
                 pPropertyInfo->dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
             if ( mObjVal.HasChildren )
                 pPropertyInfo->dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
+
+            if ( mObjVal.ObjVal._Type != NULL )
+            {
+                if( !mObjVal.ObjVal._Type->IsMutable() )
+                    pPropertyInfo->dwAttrib |= DBG_ATTRIB_TYPE_CONSTANT;
+                if( mObjVal.ObjVal._Type->IsShared() )
+                    pPropertyInfo->dwAttrib |= DBG_ATTRIB_TYPE_SYNCHRONIZED;
+
+                if( auto fun = mObjVal.ObjVal._Type->AsTypeFunction() )
+                {
+                    if ( fun->IsProperty() )
+                        pPropertyInfo->dwAttrib |= DBG_ATTRIB_PROPERTY;
+                    else
+                        pPropertyInfo->dwAttrib |= DBG_ATTRIB_METHOD;
+                }
+                else if( auto clss = mObjVal.ObjVal._Type->AsTypeStruct() )
+                    pPropertyInfo->dwAttrib |= DBG_ATTRIB_CLASS;
+                else
+                    pPropertyInfo->dwAttrib |= DBG_ATTRIB_DATA;
+            }
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
 
