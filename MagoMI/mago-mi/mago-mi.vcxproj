@@ -96,7 +96,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>editline.lib;MagoNatDE.lib;libudis86.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;CVSym.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;BinImage.lib;EED.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;dbgmetric.lib;ad2de.lib;dbghelp.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)\</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile>
@@ -141,7 +141,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>editline.lib;MagoNatDE.lib;libudis86.lib;rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;CVSym.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;BinImage.lib;EED.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;dbgmetric.lib;ad2de.lib;dbghelp.lib;gdtoa.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)\</AdditionalLibraryDirectories>
     </Link>
     <ResourceCompile>
@@ -187,6 +187,44 @@
     <ClInclude Include="source\logger.h" />
     <ClInclude Include="source\MIEngine.h" />
     <ClInclude Include="source\miutils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\CVSym\BinImage\BinImage.vcxproj">
+      <Project>{50220f87-0f20-49b1-b111-a25e1a6c98d9}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\CVSym\CVSTI\CVSTI.vcxproj">
+      <Project>{18e6fa8b-62c6-42d7-964b-4c34c797075b}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\CVSym\CVSym\CVSym.vcxproj">
+      <Project>{d4de19ae-33ef-4b61-bffe-784582bc68c1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\DebugEngine\Exec\Exec.vcxproj">
+      <Project>{c51c2776-4a52-4cc2-adab-0bbb7c8c1cdf}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\DebugEngine\MagoNatDE\MagoNatDE.vcxproj">
+      <Project>{11bdc5b8-31e1-4127-a313-5b599ef506fc}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\EED\EED\EED.vcxproj">
+      <Project>{c600b88c-b39f-4475-9144-595a14067e32}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\EED\gdtoa\gdtoa.vcxproj">
+      <Project>{40804c2d-4af3-4e82-a1e8-018ff56b2bba}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\EED\MagoNatEE\MagoNatEE.vcxproj">
+      <Project>{6c8df626-4a5e-47d9-a36f-abad63c4d1bb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\EED\Real\Real.vcxproj">
+      <Project>{76c10abf-b392-4dbd-8658-8d36ae7ea571}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\udis86\libudis86\libudis86.vcxproj">
+      <Project>{b52fb534-b06c-46ae-acc2-169c33311f23}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\udis86\udis86\udis86.vcxproj">
+      <Project>{640f0da5-72ac-4354-8bb5-81d9dcae29bc}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\editline\editline.vcxproj">
+      <Project>{0f8ab97b-1363-4df6-90c0-ba3f34393a40}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
