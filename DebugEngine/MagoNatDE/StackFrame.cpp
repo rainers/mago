@@ -387,7 +387,7 @@ namespace Mago
             info.LineEnd.dwColumn--;
 
         info.Address = (Address64) session->GetVAFromSecOffset( line.Section, line.Offset );
-        if( info.Address )
+        if( !info.Address )
             return E_FAIL;
 
         MagoST::FileInfo    fileInfo = { 0 };
