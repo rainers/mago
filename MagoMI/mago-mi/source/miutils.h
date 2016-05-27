@@ -279,9 +279,11 @@ struct StringBuffer : public Buffer<char> {
 
 
 struct WstringBuffer : public Buffer<wchar_t> {
+	WstringBuffer & pad(wchar_t ch, int len);
 	WstringBuffer & operator = (const std::wstring & s) { assign(s.c_str(), s.length()); return *this; }
 	WstringBuffer & operator += (const std::wstring & s) { append(s.c_str(), s.length()); return *this; }
 	WstringBuffer & operator += (wchar_t ch) { append(ch); return *this; }
+	WstringBuffer & appendUtf8(const char * s);
 	std::string str() { return toUtf8(wstr()); }
 	std::wstring wstr() { return std::wstring(c_str(), length()); }
 	// appends double quoted string, e.g. "Some message.\n"
@@ -363,6 +365,8 @@ enum PrintLevel {
 	PRINT_ALL_VALUES = 1,
 	PRINT_SIMPLE_VALUES = 2,
 };
+
+void getCommandsHelp(wstring_vector & res, bool forMi);
 
 struct MICommand {
 	uint64_t requestId;

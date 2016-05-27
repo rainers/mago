@@ -114,60 +114,11 @@ void Debugger::writeErrorMessage(ulong requestId, std::wstring msg, const wchar_
 		writeStdout(msg);
 }
 
-static const wchar_t * HELP_MSGS[] = {
-	L"mago-mi: GDB and GDB-MI compatible interfaces for MAGO debugger.",
-	L"",
-	L"run                     - start program execution",
-	L"continue                - continue program execution",
-	L"interrupt               - interrupt program execution",
-	L"next                    - step over",
-	L"nexti                   - step over by instruction",
-	L"step                    - step into",
-	L"stepi                   - step into by instruction",
-	L"finish                  - step out of current function",
-	L"break                   - add breakpoint",
-	L"info break              - list breakpoints",
-	L"enable N                - enable breakpoint",
-	L"disable N               - disable breakpoint",
-	L"delete N                - delete breakpoint",
-	L"info thread             - thread list with properties",
-	L"info threads            - list of thread ids",
-	L"backtrace               - list thread stack frames",
-	L"",
-	L"Type quit to exit.",
-	NULL
-};
-
-static const wchar_t * HELP_MSGS_MI[] = {
-	L"mago-mi: GDB and GDB-MI compatible interfaces for MAGO debugger.",
-	L"",
-	L"-exec-run [--start]     - start program execution",
-	L"-exec-continue          - continue program execution",
-	L"-exec-interrupt         - interrupt program which is being running",
-	L"-exec-next              - step over",
-	L"-exec-next-instruction  - step over by instruction",
-	L"-exec-step              - step into",
-	L"-exec-step-instruction  - step into by instruction",
-	L"-exec-finish            - exit function",
-	L"-break-insert           - add breakpoint",
-	L"-break-list             - list breakpoints",
-	L"-break-enable           - enable breakpoint",
-	L"-break-disable          - disable breakpoint",
-	L"-break-delete           - delete breakpoint",
-	L"-thread-info            - thread list with properties",
-	L"-thread-list-ids        - list of thread ids",
-	L"-stack-list-frames      - list thread stack frames",
-	L"-stack-list-variables   - list stack frame variables",
-	L"-gdb-exit               - quit debugger",
-	L"",
-	L"Type quit to exit.",
-	NULL
-};
-
 void Debugger::showHelp() {
-	const wchar_t **msgs = params.miMode ? HELP_MSGS_MI : HELP_MSGS;
-	for (int i = 0; msgs[i]; i++)
-	    writeDebuggerMessage(std::wstring(msgs[i]));
+	wstring_vector res;
+	getCommandsHelp(res, params.miMode);
+	for (unsigned i = 0; i < res.size(); i++)
+	    writeDebuggerMessage(res[i]);
 }
 
 /// called on new input line

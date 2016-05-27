@@ -85,6 +85,20 @@ std::wstring toUtf16(const std::string s) {
 	return buf.wstr();
 }
 
+WstringBuffer & WstringBuffer::appendUtf8(const char * s) {
+	while (s && s[0]) {
+		append(s[0]);
+		s++;
+	}
+	return *this;
+}
+
+WstringBuffer & WstringBuffer::pad(wchar_t ch, int len) {
+	while (length() < len)
+		append(ch);
+	return *this;
+}
+
 // appends number
 WstringBuffer & WstringBuffer::appendUlongLiteral(uint64_t n) {
 	wchar_t buf[32];
@@ -398,44 +412,77 @@ struct MiCommandInfo {
 static MiCommandInfo MI_COMMANDS[] = {
 	MiCommandInfo(CMD_GDB_EXIT, "-gdb-exit", "quit", "quit debugger"),
 	MiCommandInfo(CMD_HELP, NULL, "help", ""),
-	MiCommandInfo(CMD_EXEC_RUN, "-exec-run", "run", ""),
-	MiCommandInfo(CMD_EXEC_CONTINUE, "-exec-continue", "continue", ""),
-	MiCommandInfo(CMD_EXEC_INTERRUPT, "-exec-interrupt", "interrupt", ""),
-	MiCommandInfo(CMD_EXEC_FINISH, "-exec-finish", "finish", ""),
-	MiCommandInfo(CMD_EXEC_NEXT, "-exec-next", "next", ""),
-	MiCommandInfo(CMD_EXEC_NEXT_INSTRUCTION, "-exec-next-instruction", "nexti", ""),
-	MiCommandInfo(CMD_EXEC_STEP, "-exec-step", "step", ""),
-	MiCommandInfo(CMD_EXEC_STEP_INSTRUCTION, "-exec-step-instruction", "stepi", ""),
-	MiCommandInfo(CMD_BREAK_INSERT, "-break-insert", "break", ""),
-	MiCommandInfo(CMD_BREAK_DELETE, "-break-delete", "delete", ""),
-	MiCommandInfo(CMD_BREAK_ENABLE, "-break-enable", "enable", ""),
-	MiCommandInfo(CMD_BREAK_DISABLE, "-break-disable", "disable", ""),
-	MiCommandInfo(CMD_BREAK_LIST, "-break-list", NULL, ""),
-	MiCommandInfo(CMD_LIST_THREAD_GROUPS, "-list-thread-groups", "info break", ""),
-	MiCommandInfo(CMD_THREAD_INFO, "-thread-info", "info thread", ""),
-	MiCommandInfo(CMD_THREAD_LIST_IDS, "-thread-list-ids", "info threads", ""),
-	MiCommandInfo(CMD_STACK_LIST_FRAMES, "-stack-list-frames backtrace", NULL, ""),
-	MiCommandInfo(CMD_STACK_INFO_DEPTH, "-stack-info-depth", NULL, ""),
-	MiCommandInfo(CMD_STACK_LIST_VARIABLES, "-stack-list-variables", NULL, ""),
-	MiCommandInfo(CMD_STACK_LIST_LOCALS, "-stack-list-locals", NULL, ""),
-	MiCommandInfo(CMD_STACK_LIST_ARGUMENTS, "-stack-list-arguments", NULL, ""),
-	MiCommandInfo(CMD_VAR_CREATE, "-var-create", NULL, ""),
-	MiCommandInfo(CMD_VAR_UPDATE, "-var-update", NULL, ""),
-	MiCommandInfo(CMD_VAR_DELETE, "-var-delete", NULL, ""),
+	MiCommandInfo(CMD_EXEC_RUN, "-exec-run", "run", "start program execution"),
+	MiCommandInfo(CMD_EXEC_CONTINUE, "-exec-continue", "continue", "continue program execution"),
+	MiCommandInfo(CMD_EXEC_INTERRUPT, "-exec-interrupt", "interrupt", "interrupt program which is being running"),
+	MiCommandInfo(CMD_EXEC_FINISH, "-exec-finish", "finish", "step out from function"),
+	MiCommandInfo(CMD_EXEC_NEXT, "-exec-next", "next", "step over"),
+	MiCommandInfo(CMD_EXEC_NEXT_INSTRUCTION, "-exec-next-instruction", "nexti", "step over by instruction"),
+	MiCommandInfo(CMD_EXEC_STEP, "-exec-step", "step", "step into"),
+	MiCommandInfo(CMD_EXEC_STEP_INSTRUCTION, "-exec-step-instruction", "stepi", "step into by instruction"),
+	MiCommandInfo(CMD_BREAK_INSERT, "-break-insert", "break", "add breakpoint"),
+	MiCommandInfo(CMD_BREAK_DELETE, "-break-delete", "delete", "remove breakpoint"),
+	MiCommandInfo(CMD_BREAK_ENABLE, "-break-enable", "enable", "enable breakpoint"),
+	MiCommandInfo(CMD_BREAK_DISABLE, "-break-disable", "disable", "disable breakpoint"),
+	MiCommandInfo(CMD_BREAK_LIST, "-break-list", "info break", "list breakpoints"),
+	MiCommandInfo(CMD_LIST_THREAD_GROUPS, "-list-thread-groups", NULL, "list processes"),
+	MiCommandInfo(CMD_THREAD_INFO, "-thread-info", "info thread", "reports information about threads"),
+	MiCommandInfo(CMD_THREAD_LIST_IDS, "-thread-list-ids", "info threads", "show thread id list and number of threads"),
+	MiCommandInfo(CMD_STACK_LIST_FRAMES, "-stack-list-frames", "backtrace", "list stack frames"),
+	MiCommandInfo(CMD_STACK_INFO_DEPTH, "-stack-info-depth", NULL, "returns depth of stack"),
+	MiCommandInfo(CMD_STACK_LIST_VARIABLES, "-stack-list-variables", NULL, "show stack frame variables"),
+	MiCommandInfo(CMD_STACK_LIST_LOCALS, "-stack-list-locals", NULL, "show stack frame local variables"),
+	MiCommandInfo(CMD_STACK_LIST_ARGUMENTS, "-stack-list-arguments", NULL, "show stack frame function arguments"),
+	MiCommandInfo(CMD_VAR_CREATE, "-var-create", NULL, "create variable"),
+	MiCommandInfo(CMD_VAR_UPDATE, "-var-update", NULL, "update variable"),
+	MiCommandInfo(CMD_VAR_DELETE, "-var-delete", NULL, "delete variable"),
 	MiCommandInfo(CMD_VAR_SET_FORMAT, "-var-set-format", NULL, ""),
-	MiCommandInfo(CMD_LIST_FEATURES, "-list-features", NULL, ""),
-	MiCommandInfo(CMD_GDB_VERSION, "-gdb-version", NULL, ""),
-	MiCommandInfo(CMD_ENVIRONMENT_CD, "-environment-cd", NULL, ""),
+	MiCommandInfo(CMD_LIST_FEATURES, "-list-features", NULL, "show list of supported features"),
+	MiCommandInfo(CMD_GDB_VERSION, "-gdb-version", NULL, "show version of debugger"),
+	MiCommandInfo(CMD_ENVIRONMENT_CD, "-environment-cd", NULL, "set current directory"),
 	MiCommandInfo(CMD_GDB_SHOW, "-gdb-show", NULL, ""),
 	MiCommandInfo(CMD_INTERPRETER_EXEC, "-interpreter-exec", NULL, ""),
 	MiCommandInfo(CMD_DATA_EVALUATE_EXPRESSION, "-data-evaluate-expression", NULL, ""),
 	MiCommandInfo(CMD_GDB_SET, "-gdb-set", NULL, ""),
 	MiCommandInfo(CMD_MAINTENANCE, NULL, "maintenance", ""),
-	MiCommandInfo(CMD_SOURCE, NULL, "source", ""),
-	MiCommandInfo(CMD_FILE_EXEC_AND_SYMBOLS, "-file-exec-and-symbols", NULL, ""),
+	MiCommandInfo(CMD_SOURCE, NULL, "source", "execute commands from file"),
+	MiCommandInfo(CMD_FILE_EXEC_AND_SYMBOLS, "-file-exec-and-symbols", NULL, "set executable to debug"),
 	MiCommandInfo(CMD_HANDLE, NULL, "handle", ""),
 	MiCommandInfo()
 };
+
+void getCommandsHelp(wstring_vector & res, bool forMi) {
+	res.push_back(L"mago-mi: GDB and GDB-MI compatible interfaces for MAGO debugger.");
+	res.push_back(L"");
+	unsigned maxCommandLength = 10;
+	for (int i = 0; MI_COMMANDS[i].id != CMD_UNKNOWN; i++) {
+		if (forMi) {
+			if (MI_COMMANDS[i].name && maxCommandLength < strlen(MI_COMMANDS[i].name))
+				maxCommandLength = strlen(MI_COMMANDS[i].name);
+		}
+		else {
+			if (MI_COMMANDS[i].nonMiName && maxCommandLength < strlen(MI_COMMANDS[i].nonMiName))
+				maxCommandLength = strlen(MI_COMMANDS[i].nonMiName);
+		}
+	}
+	WstringBuffer buf;
+	for (int i = 0; MI_COMMANDS[i].id != CMD_UNKNOWN; i++) {
+		if (!MI_COMMANDS[i].description || !MI_COMMANDS[i].description[0])
+			continue; // no help
+		const char * name = forMi ? MI_COMMANDS[i].name : MI_COMMANDS[i].nonMiName;
+		if (name) {
+			buf.reset();
+			buf.appendUtf8(name);
+			buf.pad(' ', maxCommandLength + 2);
+			buf.append(L" - ");
+			buf.appendUtf8(MI_COMMANDS[i].description);
+		}
+		res.push_back(buf.wstr());
+	}
+	res.push_back(L"");
+	res.push_back(L"Type quit to exit.");
+}
+
 
 /// find command by name and set its id, returns false for unknown command
 bool findCommand(MICommand & v) {
