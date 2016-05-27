@@ -127,6 +127,7 @@ WstringBuffer & WstringBuffer::appendStringLiteral(std::wstring s) {
 
 MICommand::MICommand() 
 	: requestId(UNSPECIFIED_REQUEST_ID) 
+	, commandId(CMD_UNKNOWN)
 	, miCommand(false)
 {
 
@@ -328,6 +329,117 @@ bool splitByCharRev(std::wstring & s, wchar_t ch, std::wstring & before, std::ws
 	return false;
 }
 
+/// compare name (till \0 or space) with s (till \0)
+bool cmpCommand(const char * name, const wchar_t * s) {
+	if (!name || !name[0])
+		return false;
+	if (!s || !s[0])
+		return false;
+	int i = 0;
+	for (; name[i] && name[i] != ' ' && s[i]; i++)
+		if (name[i] != s[i])
+			break;
+	if (s[i])
+		return false;
+	return !name[i] || name[i] == ' ';
+}
+
+/// skip till beginning of next word
+bool nextWord(const char * &s) {
+	while (*s && s[0] != ' ')
+		s++;
+	while (s[0] == ' ')
+		s++;
+	return s[0] != 0;
+}
+
+struct MiCommandInfo {
+	MiCommandId id;
+	const char * name;
+	const char * nonMiName;
+	const char * description;
+	MiCommandInfo() : id(CMD_UNKNOWN), name(NULL), nonMiName(NULL), description(NULL) {}
+	MiCommandInfo(MiCommandId _id, const char * _name, const char * _nonMiName, const char * _description)
+		: id(_id), name(_name), nonMiName(_nonMiName), description(_description) 
+	{
+	}
+	bool compare(MICommand & v) {
+		if (cmpCommand(name, v.commandName.c_str())) {
+			v.commandId = id;
+			return true;
+		}
+		if (cmpCommand(nonMiName, v.commandName.c_str())) {
+			const char * cmdName = nonMiName;
+			int i = 0;
+			while (nextWord(cmdName)) {
+				if (i + 1 >= v.params.size())
+					return false;
+				std::wstring param = v.params[i];
+				if (!cmpCommand(cmdName, param.c_str()))
+					return false;
+				i++;
+			}
+			if (i > 0) {
+				// remove matched additional words for command
+				v.params.erase(v.params.begin(), v.params.begin() + i);
+			}
+			v.commandId = id;
+			return true;
+		}
+		return false;
+	}
+};
+
+static MiCommandInfo MI_COMMANDS[] = {
+	MiCommandInfo(CMD_GDB_EXIT, "-gdb-exit", "quit", "quit debugger"),
+	MiCommandInfo(CMD_HELP, NULL, "help", ""),
+	MiCommandInfo(CMD_EXEC_RUN, "-exec-run", "run", ""),
+	MiCommandInfo(CMD_EXEC_CONTINUE, "-exec-continue", "continue", ""),
+	MiCommandInfo(CMD_EXEC_INTERRUPT, "-exec-interrupt", "interrupt", ""),
+	MiCommandInfo(CMD_EXEC_FINISH, "-exec-finish", "finish", ""),
+	MiCommandInfo(CMD_EXEC_NEXT, "-exec-next", "next", ""),
+	MiCommandInfo(CMD_EXEC_NEXT_INSTRUCTION, "-exec-next-instruction", "nexti", ""),
+	MiCommandInfo(CMD_EXEC_STEP, "-exec-step", "step", ""),
+	MiCommandInfo(CMD_EXEC_STEP_INSTRUCTION, "-exec-step-instruction", "stepi", ""),
+	MiCommandInfo(CMD_BREAK_INSERT, "-break-insert", "break", ""),
+	MiCommandInfo(CMD_BREAK_DELETE, "-break-delete", "delete", ""),
+	MiCommandInfo(CMD_BREAK_ENABLE, "-break-enable", "enable", ""),
+	MiCommandInfo(CMD_BREAK_DISABLE, "-break-disable", "disable", ""),
+	MiCommandInfo(CMD_BREAK_LIST, "-break-list", NULL, ""),
+	MiCommandInfo(CMD_LIST_THREAD_GROUPS, "-list-thread-groups", "info break", ""),
+	MiCommandInfo(CMD_THREAD_INFO, "-thread-info", "info thread", ""),
+	MiCommandInfo(CMD_THREAD_LIST_IDS, "-thread-list-ids", "info threads", ""),
+	MiCommandInfo(CMD_STACK_LIST_FRAMES, "-stack-list-frames backtrace", NULL, ""),
+	MiCommandInfo(CMD_STACK_INFO_DEPTH, "-stack-info-depth", NULL, ""),
+	MiCommandInfo(CMD_STACK_LIST_VARIABLES, "-stack-list-variables", NULL, ""),
+	MiCommandInfo(CMD_STACK_LIST_LOCALS, "-stack-list-locals", NULL, ""),
+	MiCommandInfo(CMD_VAR_CREATE, "-var-create", NULL, ""),
+	MiCommandInfo(CMD_VAR_UPDATE, "-var-update", NULL, ""),
+	MiCommandInfo(CMD_VAR_DELETE, "-var-delete", NULL, ""),
+	MiCommandInfo(CMD_VAR_SET_FORMAT, "-var-set-format", NULL, ""),
+	MiCommandInfo(CMD_LIST_FEATURES, "-list-features", NULL, ""),
+	MiCommandInfo(CMD_GDB_VERSION, "-gdb-version", NULL, ""),
+	MiCommandInfo(CMD_ENVIRONMENT_CD, "-environment-cd", NULL, ""),
+	MiCommandInfo(CMD_GDB_SHOW, "-gdb-show", NULL, ""),
+	MiCommandInfo(CMD_INTERPRETER_EXEC, "-interpreter-exec", NULL, ""),
+	MiCommandInfo(CMD_DATA_EVALUATE_EXPRESSION, "-data-evaluate-expression", NULL, ""),
+	MiCommandInfo(CMD_GDB_SET, "-gdb-set", NULL, ""),
+	MiCommandInfo(CMD_MAINTENANCE, NULL, "maintenance", ""),
+	MiCommandInfo(CMD_SOURCE, NULL, "source", ""),
+	MiCommandInfo(CMD_FILE_EXEC_AND_SYMBOLS, "-file-exec-and-symbols", NULL, ""),
+	MiCommandInfo(CMD_HANDLE, NULL, "handle", ""),
+	MiCommandInfo()
+};
+
+/// find command by name and set its id, returns false for unknown command
+bool findCommand(MICommand & v) {
+	for (int i = 0; MI_COMMANDS[i].id != CMD_UNKNOWN; i++) {
+		if (MI_COMMANDS[i].compare(v))
+			return true;
+	}
+	return false;
+}
+
 // return true if value is required
 bool doesParameterRequireValue(std::wstring p) {
 	static const wchar_t * KNOWN_PARAMS_WITH_VALUES_LIST[] = {
@@ -369,6 +481,8 @@ bool splitParamAndValue(std::wstring & s, std::wstring & name, std::wstring & va
 		return false;
 	}
 }
+
+
 
 void collapseParams(wstring_vector & items, param_vector & namedParams) {
 	for (size_t i = 0; i < items.size(); i++) {
@@ -465,6 +579,8 @@ bool MICommand::parse(std::wstring s) {
 	skipWhiteSpace(s);
 	tail = s;
 	splitSpaceSeparatedParams(s, params);
+	// find id for command
+	findCommand(*this);
 	collapseParams(params, namedParams);
 	for (size_t i = 0; i < namedParams.size(); i++) {
 		if (namedParams[i].first.empty() && !namedParams[i].second.empty())
