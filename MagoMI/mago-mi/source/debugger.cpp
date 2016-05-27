@@ -218,19 +218,19 @@ void Debugger::onInputLine(std::wstring &s) {
 		causeBreak(cmd.requestId);
 		break;
 	case CMD_EXEC_FINISH:
-		step(STEP_OUT, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
+		step(STEP_OUT, STEP_LINE, cmd.threadId, cmd.requestId);
 		break;
 	case CMD_EXEC_NEXT:
-		step(STEP_OVER, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
+		step(STEP_OVER, STEP_LINE, cmd.threadId, cmd.requestId);
 		break;
 	case CMD_EXEC_NEXT_INSTRUCTION:
-		step(STEP_OVER, STEP_INSTRUCTION, cmd.getThreadIdParam(), cmd.requestId);
+		step(STEP_OVER, STEP_INSTRUCTION, cmd.threadId, cmd.requestId);
 		break;
 	case CMD_EXEC_STEP:
-		step(STEP_INTO, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
+		step(STEP_INTO, STEP_LINE, cmd.threadId, cmd.requestId);
 		break;
 	case CMD_EXEC_STEP_INSTRUCTION:
-		step(STEP_INTO, STEP_INSTRUCTION, cmd.getThreadIdParam(), cmd.requestId);
+		step(STEP_INTO, STEP_INSTRUCTION, cmd.threadId, cmd.requestId);
 		break;
 	case CMD_BREAK_INSERT:
 		handleBreakpointInsertCommand(cmd);
@@ -281,11 +281,14 @@ void Debugger::onInputLine(std::wstring &s) {
 	case CMD_STACK_INFO_DEPTH:
 		handleStackListFramesCommand(cmd, true);
 		break;
+	//case CMD_STACK_LIST_ARGUMENTS:
+	//	handleStackListVariablesCommand(cmd, false, true);
+	//	break;
 	case CMD_STACK_LIST_VARIABLES:
-		handleStackListVariablesCommand(cmd, false);
+		handleStackListVariablesCommand(cmd, false, false);
 		break;
 	case CMD_STACK_LIST_LOCALS:
-		handleStackListVariablesCommand(cmd, true);
+		handleStackListVariablesCommand(cmd, true, false);
 		break;
 	case CMD_VAR_CREATE:
 	case CMD_VAR_UPDATE:
@@ -404,8 +407,8 @@ void Debugger::handleDataEvaluateExpressionCommand(MICommand & cmd) {
 		return;
 	}
 	std::wstring expr = cmd.unnamedValue(0);
-	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
-	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+	DWORD threadId = cmd.threadId;
+	DWORD frameIndex = cmd.frameId;
 	// returns stack frame if found
 	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
 	if (!frame) {
@@ -461,8 +464,8 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 			name = std::wstring(L"var") + toWstring(nextVarId++);
 	}
 
-	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
-	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+	DWORD threadId = cmd.threadId;
+	DWORD frameIndex = cmd.frameId;
 	// returns stack frame if found
 	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
 	if (!frame) {
@@ -547,7 +550,7 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 }
 
 // called to handle -stack-list-variables command
-void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly) {
+void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly, bool argsOnly) {
 	if (!_paused || _stopped) {
 		writeErrorMessage(cmd.requestId, L"Cannot get variables for running or terminated process");
 		return;
@@ -561,16 +564,10 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly)
 	else
 		buf.append(L"^done,variables=[");
 
-	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
-	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+	DWORD threadId = cmd.threadId;
+	DWORD frameIndex = cmd.frameId;
 
-	int level = 0;
-	std::wstring plevel = cmd.unnamedValue(0);
-	if (plevel == L"--all-values" || plevel == L"1")
-		level = 2;
-	if (plevel == L"--simple-values" || plevel == L"2")
-		level = 1;
-
+	int level = cmd.printLevel;
 
 	// returns stack frame if found
 	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
@@ -584,7 +581,7 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly)
 		for (unsigned i = 0; i < list.size(); i++) {
 			if (i != 0)
 				buf.append(L",");
-			list[i]->dumpMiVariable(buf, level ? true : false, level ? true : false);
+			list[i]->dumpMiVariable(buf, level != PRINT_NO_VALUES ? true : false, level != PRINT_NO_VALUES ? true : false);
 		}
 	}
 	
@@ -610,7 +607,7 @@ void Debugger::handleStackListFramesCommand(MICommand & cmd, bool depthOnly) {
 		if (toUlong(cmd.unnamedValue(0), n))
 			maxDepth = (int)n;
 	}
-	DWORD tid = (DWORD)cmd.getUlongParam(L"--thread");
+	DWORD tid = cmd.threadId;
 	IDebugThread2 * pThread = findThreadById(tid);
 	StackFrameInfo frameInfos[MAX_FRAMES];
 	unsigned minIndex = 0;
@@ -1067,6 +1064,12 @@ bool Debugger::causeBreak(uint64_t requestId) {
 
 // find current program's thread by id
 IDebugThread2 * Debugger::findThreadById(DWORD threadId) {
+	if (!threadId) {
+		if (_paused)
+			return _pThread;
+		return NULL;
+	}
+
 	IDebugThread2 * res = NULL;
 	if (!_pProgram) {
 		CRLog::warn("Cannot find thread: no current program");
@@ -1328,8 +1331,7 @@ unsigned Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo
 // step paused program
 bool Debugger::step(STEPKIND stepKind, STEPUNIT stepUnit, DWORD threadId, uint64_t requestId) {
 	if (!_started || !_loaded || !_pProgram) {
-		if (requestId != UNSPECIFIED_REQUEST_ID)
-			writeErrorMessage(requestId, std::wstring(L"Cannot step: program is not running"));
+		writeErrorMessage(requestId, std::wstring(L"Cannot step: program is not running"));
 		return false;
 	}
 	if (!_paused) {

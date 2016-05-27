@@ -34,6 +34,7 @@ enum MiCommandId {
 	CMD_THREAD_LIST_IDS, // info threads -thread-list-ids
 	CMD_STACK_LIST_FRAMES, // -stack-list-frames backtrace
 	CMD_STACK_INFO_DEPTH, // -stack-info-depth
+	CMD_STACK_LIST_ARGUMENTS, // -stack-list-variables
 	CMD_STACK_LIST_VARIABLES, // -stack-list-variables
 	CMD_STACK_LIST_LOCALS, // -stack-list-locals
 	CMD_VAR_CREATE, // -var-create
@@ -357,9 +358,21 @@ inline bool endsWith(std::wstring const & value, std::wstring const & ending)
 	return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
 
+enum PrintLevel {
+	PRINT_NO_VALUES = 0,
+	PRINT_ALL_VALUES = 1,
+	PRINT_SIMPLE_VALUES = 2,
+};
+
 struct MICommand {
 	uint64_t requestId;
 	MiCommandId commandId;
+	std::wstring threadGroupId;
+	unsigned threadId;
+	unsigned frameId;
+	PrintLevel printLevel;// 0=--no-values 1=--all-values 2=--simple-values
+	bool skipUnavailable;//--skip-unavailable
+	bool noFrameFilters; //--no-frame-filters
 	/// true if command is prefixed with single -
 	bool miCommand;
 	/// original command text
@@ -385,13 +398,13 @@ struct MICommand {
 	std::wstring unnamedValue(unsigned index = 0) { return index < unnamedValues.size() ? unnamedValues[index] : std::wstring(); }
 	// get parameter --thread-id
 	uint64_t getUlongParam(std::wstring name, uint64_t defValue = 0);
-	// get parameter --thread-id
-	unsigned getThreadIdParam() { return (unsigned)getUlongParam(L"--thread-id"); }
 
 	MICommand();
 	~MICommand();
 	// parse MI command, returns true if successful
 	bool parse(std::wstring line);
+private:
+	void handleKnownParams();
 };
 
 
