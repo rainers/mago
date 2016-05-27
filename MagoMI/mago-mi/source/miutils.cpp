@@ -128,6 +128,11 @@ WstringBuffer & WstringBuffer::appendStringLiteral(std::wstring s) {
 MICommand::MICommand() 
 	: requestId(UNSPECIFIED_REQUEST_ID) 
 	, commandId(CMD_UNKNOWN)
+	, threadId(0)
+	, frameId(0)
+	, printLevel(PRINT_NO_VALUES)
+	, skipUnavailable(false)
+	, noFrameFilters(false)
 	, miCommand(false)
 {
 
@@ -370,7 +375,7 @@ struct MiCommandInfo {
 		}
 		if (cmpCommand(nonMiName, v.commandName.c_str())) {
 			const char * cmdName = nonMiName;
-			int i = 0;
+			unsigned i = 0;
 			while (nextWord(cmdName)) {
 				if (i + 1 >= v.params.size())
 					return false;
@@ -413,6 +418,7 @@ static MiCommandInfo MI_COMMANDS[] = {
 	MiCommandInfo(CMD_STACK_INFO_DEPTH, "-stack-info-depth", NULL, ""),
 	MiCommandInfo(CMD_STACK_LIST_VARIABLES, "-stack-list-variables", NULL, ""),
 	MiCommandInfo(CMD_STACK_LIST_LOCALS, "-stack-list-locals", NULL, ""),
+	MiCommandInfo(CMD_STACK_LIST_ARGUMENTS, "-stack-list-arguments", NULL, ""),
 	MiCommandInfo(CMD_VAR_CREATE, "-var-create", NULL, ""),
 	MiCommandInfo(CMD_VAR_UPDATE, "-var-update", NULL, ""),
 	MiCommandInfo(CMD_VAR_DELETE, "-var-delete", NULL, ""),
@@ -563,6 +569,75 @@ uint64_t MICommand::getUlongParam(std::wstring name, uint64_t defValue) {
 	return tid;
 }
 
+void MICommand::handleKnownParams() {
+	unsigned i = 0;
+	uint64_t n = 0;
+	bool valuesParamFound = false;
+	for (; i < params.size(); ) {
+		std::wstring param = params[i];
+		std::wstring nextparam = i + 1 < params.size() ? params[i + 1] : std::wstring();
+		int itemsHandled = 0;
+		if (param == L"--thread-id" || param == L"--thread") {
+			if (toUlong(nextparam, n)) {
+				threadId = (unsigned)n;
+				itemsHandled = 2;
+			}
+		}//--thread-group
+		else if (param == L"--thread-group") {
+			if (!nextparam.empty()) {
+				threadGroupId = nextparam;
+				itemsHandled = 2;
+			}
+		}
+		else if (param == L"--frame") {
+			if (toUlong(nextparam, n)) {
+				frameId = (unsigned)n;
+				itemsHandled = 2;
+			}
+		}
+		else if (param == L"--no-values") {
+			printLevel = PRINT_NO_VALUES;
+			itemsHandled = 1;
+			valuesParamFound = true;
+		}
+		else if (param == L"--simple-values") {
+			printLevel = PRINT_SIMPLE_VALUES;
+			itemsHandled = 1;
+			valuesParamFound = true;
+		}
+		else if (param == L"--all-values") {
+			printLevel = PRINT_ALL_VALUES;
+			itemsHandled = 1;
+			valuesParamFound = true;
+		}
+		else if (param == L"--skip-unavailable") {
+			skipUnavailable;
+			itemsHandled = 1;
+		}
+		else if (param == L"--no-frame-filters") {
+			skipUnavailable;
+			itemsHandled = 1;
+		}
+		if (itemsHandled) {
+			params.erase(params.begin() + i, params.begin() + i + itemsHandled);
+		}
+		else {
+			i++;
+		}
+	}
+	if (commandId == CMD_STACK_LIST_LOCALS || commandId == CMD_STACK_LIST_VARIABLES || commandId == CMD_STACK_LIST_ARGUMENTS) {
+		if (!valuesParamFound && params.size() > 0) {
+			std::wstring param = params[0];
+			params.erase(params.begin());
+			if (param == L"1")
+				printLevel = PRINT_ALL_VALUES;
+			else if (param == L"2")
+				printLevel = PRINT_SIMPLE_VALUES;
+		}
+		//CRLog::trace("print level: %d", printLevel);
+	}
+}
+
 bool MICommand::parse(std::wstring s) {
 	requestId = UNSPECIFIED_REQUEST_ID;
 	commandName.clear();
@@ -581,6 +656,7 @@ bool MICommand::parse(std::wstring s) {
 	splitSpaceSeparatedParams(s, params);
 	// find id for command
 	findCommand(*this);
+	handleKnownParams();
 	collapseParams(params, namedParams);
 	for (size_t i = 0; i < namedParams.size(); i++) {
 		if (namedParams[i].first.empty() && !namedParams[i].second.empty())
