@@ -60,7 +60,7 @@ public:
 	// called to handle -data-evaluate-expression command
 	virtual void handleDataEvaluateExpressionCommand(MICommand & cmd);
 	// called to handle -stack-list-variables command
-	virtual void handleStackListVariablesCommand(MICommand & cmd, bool localsOnly = false);
+	virtual void handleStackListVariablesCommand(MICommand & cmd, bool localsOnly, bool argsOnly);
 	// called to handle -stack-list-frames command
 	virtual void handleStackListFramesCommand(MICommand & cmd, bool depthOnly = false);
 	// called to handle -thread-info and -thread-list-ids commands
