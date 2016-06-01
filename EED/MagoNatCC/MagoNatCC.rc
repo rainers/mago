@@ -11,6 +11,7 @@
 #include "targetver.h"
 #endif
 #include "winres.h"
+#include "MagoVersion.h"
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -31,7 +32,7 @@ END
 
 2 TEXTINCLUDE
 BEGIN
-	"#ifndef APSTUDIO_INVOKED\r\n"
+    "#ifndef APSTUDIO_INVOKED\r\n"
     "#include ""targetver.h""\r\n"
     "#endif\r\n"
     "#include ""winres.h""\r\n"
@@ -40,7 +41,6 @@ END
 
 3 TEXTINCLUDE  
 BEGIN
-    "1 TYPELIB ""MagoNatEE.tlb""\r\n"
     "\0"
 END
 
@@ -53,8 +53,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
+ FILEVERSION MAGO_FILEVERSION
+ PRODUCTVERSION MAGO_PRODVERSION
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -69,14 +69,14 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "TODO: <Company name>"
-            VALUE "FileDescription", "TODO: <File description>"
-            VALUE "FileVersion", "1.0.0.1"
-            VALUE "LegalCopyright", "TODO: (c) <Company name>.  All rights reserved."
-            VALUE "InternalName", "MagoNatEE.dll"
-            VALUE "OriginalFilename", "MagoNatEE.dll"
-            VALUE "ProductName", "TODO: <Product name>"
-            VALUE "ProductVersion", "1.0.0.1"
+            VALUE "CompanyName", "Aldo J. Nunez, Rainer Schuetze"
+            VALUE "FileDescription", "Mago D Expression Evaluator"
+            VALUE "FileVersion", MAGO_PRODVERSION_STR
+            VALUE "LegalCopyright", "(c) Aldo J. Nunez, Rainer Schuetze.  All rights reserved."
+            VALUE "InternalName", "MagoNatCC.dll"
+            VALUE "OriginalFilename", "MagoNatCC.dll"
+            VALUE "ProductName", "Mago D Expression Evaluator"
+            VALUE "ProductVersion", MAGO_PRODVERSION_STR
             VALUE "OLESelfRegister", ""
         END
     END
@@ -95,7 +95,7 @@ END
 
 STRINGTABLE
 BEGIN
-	IDS_PROJNAME					"MagoNatEE"
+    IDS_PROJNAME    "MagoNatCC"
 END
 
 ////////////////////////////////////////////////////////////////////////////
