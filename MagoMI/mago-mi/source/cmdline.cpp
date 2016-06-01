@@ -1,9 +1,9 @@
-#include "cmdline.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
 #include "miutils.h"
+#include "cmdline.h"
 #include "logger.h"
 #include "miutils.h"
 
@@ -23,8 +23,7 @@ static void fatalError(std::wstring msg, int errCode) {
 }
 
 ExecutableInfo::ExecutableInfo()
-	: argCount(0)
-	, verbose(false) 
+	: verbose(false) 
 	, miMode(false)
 	, silent(false)
 	, stopOnEntry(false)
@@ -35,10 +34,7 @@ ExecutableInfo::ExecutableInfo()
 void ExecutableInfo::clear() {
 	exename.clear();
 	dir.clear();
-	for (int i = 0; i < argCount; i++) {
-		args[i].clear();
-	}
-	argCount = 0;
+	args.clear();
 }
 
 ExecutableInfo::~ExecutableInfo() {
@@ -74,19 +70,16 @@ void ExecutableInfo::setTty(std::wstring tty) {
 }
 
 void ExecutableInfo::addArg(std::wstring param) {
-	if (argCount >= MAX_PARAM_COUNT) {
-		fatalError("Too many executable file parameters", 3);
-	}
-	args[argCount++] = param;
+	args.push_back(param);
 }
 
 void ExecutableInfo::dumpParams() {
 	CRLog::info("%s", toUtf8(VERSION_STRING).c_str());
 	if (!exename.empty()) {
 		CRLog::info("Executable file: %s\n", toUtf8(exename).c_str());
-		if (argCount) {
+		if (argCount()) {
 			CRLog::info("Inferior arguments:");
-			for (int i = 0; i < argCount; i++) {
+			for (int i = 0; i < argCount(); i++) {
 				CRLog::info("[%d] %s", i, toUtf8(args[i]).c_str());
 			}
 		}

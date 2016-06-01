@@ -108,6 +108,32 @@ WstringBuffer & WstringBuffer::appendUlongLiteral(uint64_t n) {
 	return *this;
 }
 
+/// append command line parameter, quote if if needed
+WstringBuffer & WstringBuffer::appendCommandLineParameter(std::wstring s) {
+	if (s.empty())
+		return *this;
+	if (last() != 0 && last() != ' ')
+		append(L" ");
+	bool needQuotes = false;
+	for (unsigned i = 0; i < s.length(); i++)
+		if (s[i] == ' ')
+			needQuotes = true;
+	if (needQuotes)
+		append(L"\"");
+	for (unsigned i = 0; i < s.length(); i++) {
+		wchar_t ch = s[i];
+		if (ch == '\"')
+			append(L"\"");
+		else if (ch == '\n')
+			append(L"\\n");
+		else
+			append(ch);
+	}
+	if (needQuotes)
+		append(L"\"");
+	return *this;
+}
+
 WstringBuffer & WstringBuffer::appendStringLiteral(std::wstring s) {
 	append('\"');
 	for (size_t i = 0; i < s.length(); i++) {

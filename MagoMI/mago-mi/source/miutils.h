@@ -281,6 +281,8 @@ struct WstringBuffer : public Buffer<wchar_t> {
 			appendStringParam(paramName, value, appendCommaIfNotThisChar);
 		return *this;
 	}
+	/// append command line parameter, quote if if needed
+	WstringBuffer & appendCommandLineParameter(std::wstring s);
 };
 
 

@@ -473,10 +473,28 @@ HRESULT MIEngine::Init(MIEventCallback * eventCallback) {
 	return S_OK;
 }
 
-HRESULT MIEngine::Launch(const wchar_t * pszExe,
-	const wchar_t * pszArgs,
-	const wchar_t * pszDir
+HRESULT MIEngine::Launch(
+		const wchar_t * pszExe,
+		const wchar_t * pszArgs,
+		const wchar_t * pszDir,
+		const wchar_t * pszTerminalNamedPipe
 	) {
+	HANDLE hPipe = NULL;
+	if (pszTerminalNamedPipe && pszTerminalNamedPipe[0]) {
+		hPipe = CreateFile(
+			pszTerminalNamedPipe,   // pipe name 
+			GENERIC_READ |  // read and write access 
+			GENERIC_WRITE,
+			0,              // no sharing 
+			NULL,           // default security attributes
+			OPEN_EXISTING,  // opens existing pipe 
+			0,              // default attributes 
+			NULL);
+		if (hPipe == INVALID_HANDLE_VALUE) {
+			CRLog::error("Cannot open terminal named pipe %s", toUtf8z(pszTerminalNamedPipe));
+			return E_FAIL;
+		}
+	}
 	HRESULT hr = engine->LaunchSuspended(
 		NULL, //pszMachine,
 		debugPort, //IDebugPort2*          pPort,
@@ -486,9 +504,9 @@ HRESULT MIEngine::Launch(const wchar_t * pszExe,
 		NULL, //BSTR                  bstrEnv,
 		NULL, //LPCOLESTR             pszOptions,
 		0, //LAUNCH_FLAGS          dwLaunchFlags,
-		NULL, //DWORD                 hStdInput,
-		NULL, //DWORD                 hStdOutput,
-		NULL, //DWORD                 hStdError,
+		(DWORD)hPipe, //DWORD                 hStdInput,
+		(DWORD)hPipe, //DWORD                 hStdOutput,
+		(DWORD)hPipe, //DWORD                 hStdError,
 		this, //IDebugEventCallback2* pCallback,
 		&debugProcess //IDebugProcess2**      ppDebugProcess
 		);

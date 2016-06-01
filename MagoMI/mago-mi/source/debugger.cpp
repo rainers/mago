@@ -263,6 +263,17 @@ void Debugger::onInputLine(std::wstring &s) {
 		writeStdout(L"~\"" VERSION_EXPLANATION_STRING L"\\n\"");
 		writeResultMessage(cmd.requestId, L"done");
 		break;
+	case CMD_SET_INFERIOR_TTY:
+		if (cmd.unnamedValues.size() != 1) {
+			writeErrorMessage(cmd.requestId, L"tty device name is required");
+			return;
+		}
+		{
+			std::wstring device = unquoteString(cmd.unnamedValues[0]);
+			params.setTty(device);
+			writeResultMessage(cmd.requestId, L"done");
+		}
+		break;
 	case CMD_ENVIRONMENT_CD:
 		{
 			if (cmd.unnamedValues.size() != 1) {
@@ -846,10 +857,16 @@ bool Debugger::load(uint64_t requestId, bool synchronous) {
 		writeErrorMessage(requestId, std::wstring(L"Executable file not found: ") + params.exename);
 		return false;
 	}
+	WstringBuffer cmdline;
+	cmdline.appendCommandLineParameter(params.exename);
+	for (unsigned i = 0; i < params.args.size(); i++)
+		cmdline.appendCommandLineParameter(params.args[i]);
+
 	HRESULT hr = _engine->Launch(
 		params.exename.c_str(), //LPCOLESTR             pszExe,
-		NULL, //LPCOLESTR             pszArgs,
-		params.dir.c_str() //LPCOLESTR             pszDir,
+		params.argCount() ? cmdline.c_str() : NULL, //LPCOLESTR             pszArgs,
+		params.dir.c_str(), //LPCOLESTR             pszDir,
+		params.tty.c_str()
 		);
 	if (FAILED(hr)) {
 		writeErrorMessage(requestId, std::wstring(L"Failed to start debugging of ") + params.exename);
