@@ -177,6 +177,7 @@
     <ClCompile Include="source\debugger.cpp" />
     <ClCompile Include="source\logger.cpp" />
     <ClCompile Include="source\mago-mi.cpp" />
+    <ClCompile Include="source\micommand.cpp" />
     <ClCompile Include="source\MIEngine.cpp" />
     <ClCompile Include="source\miutils.cpp" />
   </ItemGroup>
@@ -185,6 +186,7 @@
     <ClInclude Include="source\cmdline.h" />
     <ClInclude Include="source\debugger.h" />
     <ClInclude Include="source\logger.h" />
+    <ClInclude Include="source\micommand.h" />
     <ClInclude Include="source\MIEngine.h" />
     <ClInclude Include="source\miutils.h" />
   </ItemGroup>

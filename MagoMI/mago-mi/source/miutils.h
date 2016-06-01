@@ -11,6 +11,11 @@ typedef unsigned __int64 ulong;
 // magic constant for non-specified MI request id
 const uint64_t UNSPECIFIED_REQUEST_ID = 0xFFFFFFFFFFFFFFFEull;
 
+typedef std::vector<std::wstring> wstring_vector;
+typedef std::pair<std::wstring, std::wstring> wstring_pair;
+typedef std::vector<wstring_pair> param_vector;
+
+#include "micommand.h"
 
 #define DEFAULT_GUARD_TIMEOUT 50
 #ifdef _DEBUG
@@ -234,9 +239,11 @@ struct StringBuffer : public Buffer<char> {
 
 
 struct WstringBuffer : public Buffer<wchar_t> {
+	WstringBuffer & pad(wchar_t ch, int len);
 	WstringBuffer & operator = (const std::wstring & s) { assign(s.c_str(), s.length()); return *this; }
 	WstringBuffer & operator += (const std::wstring & s) { append(s.c_str(), s.length()); return *this; }
 	WstringBuffer & operator += (wchar_t ch) { append(ch); return *this; }
+	WstringBuffer & appendUtf8(const char * s);
 	std::string str() { return toUtf8(wstr()); }
 	std::wstring wstr() { return std::wstring(c_str(), length()); }
 	// appends double quoted string, e.g. "Some message.\n"
@@ -274,11 +281,10 @@ struct WstringBuffer : public Buffer<wchar_t> {
 			appendStringParam(paramName, value, appendCommaIfNotThisChar);
 		return *this;
 	}
+	/// append command line parameter, quote if if needed
+	WstringBuffer & appendCommandLineParameter(std::wstring s);
 };
 
-typedef std::vector<std::wstring> wstring_vector;
-typedef std::pair<std::wstring, std::wstring> wstring_pair;
-typedef std::vector<wstring_pair> param_vector;
 
 // various parsing utility functions
 
@@ -312,42 +318,6 @@ inline bool endsWith(std::wstring const & value, std::wstring const & ending)
 		return false;
 	return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
 }
-
-struct MICommand {
-	uint64_t requestId;
-	/// true if command is prefixed with single -
-	bool miCommand;
-	/// original command text
-	std::wstring commandText;
-	/// command name string
-	std::wstring commandName;
-	/// tail after command till end of line
-	std::wstring tail;
-	/// individual parameters from tail
-	wstring_vector params;
-	/// named parameters - pairs (key, value)
-	param_vector namedParams;
-	/// parameters with values w/o names
-	wstring_vector unnamedValues;
-
-	// debug dump
-	std::wstring dumpCommand();
-
-	/// returns true if there is specified named parameter in cmd
-	bool hasParam(std::wstring name);
-	// find parameter by name
-	std::wstring findParam(std::wstring name);
-	std::wstring unnamedValue(unsigned index = 0) { return index < unnamedValues.size() ? unnamedValues[index] : std::wstring(); }
-	// get parameter --thread-id
-	uint64_t getUlongParam(std::wstring name, uint64_t defValue = 0);
-	// get parameter --thread-id
-	unsigned getThreadIdParam() { return (unsigned)getUlongParam(L"--thread-id"); }
-
-	MICommand();
-	~MICommand();
-	// parse MI command, returns true if successful
-	bool parse(std::wstring line);
-};
 
 
 class RefCountedBase {

@@ -2,6 +2,7 @@
 #include "miutils.h"
 #include "MIEngine.h"
 #include "../../DebugEngine/MagoNatDE/PendingBreakpoint.h"
+//#include "micommand.h"
 
 //const char * toUtf8z(const std::wstring s) { 
 //	return toUtf8(s).c_str(); 
@@ -85,11 +86,51 @@ std::wstring toUtf16(const std::string s) {
 	return buf.wstr();
 }
 
+WstringBuffer & WstringBuffer::appendUtf8(const char * s) {
+	while (s && s[0]) {
+		append(s[0]);
+		s++;
+	}
+	return *this;
+}
+
+WstringBuffer & WstringBuffer::pad(wchar_t ch, int len) {
+	while (length() < len)
+		append(ch);
+	return *this;
+}
+
 // appends number
 WstringBuffer & WstringBuffer::appendUlongLiteral(uint64_t n) {
 	wchar_t buf[32];
 	wsprintf(buf, L"%I64d", n);
 	append(buf);
+	return *this;
+}
+
+/// append command line parameter, quote if if needed
+WstringBuffer & WstringBuffer::appendCommandLineParameter(std::wstring s) {
+	if (s.empty())
+		return *this;
+	if (last() != 0 && last() != ' ')
+		append(L" ");
+	bool needQuotes = false;
+	for (unsigned i = 0; i < s.length(); i++)
+		if (s[i] == ' ')
+			needQuotes = true;
+	if (needQuotes)
+		append(L"\"");
+	for (unsigned i = 0; i < s.length(); i++) {
+		wchar_t ch = s[i];
+		if (ch == '\"')
+			append(L"\"");
+		else if (ch == '\n')
+			append(L"\\n");
+		else
+			append(ch);
+	}
+	if (needQuotes)
+		append(L"\"");
 	return *this;
 }
 
@@ -123,16 +164,6 @@ WstringBuffer & WstringBuffer::appendStringLiteral(std::wstring s) {
 	}
 	append('\"');
 	return *this;
-}
-
-MICommand::MICommand() 
-	: requestId(UNSPECIFIED_REQUEST_ID) 
-	, miCommand(false)
-{
-
-}
-MICommand::~MICommand() {
-	
 }
 
 /// helper function converts BSTR string to std::wstring and frees original string
@@ -326,183 +357,6 @@ bool splitByCharRev(std::wstring & s, wchar_t ch, std::wstring & before, std::ws
 	before = s;
 	after.clear();
 	return false;
-}
-
-// return true if value is required
-bool doesParameterRequireValue(std::wstring p) {
-	static const wchar_t * KNOWN_PARAMS_WITH_VALUES_LIST[] = {
-		L"--thread-group",
-		L"--thread",
-		L"--frame",
-		NULL
-	};
-	for (int i = 0; KNOWN_PARAMS_WITH_VALUES_LIST[i]; i++)
-		if (p == KNOWN_PARAMS_WITH_VALUES_LIST[i])
-			return true;
-	return false;
-}
-
-// returns true if embedded value is found
-bool splitParamAndValue(std::wstring & s, std::wstring & name, std::wstring & value) {
-	if (isShortParamName(s)) {
-		if (s.length() == 2) {
-			// -c
-			name = s;
-			value.clear();
-			return false;
-		}
-		else {
-			// -cvalue
-			name = s.substr(0, 2);
-			value = s.substr(2, s.length() - 2);
-			return true;
-		}
-	}
-	else if (isLongParamName(s)) {
-		// --paramname or --paramname=value
-		return splitByChar(s, '=', name, value);
-	}
-	else {
-		// not a parameter - put into value
-		name.clear();
-		value = s;
-		return false;
-	}
-}
-
-void collapseParams(wstring_vector & items, param_vector & namedParams) {
-	for (size_t i = 0; i < items.size(); i++) {
-		std::wstring item = items[i];
-		std::wstring next = i + 1 < items.size() ? items[i + 1] : std::wstring();
-		std::wstring name;
-		std::wstring value;
-		if (isParamName(item)) {
-			// --param or -p
-			if (splitParamAndValue(item, name, value)) {
-				// has both name and value: --param=value or -pvalue
-				wstring_pair pair;
-				pair.first = name;
-				pair.second = value;
-				namedParams.push_back(pair);
-			}
-			else {
-				// separate values for params not supported
-				if (!doesParameterRequireValue(item)) {
-					// no value
-					wstring_pair pair;
-					pair.first = name;
-					namedParams.push_back(pair);
-				}
-				else {
-					if (isParamName(next) || next.empty()) { // short params cannot have separate values
-						// no value
-						wstring_pair pair;
-						pair.first = name;
-						namedParams.push_back(pair);
-					}
-					else {
-						// next item is value for this param
-						wstring_pair pair;
-						pair.first = name;
-						pair.second = next;
-						namedParams.push_back(pair);
-						// skip one item - it's already used as value
-						i++;
-					}
-				}
-			}
-
-		}
-		else {
-			wstring_pair pair;
-			pair.second = item;
-			namedParams.push_back(pair);
-		}
-
-	}
-}
-
-/// returns true if there is specified named parameter in cmd
-bool MICommand::hasParam(std::wstring name) {
-	for (unsigned i = 0; i < namedParams.size(); i++)
-		if (namedParams[i].first == name)
-			return true;
-	return false;
-}
-
-// find parameter by name
-std::wstring MICommand::findParam(std::wstring name) {
-	for (unsigned i = 0; i < namedParams.size(); i++)
-		if (namedParams[i].first == name)
-			return namedParams[i].second;
-	return std::wstring();
-}
-
-// get parameter --thread-id
-uint64_t MICommand::getUlongParam(std::wstring name, uint64_t defValue) {
-	std::wstring v = findParam(name);
-	if (v.empty())
-		return defValue;
-	uint64_t tid = 0;
-	if (!toUlong(v, tid))
-		return defValue;
-	return tid;
-}
-
-bool MICommand::parse(std::wstring s) {
-	requestId = UNSPECIFIED_REQUEST_ID;
-	commandName.clear();
-	tail.clear();
-	params.clear();
-	namedParams.clear();
-	unnamedValues.clear();
-	commandText = s;
-	parseUlong(s, requestId);
-	if (!parseIdentifier(s, commandName))
-		return false;
-	if (commandName[0] == '-' && commandName[1] != '-')
-		miCommand = true;
-	skipWhiteSpace(s);
-	tail = s;
-	splitSpaceSeparatedParams(s, params);
-	collapseParams(params, namedParams);
-	for (size_t i = 0; i < namedParams.size(); i++) {
-		if (namedParams[i].first.empty() && !namedParams[i].second.empty())
-			unnamedValues.push_back(namedParams[i].second);
-	}
-	return true;
-}
-
-// debug dump
-std::wstring MICommand::dumpCommand() {
-	WstringBuffer buf;
-	buf.append(L"MICommand {");
-	buf.appendStringParam(L"commandName", commandName);
-	buf.append(L" params=[ ");
-	for (size_t i = 0; i < params.size(); i++) {
-		buf.append(L"`");
-		buf += params[i];
-		buf.append(L"` ");
-	}
-	buf.append(L"] ");
-	buf.append(L" namedParams={");
-	for (size_t i = 0; i < namedParams.size(); i++) {
-		buf.append(L"`");
-		buf += namedParams[i].first;
-		buf.append(L"`=`");
-		buf += namedParams[i].second;
-		buf.append(L"` ");
-	}
-	buf.append(L"} ");
-	buf.append(L" unnamedValues=[ ");
-	for (size_t i = 0; i < unnamedValues.size(); i++) {
-		buf.append(L"`");
-		buf += unnamedValues[i];
-		buf.append(L"` ");
-	}
-	buf.append(L"] ");
-	buf.append(L"}");
-	return buf.wstr();
 }
 
 // debug dump

@@ -1,9 +1,9 @@
-#include "cmdline.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
 #include "miutils.h"
+#include "cmdline.h"
 #include "logger.h"
 #include "miutils.h"
 
@@ -23,8 +23,7 @@ static void fatalError(std::wstring msg, int errCode) {
 }
 
 ExecutableInfo::ExecutableInfo()
-	: argCount(0)
-	, verbose(false) 
+	: verbose(false) 
 	, miMode(false)
 	, silent(false)
 	, stopOnEntry(false)
@@ -35,10 +34,7 @@ ExecutableInfo::ExecutableInfo()
 void ExecutableInfo::clear() {
 	exename.clear();
 	dir.clear();
-	for (int i = 0; i < argCount; i++) {
-		args[i].clear();
-	}
-	argCount = 0;
+	args.clear();
 }
 
 ExecutableInfo::~ExecutableInfo() {
@@ -69,20 +65,21 @@ void ExecutableInfo::setDir(std::wstring directory) {
 	CRLog::info("dir is set: %s", toUtf8z(dir));
 }
 
+void ExecutableInfo::setTty(std::wstring tty) {
+	this->tty = tty;
+}
+
 void ExecutableInfo::addArg(std::wstring param) {
-	if (argCount >= MAX_PARAM_COUNT) {
-		fatalError("Too many executable file parameters", 3);
-	}
-	args[argCount++] = param;
+	args.push_back(param);
 }
 
 void ExecutableInfo::dumpParams() {
 	CRLog::info("%s", toUtf8(VERSION_STRING).c_str());
 	if (!exename.empty()) {
 		CRLog::info("Executable file: %s\n", toUtf8(exename).c_str());
-		if (argCount) {
+		if (argCount()) {
 			CRLog::info("Inferior arguments:");
-			for (int i = 0; i < argCount; i++) {
+			for (int i = 0; i < argCount(); i++) {
 				CRLog::info("[%d] %s", i, toUtf8(args[i]).c_str());
 			}
 		}
@@ -241,10 +238,11 @@ CmdLineParamDef paramDefs[] = {
 	CmdLineParamDef(NULL, "--help", NO_PARAMS, "Print this message and then exit", NULL, &showHelp),
 	CmdLineParamDef(NULL, "--version", NO_PARAMS, "Print version information and then exit", NULL, &showVersion),
 	CmdLineParamDef("-v", NULL, NO_PARAMS, "Verbose output", NULL, &handleVerbose),
-	CmdLineParamDef(NULL, "--silent", NO_PARAMS, "Don't print version info on startup", NULL, &handleSilent),
+	CmdLineParamDef("-q", "--silent", NO_PARAMS, "Don't print version info on startup", NULL, &handleSilent),
 	CmdLineParamDef("Other options"),
 	CmdLineParamDef(NULL, "--cd=DIR", STRING_PARAM, "Change current directory to DIR.", NULL, &handleDir),
-	CmdLineParamDef(NULL, "--nx", NO_PARAMS, "Do not execute commands found in any initializaton file", NULL, &handleNx),
+	CmdLineParamDef("-n", "--nx", NO_PARAMS, "Do not execute commands found in any initializaton file", NULL, &handleNx),
+	CmdLineParamDef("-t", "--tty", STRING_PARAM, "Run using named pipe for standard input/output", NULL, &handleNx),
 	CmdLineParamDef(NULL, "--log-file=FILE", STRING_PARAM, "Set log file for debugger internal logging.", NULL, &handleLogFile),
 	CmdLineParamDef(NULL, "--log-level=FATAL|ERROR|WARN|INFO|DEBUG|TRACE", STRING_PARAM, "Set log level for debugger internal logging.", NULL, &handleLogLevel),
 	CmdLineParamDef()

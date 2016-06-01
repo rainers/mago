@@ -114,212 +114,195 @@ void Debugger::writeErrorMessage(ulong requestId, std::wstring msg, const wchar_
 		writeStdout(msg);
 }
 
-static const wchar_t * HELP_MSGS[] = {
-	L"mago-mi: GDB and GDB-MI compatible interfaces for MAGO debugger.",
-	L"",
-	L"run                     - start program execution",
-	L"continue                - continue program execution",
-	L"interrupt               - interrupt program execution",
-	L"next                    - step over",
-	L"nexti                   - step over by instruction",
-	L"step                    - step into",
-	L"stepi                   - step into by instruction",
-	L"finish                  - step out of current function",
-	L"break                   - add breakpoint",
-	L"info break              - list breakpoints",
-	L"enable N                - enable breakpoint",
-	L"disable N               - disable breakpoint",
-	L"delete N                - delete breakpoint",
-	L"info thread             - thread list with properties",
-	L"info threads            - list of thread ids",
-	L"backtrace               - list thread stack frames",
-	L"",
-	L"Type quit to exit.",
-	NULL
-};
-
-static const wchar_t * HELP_MSGS_MI[] = {
-	L"mago-mi: GDB and GDB-MI compatible interfaces for MAGO debugger.",
-	L"",
-	L"-exec-run [--start]     - start program execution",
-	L"-exec-continue          - continue program execution",
-	L"-exec-interrupt         - interrupt program which is being running",
-	L"-exec-next              - step over",
-	L"-exec-next-instruction  - step over by instruction",
-	L"-exec-step              - step into",
-	L"-exec-step-instruction  - step into by instruction",
-	L"-exec-finish            - exit function",
-	L"-break-insert           - add breakpoint",
-	L"-break-list             - list breakpoints",
-	L"-break-enable           - enable breakpoint",
-	L"-break-disable          - disable breakpoint",
-	L"-break-delete           - delete breakpoint",
-	L"-thread-info            - thread list with properties",
-	L"-thread-list-ids        - list of thread ids",
-	L"-stack-list-frames      - list thread stack frames",
-	L"-stack-list-variables   - list stack frame variables",
-	L"-gdb-exit               - quit debugger",
-	L"",
-	L"Type quit to exit.",
-	NULL
-};
-
 void Debugger::showHelp() {
-	const wchar_t **msgs = params.miMode ? HELP_MSGS_MI : HELP_MSGS;
-	for (int i = 0; msgs[i]; i++)
-	    writeDebuggerMessage(std::wstring(msgs[i]));
+	wstring_vector res;
+	getCommandsHelp(res, params.miMode);
+	for (unsigned i = 0; i < res.size(); i++)
+	    writeDebuggerMessage(res[i]);
 }
 
 /// called on new input line
 void Debugger::onInputLine(std::wstring &s) {
+	
 	CRLog::trace("Input line: %s", toUtf8(s).c_str());
 	if (s.empty())
 		return;
+
 	//if (_entryPointContinuePending) {
 	//	_entryPointContinuePending = false;
 	//	resume();
 	//}
+
 	MICommand cmd;
 	if (!cmd.parse(s)) {
 		writeErrorMessage(cmd.requestId, std::wstring(L"invalid command syntax: ") + s, L"undefined-command");
 		return;
 	}
-	if (cmd.commandName == L"quit" || cmd.commandName == L"-gdb-exit") {
+	switch (cmd.commandId) {
+	case CMD_UNKNOWN:
+	default:
+		if (cmd.miCommand)
+			writeErrorMessage(cmd.requestId, std::wstring(L"Undefined MI command: ") + s, L"undefined-command");
+		else
+			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s, L"undefined-command");
+		break;
+	case CMD_GDB_EXIT:
 		CRLog::info("quit requested");
 		_quitRequested = true;
 		if (params.miMode) {
 			writeStdout(L"^exit");
 			Sleep(10);
 		}
-	}
-	else if (cmd.commandName == L"help") {
+		break;
+	case CMD_HELP:
 		showHelp();
-	}
-	else if (cmd.commandName == L"run" || cmd.commandName == L"-exec-run") {
+		break;
+	case CMD_EXEC_RUN:
 		if (cmd.hasParam(std::wstring(L"--start")))
 			params.stopOnEntry = true;
 		run(cmd.requestId);
-	}
-	else if (cmd.commandName == L"continue" || cmd.commandName == L"-exec-continue") {
+		break;
+	case CMD_EXEC_CONTINUE:
 		resume(cmd.requestId);
-	}
-	else if (cmd.commandName == L"interrupt" || cmd.commandName == L"-exec-interrupt") {
+		break;
+	case CMD_EXEC_INTERRUPT:
 		causeBreak(cmd.requestId);
-	}
-	else if (cmd.commandName == L"finish" || cmd.commandName == L"-exec-finish") {
-		step(STEP_OUT, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
-	}
-	else if (cmd.commandName == L"next" || cmd.commandName == L"-exec-next") {
-		step(STEP_OVER, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
-	}
-	else if (cmd.commandName == L"nexti" || cmd.commandName == L"-exec-next-instruction") {
-		step(STEP_OVER, STEP_INSTRUCTION, cmd.getThreadIdParam(), cmd.requestId);
-	}
-	else if (cmd.commandName == L"step" || cmd.commandName == L"-exec-step") {
-		step(STEP_INTO, STEP_LINE, cmd.getThreadIdParam(), cmd.requestId);
-	}
-	else if (cmd.commandName == L"stepi" || cmd.commandName == L"-exec-step-instruction") {
-		step(STEP_INTO, STEP_INSTRUCTION, cmd.getThreadIdParam(), cmd.requestId);
-	}
-	else if (cmd.commandName == L"break" || cmd.commandName == L"-break-insert") {
+		break;
+	case CMD_EXEC_FINISH:
+		step(STEP_OUT, STEP_LINE, cmd.threadId, cmd.requestId);
+		break;
+	case CMD_EXEC_NEXT:
+		step(STEP_OVER, STEP_LINE, cmd.threadId, cmd.requestId);
+		break;
+	case CMD_EXEC_NEXT_INSTRUCTION:
+		step(STEP_OVER, STEP_INSTRUCTION, cmd.threadId, cmd.requestId);
+		break;
+	case CMD_EXEC_STEP:
+		step(STEP_INTO, STEP_LINE, cmd.threadId, cmd.requestId);
+		break;
+	case CMD_EXEC_STEP_INSTRUCTION:
+		step(STEP_INTO, STEP_INSTRUCTION, cmd.threadId, cmd.requestId);
+		break;
+	case CMD_BREAK_INSERT:
 		handleBreakpointInsertCommand(cmd);
-	}
-	else if (cmd.commandName == L"delete" || cmd.commandName == L"-break-delete") {
+		break;
+	case CMD_BREAK_DELETE:
 		handleBreakpointDeleteCommand(cmd);
-	}
-	else if (cmd.commandName == L"enable" || cmd.commandName == L"-break-enable") {
+		break;
+	case CMD_BREAK_ENABLE:
 		handleBreakpointEnableCommand(cmd, true);
-	}
-	else if (cmd.commandName == L"disable" || cmd.commandName == L"-break-disable") {
+		break;
+	case CMD_BREAK_DISABLE:
 		handleBreakpointEnableCommand(cmd, false);
-	}
-	else if (cmd.commandName == L"-list-thread-groups") {
-		if (!_paused && (cmd.unnamedValue(0) == L"i1" || cmd.hasParam(L"--available"))) {
-			writeErrorMessage(cmd.requestId, L"Can not fetch data now.\n");
-			return;
+		break;
+	case CMD_LIST_THREAD_GROUPS:
+		{
+			if (!_paused && (cmd.unnamedValue(0) == L"i1" || cmd.hasParam(L"--available"))) {
+				writeErrorMessage(cmd.requestId, L"Can not fetch data now.\n");
+				return;
+			}
+			if (cmd.unnamedValue(0) == L"i1") {
+				handleThreadInfoCommand(cmd, false);
+				return;
+			}
+			WstringBuffer buf;
+			buf.appendUlongIfNonEmpty(cmd.requestId);
+			buf.append(L"^done");
+			buf.append(L",groups=[{");
+			buf.appendStringParam(L"id", L"i1");
+			buf.appendStringParam(L"type", L"process");
+			buf.appendStringParam(L"pid", L"123"); // todo: add real PID
+			buf.appendStringParamIfNonEmpty(L"executable", params.exename);
+			buf.append(L"}]");
+			writeStdout(buf.wstr());
 		}
-		if (cmd.unnamedValue(0) == L"i1") {
-			handleThreadInfoCommand(cmd, false);
-			return;
-		}
-		WstringBuffer buf;
-		buf.appendUlongIfNonEmpty(cmd.requestId);
-		buf.append(L"^done");
-		buf.append(L",groups=[{");
-		buf.appendStringParam(L"id", L"i1");
-		buf.appendStringParam(L"type", L"process");
-		buf.appendStringParam(L"pid", L"123"); // todo: add real PID
-		buf.appendStringParamIfNonEmpty(L"executable", params.exename);
-		buf.append(L"}]");
-		writeStdout(buf.wstr());
-	}
-	else if ((cmd.commandName == L"info" && cmd.tail == L"break") || cmd.commandName == L"-break-list") {
+		break;
+	case CMD_BREAK_LIST:
 		handleBreakpointListCommand(cmd);
-	}
-	else if ((cmd.commandName == L"info" && cmd.tail == L"thread") || cmd.commandName == L"-thread-info") {
+		break;
+	case CMD_THREAD_INFO:
 		handleThreadInfoCommand(cmd, false);
-	}
-	else if ((cmd.commandName == L"info" && cmd.tail == L"threads") || cmd.commandName == L"-thread-list-ids") {
+		break;
+	case CMD_THREAD_LIST_IDS:
 		handleThreadInfoCommand(cmd, true);
-	}
-	else if (cmd.commandName == L"backtrace" || cmd.commandName == L"bt" || cmd.commandName == L"-stack-list-frames") {
+		break;
+	case CMD_STACK_LIST_FRAMES:
 		handleStackListFramesCommand(cmd, false);
-	}
-	else if (cmd.commandName == L"-stack-info-depth") {
+		break;
+	case CMD_STACK_INFO_DEPTH:
 		handleStackListFramesCommand(cmd, true);
-	}
-	else if (cmd.commandName == L"-stack-list-variables") {
-		handleStackListVariablesCommand(cmd, false);
-	}
-	else if (cmd.commandName == L"-stack-list-locals") {
-		handleStackListVariablesCommand(cmd, true);
-	}
-	else if (cmd.commandName == L"-var-create" || cmd.commandName == L"-var-update" || cmd.commandName == L"-var-delete") {
+		break;
+	//case CMD_STACK_LIST_ARGUMENTS:
+	//	handleStackListVariablesCommand(cmd, false, true);
+	//	break;
+	case CMD_STACK_LIST_VARIABLES:
+		handleStackListVariablesCommand(cmd, false, false);
+		break;
+	case CMD_STACK_LIST_LOCALS:
+		handleStackListVariablesCommand(cmd, true, false);
+		break;
+	case CMD_VAR_CREATE:
+	case CMD_VAR_UPDATE:
+	case CMD_VAR_DELETE:
 		handleVariableCommand(cmd);
-	}
-	else if (cmd.commandName == L"-var-set-format") {
-		CRLog::warn("command -gdb-show is not implemented");
-		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"-list-features") {
-		WstringBuffer buf;
-		buf.appendUlongIfNonEmpty(cmd.requestId);
-		buf.append(L"^done,features=[\"frozen - varobjs\",\"pending - breakpoints\",\"thread-info\"]");
-		//,\"breakpoint-notifications\",\"undefined-command-error-code\",\"exec-run-start-option\"
-		writeStdout(buf.wstr());
-	}
-	else if (cmd.commandName == L"-gdb-version") {
+		break;
+	case CMD_VAR_SET_FORMAT:
+		handleVariableCommand(cmd);
+		break;
+	case CMD_LIST_FEATURES:
+		{
+			WstringBuffer buf;
+			buf.appendUlongIfNonEmpty(cmd.requestId);
+			buf.append(L"^done,features=[\"frozen - varobjs\",\"pending - breakpoints\",\"thread-info\"]");
+			//,\"breakpoint-notifications\",\"undefined-command-error-code\",\"exec-run-start-option\"
+			writeStdout(buf.wstr());
+		}
+		break;
+	case CMD_GDB_VERSION:
 		writeStdout(L"~\"" VERSION_STRING L"\\n\"");
 		writeStdout(L"~\"" VERSION_EXPLANATION_STRING L"\\n\"");
 		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"-environment-cd") {
+		break;
+	case CMD_SET_INFERIOR_TTY:
 		if (cmd.unnamedValues.size() != 1) {
-			writeErrorMessage(cmd.requestId, L"directory name parameter required");
+			writeErrorMessage(cmd.requestId, L"tty device name is required");
 			return;
 		}
-		std::wstring dir = unquoteString(cmd.unnamedValues[0]);
-		params.setDir(dir);
-		CRLog::info("Changing current directory to %s", toUtf8z(params.dir));
-		if (SetCurrentDirectoryW(dir.c_str()) != TRUE)
-			CRLog::error("Cannot change current directory to %s", toUtf8z(params.dir));
-		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"-gdb-show") { // language
+		{
+			std::wstring device = unquoteString(cmd.unnamedValues[0]);
+			params.setTty(device);
+			writeResultMessage(cmd.requestId, L"done");
+		}
+		break;
+	case CMD_ENVIRONMENT_CD:
+		{
+			if (cmd.unnamedValues.size() != 1) {
+				writeErrorMessage(cmd.requestId, L"directory name parameter required");
+				return;
+			}
+			std::wstring dir = unquoteString(cmd.unnamedValues[0]);
+			params.setDir(dir);
+			CRLog::info("Changing current directory to %s", toUtf8z(params.dir));
+			if (SetCurrentDirectoryW(dir.c_str()) != TRUE)
+				CRLog::error("Cannot change current directory to %s", toUtf8z(params.dir));
+			writeResultMessage(cmd.requestId, L"done");
+		}
+		break;
+	case CMD_GDB_SHOW:
 		if (cmd.unnamedValue(0) == L"language") {
 			writeResultMessageRaw(cmd.requestId, L"done", L"value=\"auto\"");
 			return;
 		}
 		CRLog::warn("command -gdb-show is not implemented");
 		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"-interpreter-exec") {
+		break;
+	case CMD_INTERPRETER_EXEC:
 		if (cmd.unnamedValue(0) == L"console") {
 			if (unquoteString(cmd.unnamedValue(1)) == L"show endian") {
 				writeDebuggerMessage(L"The target endianness is set automatically (currently little endian)\n");
 				writeResultMessage(cmd.requestId, L"done");
 				return;
-			} 
+			}
 			else if (unquoteString(cmd.unnamedValue(1)) == L"p/x (char)-1") {
 				writeDebuggerMessage(L"$1 = 0xff\n");
 				writeResultMessage(cmd.requestId, L"done");
@@ -332,50 +315,46 @@ void Debugger::onInputLine(std::wstring &s) {
 		}
 		CRLog::warn("command -interpreter-exec is not implemented");
 		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"-data-evaluate-expression") {
+		break;
+	case CMD_DATA_EVALUATE_EXPRESSION:
 		handleDataEvaluateExpressionCommand(cmd);
-	}
-	else if (cmd.commandName == L"-gdb-set") { // breakpoint pending on
+		break;
+	case CMD_GDB_SET:
 		CRLog::warn("command -gdb-set is not implemented");
 		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"maintenance") { // breakpoint pending on
+		break;
+	case CMD_MAINTENANCE:
 		CRLog::warn("command maintenance is not implemented");
 		writeStdout(L"&\"%s\\n\"", cmd.commandText.c_str());
 		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"-enable-pretty-printing") {
+		break;
+	case CMD_ENABLE_PRETTY_PRINTING:
 		CRLog::warn("command -enable-pretty-printing is not implemented");
 		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"source") {
+		break;
+	case CMD_HANDLE:
+		// ignore, reply done
+		writeResultMessage(cmd.requestId, L"done");
+		break;
+	case CMD_SOURCE:
 		CRLog::warn("command source is not implemented");
 		writeStdout(L"&\"source.gdbinit\\n\"");
 		writeStdout(L"&\".gdbinit: No such file or directory.\\n\"");
 		writeErrorMessage(cmd.requestId, L".gdbinit: No such file or directory.");
-		//writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"-file-exec-and-symbols") {
-		if (cmd.unnamedValues.size() != 1) {
-			writeErrorMessage(cmd.requestId, L"directory name parameter required");
-			return;
+		break;
+	case CMD_FILE_EXEC_AND_SYMBOLS:
+		{
+			if (cmd.unnamedValues.size() != 1) {
+				writeErrorMessage(cmd.requestId, L"directory name parameter required");
+				return;
+			}
+			std::wstring fn = unquoteString(cmd.unnamedValues[0]);
+			params.setExecutable(fn);
+			load(cmd.requestId, true);
+			writeResultMessage(cmd.requestId, L"done");
+
 		}
-		std::wstring fn = unquoteString(cmd.unnamedValues[0]);
-		params.setExecutable(fn);
-		load(cmd.requestId, true);
-		writeResultMessage(cmd.requestId, L"done");
-	}
-	else if (cmd.commandName == L"handle") {
-		// ignore, reply done
-		writeResultMessage(cmd.requestId, L"done");
-	}
-	else
-	{
-		if (cmd.miCommand)
-			writeErrorMessage(cmd.requestId, std::wstring(L"Undefined MI command: ") + s, L"undefined-command");
-		else
-			writeErrorMessage(cmd.requestId, std::wstring(L"unknown command: ") + s, L"undefined-command");
+		break;
 	}
 }
 
@@ -390,8 +369,8 @@ void Debugger::handleDataEvaluateExpressionCommand(MICommand & cmd) {
 		return;
 	}
 	std::wstring expr = cmd.unnamedValue(0);
-	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
-	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+	DWORD threadId = cmd.threadId;
+	DWORD frameIndex = cmd.frameId;
 	// returns stack frame if found
 	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
 	if (!frame) {
@@ -447,8 +426,8 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 			name = std::wstring(L"var") + toWstring(nextVarId++);
 	}
 
-	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
-	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+	DWORD threadId = cmd.threadId;
+	DWORD frameIndex = cmd.frameId;
 	// returns stack frame if found
 	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
 	if (!frame) {
@@ -533,7 +512,7 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 }
 
 // called to handle -stack-list-variables command
-void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly) {
+void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly, bool argsOnly) {
 	if (!_paused || _stopped) {
 		writeErrorMessage(cmd.requestId, L"Cannot get variables for running or terminated process");
 		return;
@@ -547,16 +526,10 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly)
 	else
 		buf.append(L"^done,variables=[");
 
-	DWORD threadId = (DWORD)cmd.getUlongParam(L"--thread");
-	DWORD frameIndex = (DWORD)cmd.getUlongParam(L"--frame");
+	DWORD threadId = cmd.threadId;
+	DWORD frameIndex = cmd.frameId;
 
-	int level = 0;
-	std::wstring plevel = cmd.unnamedValue(0);
-	if (plevel == L"--all-values" || plevel == L"1")
-		level = 2;
-	if (plevel == L"--simple-values" || plevel == L"2")
-		level = 1;
-
+	int level = cmd.printLevel;
 
 	// returns stack frame if found
 	IDebugStackFrame2 * frame = getStackFrame(threadId, frameIndex);
@@ -570,7 +543,7 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly)
 		for (unsigned i = 0; i < list.size(); i++) {
 			if (i != 0)
 				buf.append(L",");
-			list[i]->dumpMiVariable(buf, level ? true : false, level ? true : false);
+			list[i]->dumpMiVariable(buf, level != PRINT_NO_VALUES ? true : false, level != PRINT_NO_VALUES ? true : false);
 		}
 	}
 	
@@ -596,7 +569,7 @@ void Debugger::handleStackListFramesCommand(MICommand & cmd, bool depthOnly) {
 		if (toUlong(cmd.unnamedValue(0), n))
 			maxDepth = (int)n;
 	}
-	DWORD tid = (DWORD)cmd.getUlongParam(L"--thread");
+	DWORD tid = cmd.threadId;
 	IDebugThread2 * pThread = findThreadById(tid);
 	StackFrameInfo frameInfos[MAX_FRAMES];
 	unsigned minIndex = 0;
@@ -884,10 +857,16 @@ bool Debugger::load(uint64_t requestId, bool synchronous) {
 		writeErrorMessage(requestId, std::wstring(L"Executable file not found: ") + params.exename);
 		return false;
 	}
+	WstringBuffer cmdline;
+	cmdline.appendCommandLineParameter(params.exename);
+	for (unsigned i = 0; i < params.args.size(); i++)
+		cmdline.appendCommandLineParameter(params.args[i]);
+
 	HRESULT hr = _engine->Launch(
 		params.exename.c_str(), //LPCOLESTR             pszExe,
-		NULL, //LPCOLESTR             pszArgs,
-		params.dir.c_str() //LPCOLESTR             pszDir,
+		params.argCount() ? cmdline.c_str() : NULL, //LPCOLESTR             pszArgs,
+		params.dir.c_str(), //LPCOLESTR             pszDir,
+		params.tty.c_str()
 		);
 	if (FAILED(hr)) {
 		writeErrorMessage(requestId, std::wstring(L"Failed to start debugging of ") + params.exename);
@@ -1053,6 +1032,12 @@ bool Debugger::causeBreak(uint64_t requestId) {
 
 // find current program's thread by id
 IDebugThread2 * Debugger::findThreadById(DWORD threadId) {
+	if (!threadId) {
+		if (_paused)
+			return _pThread;
+		return NULL;
+	}
+
 	IDebugThread2 * res = NULL;
 	if (!_pProgram) {
 		CRLog::warn("Cannot find thread: no current program");
@@ -1314,8 +1299,7 @@ unsigned Debugger::getThreadFrameContext(IDebugThread2 * pThread, StackFrameInfo
 // step paused program
 bool Debugger::step(STEPKIND stepKind, STEPUNIT stepUnit, DWORD threadId, uint64_t requestId) {
 	if (!_started || !_loaded || !_pProgram) {
-		if (requestId != UNSPECIFIED_REQUEST_ID)
-			writeErrorMessage(requestId, std::wstring(L"Cannot step: program is not running"));
+		writeErrorMessage(requestId, std::wstring(L"Cannot step: program is not running"));
 		return false;
 	}
 	if (!_paused) {

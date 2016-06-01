@@ -11,11 +11,12 @@ extern "C" void parseCommandLine(int argc, wchar_t *argv[]);
 #define MAX_PARAM_COUNT 10000
 struct ExecutableInfo {
 	std::wstring exename;
-	int argCount;
-	std::wstring  args[MAX_PARAM_COUNT];
+	wstring_vector args;
 	std::wstring dir;
 	std::wstring logFile;
 	std::wstring logLevel;
+	std::wstring tty;
+	int argCount() { return (int)args.size(); }
 	bool verbose;
 	bool miMode;
 	bool silent;
@@ -27,6 +28,7 @@ struct ExecutableInfo {
 	void setExecutable(std::wstring exe);
 	void setDir(std::wstring directory);
 	void addArg(std::wstring param);
+	void setTty(std::wstring tty);
 	void dumpParams();
 
 	bool hasExecutableSpecified();

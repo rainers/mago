@@ -211,8 +211,8 @@ public:
 
 	HRESULT Launch(const wchar_t * pszExe,
 		const wchar_t * pszArgs,
-		const wchar_t * pszDir
-		);
+		const wchar_t * pszDir,
+		const wchar_t * pszTerminalNamedPipe);
 	HRESULT ResumeProcess();
 	HRESULT CreatePendingBreakpoint(BreakpointInfoRef & bp);
 };
