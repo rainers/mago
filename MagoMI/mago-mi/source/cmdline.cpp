@@ -69,6 +69,10 @@ void ExecutableInfo::setDir(std::wstring directory) {
 	CRLog::info("dir is set: %s", toUtf8z(dir));
 }
 
+void ExecutableInfo::setTty(std::wstring tty) {
+	this->tty = tty;
+}
+
 void ExecutableInfo::addArg(std::wstring param) {
 	if (argCount >= MAX_PARAM_COUNT) {
 		fatalError("Too many executable file parameters", 3);
@@ -241,10 +245,11 @@ CmdLineParamDef paramDefs[] = {
 	CmdLineParamDef(NULL, "--help", NO_PARAMS, "Print this message and then exit", NULL, &showHelp),
 	CmdLineParamDef(NULL, "--version", NO_PARAMS, "Print version information and then exit", NULL, &showVersion),
 	CmdLineParamDef("-v", NULL, NO_PARAMS, "Verbose output", NULL, &handleVerbose),
-	CmdLineParamDef(NULL, "--silent", NO_PARAMS, "Don't print version info on startup", NULL, &handleSilent),
+	CmdLineParamDef("-q", "--silent", NO_PARAMS, "Don't print version info on startup", NULL, &handleSilent),
 	CmdLineParamDef("Other options"),
 	CmdLineParamDef(NULL, "--cd=DIR", STRING_PARAM, "Change current directory to DIR.", NULL, &handleDir),
-	CmdLineParamDef(NULL, "--nx", NO_PARAMS, "Do not execute commands found in any initializaton file", NULL, &handleNx),
+	CmdLineParamDef("-n", "--nx", NO_PARAMS, "Do not execute commands found in any initializaton file", NULL, &handleNx),
+	CmdLineParamDef("-t", "--tty", STRING_PARAM, "Run using named pipe for standard input/output", NULL, &handleNx),
 	CmdLineParamDef(NULL, "--log-file=FILE", STRING_PARAM, "Set log file for debugger internal logging.", NULL, &handleLogFile),
 	CmdLineParamDef(NULL, "--log-level=FATAL|ERROR|WARN|INFO|DEBUG|TRACE", STRING_PARAM, "Set log level for debugger internal logging.", NULL, &handleLogLevel),
 	CmdLineParamDef()
