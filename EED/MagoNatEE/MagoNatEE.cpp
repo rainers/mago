@@ -51,12 +51,12 @@ namespace MagoEE
             return MagoEE::EnumValueChildren( binder, parentExprText, parentVal, typeEnv, strTable, enumerator );
         }
 
-        HRESULT FormatBasicValue( const DataObject& objVal, int radix, BSTR& outStr )
+        HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr )
         {
             HRESULT         hr = S_OK;
             std::wstring    stdStr;
 
-            hr = MagoEE::FormatBasicValue( objVal, radix, stdStr );
+            hr = MagoEE::FormatBasicValue( objVal, fmtopt, stdStr );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -67,12 +67,12 @@ namespace MagoEE
             return S_OK;
         }
 
-        HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, int radix, BSTR& outStr )
+        HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr )
         {
             HRESULT         hr = S_OK;
             std::wstring    stdStr;
 
-            hr = MagoEE::FormatValue( binder, objVal, radix, stdStr );
+            hr = MagoEE::FormatValue( binder, objVal, fmtopt, stdStr );
             if ( FAILED( hr ) )
                 return hr;
 

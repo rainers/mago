@@ -190,7 +190,8 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = enumProps->Init( enumVals, mExprContext, dwFields, dwRadix );
+        MagoEE::FormatOptions fmtopts = { dwRadix };
+        hr = enumProps->Init( enumVals, mExprContext, dwFields, fmtopts );
         if ( FAILED( hr ) )
             return hr;
 
@@ -377,7 +378,8 @@ namespace Mago
         HRESULT     hr = S_OK;
         CComBSTR    str;
 
-        hr = MagoEE::EED::FormatValue( mExprContext, mObjVal.ObjVal, radix, str.m_str );
+        MagoEE::FormatOptions fmtopts = { radix };
+        hr = MagoEE::EED::FormatValue( mExprContext, mObjVal.ObjVal, fmtopts, str.m_str );
         if ( FAILED( hr ) )
             return NULL;
 

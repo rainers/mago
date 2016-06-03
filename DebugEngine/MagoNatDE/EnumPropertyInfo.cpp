@@ -61,9 +61,9 @@ namespace Mago
     //------------------------------------------------------------------------
 
     EnumDebugPropertyInfo2::EnumDebugPropertyInfo2()
-        :   mFields( 0 ),
-            mRadix( 0 )
+        :   mFields( 0 )
     {
+        mFormatOpt.radix = 0;
     }
 
     EnumDebugPropertyInfo2::~EnumDebugPropertyInfo2()
@@ -130,7 +130,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = errProp->GetPropertyInfo( mFields, mRadix, INFINITE, NULL, 0, &info );
+        hr = errProp->GetPropertyInfo( mFields, mFormatOpt.radix, INFINITE, NULL, 0, &info );
         if ( FAILED( hr ) )
             return hr;
 
@@ -195,7 +195,7 @@ namespace Mago
 
         if ( (mFields & DEBUGPROP_INFO_VALUE) != 0 )
         {
-            MagoEE::EED::FormatValue( mExprContext, result.ObjVal, mRadix, info.bstrValue );
+            MagoEE::EED::FormatValue( mExprContext, result.ObjVal, mFormatOpt, info.bstrValue );
             info.dwFields |= DEBUGPROP_INFO_VALUE;
         }
 
@@ -267,7 +267,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = enumCopy->Init( eeEnumCopy, mExprContext, mFields, mRadix );
+        hr = enumCopy->Init( eeEnumCopy, mExprContext, mFields, mFormatOpt );
         if ( FAILED( hr ) )
             return hr;
 
@@ -287,7 +287,7 @@ namespace Mago
         MagoEE::IEEDEnumValues* eeEnum, 
         ExprContext* exprContext,
         DEBUGPROP_INFO_FLAGS dwFields, 
-        DWORD dwRadix )
+        const MagoEE::FormatOptions& fmtopts )
     {
         _ASSERT( eeEnum != NULL );
         if ( eeEnum == NULL )
@@ -296,7 +296,7 @@ namespace Mago
         mEEEnum = eeEnum;
         mExprContext = exprContext;
         mFields = dwFields;
-        mRadix = dwRadix;
+        mFormatOpt = fmtopts;
 
         return S_OK;
     }

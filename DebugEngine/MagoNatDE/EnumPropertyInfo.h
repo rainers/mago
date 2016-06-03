@@ -8,6 +8,7 @@
 #pragma once
 
 #include "ComEnumWithCount.h"
+#include <MagoEED.h>
 
 
 namespace MagoEE
@@ -50,7 +51,7 @@ namespace Mago
         RefPtr<MagoEE::IEEDEnumValues>  mEEEnum;
         RefPtr<ExprContext>             mExprContext;
         DEBUGPROP_INFO_FLAGS            mFields;
-        DWORD                           mRadix;
+        MagoEE::FormatOptions           mFormatOpt;
 
     public:
         EnumDebugPropertyInfo2();
@@ -72,7 +73,7 @@ namespace Mago
             MagoEE::IEEDEnumValues* eeEnum, 
             ExprContext* exprContext,
             DEBUGPROP_INFO_FLAGS dwFields, 
-            DWORD dwRadix );
+            const MagoEE::FormatOptions& fmtopt );
 
     private:
         HRESULT GetPropertyInfo( 

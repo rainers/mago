@@ -76,12 +76,12 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT FormatInt( uint64_t number, Type* type, int radix, std::wstring& outStr )
+    HRESULT FormatInt( uint64_t number, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         // 18446744073709551616
         wchar_t buf[20 + 9 + 1] = L"";
 
-        if ( radix == 16 )
+        if ( fmtopt.radix == 16 )
         {
             int width = type->GetSize() * 2;
             
@@ -104,17 +104,18 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT FormatInt( const DataObject& objVal, int radix, std::wstring& outStr )
+    HRESULT FormatInt( const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
     {
-        return FormatInt( objVal.Value.UInt64Value, objVal._Type, radix, outStr );
+        return FormatInt( objVal.Value.UInt64Value, objVal._Type, fmtopt, outStr );
     }
 
     HRESULT FormatAddress( Address addr, Type* type, std::wstring& outStr )
     {
-        return FormatInt( addr, type, 16, outStr );
+        FormatOptions fmtopt = { 16 };
+        return FormatInt( addr, type, fmtopt, outStr );
     }
 
-    HRESULT FormatChar( const DataObject& objVal, int radix, std::wstring& outStr )
+    HRESULT FormatChar( const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         // object replacement char U+FFFC
         // replacement character U+FFFD
@@ -122,7 +123,7 @@ namespace MagoEE
 
         HRESULT hr = S_OK;
 
-        hr = FormatInt( objVal, radix, outStr );
+        hr = FormatInt( objVal, fmtopt, outStr );
         if ( FAILED( hr ) )
             return hr;
 
@@ -163,7 +164,7 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT FormatBasicValue( const DataObject& objVal, int radix, std::wstring& outStr )
+    HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         _ASSERT( objVal._Type->IsBasic() );
 
@@ -181,11 +182,11 @@ namespace MagoEE
         }
         else if ( type->IsChar() )
         {
-            hr = FormatChar( objVal, radix, outStr );
+            hr = FormatChar( objVal, fmtopt, outStr );
         }
         else if ( type->IsIntegral() )
         {
-            hr = FormatInt( objVal, radix, outStr );
+            hr = FormatInt( objVal, fmtopt, outStr );
         }
         else if ( type->IsComplex() )
         {
@@ -209,9 +210,8 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT FormatEnum( const DataObject& objVal, int radix, std::wstring& outStr )
+    HRESULT FormatEnum( const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
     {
-        UNREFERENCED_PARAMETER( radix );
         _ASSERT( objVal._Type->AsTypeEnum() != NULL );
 
         HRESULT hr = S_OK;
@@ -238,7 +238,7 @@ namespace MagoEE
         }
         else
         {
-            hr = FormatInt( objVal, radix, outStr );
+            hr = FormatInt( objVal, fmtopt, outStr );
             if ( FAILED( hr ) )
                 return hr;
         }
@@ -414,9 +414,8 @@ namespace MagoEE
             outStr.append( 1, L'd' );
     }
 
-    HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, int radix, std::wstring& outStr )
+    HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
     {
-        UNREFERENCED_PARAMETER( radix );
         _ASSERT( type->IsSArray() );
 
         ITypeSArray*    arrayType = type->AsTypeSArray();
@@ -451,7 +450,7 @@ namespace MagoEE
                     return hr;
 
                 std::wstring elemStr;
-                hr = FormatValue( binder, elementObj, radix, elemStr );
+                hr = FormatValue( binder, elementObj, fmtopt, elemStr );
                 if ( FAILED( hr ) )
                     return hr;
 
@@ -464,7 +463,7 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT FormatDArray( IValueBinder* binder, DArray array, Type* type, int radix, std::wstring& outStr )
+    HRESULT FormatDArray( IValueBinder* binder, DArray array, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         _ASSERT( type->IsDArray() );
 
@@ -482,7 +481,7 @@ namespace MagoEE
         {
             outStr.append( L"{length=" );
 
-            hr = FormatInt( array.Length, arrayType->GetLengthType(), radix, outStr );
+            hr = FormatInt( array.Length, arrayType->GetLengthType(), fmtopt, outStr );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -501,14 +500,14 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT FormatAArray( Address addr, Type* type, int radix, std::wstring& outStr )
+    HRESULT FormatAArray( Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         _ASSERT( type->IsAArray() );
-        UNREFERENCED_PARAMETER( radix );
+        UNREFERENCED_PARAMETER( fmtopt );
         return FormatAddress( addr, type, outStr );
     }
 
-    HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, int radix, std::wstring& outStr )
+    HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         HRESULT         hr = S_OK;
 
@@ -548,7 +547,7 @@ namespace MagoEE
                 return hr;
 
             std::wstring memberStr;
-            hr = FormatValue( binder, memberObj, radix, memberStr );
+            hr = FormatValue( binder, memberObj, fmtopt, memberStr );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -794,7 +793,7 @@ namespace MagoEE
         return FormatRawStringInternal( binder, address, unitSize, knownLen, bufCharLen, bufCharLenWritten, buf );
     }
 
-    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, int radix, std::wstring& outStr )
+    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         HRESULT hr = S_OK;
         Type*   type = NULL;
@@ -810,27 +809,27 @@ namespace MagoEE
         }
         else if ( type->IsBasic() )
         {
-            hr = FormatBasicValue( objVal, radix, outStr );
+            hr = FormatBasicValue( objVal, fmtopt, outStr );
         }
         else if ( type->AsTypeEnum() != NULL )
         {
-            hr = FormatEnum( objVal, radix, outStr );
+            hr = FormatEnum( objVal, fmtopt, outStr );
         }
         else if ( type->IsSArray() )
         {
-            hr = FormatSArray( binder, objVal.Addr, objVal._Type, radix, outStr );
+            hr = FormatSArray( binder, objVal.Addr, objVal._Type, fmtopt, outStr );
         }
         else if ( type->IsDArray() )
         {
-            hr = FormatDArray( binder, objVal.Value.Array, objVal._Type, radix, outStr );
+            hr = FormatDArray( binder, objVal.Value.Array, objVal._Type, fmtopt, outStr );
         }
         else if ( type->IsAArray() )
         {
-            hr = FormatAArray( objVal.Value.Addr, objVal._Type, radix, outStr );
+            hr = FormatAArray( objVal.Value.Addr, objVal._Type, fmtopt, outStr );
         }
         else if ( type->AsTypeStruct() )
         {
-            hr = FormatStruct( binder, objVal.Addr, type, radix, outStr );
+            hr = FormatStruct( binder, objVal.Addr, type, fmtopt, outStr );
         }
         else
             hr = E_FAIL;

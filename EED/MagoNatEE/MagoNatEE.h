@@ -45,8 +45,8 @@ namespace MagoEE
             NameTable* strTable,
             IEEDEnumValues*& enumerator );
 
-        EXPORT HRESULT FormatBasicValue( const DataObject& objVal, int radix, BSTR& outStr );
-        EXPORT HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, int radix, BSTR& outStr );
+        EXPORT HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr );
+        EXPORT HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr );
 
         EXPORT HRESULT GetRawStringLength( IValueBinder* binder, const DataObject& objVal, uint32_t& length );
         EXPORT HRESULT FormatRawString(

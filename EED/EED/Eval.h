@@ -77,6 +77,10 @@ namespace MagoEE
         bool    AllowAssignment;
     };
 
+    struct FormatOptions
+    {
+        int radix;
+    };
 
     class IScope
     {

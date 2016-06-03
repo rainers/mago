@@ -587,7 +587,8 @@ namespace MagoEE
             return hr;
 
         std::wstring keystr;
-        hr = FormatValue( mBinder, keyobj, 10, keystr );
+        struct FormatOptions fmt = { 10 };
+        hr = FormatValue( mBinder, keyobj, fmt, keystr );
         if ( FAILED( hr ) )
             return hr;
 

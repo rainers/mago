@@ -10,8 +10,8 @@
 
 namespace MagoEE
 {
-    HRESULT FormatBasicValue( const DataObject& objVal, int radix, std::wstring& outStr );
-    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, int radix, std::wstring& outStr );
+    HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr );
+    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr );
 
     HRESULT GetRawStringLength( IValueBinder* binder, const DataObject& objVal, uint32_t& length );
     HRESULT FormatRawString(
