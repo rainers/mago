@@ -428,7 +428,39 @@ namespace MagoEE
         {
             _formatString( binder, addr, arrayType->GetLength(), arrayType->GetElement(), outStr );
         }
+        else
+        {
+            uint32_t length = arrayType->GetLength();
+            uint32_t elementSize = arrayType->GetElement()->GetSize();
 
+            outStr.append( L"{" );
+            for ( uint32_t i = 0; i < length; i++ )
+            {
+                if ( outStr.length () > 64 )
+                {
+                    outStr.append( L", ..." );
+                    break;
+                }
+
+                DataObject elementObj;
+                elementObj._Type = arrayType->GetElement();
+                elementObj.Addr = addr + elementSize * i;
+
+                HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                std::wstring elemStr;
+                hr = FormatValue( binder, elementObj, radix, elemStr );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                if ( outStr.length() > 1 )
+                    outStr.append( L", " );
+                outStr.append( elemStr );
+            }
+            outStr.append( L"}" );
+        }
         return S_OK;
     }
 
