@@ -628,6 +628,7 @@ Done:
             token = &GetToken();
             switch ( token->Code )
             {
+            case TOKarrow: // allow "->" just aswell to improve debugging C/C++
             case TOKdot:
                 NextToken();
                 // leave out New expression (instead of ID)
