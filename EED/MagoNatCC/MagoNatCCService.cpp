@@ -563,6 +563,27 @@ HRESULT createEvaluationResult(Evaluation::DkmInspectionContext* pInspectionCont
     return hr;
 }
 
+HRESULT createEvaluationError(Evaluation::DkmInspectionContext* pInspectionContext, CallStack::DkmStackWalkFrame* pStackFrame,
+                              HRESULT hrErr, Evaluation::DkmLanguageExpression* expr,
+                              IDkmCompletionRoutine<Evaluation::DkmEvaluateExpressionAsyncResult>* pCompletionRoutine)
+{
+    std::wstring errStr;
+    Evaluation::DkmFailedEvaluationResult* pResultObject = nullptr;
+
+    tryHR(MagoEE::GetErrorString(hrErr, errStr));
+    tryHR(Evaluation::DkmFailedEvaluationResult::Create(
+        pInspectionContext, pStackFrame, 
+        expr->Text(), expr->Text(), toDkmString(errStr.c_str()), 
+        Evaluation::DkmEvaluationResultFlags::None, nullptr, 
+        DkmDataItem::Null(), &pResultObject));
+
+    Evaluation::DkmEvaluateExpressionAsyncResult result;
+    result.ErrorCode = hrErr;
+    result.pResultObject = pResultObject;
+    pCompletionRoutine->OnComplete(result);
+    return S_OK;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     _In_ Evaluation::DkmInspectionContext* pInspectionContext,
@@ -581,17 +602,17 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     RefPtr<MagoEE::IEEDParsedExpr> pExpr;
     hr = MagoEE::ParseText(pExpression->Text()->Value(), exprContext->GetTypeEnv(), exprContext->GetStringTable(), pExpr.Ref());
     if (FAILED(hr))
-        return hr;
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalOptions options = { 0 };
     hr = pExpr->Bind(options, exprContext);
     if (FAILED(hr))
-        return hr;
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalResult value = { 0 };
     hr = pExpr->Evaluate( options, exprContext, value );
     if (FAILED(hr))
-        return hr;
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     RefPtr<Mago::Property> pProperty;
     tryHR(MakeCComObject(pProperty));
@@ -609,7 +630,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     result.ErrorCode = S_OK;
     result.pResultObject = pResultObject;
     pCompletionRoutine->OnComplete(result);
-    return hr;
+    return S_OK;
 }
 
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetChildren(
