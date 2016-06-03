@@ -19,6 +19,8 @@
 
 namespace MagoEE
 {
+    class Expression;
+
     struct EvalResult
     {
         DataObject  ObjVal;
@@ -73,6 +75,8 @@ namespace MagoEE
         ITypeEnv* typeEnv,
         NameTable* strTable,
         IEEDEnumValues*& enumerator );
+
+    void FillValueTraits( EvalResult& result, Expression* expr );
 
     HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr );
 }

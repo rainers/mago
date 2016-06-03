@@ -79,49 +79,11 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
-            FillValueTraits( result );
+            FillValueTraits( result, mExpr );
 
             return S_OK;
         }
 
-        void FillValueTraits( EvalResult& result )
-        {
-            result.ReadOnly = true;
-            result.HasString = false;
-            result.HasChildren = false;
-
-            if ( mExpr->Kind == DataKind_Value )
-            {
-                RefPtr<Type>    type = result.ObjVal._Type;
-
-                if ( (type->AsTypeStruct() != NULL)
-                    || type->IsSArray() )
-                {
-                    // some types just don't allow assignment
-                }
-                else if ( result.ObjVal.Addr != 0 )
-                {
-                    result.ReadOnly = false;
-                }
-                else if ( mExpr->AsNamingExpression() != NULL ) 
-                {
-                    Declaration* decl = mExpr->AsNamingExpression()->Decl;
-                    result.ReadOnly = (decl == NULL) || decl->IsConstant();
-                }
-
-                if ( (type->AsTypeNext() != NULL) && type->AsTypeNext()->GetNext()->IsChar() )
-                {
-                    if ( type->IsPointer() || type->IsSArray() || type->IsDArray() )
-                        result.HasString = true;
-                }
-
-                if ( type->IsPointer() || type->IsSArray() || type->IsDArray()  || type->IsAArray()
-                    || (type->AsTypeStruct() != NULL) )
-                {
-                    result.HasChildren = true;
-                }
-            }
-        }
     };
 
 
@@ -247,6 +209,45 @@ namespace MagoEE
         enumerator = en.Detach();
 
         return S_OK;
+    }
+
+    void FillValueTraits( EvalResult& result, Expression* expr )
+    {
+        result.ReadOnly = true;
+        result.HasString = false;
+        result.HasChildren = false;
+
+        if ( !expr || expr->Kind == DataKind_Value )
+        {
+            RefPtr<Type>    type = result.ObjVal._Type;
+
+            if ( (type->AsTypeStruct() != NULL)
+                || type->IsSArray() )
+            {
+                // some types just don't allow assignment
+            }
+            else if ( result.ObjVal.Addr != 0 )
+            {
+                result.ReadOnly = false;
+            }
+            else if ( expr && expr->AsNamingExpression() != NULL ) 
+            {
+                Declaration* decl = expr->AsNamingExpression()->Decl;
+                result.ReadOnly = (decl == NULL) || decl->IsConstant();
+            }
+
+            if ( (type->AsTypeNext() != NULL) && type->AsTypeNext()->GetNext()->IsChar() )
+            {
+                if ( type->IsPointer() || type->IsSArray() || type->IsDArray() )
+                    result.HasString = true;
+            }
+
+            if ( type->IsPointer() || type->IsSArray() || type->IsDArray()  || type->IsAArray()
+                || (type->AsTypeStruct() != NULL) )
+            {
+                result.HasChildren = true;
+            }
+        }
     }
 
     static const wchar_t    gCommonErrStr[] = L": Error: ";

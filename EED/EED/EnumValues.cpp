@@ -593,8 +593,6 @@ namespace MagoEE
 
         name = L"[" + keystr + L"]";
 
-        RefPtr<IEEDParsedExpr>  parsedExpr;
-
         bool isIdent = IsIdentifier( mParentExprText.data() );
         fullName.clear();
         if ( !isIdent )
@@ -612,6 +610,7 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
+        FillValueTraits( result, nullptr );
         mCountDone++;
 
         return FindNext();
