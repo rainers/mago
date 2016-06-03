@@ -382,6 +382,38 @@ namespace MagoEE
         return S_OK;
     }
 
+    void _formatString( IValueBinder* binder, Address addr, uint64_t slen, Type* elementType, std::wstring& outStr )
+    {
+        bool        foundTerm = true;
+        uint32_t    len = MaxStringLen;
+
+        // cap it somewhere under the range of a long
+        // do it this way, otherwise only truncating could leave us with a tiny array
+        // which would not be useful
+
+        if ( slen < MaxStringLen )
+            len = (uint32_t) slen;
+
+        outStr.append( L"\"" );
+
+        FormatString( 
+            binder, 
+            addr, 
+            elementType->GetSize(),
+            true,
+            len,
+            outStr,
+            foundTerm );
+
+        outStr.append( 1, L'"' );
+
+        ENUMTY ty = elementType->GetBackingTy();
+        if ( ty == Tuns16 )
+            outStr.append( 1, L'w' );
+        else if ( ty == Tuns32 )
+            outStr.append( 1, L'd' );
+    }
+
     HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, int radix, std::wstring& outStr )
     {
         UNREFERENCED_PARAMETER( radix );
@@ -394,20 +426,7 @@ namespace MagoEE
 
         if ( arrayType->GetElement()->IsChar() )
         {
-            bool    foundTerm = true;
-
-            outStr.append( L"\"" );
-
-            FormatString( 
-                binder, 
-                addr, 
-                arrayType->GetElement()->GetSize(),
-                true,
-                arrayType->GetLength(),
-                outStr,
-                foundTerm );
-
-            outStr.append( 1, L'"' );
+            _formatString( binder, addr, arrayType->GetLength(), arrayType->GetElement(), outStr );
         }
 
         return S_OK;
@@ -423,48 +442,29 @@ namespace MagoEE
         if ( arrayType == NULL )
             return E_FAIL;
 
-        outStr.append( L"{length=" );
-
-        hr = FormatInt( array.Length, arrayType->GetLengthType(), radix, outStr );
-        if ( FAILED( hr ) )
-            return hr;
-
-        if ( !arrayType->GetElement()->IsChar() )
-        {
-            outStr.append( L" ptr=" );
-
-            hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
-            if ( FAILED( hr ) )
-                return hr;
-        }
-
         if ( arrayType->GetElement()->IsChar() )
         {
-            bool        foundTerm = true;
-            uint32_t    len = MaxStringLen;
-
-            // cap it somewhere under the range of a long
-            // do it this way, otherwise only truncating could leave us with a tiny array
-            // which would not be useful
-
-            if ( array.Length < MaxStringLen )
-                len = (uint32_t) array.Length;
-
-            outStr.append( L" \"" );
-
-            FormatString( 
-                binder, 
-                array.Addr, 
-                arrayType->GetElement()->GetSize(),
-                true,
-                len,
-                outStr,
-                foundTerm );
-
-            outStr.append( 1, L'"' );
+            _formatString( binder, array.Addr, array.Length, arrayType->GetElement(), outStr );
         }
+        else
+        {
+            outStr.append( L"{length=" );
 
-        outStr.append( 1, L'}' );
+            hr = FormatInt( array.Length, arrayType->GetLengthType(), radix, outStr );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( !arrayType->GetElement()->IsChar() )
+            {
+                outStr.append( L" ptr=" );
+
+                hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
+                if ( FAILED( hr ) )
+                    return hr;
+            }
+
+            outStr.append( 1, L'}' );
+        }
 
         return S_OK;
     }
