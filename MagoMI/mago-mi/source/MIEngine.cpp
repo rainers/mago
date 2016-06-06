@@ -481,6 +481,7 @@ HRESULT MIEngine::Launch(
 	) {
 	HANDLE hPipe = NULL;
 	if (pszTerminalNamedPipe && pszTerminalNamedPipe[0]) {
+		CRLog::error("Terminal named pipe: %s", toUtf8z(pszTerminalNamedPipe));
 		hPipe = CreateFile(
 			pszTerminalNamedPipe,   // pipe name 
 			GENERIC_READ |  // read and write access 
@@ -491,7 +492,7 @@ HRESULT MIEngine::Launch(
 			0,              // default attributes 
 			NULL);
 		if (hPipe == INVALID_HANDLE_VALUE) {
-			CRLog::error("Cannot open terminal named pipe %s", toUtf8z(pszTerminalNamedPipe));
+			CRLog::error("Cannot open terminal named pipe %s result code is %d", toUtf8z(pszTerminalNamedPipe), GetLastError());
 			return E_FAIL;
 		}
 	}
