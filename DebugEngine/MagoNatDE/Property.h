@@ -20,11 +20,12 @@ namespace Mago
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugProperty3
     {
-        CComBSTR            mExprText;
-        CComBSTR            mFullExprText;
-        MagoEE::EvalResult  mObjVal;
-        RefPtr<ExprContext> mExprContext;
-        int                 mPtrSize;
+        CComBSTR              mExprText;
+        CComBSTR              mFullExprText;
+        MagoEE::EvalResult    mObjVal;
+        RefPtr<ExprContext>   mExprContext;
+        int                   mPtrSize;
+        MagoEE::FormatOptions mFormatOpts;
 
     public:
         Property();
@@ -124,7 +125,8 @@ namespace Mago
             const wchar_t* exprText, 
             const wchar_t* fullExprText, 
             const MagoEE::EvalResult& objVal, 
-            ExprContext* exprContext );
+            ExprContext* exprContext,
+            const MagoEE::FormatOptions& fmtopt );
 
     private:
         BSTR FormatValue( int radix );

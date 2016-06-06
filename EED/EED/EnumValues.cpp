@@ -265,9 +265,107 @@ namespace MagoEE
         return S_OK;
     }
 
+    //------------------------------------------------------------------------
+    //  EEDEnumRawDArray
+    //------------------------------------------------------------------------
+
+    EEDEnumRawDArray::EEDEnumRawDArray()
+        :   mCountDone( 0 )
+    {
+    }
+
+    uint32_t EEDEnumRawDArray::GetCount()
+    {
+        return 2;
+    }
+
+    uint32_t EEDEnumRawDArray::GetIndex()
+    {
+        return mCountDone;
+    }
+
+    void EEDEnumRawDArray::Reset()
+    {
+        mCountDone = 0;
+    }
+
+    HRESULT EEDEnumRawDArray::Skip( uint32_t count )
+    {
+        if ( count > (GetCount() - mCountDone) )
+        {
+            mCountDone = GetCount();
+            return S_FALSE;
+        }
+
+        mCountDone += count;
+
+        return S_OK;
+    }
+
+    HRESULT EEDEnumRawDArray::Clone( IEEDEnumValues*& copiedEnum )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<EEDEnumRawDArray> en = new EEDEnumRawDArray();
+
+        if ( en == NULL )
+            return E_OUTOFMEMORY;
+
+        hr = en->Init( mBinder, mParentExprText.c_str(), mParentVal, mTypeEnv, mStrTable );
+        if ( FAILED( hr ) )
+            return hr;
+
+        en->mCountDone = mCountDone;
+
+        copiedEnum = en.Detach();
+        return S_OK;
+    }
+
+    HRESULT EEDEnumRawDArray::EvaluateNext( 
+        const EvalOptions& options, 
+        EvalResult& result,
+        std::wstring& name,
+        std::wstring& fullName )
+    {
+        if ( mCountDone >= GetCount() )
+            return E_FAIL;
+
+        HRESULT hr = S_OK;
+        RefPtr<IEEDParsedExpr>  parsedExpr;
+        const wchar_t* field = (mCountDone == 0 ? L"length" : L"ptr");
+
+        name.clear();
+        name.append( field );
+
+        bool isIdent = IsIdentifier( mParentExprText.data() );
+        fullName.clear();
+        if ( !isIdent )
+            fullName.append( L"(" );
+        fullName.append( mParentExprText );
+        if ( !isIdent )
+            fullName.append( L")" );
+        fullName.append( L"." );
+        fullName.append( name );
+
+        hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = parsedExpr->Bind( options, mBinder );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = parsedExpr->Evaluate( options, mBinder, result );
+        if ( FAILED( hr ) )
+            return hr;
+
+        mCountDone++;
+
+        return S_OK;
+    }
+
 
     //------------------------------------------------------------------------
-    //  EEDEnumSArray
+    //  EEDEnumAArray
     //------------------------------------------------------------------------
 
     EEDEnumAArray::EEDEnumAArray( int aaVersion )
@@ -587,7 +685,7 @@ namespace MagoEE
             return hr;
 
         std::wstring keystr;
-        struct FormatOptions fmt = { 10 };
+        struct FormatOptions fmt (10);
         hr = FormatValue( mBinder, keyobj, fmt, keystr );
         if ( FAILED( hr ) )
             return hr;

@@ -67,6 +67,8 @@ namespace MagoEE
     HRESULT MakeTypeEnv( int ptrSize, ITypeEnv*& typeEnv );
     HRESULT MakeNameTable( NameTable*& nameTable );
     HRESULT ParseText( const wchar_t* text, ITypeEnv* typeEnv, NameTable* strTable, IEEDParsedExpr*& expr );
+    HRESULT StripFormatSpecifier( std::wstring& text, FormatOptions& fmtopt );
+    HRESULT AppendFormatSpecifier( std::wstring& text, const FormatOptions& fmtopt );
 
     HRESULT EnumValueChildren( 
         IValueBinder* binder, 
@@ -74,6 +76,7 @@ namespace MagoEE
         const DataObject& parentVal, 
         ITypeEnv* typeEnv,
         NameTable* strTable,
+        const FormatOptions& fmtopts,
         IEEDEnumValues*& enumerator );
 
     void FillValueTraits( EvalResult& result, Expression* expr );

@@ -79,7 +79,15 @@ namespace MagoEE
 
     struct FormatOptions
     {
-        int radix;
+        uint32_t radix;
+        uint32_t specifier; // some of https://msdn.microsoft.com/en-us/library/75w45ekt.aspx
+
+        FormatOptions( uint32_t r = 0, uint32_t s = 0 ) : radix( r ), specifier( s ) {}
+    };
+
+    enum SupportedFormatSpecifiers
+    {
+        FormatSpecRaw = '!',
     };
 
     class IScope

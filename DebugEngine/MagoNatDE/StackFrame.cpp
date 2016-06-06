@@ -627,7 +627,7 @@ namespace Mago
                 if ( hr == S_OK )
                 {
                     std::wstring valueStr;
-                    MagoEE::FormatOptions fmtopts = { radix };
+                    MagoEE::FormatOptions fmtopts (radix);
                     hr = MagoEE::FormatValue( mExprContext, resultObj, fmtopts, valueStr );
                     if ( hr == S_OK )
                     {

@@ -48,13 +48,17 @@ namespace Mago
 
         if ( (dwFields & DEBUGPROP_INFO_NAME) != 0 )
         {
-            pPropertyInfo->bstrName = SysAllocString( mExprText );
+            std::wstring txt = mExprText;
+            MagoEE::AppendFormatSpecifier( txt, mFormatOpts );
+            pPropertyInfo->bstrName = SysAllocString( txt.c_str() );
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_NAME;
         }
 
         if ( (dwFields & DEBUGPROP_INFO_FULLNAME) != 0 )
         {
-            pPropertyInfo->bstrFullName = SysAllocString( mFullExprText );
+            std::wstring txt = mFullExprText;
+            MagoEE::AppendFormatSpecifier( txt, mFormatOpts );
+            pPropertyInfo->bstrFullName = SysAllocString( txt.c_str() );
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_FULLNAME;
         }
 
@@ -182,6 +186,7 @@ namespace Mago
             mObjVal.ObjVal, 
             mExprContext->GetTypeEnv(),
             mExprContext->GetStringTable(),
+            mFormatOpts,
             enumVals.Ref() );
         if ( FAILED( hr ) )
             return hr;
@@ -190,7 +195,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        MagoEE::FormatOptions fmtopts = { dwRadix };
+        MagoEE::FormatOptions fmtopts (dwRadix);
         hr = enumProps->Init( enumVals, mExprContext, dwFields, fmtopts );
         if ( FAILED( hr ) )
             return hr;
@@ -355,12 +360,14 @@ namespace Mago
         const wchar_t* exprText, 
         const wchar_t* fullExprText, 
         const MagoEE::EvalResult& objVal, 
-        ExprContext* exprContext )
+        ExprContext* exprContext,
+        const MagoEE::FormatOptions& fmtopt )
     {
         mExprText = exprText;
         mFullExprText = fullExprText;
         mObjVal = objVal;
         mExprContext = exprContext;
+        mFormatOpts = fmtopt;
 
         Thread*     thread = exprContext->GetThread();
         ArchData*   archData = thread->GetCoreProcess()->GetArchData();
@@ -378,7 +385,9 @@ namespace Mago
         HRESULT     hr = S_OK;
         CComBSTR    str;
 
-        MagoEE::FormatOptions fmtopts = { radix };
+        MagoEE::FormatOptions fmtopts (mFormatOpts);
+        if (fmtopts.radix == 0)
+            fmtopts.radix = radix;
         hr = MagoEE::EED::FormatValue( mExprContext, mObjVal.ObjVal, fmtopts, str.m_str );
         if ( FAILED( hr ) )
             return NULL;

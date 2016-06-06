@@ -111,7 +111,7 @@ namespace MagoEE
 
     HRESULT FormatAddress( Address addr, Type* type, std::wstring& outStr )
     {
-        FormatOptions fmtopt = { 16 };
+        FormatOptions fmtopt (16);
         return FormatInt( addr, type, fmtopt, outStr );
     }
 
@@ -432,7 +432,7 @@ namespace MagoEE
             uint32_t length = arrayType->GetLength();
             uint32_t elementSize = arrayType->GetElement()->GetSize();
 
-            outStr.append( L"{" );
+            outStr.append( L"[" );
             for ( uint32_t i = 0; i < length; i++ )
             {
                 if ( outStr.length () > 64 )
@@ -458,7 +458,7 @@ namespace MagoEE
                     outStr.append( L", " );
                 outStr.append( elemStr );
             }
-            outStr.append( L"}" );
+            outStr.append( L"]" );
         }
         return S_OK;
     }
@@ -473,7 +473,7 @@ namespace MagoEE
         if ( arrayType == NULL )
             return E_FAIL;
 
-        if ( arrayType->GetElement()->IsChar() )
+        if ( fmtopt.specifier != FormatSpecRaw && arrayType->GetElement()->IsChar() )
         {
             _formatString( binder, array.Addr, array.Length, arrayType->GetElement(), outStr );
         }
@@ -485,14 +485,11 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
-            if ( !arrayType->GetElement()->IsChar() )
-            {
-                outStr.append( L" ptr=" );
+            outStr.append( L" ptr=" );
 
-                hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
-                if ( FAILED( hr ) )
-                    return hr;
-            }
+            hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
+            if ( FAILED( hr ) )
+                return hr;
 
             outStr.append( 1, L'}' );
         }

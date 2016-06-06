@@ -123,6 +123,27 @@ namespace MagoEE
         return S_OK;
     }
 
+    HRESULT StripFormatSpecifier( std::wstring& text, FormatOptions& fmtopt )
+    {
+        size_t textlen = text.size();
+        if( textlen > 2 && text[textlen - 2] == ',')
+        {
+            fmtopt.specifier = text[textlen - 1];
+            text.resize(textlen - 2);
+        }
+        return S_OK;
+    }
+
+    HRESULT AppendFormatSpecifier( std::wstring& text, const FormatOptions& fmtopt )
+    {
+        if ( fmtopt.specifier )
+        {
+            text.push_back( ',' );
+            text.push_back( (wchar_t) fmtopt.specifier );
+        }
+        return S_OK;
+    }
+
     HRESULT ParseText( const wchar_t* text, ITypeEnv* typeEnv, NameTable* strTable, IEEDParsedExpr*& expr )
     {
         if ( (text == NULL) || (typeEnv == NULL) || (strTable == NULL) )
@@ -163,6 +184,7 @@ namespace MagoEE
         const DataObject& parentVal, 
         ITypeEnv* typeEnv,
         NameTable* strTable,
+        const FormatOptions& fmtopts,
         IEEDEnumValues*& enumerator )
     {
         if ( (binder == NULL) || (parentExprText == NULL) 
@@ -186,7 +208,10 @@ namespace MagoEE
         }
         else if ( parentVal._Type->IsDArray() )
         {
-            en = new EEDEnumDArray();
+            if ( fmtopts.specifier == FormatSpecRaw )
+                en = new EEDEnumRawDArray();
+            else
+                en = new EEDEnumDArray();
         }
         else if ( parentVal._Type->IsAArray() )
         {

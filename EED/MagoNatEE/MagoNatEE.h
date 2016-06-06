@@ -43,6 +43,7 @@ namespace MagoEE
             const DataObject& parentVal, 
             ITypeEnv* typeEnv,
             NameTable* strTable,
+            const FormatOptions& fmtopts,
             IEEDEnumValues*& enumerator );
 
         EXPORT HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr );

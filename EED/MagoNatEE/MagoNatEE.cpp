@@ -46,9 +46,10 @@ namespace MagoEE
             const DataObject& parentVal, 
             ITypeEnv* typeEnv,
             NameTable* strTable,
+            const FormatOptions& fmtopts,
             IEEDEnumValues*& enumerator )
         {
-            return MagoEE::EnumValueChildren( binder, parentExprText, parentVal, typeEnv, strTable, enumerator );
+            return MagoEE::EnumValueChildren( binder, parentExprText, parentVal, typeEnv, strTable, fmtopts, enumerator );
         }
 
         HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr )

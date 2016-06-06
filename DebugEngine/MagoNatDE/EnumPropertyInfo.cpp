@@ -218,7 +218,7 @@ namespace Mago
             hr = MakeCComObject( prop );
             if ( SUCCEEDED( hr ) )
             {
-                hr = prop->Init( name, fullName, result, mExprContext );
+                hr = prop->Init( name, fullName, result, mExprContext, mFormatOpt );
                 if ( SUCCEEDED( hr ) )
                 {
                     prop->QueryInterface( __uuidof( IDebugProperty2 ), (void**) &info.pProperty );

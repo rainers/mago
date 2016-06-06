@@ -67,7 +67,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = prop->Init( mExprText, mExprText, result, mContext );
+        hr = prop->Init( mExprText, mExprText, result, mContext, MagoEE::FormatOptions() );
         if ( FAILED( hr ) )
             return hr;
 

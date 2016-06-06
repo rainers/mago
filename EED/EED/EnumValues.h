@@ -79,8 +79,28 @@ namespace MagoEE
             std::wstring& fullName );
     };
 
-
     typedef EEDEnumSArray EEDEnumDArray;
+
+    class EEDEnumRawDArray : public EEDEnumValues
+    {
+        uint32_t        mCountDone;
+
+    public:
+        EEDEnumRawDArray();
+
+        virtual uint32_t GetCount();
+        virtual uint32_t GetIndex();
+        virtual void Reset();
+        virtual HRESULT Skip( uint32_t count );
+        virtual HRESULT Clone( IEEDEnumValues*& copiedEnum );
+
+        virtual HRESULT EvaluateNext( 
+            const EvalOptions& options, 
+            EvalResult& result, 
+            std::wstring& name, 
+            std::wstring& fullName );
+    };
+
 
     class EEDEnumAArray : public EEDEnumValues
     {

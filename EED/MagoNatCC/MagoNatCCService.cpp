@@ -599,8 +599,12 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     tryHR(MakeCComObject(exprContext));
     tryHR(exprContext->Init(process, pStackFrame));
 
+    std::wstring exprText = pExpression->Text()->Value();
+    MagoEE::FormatOptions fmtopt;
+    tryHR(MagoEE::StripFormatSpecifier(exprText, fmtopt));
+
     RefPtr<MagoEE::IEEDParsedExpr> pExpr;
-    hr = MagoEE::ParseText(pExpression->Text()->Value(), exprContext->GetTypeEnv(), exprContext->GetStringTable(), pExpr.Ref());
+    hr = MagoEE::ParseText(exprText.c_str(), exprContext->GetTypeEnv(), exprContext->GetStringTable(), pExpr.Ref());
     if (FAILED(hr))
         return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
@@ -610,13 +614,13 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
         return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalResult value = { 0 };
-    hr = pExpr->Evaluate( options, exprContext, value );
+    hr = pExpr->Evaluate(options, exprContext, value);
     if (FAILED(hr))
         return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     RefPtr<Mago::Property> pProperty;
     tryHR(MakeCComObject(pProperty));
-    tryHR(pProperty->Init(pExpression->Text()->Value(), pExpression->Text()->Value(), value, exprContext));
+    tryHR(pProperty->Init(exprText.c_str(), exprText.c_str(), value, exprContext, fmtopt));
 
     int radix = pInspectionContext->Radix();
     int timeout = pInspectionContext->Timeout();
