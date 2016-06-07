@@ -117,6 +117,9 @@ public:
 		PAUSED_BY_EXCEPTION,
 		PAUSED_BY_BREAK,
 	};
+	DWORD _exceptionCode;
+	std::wstring _exceptionName;
+	std::wstring _exceptionDescription;
 	void paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requestId = UNSPECIFIED_REQUEST_ID, BreakpointInfo * bp = NULL);
 
 	// MIEventCallback interface

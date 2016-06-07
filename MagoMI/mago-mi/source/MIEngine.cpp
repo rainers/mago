@@ -493,7 +493,7 @@ HRESULT MIEngine::Launch(
 			0,              // no sharing 
 			&sa,           // default security attributes
 			OPEN_EXISTING,  // opens existing pipe
-			FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH, // flags and attributes 
+			FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH, // flags and attributes  
 			NULL);
 		if (hPipe == INVALID_HANDLE_VALUE) {
 			CRLog::error("Cannot open terminal named pipe %s result code is %d", toUtf8z(pszTerminalNamedPipe), GetLastError());

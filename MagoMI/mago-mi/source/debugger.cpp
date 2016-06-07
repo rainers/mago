@@ -1110,6 +1110,12 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 		buf.append(L",reason=");
 		buf.appendStringLiteral(reasonName);
 	}
+	if (reason == PAUSED_BY_EXCEPTION) {
+		buf.appendStringParam(L"signal-name", _exceptionName, ',');
+		buf.appendStringParam(L"signal-meaning", L"Unknown", ',');
+		buf.appendStringParam(L"signal-description", _exceptionDescription, ',');
+		buf.appendUlongParamAsString(L"signal-code", _exceptionCode, ',');
+	}
 	if (reason == PAUSED_BY_BREAKPOINT && bp) {
 		buf.appendStringParam(L"disp", std::wstring(bp->temporary ? L"del" : L"keep"));
 		buf.appendUlongParamAsString(L"bkptno", bp->id);
@@ -1762,6 +1768,23 @@ HRESULT Debugger::OnDebugException(IDebugEngine2 *pEngine,
 	IDebugExceptionEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
+	if (pEvent->CanPassToDebuggee())
+		pEvent->PassToDebuggee(TRUE);
+	BSTR pdescription = NULL;
+	pEvent->GetExceptionDescription(&pdescription);
+	_exceptionDescription = fromBSTR(pdescription);
+	writeDebuggerMessage(std::wstring(L"Exception: ") + _exceptionDescription);
+	EXCEPTION_INFO info;
+	memset(&info, 0, sizeof(info));
+	std::wstring name;
+	std::wstring programName;
+	_exceptionCode = 0;
+	_exceptionName.clear();
+	if (!FAILED(pEvent->GetException(&info))) {
+		_exceptionName = fromBSTR(info.bstrExceptionName);
+		programName = fromBSTR(info.bstrProgramName);
+		_exceptionCode = info.dwCode;
+	}
 	paused(pThread, PAUSED_BY_EXCEPTION);
 	DUMP_EVENT(OnDebugException);
 	return S_OK;
