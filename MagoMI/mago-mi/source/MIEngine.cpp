@@ -482,19 +482,30 @@ HRESULT MIEngine::Launch(
 	HANDLE hPipe = NULL;
 	if (pszTerminalNamedPipe && pszTerminalNamedPipe[0]) {
 		CRLog::error("Terminal named pipe: %s", toUtf8z(pszTerminalNamedPipe));
+		SECURITY_ATTRIBUTES sa;
+		memset(&sa, 0, sizeof(sa));
+		sa.nLength = sizeof(sa);
+		sa.bInheritHandle = TRUE;
 		hPipe = CreateFile(
 			pszTerminalNamedPipe,   // pipe name 
 			GENERIC_READ |  // read and write access 
 			GENERIC_WRITE,
 			0,              // no sharing 
-			NULL,           // default security attributes
-			OPEN_EXISTING,  // opens existing pipe 
-			0,              // default attributes 
+			&sa,           // default security attributes
+			OPEN_EXISTING,  // opens existing pipe
+			FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH, // flags and attributes 
 			NULL);
 		if (hPipe == INVALID_HANDLE_VALUE) {
 			CRLog::error("Cannot open terminal named pipe %s result code is %d", toUtf8z(pszTerminalNamedPipe), GetLastError());
 			return E_FAIL;
 		}
+		//DWORD mode = PIPE_READMODE_BYTE | PIPE_WAIT;
+		//DWORD mode = PIPE_READMODE_MESSAGE | PIPE_WAIT;
+		//SetNamedPipeHandleState(hPipe, PIPE_READMODE_BYTE | PIPE_WAIT, NULL, NULL);
+		//SetNamedPipeHandleState(hPipe, &mode, NULL, NULL);
+		//DWORD bytesWritten = 0;
+		//WriteFile(hPipe, "test\n", 5, &bytesWritten, NULL);
+		//WriteFile(hPipe, "test2\n", 5, &bytesWritten, NULL);
 	}
 	HRESULT hr = engine->LaunchSuspended(
 		NULL, //pszMachine,
