@@ -501,8 +501,8 @@ namespace Mago
         info.StdOutput = (HANDLE) hStdOutput;
         info.StdError = (HANDLE) hStdError;
         info.Suspend = true;
-		if (pszOptions && std::wstring(pszOptions) == L"--external-console")
-			info.NewConsole = true;
+        if (pszOptions && std::wstring(pszOptions) == L"--external-console")
+            info.NewConsole = true;
 
         IDebuggerProxy* debugger = NULL;
 
