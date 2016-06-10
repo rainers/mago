@@ -143,6 +143,7 @@ namespace MagoEE
         bool            mSkipHeadRef;
 
         RefPtr<IEnumDeclarationMembers> mMembers;
+        std::wstring    mClassName;
 
     public:
         EEDEnumStruct( bool skipHeadRef = false );

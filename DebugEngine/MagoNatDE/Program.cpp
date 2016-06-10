@@ -494,6 +494,9 @@ namespace Mago
             }
             else if ( FindGlobalSymbolAddress( mod, "_D2rt3aaA11fakeEntryTIFxC8TypeInfoxC8TypeInfoZC15TypeInfo_Struct", addr ) )
                 mDRuntime->SetAAVersion( 1 );
+
+            if ( FindGlobalSymbolAddress( mod, "_D14TypeInfo_Class6__vtblZ", addr ) )
+                mDRuntime->SetClassInfoVtblAddr( mod->GetAddress() + addr );
         }
     }
 

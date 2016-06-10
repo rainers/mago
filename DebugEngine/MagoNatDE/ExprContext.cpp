@@ -469,6 +469,18 @@ namespace Mago
         return GetDRuntime()->GetAAVersion();
     }
 
+    HRESULT ExprContext::GetClassName( MagoEE::Address addr, std::wstring& className )
+    {
+        BSTR bstrClassname;
+        HRESULT hr = GetDRuntime()->GetClassName( addr, &bstrClassname );
+        if ( SUCCEEDED( hr ) )
+        {
+            className = bstrClassname;
+            SysFreeString( bstrClassname );
+        }
+        return hr;
+    }
+
     HRESULT ExprContext::SetValue( 
         MagoEE::Declaration* decl, 
         const MagoEE::DataValue& value )

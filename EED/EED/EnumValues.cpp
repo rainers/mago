@@ -765,6 +765,21 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
+        MagoEE::UdtKind kind;
+        if ( decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class &&
+             wcsncmp( parentExprText, L"*cast(", 6 ) != 0 )  // already inside the base/derived class enumeration?
+        {
+            Address addr = 0;
+            uint32_t sizeRead;
+            hr = binder->ReadMemory( parentVal.Addr, typeEnv->GetPointerSize(), sizeRead, (uint8_t*)&addr );
+            if( SUCCEEDED( hr ) && sizeRead == uint32_t( typeEnv->GetPointerSize() ) )
+                binder->GetClassName( addr, mClassName );
+
+            // don't show runtime class if it is the same as the compile time type
+            if( !mClassName.empty() && mClassName == decl->GetName() )
+                mClassName.clear();
+        }
+
         mMembers = members;
 
         return S_OK;
@@ -772,7 +787,7 @@ namespace MagoEE
 
     uint32_t EEDEnumStruct::GetCount()
     {
-        return mMembers->GetCount();
+        return mMembers->GetCount() + ( mClassName.empty() ? 0 : 1 );
     }
 
     uint32_t EEDEnumStruct::GetIndex()
@@ -794,6 +809,11 @@ namespace MagoEE
             return S_FALSE;
         }
 
+        if( count > 0 && mCountDone == 0 && !mClassName.empty() )
+        {
+            mCountDone++;
+            count--;
+        }
         mCountDone += count;
         mMembers->Skip( count );
 
@@ -803,7 +823,7 @@ namespace MagoEE
     HRESULT EEDEnumStruct::Clone( IEEDEnumValues*& copiedEnum )
     {
         HRESULT hr = S_OK;
-        RefPtr<EEDEnumStruct>  en = new EEDEnumStruct();
+        RefPtr<EEDEnumStruct>  en = new EEDEnumStruct( mSkipHeadRef );
 
         if ( en == NULL )
             return E_OUTOFMEMORY;
@@ -831,15 +851,21 @@ namespace MagoEE
         RefPtr<Declaration>     decl;
         RefPtr<IEEDParsedExpr>  parsedExpr;
 
-        if ( !mMembers->Next( decl.Ref() ) )
-            return E_FAIL;
-
-        mCountDone++;
-
         name.clear();
         fullName.clear();
 
-        if ( decl->IsBaseClass() )
+        if( mCountDone > 0 || mClassName.empty() )
+            if ( !mMembers->Next( decl.Ref() ) )
+                return E_FAIL;
+
+        mCountDone++;
+
+        if ( !decl )
+        {
+            name = L"[" + mClassName + L"]";
+            fullName = L"*cast(" + mClassName + L"*)&(" + mParentExprText + L")";
+        }
+        else if ( decl->IsBaseClass() )
         {
             if ( !NameBaseClass( decl, name, fullName ) )
                 return E_FAIL;
@@ -891,7 +917,7 @@ namespace MagoEE
             fullName.append( L"*" );
 
         fullName.append( L"cast(" );
-        fullName.append( name );
+        fullName.append( baseDecl->GetName() );
 
         if ( mSkipHeadRef )
             fullName.append( L")(" );

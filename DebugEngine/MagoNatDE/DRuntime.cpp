@@ -55,7 +55,8 @@ namespace Mago
         :   mDebugger( debugger ),
             mCoreProc( coreProcess ),
             mPtrSize( 0 ),
-            mAAVersion( -1 )
+            mAAVersion( -1 ),
+            mClassInfoVtblAddr( 0 )
     {
         _ASSERT( debugger != NULL );
         _ASSERT( coreProcess != NULL );
@@ -959,7 +960,7 @@ namespace Mago
     {
         _ASSERT( pbstrClassName != NULL );
 
-        Address64 vtbl, classinfo;
+        Address64 vtbl, classinfo, ci_vtbl;
         uint32_t read, unread;
         HRESULT hr = ReadAddress( addr, 0, vtbl );
         if ( SUCCEEDED( hr ) )
@@ -967,6 +968,15 @@ namespace Mago
             hr = ReadAddress( vtbl, 0, classinfo );
             if ( SUCCEEDED( hr ) )
             {
+                if( mClassInfoVtblAddr )
+                {
+                    hr = ReadAddress( classinfo, 0, ci_vtbl );
+                    if ( FAILED( hr ) )
+                        return hr;
+                    if( ci_vtbl != mClassInfoVtblAddr )
+                        return E_FAIL;
+                }
+
                 DArray64 className;
                 Address64 nameAddr = classinfo;
 
@@ -983,8 +993,8 @@ namespace Mago
                         char* buf = new char[(size_t) className.length];
                         if ( buf == NULL )
                             return E_OUTOFMEMORY;
-                        hr = mDebugger->ReadMemory( 
-                            mCoreProc, className.ptr, (uint32_t) className.length, read, unread, (uint8_t*) buf );
+                        hr = mDebugger->ReadMemory( mCoreProc, className.ptr, 
+                                                    (uint32_t) className.length, read, unread, (uint8_t*) buf );
                         if ( SUCCEEDED( hr ) )
                         {
                             // read at most className.length
@@ -1115,6 +1125,11 @@ namespace Mago
     void DRuntime::SetAAVersion( int ver )
     {
         mAAVersion = ver;
+    }
+
+    void DRuntime::SetClassInfoVtblAddr( Address64 addr )
+    {
+        mClassInfoVtblAddr = addr;
     }
 
 }

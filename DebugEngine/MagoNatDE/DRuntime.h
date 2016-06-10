@@ -28,12 +28,15 @@ namespace Mago
         RefPtr<ICoreProcess>    mCoreProc;
         int                     mPtrSize;
         int                     mAAVersion;
+        Address64               mClassInfoVtblAddr;
 
     public:
         DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess );
 
         void SetAAVersion( int ver );
         int GetAAVersion() const { return mAAVersion; }
+
+        void SetClassInfoVtblAddr( Address64 addr );
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 

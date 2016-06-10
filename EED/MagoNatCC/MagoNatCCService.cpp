@@ -122,6 +122,37 @@ public:
         uint8_t* pdata ) );
 };
 
+class CCCoreModule : public Mago::ICoreModule
+{
+public:
+    CCCoreModule(DkmModuleInstance* modInst) : mModule(modInst) { }
+
+    virtual void AddRef()
+    {
+        InterlockedIncrement(&mRefCount);
+    }
+    virtual void Release()
+    {
+        long newRef = InterlockedDecrement(&mRefCount);
+        _ASSERT(newRef >= 0);
+        if (newRef == 0)
+            delete this;
+    }
+
+	// Program needs the image base
+    virtual Mago::Address64 GetImageBase() { return mModule->BaseAddress(); }
+    virtual Mago::Address64 GetPreferredImageBase() { return mModule->BaseAddress(); }
+    virtual uint32_t        GetSize() { return mModule->Size(); }
+    virtual uint16_t        GetMachine() { return 0; }
+    virtual const wchar_t*  GetPath() { return mModule->FullName()->Value(); }
+    virtual const wchar_t*  GetSymbolSearchPath() { return mModule->FullName()->Value(); }
+
+private:
+    long mRefCount = 0;
+
+    RefPtr<DkmModuleInstance> mModule;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 template<typename I>
 I* GetEnumTable(IDiaSession *pSession)
@@ -267,12 +298,19 @@ protected:
         tryHR(mDataSource->InitDebugInfo(diasession, mAddrMap));
         tryHR(mDataSource->OpenSession(mSession.Ref()));
         mModule->SetSession(mSession);
+		DkmArray<Microsoft::VisualStudio::Debugger::DkmModuleInstance*> pModules = { 0 };
+        module->GetModuleInstances(&pModules);
+        if(pModules.Length > 0)
+            mModule->SetCoreModule(new CCCoreModule(pModules.Members[0]));
+		DkmFreeArray(pModules);
 
         tryHR(MakeCComObject(mProgram));
 
         // any process to pass architecture info
         RefPtr<Mago::LocalProcess> localprocess = new Mago::LocalProcess(mArchData);
         mProgram->SetCoreProcess(localprocess);
+        mProgram->SetDebuggerProxy(mDebuggerProxy);
+        mProgram->AddModule(mModule);
         UniquePtr<Mago::DRuntime> druntime(new Mago::DRuntime(mDebuggerProxy, localprocess));
         mProgram->SetDRuntime(druntime);
 

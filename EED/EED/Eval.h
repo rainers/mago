@@ -112,6 +112,7 @@ namespace MagoEE
         virtual HRESULT GetValue( Address addr, Type* type, DataValue& value ) = 0;
         virtual HRESULT GetValue( Address aArrayAddr, const DataObject& key, Address& valueAddr ) = 0;
         virtual int GetAAVersion() = 0;
+        virtual HRESULT GetClassName( Address addr, std::wstring& className ) = 0;
 
         virtual HRESULT SetValue( Declaration* decl, const DataValue& value ) = 0;
         virtual HRESULT SetValue( Address addr, Type* type, const DataValue& value ) = 0;
