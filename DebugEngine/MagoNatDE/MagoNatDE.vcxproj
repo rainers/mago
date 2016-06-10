@@ -780,6 +780,9 @@
       <Project>{40804c2d-4af3-4e82-a1e8-018ff56b2bba}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+    <ProjectReference Include="..\..\EED\MagoNatEE\MagoNatEE.vcxproj">
+      <Project>{6c8df626-4a5e-47d9-a36f-abad63c4d1bb}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\..\udis86\udis86\udis86.vcxproj">
       <Project>{640f0da5-72ac-4354-8bb5-81d9dcae29bc}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
