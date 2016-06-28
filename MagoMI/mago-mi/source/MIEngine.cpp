@@ -515,6 +515,7 @@ HRESULT MIEngine::Launch(
 			//WriteFile(hPipe, "test2\n", 5, &bytesWritten, NULL);
 		}
 	}
+	LAUNCH_FLAGS;
 	HRESULT hr = engine->LaunchSuspended(
 		NULL, //pszMachine,
 		debugPort, //IDebugPort2*          pPort,
@@ -522,8 +523,8 @@ HRESULT MIEngine::Launch(
 		pszArgs, //LPCOLESTR             pszArgs,
 		pszDir, //LPCOLESTR             pszDir,
 		NULL, //BSTR                  bstrEnv,
-		externalConsole ? L"--external-console" : NULL, //LPCOLESTR             pszOptions,
-		0, //LAUNCH_FLAGS          dwLaunchFlags,
+		NULL, //LPCOLESTR             pszOptions,
+		externalConsole ? LAUNCH_NEW_CONSOLE : 0, //LAUNCH_FLAGS          dwLaunchFlags,
 		(DWORD)hPipe, //DWORD                 hStdInput,
 		(DWORD)hPipe, //DWORD                 hStdOutput,
 		(DWORD)hPipe, //DWORD                 hStdError,

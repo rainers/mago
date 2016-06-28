@@ -378,7 +378,8 @@ void Debugger::handleDataEvaluateExpressionCommand(MICommand & cmd) {
 		return;
 	}
 	StackFrameInfo frameInfo;
-	bool hasContext = getThreadFrameContext(findThreadById(threadId), &frameInfo) == 1;
+	//bool hasContext = 
+	getThreadFrameContext(findThreadById(threadId), &frameInfo); // == 1;
 	LocalVariableList list;
 	if (frame && getLocalVariables(frame, list, true)) {
 		for (unsigned i = 0; i < list.size(); i++) {
@@ -435,7 +436,8 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 		return;
 	}
 	StackFrameInfo frameInfo;
-	bool hasContext = getThreadFrameContext(findThreadById(threadId), &frameInfo) == 1;
+	//bool hasContext = 
+	getThreadFrameContext(findThreadById(threadId), &frameInfo); // == 1;
 	if (addr == L"*") {
 		addr = frameInfo.address;
 	}
@@ -513,6 +515,7 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 
 // called to handle -stack-list-variables command
 void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly, bool argsOnly) {
+	UNREFERENCED_PARAMETER(argsOnly);
 	if (!_paused || _stopped) {
 		writeErrorMessage(cmd.requestId, L"Cannot get variables for running or terminated process");
 		return;
@@ -1154,7 +1157,6 @@ IDebugStackFrame2 * Debugger::getStackFrame(IDebugThread2 * pThread, unsigned fr
 		CRLog::error("cannot get thread frame enum");
 		return false;
 	}
-	unsigned outIndex = 0;
 	ULONG count = 0;
 	pFrames->GetCount(&count);
 	for (ULONG i = 0; i < count; i++) {
@@ -1179,6 +1181,7 @@ IDebugStackFrame2 * Debugger::getStackFrame(IDebugThread2 * pThread, unsigned fr
 
 // retrieves list of local variables from debug frame
 bool Debugger::getLocalVariables(IDebugStackFrame2 * frame, LocalVariableList &list, bool includeArgs) {
+	UNREFERENCED_PARAMETER(includeArgs);
 	if (!frame)
 		return NULL;
 	ULONG count = 0;
@@ -1678,7 +1681,7 @@ HRESULT Debugger::OnDebugBreakpointBound(IDebugEngine2 *pEngine,
 		CONTEXT_INFO info;
 		memset(&info, 0, sizeof(info));
 		if (SUCCEEDED(context->GetInfo(CIF_ALLFIELDS, &info))) {
-			int fnLine = info.posFunctionOffset.dwLine;
+			//int fnLine = info.posFunctionOffset.dwLine;
 			if (info.bstrFunction && info.bstrAddressOffset)
 				bp->functionName = std::wstring(info.bstrFunction) + std::wstring(info.bstrAddressOffset);
 			else if (info.bstrFunction)
