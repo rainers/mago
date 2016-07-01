@@ -378,7 +378,8 @@ void Debugger::handleDataEvaluateExpressionCommand(MICommand & cmd) {
 		return;
 	}
 	StackFrameInfo frameInfo;
-	bool hasContext = getThreadFrameContext(findThreadById(threadId), &frameInfo) == 1;
+	//bool hasContext = 
+	getThreadFrameContext(findThreadById(threadId), &frameInfo); // == 1;
 	LocalVariableList list;
 	if (frame && getLocalVariables(frame, list, true)) {
 		for (unsigned i = 0; i < list.size(); i++) {
@@ -435,7 +436,8 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 		return;
 	}
 	StackFrameInfo frameInfo;
-	bool hasContext = getThreadFrameContext(findThreadById(threadId), &frameInfo) == 1;
+	//bool hasContext = 
+	getThreadFrameContext(findThreadById(threadId), &frameInfo); // == 1;
 	if (addr == L"*") {
 		addr = frameInfo.address;
 	}
@@ -513,6 +515,7 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 
 // called to handle -stack-list-variables command
 void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly, bool argsOnly) {
+	UNREFERENCED_PARAMETER(argsOnly);
 	if (!_paused || _stopped) {
 		writeErrorMessage(cmd.requestId, L"Cannot get variables for running or terminated process");
 		return;
@@ -1110,6 +1113,12 @@ void Debugger::paused(IDebugThread2 * pThread, PauseReason reason, uint64_t requ
 		buf.append(L",reason=");
 		buf.appendStringLiteral(reasonName);
 	}
+	if (reason == PAUSED_BY_EXCEPTION) {
+		buf.appendStringParam(L"signal-name", _exceptionName, ',');
+		buf.appendStringParam(L"signal-meaning", L"Unknown", ',');
+		buf.appendStringParam(L"signal-description", _exceptionDescription, ',');
+		buf.appendUlongParamAsString(L"signal-code", _exceptionCode, ',');
+	}
 	if (reason == PAUSED_BY_BREAKPOINT && bp) {
 		buf.appendStringParam(L"disp", std::wstring(bp->temporary ? L"del" : L"keep"));
 		buf.appendUlongParamAsString(L"bkptno", bp->id);
@@ -1148,7 +1157,6 @@ IDebugStackFrame2 * Debugger::getStackFrame(IDebugThread2 * pThread, unsigned fr
 		CRLog::error("cannot get thread frame enum");
 		return false;
 	}
-	unsigned outIndex = 0;
 	ULONG count = 0;
 	pFrames->GetCount(&count);
 	for (ULONG i = 0; i < count; i++) {
@@ -1173,6 +1181,7 @@ IDebugStackFrame2 * Debugger::getStackFrame(IDebugThread2 * pThread, unsigned fr
 
 // retrieves list of local variables from debug frame
 bool Debugger::getLocalVariables(IDebugStackFrame2 * frame, LocalVariableList &list, bool includeArgs) {
+	UNREFERENCED_PARAMETER(includeArgs);
 	if (!frame)
 		return NULL;
 	ULONG count = 0;
@@ -1672,7 +1681,7 @@ HRESULT Debugger::OnDebugBreakpointBound(IDebugEngine2 *pEngine,
 		CONTEXT_INFO info;
 		memset(&info, 0, sizeof(info));
 		if (SUCCEEDED(context->GetInfo(CIF_ALLFIELDS, &info))) {
-			int fnLine = info.posFunctionOffset.dwLine;
+			//int fnLine = info.posFunctionOffset.dwLine;
 			if (info.bstrFunction && info.bstrAddressOffset)
 				bp->functionName = std::wstring(info.bstrFunction) + std::wstring(info.bstrAddressOffset);
 			else if (info.bstrFunction)
@@ -1762,6 +1771,23 @@ HRESULT Debugger::OnDebugException(IDebugEngine2 *pEngine,
 	IDebugExceptionEvent2 * pEvent) 
 {
 	UNUSED_EVENT_PARAMS;
+	if (pEvent->CanPassToDebuggee())
+		pEvent->PassToDebuggee(TRUE);
+	BSTR pdescription = NULL;
+	pEvent->GetExceptionDescription(&pdescription);
+	_exceptionDescription = fromBSTR(pdescription);
+	writeDebuggerMessage(std::wstring(L"Exception: ") + _exceptionDescription);
+	EXCEPTION_INFO info;
+	memset(&info, 0, sizeof(info));
+	std::wstring name;
+	std::wstring programName;
+	_exceptionCode = 0;
+	_exceptionName.clear();
+	if (!FAILED(pEvent->GetException(&info))) {
+		_exceptionName = fromBSTR(info.bstrExceptionName);
+		programName = fromBSTR(info.bstrProgramName);
+		_exceptionCode = info.dwCode;
+	}
 	paused(pThread, PAUSED_BY_EXCEPTION);
 	DUMP_EVENT(OnDebugException);
 	return S_OK;
