@@ -15,7 +15,7 @@
 #include "RemoteDebuggerProxy.h"
 #include "ExceptionTable.h"
 
-enum enum_LAUNCH_FLAGS_MAGO
+enum LAUNCH_FLAGS_MAGO
 {
 	LAUNCH_NEW_CONSOLE = 0x8000
 };
