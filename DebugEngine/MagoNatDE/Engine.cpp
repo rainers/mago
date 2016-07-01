@@ -501,7 +501,7 @@ namespace Mago
         info.StdOutput = (HANDLE) hStdOutput;
         info.StdError = (HANDLE) hStdError;
         info.Suspend = true;
-		if ( (dwLaunchFlags & LAUNCH_NEW_CONSOLE) != 0 )
+        if ( (dwLaunchFlags & LAUNCH_NEW_CONSOLE) != 0 )
             info.NewConsole = true;
 
         IDebuggerProxy* debugger = NULL;

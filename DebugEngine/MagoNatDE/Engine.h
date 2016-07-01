@@ -17,7 +17,7 @@
 
 enum LAUNCH_FLAGS_MAGO
 {
-	LAUNCH_NEW_CONSOLE = 0x8000
+    LAUNCH_NEW_CONSOLE = 0x8000
 };
 
 namespace Mago
