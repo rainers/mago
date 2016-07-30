@@ -291,6 +291,11 @@ namespace MagoEE
                     NextChar();
                     mTok.Code = TOKminass;
                 }
+                else if ( GetChar() == L'>' )
+                {
+                    NextChar();
+                    mTok.Code = TOKarrow;
+                }
                 else
                     mTok.Code = TOKmin;
                 return;
