@@ -577,7 +577,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        while ( session->NextSymbol( funcScope, childSH ) )
+        while ( session->NextSymbol( funcScope, childSH, ~0 ) )
         {
             MagoST::SymInfoData     childData = { 0 };
             MagoST::ISymbolInfo*    childSym = NULL;

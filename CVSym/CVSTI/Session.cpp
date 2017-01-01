@@ -120,7 +120,7 @@ namespace MagoST
         if ( FAILED( hr ) )
             return hr;
 
-        for ( ; mStore->NextSymbol( scope, childHandle ); )
+        for ( ; mStore->NextSymbol( scope, childHandle, ~0U ); )
         {
             ISymbolInfo*    symInfo = NULL;
             SymString       pstrName;
@@ -199,7 +199,7 @@ namespace MagoST
             if ( FAILED( hr ) )
                 return hr;
 
-            for ( int j = 0; (j < USHRT_MAX) && !foundChild && mStore->NextSymbol( scope, curHandle ); j++ )
+            for ( int j = 0; (j < USHRT_MAX) && !foundChild && mStore->NextSymbol( scope, curHandle, offset ); j++ )
             {
                 SymTag          tag = SymTagNull;
                 uint32_t        childOffset = 0;
@@ -242,9 +242,9 @@ namespace MagoST
         return mStore->SetChildSymbolScope( handle, scope );
     }
 
-    bool Session::NextSymbol( SymbolScope& scope, SymHandle& handle )
+    bool Session::NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr )
     {
-        return mStore->NextSymbol( scope, handle );
+        return mStore->NextSymbol( scope, handle, addr );
     }
 
     HRESULT Session::GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo )

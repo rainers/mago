@@ -334,7 +334,7 @@ namespace MagoST
         return S_OK;
     }
 
-    bool DebugStore::NextSymbol( SymbolScope& scope, SymHandle& handle )
+    bool DebugStore::NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr )
     {
         SymbolScopeIn* scopeIn = (SymbolScopeIn*) &scope;
 

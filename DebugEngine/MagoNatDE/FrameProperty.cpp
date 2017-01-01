@@ -189,7 +189,7 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            while ( session->NextSymbol( scope, childSH ) )
+            while ( session->NextSymbol( scope, childSH, exprContext->GetPC() ) )
             {
                 MagoST::SymInfoData     infoData = { 0 };
                 MagoST::ISymbolInfo*    symInfo = NULL;

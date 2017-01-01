@@ -376,7 +376,7 @@ namespace MagoST
 
             LONG cnt = 0;
             IDiaEnumSymbols* pEnumSymbols = NULL;
-            HRESULT hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &pEnumSymbols );
+            HRESULT hr = pSymbol->findChildrenEx( SymTagNull, NULL, nsNone, &pEnumSymbols );
             if ( !FAILED( hr ) )
                 hr = pEnumSymbols->get_Count( &cnt );
             if ( pEnumSymbols )
@@ -658,7 +658,7 @@ namespace MagoST
         return S_OK;
     }
 
-    bool PDBDebugStore::NextSymbol( SymbolScope& scope, SymHandle& handle )
+    bool PDBDebugStore::NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr )
     {
         PDBStore::SymHandleIn& symIn = (PDBStore::SymHandleIn&) handle;
         PDBStore::SymbolScopeIn& scopeIn = (PDBStore::SymbolScopeIn&) scope;
@@ -667,7 +667,10 @@ namespace MagoST
         HRESULT hr = mSession->symbolById( scopeIn.id, &pSymbol );
         IDiaEnumSymbols* pEnumSymbols = NULL;
         if ( !FAILED( hr ) && pSymbol )
-            hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &pEnumSymbols );
+            if ( addr == ~0 )
+                hr = pSymbol->findChildrenEx( SymTagNull, NULL, nsNone, &pEnumSymbols );
+            else
+                hr = pSymbol->findChildrenExByRVA( SymTagNull, NULL, nsNone, addr, &pEnumSymbols );
         IDiaSymbol* pChild = NULL;
         if ( !FAILED( hr ) && pEnumSymbols )
             hr = pEnumSymbols->Item( scopeIn.current, &pChild );

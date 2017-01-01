@@ -34,7 +34,7 @@ namespace MagoST
         virtual HRESULT SetCompilandSymbolScope( DWORD compilandIndex, SymbolScope& scope ) = 0;
         virtual HRESULT SetChildSymbolScope( SymHandle handle, SymbolScope& scope ) = 0;
 
-        virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle ) = 0;
+        virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr ) = 0;
 
         virtual HRESULT FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data ) = 0;
         virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle ) = 0;
@@ -136,7 +136,7 @@ namespace MagoST
         virtual HRESULT SetCompilandSymbolScope( DWORD compilandIndex, SymbolScope& scope );
         virtual HRESULT SetChildSymbolScope( SymHandle handle, SymbolScope& scope );
 
-        virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle );
+        virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr );
 
         virtual HRESULT FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data );
         virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle );

@@ -69,7 +69,7 @@ namespace MagoST
 
         virtual HRESULT SetChildSymbolScope( SymHandle handle, SymbolScope& scope );
 
-        virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle );
+        virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr );
 
         // types
 

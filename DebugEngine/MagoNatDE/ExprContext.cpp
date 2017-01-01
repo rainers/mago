@@ -274,6 +274,24 @@ namespace Mago
             }
             break;
 
+        case LocIsEnregistered:
+            {
+                uint32_t    reg = 0;
+
+                if ( !sym->GetRegister( reg ) )
+                    return E_FAIL;
+
+                hr = GetRegValue( reg, valKind, dataVal );
+                if ( FAILED( hr ) )
+                    return E_FAIL;
+
+                if ( (valKind != MagoEE::DataValueKind_Int64) && (valKind != MagoEE::DataValueKind_UInt64) )
+                    return E_FAIL;
+
+                addr = dataVal.UInt64Value;
+            }
+            break;
+
         case LocIsStatic:
             {
                 uint16_t        sec = 0;
