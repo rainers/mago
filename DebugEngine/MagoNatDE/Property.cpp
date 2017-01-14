@@ -93,7 +93,10 @@ namespace Mago
                 pPropertyInfo->dwAttrib |= DBG_ATTRIB_VALUE_RAW_STRING;
             if ( mObjVal.ReadOnly )
                 pPropertyInfo->dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
-            if ( mObjVal.HasChildren )
+
+            if ( mFormatOpts.specifier != MagoEE::FormatSpecRaw && mObjVal.HasChildren )
+                pPropertyInfo->dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
+            if ( mFormatOpts.specifier == MagoEE::FormatSpecRaw && mObjVal.HasRawChildren )
                 pPropertyInfo->dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
 
             if ( mObjVal.ObjVal._Type != NULL )

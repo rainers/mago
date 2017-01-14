@@ -27,6 +27,7 @@ namespace MagoEE
         bool        ReadOnly;
         bool        HasString;
         bool        HasChildren;
+        bool        HasRawChildren;
     };
 
     class IEEDParsedExpr

@@ -241,11 +241,13 @@ namespace MagoEE
         result.ReadOnly = true;
         result.HasString = false;
         result.HasChildren = false;
+        result.HasRawChildren = false;
 
         if ( !expr || expr->Kind == DataKind_Value )
         {
             RefPtr<Type>    type = result.ObjVal._Type;
 
+            // ReadOnly
             if ( (type->AsTypeStruct() != NULL)
                 || type->IsSArray() )
             {
@@ -261,16 +263,36 @@ namespace MagoEE
                 result.ReadOnly = (decl == NULL) || decl->IsConstant();
             }
 
+            // HasString
             if ( (type->AsTypeNext() != NULL) && type->AsTypeNext()->GetNext()->IsChar() )
             {
-                if ( type->IsPointer() || type->IsSArray() || type->IsDArray() )
+                if ( type->IsPointer() )
+                    result.HasString = result.ObjVal.Value.Addr != 0;
+                else if ( type->IsSArray() || type->IsDArray() )
                     result.HasString = true;
             }
 
-            if ( type->IsPointer() || type->IsSArray() || type->IsDArray()  || type->IsAArray()
-                || (type->AsTypeStruct() != NULL) )
+            // HasChildren/HasRawChildren
+            if ( type->IsPointer() )
             {
-                result.HasChildren = true;
+                result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
+            }
+            else if ( ITypeSArray* sa = type->AsTypeSArray() )
+            {
+                result.HasChildren = result.HasRawChildren = sa->GetLength() > 0;
+            }
+            else if ( type->IsDArray() )
+            {
+                result.HasChildren = result.ObjVal.Value.Array.Length > 0;
+                result.HasRawChildren = true;
+            }
+            else if( type->IsAArray() )
+            {
+                result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
+            }
+            else if ( type->AsTypeStruct() )
+            {
+                result.HasChildren = result.HasRawChildren = true;
             }
         }
     }

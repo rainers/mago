@@ -234,7 +234,9 @@ namespace Mago
                 info.dwAttrib |= DBG_ATTRIB_VALUE_RAW_STRING;
             if ( result.ReadOnly )
                 info.dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
-            if ( result.HasChildren )
+            if ( mFormatOpt.specifier != MagoEE::FormatSpecRaw && result.HasChildren )
+                info.dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
+            if ( mFormatOpt.specifier == MagoEE::FormatSpecRaw && result.HasRawChildren )
                 info.dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
             info.dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
