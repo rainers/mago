@@ -82,7 +82,8 @@ namespace MagoEE
         TypeInstance( TemplateInstancePart* instance );
         virtual RefPtr<Type>    Copy();
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual void ToString( std::wstring& str );
+    protected:
+        virtual void _ToString( std::wstring& str );
     };
 
 
@@ -95,7 +96,8 @@ namespace MagoEE
         TypeIdentifier( Utf16String* id );
         virtual RefPtr<Type>    Copy();
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual void ToString( std::wstring& str );
+    protected:
+        virtual void _ToString( std::wstring& str );
     };
 
 
@@ -106,7 +108,8 @@ namespace MagoEE
 
         virtual RefPtr<Type>    Copy();
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual void ToString( std::wstring& str );
+    protected:
+        virtual void _ToString( std::wstring& str );
     };
 
 
@@ -118,7 +121,8 @@ namespace MagoEE
         TypeTypeof( Expression* expr );
         virtual RefPtr<Type>    Copy();
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual void ToString( std::wstring& str );
+    protected:
+        virtual void _ToString( std::wstring& str );
     };
 
 
@@ -130,7 +134,8 @@ namespace MagoEE
         TypeSArrayUnresolved( Type* elem, Expression* expr );
         virtual RefPtr<Type>    Copy();
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual void ToString( std::wstring& str );
+    protected:
+        virtual void _ToString( std::wstring& str );
     };
 
 
@@ -143,6 +148,7 @@ namespace MagoEE
         TypeSlice( Type* elem, Expression* exprLow, Expression* exprHigh );
         virtual RefPtr<Type>    Copy();
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual void ToString( std::wstring& str );
+    protected:
+        virtual void _ToString( std::wstring& str );
     };
 }

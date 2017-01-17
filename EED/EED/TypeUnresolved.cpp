@@ -209,7 +209,7 @@ namespace MagoEE
         return ResolveTypeChain( retType->GetDeclaration() );
     }
 
-    void TypeReturn::ToString( std::wstring& str )
+    void TypeReturn::_ToString( std::wstring& str )
     {
         // TODO: do we really need to define this method or can we have Type say "unresolved"?
         str.append( L"typeof(return)" );
@@ -253,7 +253,7 @@ namespace MagoEE
         return ResolveTypeChain( Expr->_Type->GetDeclaration() );
     }
 
-    void TypeTypeof::ToString( std::wstring& str )
+    void TypeTypeof::_ToString( std::wstring& str )
     {
         // TODO: do we really need to define this method or can we have Type say "unresolved"?
         str.append( L"typeof()" );
@@ -302,7 +302,7 @@ namespace MagoEE
         return ResolveTypeChain( decl );
     }
 
-    void TypeInstance::ToString( std::wstring& str )
+    void TypeInstance::_ToString( std::wstring& str )
     {
         // TODO: do we really need to define this method or can we have Type say "unresolved"?
         str.append( L"instance" );
@@ -346,7 +346,7 @@ namespace MagoEE
         return ResolveTypeChain( decl );
     }
 
-    void TypeIdentifier::ToString( std::wstring& str )
+    void TypeIdentifier::_ToString( std::wstring& str )
     {
         // TODO: do we really need to define this method or can we have Type say "unresolved"?
         str.append( L"identifier" );
@@ -402,7 +402,7 @@ namespace MagoEE
         return resolvedThis;
     }
 
-    void TypeSArrayUnresolved::ToString( std::wstring& str )
+    void TypeSArrayUnresolved::_ToString( std::wstring& str )
     {
         // TODO: do we really need to define this method or can we have Type say "unresolved"?
         str.append( L"unresolved_Sarray" );
@@ -436,7 +436,7 @@ namespace MagoEE
         return NULL;
     }
 
-    void TypeSlice::ToString( std::wstring& str )
+    void TypeSlice::_ToString( std::wstring& str )
     {
         // TODO: do we really need to define this method or can we have Type say "unresolved"?
         str.append( L"slice" );

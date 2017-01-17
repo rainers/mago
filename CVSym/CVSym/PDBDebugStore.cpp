@@ -439,8 +439,18 @@ namespace MagoST
 
         virtual bool GetMod( uint16_t& mod )
         {
-            UNREFERENCED_PARAMETER( mod );
-            return false;
+            IDiaSymbol* pSymbol = NULL;
+            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+                return false;
+
+            mod = 0;
+            BOOL isConst;
+            HRESULT hr = pSymbol->get_constType( &isConst );
+            if( hr == S_OK && isConst )
+                mod |= 1; // EED::MODconst;
+
+            pSymbol->Release();
+            return true;
         }
 #endif
     };

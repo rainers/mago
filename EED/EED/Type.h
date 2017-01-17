@@ -70,6 +70,7 @@ namespace MagoEE
         virtual RefPtr<Type>    MakeSharedConst();
         virtual RefPtr<Type>    MakeConst();
         virtual RefPtr<Type>    MakeInvariant();
+        virtual RefPtr<Type>    MakeMod( MOD m );
 
         bool IsConst();
         bool IsInvariant();
@@ -77,6 +78,11 @@ namespace MagoEE
         bool IsShared();
         bool IsSharedConst();
 
+        void ToString( std::wstring& str );      // adds modifiers
+    protected:
+        virtual void _ToString( std::wstring& str ) = 0; // no modifier
+
+    public:
         bool CanImplicitCastToBool();
 
         virtual bool IsBasic();
@@ -103,7 +109,6 @@ namespace MagoEE
         virtual ENUMTY GetBackingTy();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str ) = 0;
 
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual StdProperty* FindProperty( const wchar_t* name );
@@ -142,7 +147,7 @@ namespace MagoEE
         virtual ENUMTY GetBackingTy();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
 
         virtual StdProperty* FindProperty( const wchar_t* name );
 
@@ -191,7 +196,7 @@ namespace MagoEE
         virtual bool CanRefMember();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
     };
 
@@ -209,7 +214,7 @@ namespace MagoEE
         virtual bool CanRefMember();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
     };
 
@@ -235,7 +240,7 @@ namespace MagoEE
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual StdProperty* FindProperty( const wchar_t* name );
         virtual ITypeDArray* AsTypeDArray();
 
@@ -265,7 +270,7 @@ namespace MagoEE
         virtual bool IsAArray();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
         virtual ITypeAArray* AsTypeAArray();
 
@@ -294,7 +299,7 @@ namespace MagoEE
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
         virtual RefPtr<Type> Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual StdProperty* FindProperty( const wchar_t* name );
         virtual ITypeSArray* AsTypeSArray();
 
@@ -340,7 +345,7 @@ namespace MagoEE
         virtual RefPtr<Type>    Copy();
         virtual bool IsFunction();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual ITypeFunction* AsTypeFunction();
 
         // ITypeFunction
@@ -368,7 +373,7 @@ namespace MagoEE
         virtual bool IsDelegate();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual StdProperty* FindProperty( const wchar_t* name );
     };
 
@@ -396,7 +401,7 @@ namespace MagoEE
         virtual bool CanRefMember();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual ITypeStruct* AsTypeStruct();
 
         // ITypeStruct
@@ -429,7 +434,7 @@ namespace MagoEE
         virtual bool CanRefMember();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
         virtual ITypeEnum* AsTypeEnum();
 
         // ITypeEnum
@@ -471,7 +476,7 @@ namespace MagoEE
         virtual ENUMTY GetBackingTy();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
-        virtual void ToString( std::wstring& str );
+        virtual void _ToString( std::wstring& str );
 
         virtual StdProperty* FindProperty( const wchar_t* name );
 

@@ -93,11 +93,34 @@ namespace MagoEE
         return type;
     }
 
+    RefPtr<Type> Type::MakeMod( MOD m )
+    {
+        RefPtr<Type>    type = Copy();
+        type->Mod = m;
+        return type;
+    }
+
     bool Type::IsConst()        { return (Mod & MODconst) != 0; }
     bool Type::IsInvariant()    { return (Mod & MODinvariant) != 0; }
     bool Type::IsMutable()      { return !(Mod & (MODconst | MODinvariant)); }
     bool Type::IsShared()       { return (Mod & MODshared) != 0; }
     bool Type::IsSharedConst()  { return Mod == (MODshared | MODconst); }
+
+    void Type::ToString( std::wstring& str )
+    {
+        size_t len = str.length();
+        _ToString( str );
+        if ( Mod == 0 )
+            return;
+        std::wstring sub = str.substr(len);
+        if ( Mod & MODinvariant )
+            sub = L"immutable(" + sub + L")";
+        else if ( Mod & MODconst )
+            sub = L"const(" + sub + L")";
+        if ( Mod & MODshared )
+            sub = L"shared(" + sub + L")";
+        str = str.substr( 0, len ) + sub;
+    }
 
     bool Type::CanImplicitCastToBool()
     {
@@ -450,7 +473,7 @@ namespace MagoEE
         return false;
     }
 
-    void TypeBasic::ToString( std::wstring& str )
+    void TypeBasic::_ToString( std::wstring& str )
     {
         str.append( GetTypeName( Ty ) );
     }
@@ -611,7 +634,7 @@ namespace MagoEE
         return Next->Equals( other->AsTypeNext()->GetNext() );
     }
 
-    void TypePointer::ToString( std::wstring& str )
+    void TypePointer::_ToString( std::wstring& str )
     {
         Next->ToString( str );
         str.append( L"*" );
@@ -679,7 +702,7 @@ namespace MagoEE
         return Next->Equals( other->AsTypeNext()->GetNext() );
     }
 
-    void TypeReference::ToString( std::wstring& str )
+    void TypeReference::_ToString( std::wstring& str )
     {
         Next->ToString( str );
     }
@@ -746,10 +769,19 @@ namespace MagoEE
         return Next->Equals( other->AsTypeNext()->GetNext() );
     }
 
-    void TypeDArray::ToString( std::wstring& str )
+    void TypeDArray::_ToString( std::wstring& str )
     {
+        size_t len = str.length();
         Next->ToString( str );
-        str.append( L"[]" );
+        std::wstring sub = str.substr(len);
+        if ( sub == L"immutable(char)" )
+            str = str.substr( 0, len ) + L"string";
+        else if ( sub == L"immutable(wchar)" )
+            str = str.substr( 0, len ) + L"wstring";
+        else if ( sub == L"immutable(dchar)" )
+            str = str.substr( 0, len ) + L"dstring";
+        else
+            str.append( L"[]" );
     }
 
     RefPtr<Type> TypeDArray::Resolve( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
@@ -808,7 +840,7 @@ namespace MagoEE
         return Index->Equals( ((TypeAArray*) other)->Index.Get() );
     }
 
-    void TypeAArray::ToString( std::wstring& str )
+    void TypeAArray::_ToString( std::wstring& str )
     {
         Next->ToString( str );
         str.append( L"[" );
@@ -884,7 +916,7 @@ namespace MagoEE
         return Length == ((TypeSArray*) other)->Length;
     }
 
-    void TypeSArray::ToString( std::wstring& str )
+    void TypeSArray::_ToString( std::wstring& str )
     {
         // we're using space for a ulong's digits, but we only need that for a uint
         const int UlongDigits = 20;
@@ -1062,7 +1094,7 @@ namespace MagoEE
         str.append( L")" );
     }
 
-    void TypeFunction::ToString( std::wstring& str )
+    void TypeFunction::_ToString( std::wstring& str )
     {
         FunctionToString( L"function", AsTypeFunction(), str );
     }
@@ -1164,7 +1196,7 @@ namespace MagoEE
         return Next->Equals( other->AsTypeNext()->GetNext() );
     }
 
-    void TypeDelegate::ToString( std::wstring& str )
+    void TypeDelegate::_ToString( std::wstring& str )
     {
         ITypeNext*  ptrToFunc = Next->AsTypeNext();
 
@@ -1258,7 +1290,7 @@ namespace MagoEE
         return wcscmp( mDecl->GetName(), other->GetDeclaration()->GetName() ) == 0;
     }
 
-    void TypeStruct::ToString( std::wstring& str )
+    void TypeStruct::_ToString( std::wstring& str )
     {
         str.append( mDecl->GetName() );
     }
@@ -1355,7 +1387,7 @@ namespace MagoEE
         return wcscmp( mDecl->GetName(), other->GetDeclaration()->GetName() ) == 0;
     }
 
-    void TypeEnum::ToString( std::wstring& str )
+    void TypeEnum::_ToString( std::wstring& str )
     {
         str.append( mDecl->GetName() );
     }
@@ -1545,7 +1577,7 @@ namespace MagoEE
         return mAliased->FindProperty( name );
     }
 
-    void TypeTypedef::ToString( std::wstring& str )
+    void TypeTypedef::_ToString( std::wstring& str )
     {
         str.append( mName );
     }

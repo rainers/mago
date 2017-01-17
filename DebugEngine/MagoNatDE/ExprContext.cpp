@@ -1395,17 +1395,21 @@ namespace Mago
             return E_INVALIDARG;
 
         bool isArray = false;
-        bool isDstring = false;
-        if( name.GetLength() == 6 )
-            isArray = ( strncmp( name.GetName(), "dArray", 6 ) == 0 || strncmp( name.GetName(), "string", 6 ) == 0 );
+        bool isString = false;
+        bool usesDchar = false;
+        if( name.GetLength() == 6 && strncmp( name.GetName(), "string", 6 ) == 0 )
+            isArray = isString = true;
         else if( name.GetLength() == 7 && strncmp( name.GetName(), "wstring", 7 ) == 0 )
-            isArray = true;
+            isArray = isString = true;
         else if( name.GetLength() == 7 && strncmp( name.GetName(), "dstring", 7 ) == 0 )
-            isArray = isDstring = true;
+            isArray = isString = usesDchar = true;
+        else if( name.GetLength() == 6 && strncmp( name.GetName(), "dArray", 6 ) == 0 )
+            isArray = true;
         if( !isArray && name.GetLength() > 2 )
         {
             isArray = strcmp( name.GetName() + name.GetLength() - 2, "[]" ) == 0;
-            isDstring = isArray && ( strcmp( name.GetName(), "dchar[]" ) == 0 || strcmp( name.GetName(), "const(dchar)[]" ) == 0 );
+            usesDchar = isArray && ( ( name.GetLength() == 7 && strncmp( name.GetName(), "dchar[]", 7 ) == 0 ) || 
+                                     ( name.GetLength() == 14 && strncmp( name.GetName(), "const(dchar)[]", 14 ) == 0 ) );
         }
         if( isArray )
         {
@@ -1420,14 +1424,19 @@ namespace Mago
                 MagoEE::ITypeNext* nexttype = ptrtype->AsTypeNext();
                 if( nexttype != NULL )
                 {
-                    if( isDstring )
+                    if( usesDchar )
                     {
                         MagoEE::TypeBasic* tb = new MagoEE::TypeBasic( MagoEE::Tdchar );
-                        tb->Mod = nexttype->GetNext()->Mod;
+                        tb->Mod = isString ? MODimmutable : nexttype->GetNext()->Mod;
                         hr = mTypeEnv->NewDArray( tb, type );
                     }
                     else
-                        hr = mTypeEnv->NewDArray( nexttype->GetNext(), type );
+                    {
+                        RefPtr<MagoEE::Type> ntype = nexttype->GetNext();
+                        if( isString )
+                            ntype = ntype->MakeInvariant();
+                        hr = mTypeEnv->NewDArray( ntype, type );
+                    }
                 }
             }
 
@@ -1504,6 +1513,11 @@ namespace Mago
         type = mTypeEnv->GetType( ty );
         if ( type == NULL )
             return E_NOT_FOUND;
+
+        RefPtr<MagoEE::Type> mtype;
+        uint16_t mod;
+        if ( symInfo->GetMod( mod ) && mod != 0 )
+            type = mtype = type->MakeMod( (MOD) mod );
 
         type->AddRef();
         return S_OK;
