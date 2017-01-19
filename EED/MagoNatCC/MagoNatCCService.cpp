@@ -277,7 +277,9 @@ protected:
         int ptrSize = arch == PROCESSOR_ARCHITECTURE_AMD64 ? 8 : 4;
 
         CComPtr<IDiaSession> diasession;
-        tryHR(module->GetSymbolInterface(guidIDiaSession, (IUnknown**)&diasession));
+        if (module->GetSymbolInterface(guidIDiaSession, (IUnknown**)&diasession) != S_OK) // VS 2015
+            if (HRESULT hr = module->GetSymbolInterface(__uuidof(IDiaSession), (IUnknown**)&diasession) != S_OK) // VS2013
+                return hr;
 
         auto features = toMago(system->ProcessorFeatures());
         if (arch == PROCESSOR_ARCHITECTURE_AMD64)
