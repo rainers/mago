@@ -25,9 +25,14 @@ static const char*      gEventNames[] =
     "RIP_EVENT",
 };
 
+#ifdef NDEBUG
+static bool _log_enabled = false;
+#else
 static bool _log_enabled = true;
+#endif
 
-void Log::Enable(bool enabled) {
+void Log::Enable( bool enabled )
+{
     _log_enabled = enabled;
 }
 
@@ -59,5 +64,12 @@ void Log::LogDebugEvent( const DEBUG_EVENT& event )
     printf( "%s\n", msg );
 
     strncat_s( msg, "\n", _TRUNCATE );
+    OutputDebugStringA( msg );
+}
+
+void Log::LogMessage( const char* msg )
+{
+    if (!_log_enabled)
+        return;
     OutputDebugStringA( msg );
 }

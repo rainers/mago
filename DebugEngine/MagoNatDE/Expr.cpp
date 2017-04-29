@@ -47,7 +47,7 @@ namespace Mago
             IDebugEventCallback2* pExprCallback,
             IDebugProperty2** ppResult )
     {
-        OutputDebugStringA( "Expr::EvaluateSync\n" );
+        Log::LogMessage( "Expr::EvaluateSync\n" );
 
         HRESULT hr = S_OK;
         RefPtr<Property>    prop;

@@ -56,6 +56,7 @@ using namespace ATL;
 // Debug Exec
 #include "..\Exec\Types.h"
 #include "..\Exec\Enumerator.h"
+#include "..\Exec\Log.h"
 #include "..\Exec\Error.h"
 #include "..\Exec\Exec.h"
 #include "..\Exec\EventCallback.h"

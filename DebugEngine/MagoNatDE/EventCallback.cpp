@@ -87,12 +87,12 @@ namespace Mago
 
     void EventCallback::OnProcessStart( DWORD uniquePid )
     {
-        OutputDebugStringA( "EventCallback::OnProcessStart\n" );
+        Log::LogMessage( "EventCallback::OnProcessStart\n" );
     }
 
     void EventCallback::OnProcessExit( DWORD uniquePid, DWORD exitCode )
     {
-        OutputDebugStringA( "EventCallback::OnProcessExit\n" );
+        Log::LogMessage( "EventCallback::OnProcessExit\n" );
 
         HRESULT     hr = S_OK;
         RefPtr<ProgramDestroyEvent> event;
@@ -114,7 +114,7 @@ namespace Mago
 
     void EventCallback::OnThreadStart( DWORD uniquePid, ICoreThread* coreThread )
     {
-        OutputDebugStringA( "EventCallback::OnThreadStart\n" );
+        Log::LogMessage( "EventCallback::OnThreadStart\n" );
 
         HRESULT     hr = S_OK;
         RefPtr<ThreadCreateEvent>   event;
@@ -141,7 +141,7 @@ namespace Mago
 
     void EventCallback::OnThreadExit( DWORD uniquePid, DWORD threadId, DWORD exitCode )
     {
-        OutputDebugStringA( "EventCallback::OnThreadExit\n" );
+        Log::LogMessage( "EventCallback::OnThreadExit\n" );
 
         HRESULT     hr = S_OK;
         RefPtr<ThreadDestroyEvent>  event;
@@ -181,7 +181,7 @@ namespace Mago
 
     void EventCallback::OnModuleLoadInternal( DWORD uniquePid, ICoreModule* coreModule )
     {
-        OutputDebugStringA( "EventCallback::OnModuleLoad\n" );
+        Log::LogMessage( "EventCallback::OnModuleLoad\n" );
 
         HRESULT     hr = S_OK;
         RefPtr<ModuleLoadEvent>     event;
@@ -252,7 +252,7 @@ namespace Mago
 
     void EventCallback::OnModuleUnloadInternal( DWORD uniquePid, Address64 baseAddr )
     {
-        OutputDebugStringA( "EventCallback::OnModuleUnload\n" );
+        Log::LogMessage( "EventCallback::OnModuleUnload\n" );
 
         HRESULT     hr = S_OK;
         RefPtr<ModuleLoadEvent>     event;
@@ -289,7 +289,7 @@ namespace Mago
 
     void EventCallback::OnOutputString( DWORD uniquePid, const wchar_t* outputString )
     {
-        OutputDebugStringA( "EventCallback::OnOutputString\n" );
+        Log::LogMessage( "EventCallback::OnOutputString\n" );
 
         HRESULT     hr = S_OK;
         RefPtr<OutputStringEvent>   event;
@@ -362,7 +362,7 @@ namespace Mago
 
     void EventCallback::OnLoadComplete( DWORD uniquePid, DWORD threadId )
     {
-        OutputDebugStringA( "EventCallback::OnLoadComplete\n" );
+        Log::LogMessage( "EventCallback::OnLoadComplete\n" );
 
         HRESULT     hr = S_OK;
         RefPtr<LoadCompleteEvent>   event;
@@ -408,7 +408,7 @@ namespace Mago
     {
         const DWORD DefaultState = EXCEPTION_STOP_SECOND_CHANCE;
 
-        OutputDebugStringA( "EventCallback::OnException\n" );
+        Log::LogMessage( "EventCallback::OnException\n" );
 
         HRESULT     hr = S_OK;
         RefPtr<ExceptionEvent>      event;
@@ -585,7 +585,7 @@ namespace Mago
     RunMode EventCallback::OnBreakpoint( 
         DWORD uniquePid, uint32_t threadId, Address64 address, bool embedded )
     {
-        OutputDebugStringA( "EventCallback::OnBreakpoint\n" );
+        Log::LogMessage( "EventCallback::OnBreakpoint\n" );
 
         RefPtr<Program>             prog;
         RefPtr<Thread>              thread;
@@ -618,7 +618,7 @@ namespace Mago
 
     void EventCallback::OnStepComplete( DWORD uniquePid, uint32_t threadId )
     {
-        OutputDebugStringA( "EventCallback::OnStepComplete\n" );
+        Log::LogMessage( "EventCallback::OnStepComplete\n" );
 
         HRESULT hr = S_OK;
         RefPtr<StepCompleteEvent>   event;
@@ -649,7 +649,7 @@ namespace Mago
     ProbeRunMode EventCallback::OnCallProbe( 
         DWORD uniquePid, uint32_t threadId, Address64 address, AddressRange64& thunkRange )
     {
-        OutputDebugStringA( "EventCallback::OnCallProbe\n" );
+        Log::LogMessage( "EventCallback::OnCallProbe\n" );
 
         RefPtr<Program>             prog;
         RefPtr<Module>              mod;

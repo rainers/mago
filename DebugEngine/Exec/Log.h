@@ -14,4 +14,5 @@ public:
     // call Enable(false) to disable logs
     static void Enable(bool enabled);
     static void LogDebugEvent( const DEBUG_EVENT& event );
+    static void LogMessage( const char* msg );
 };

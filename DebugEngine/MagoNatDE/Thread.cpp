@@ -385,7 +385,7 @@ namespace Mago
 
     HRESULT Thread::BuildCallstack( IRegisterSet* topRegSet, Callstack& callstack )
     {
-        OutputDebugStringA( "Thread::BuildCallstack\n" );
+        Log::LogMessage( "Thread::BuildCallstack\n" );
 
         HRESULT             hr = S_OK;
         int                 frameIndex = 0;

@@ -166,7 +166,7 @@ namespace Mago
         IDebugReference2* pValue,
         DWORD dwTimeout )
     {
-        OutputDebugStringA( "Property::SetValueAsReference\n" );
+        Log::LogMessage( "Property::SetValueAsReference\n" );
         return E_NOTIMPL;
     }
     
@@ -209,28 +209,28 @@ namespace Mago
     HRESULT Property::GetParent( 
         IDebugProperty2** ppParent )
     {
-        OutputDebugStringA( "Property::GetParent\n" );
+        Log::LogMessage( "Property::GetParent\n" );
         return E_NOTIMPL;
     }
     
     HRESULT Property::GetDerivedMostProperty( 
         IDebugProperty2** ppDerivedMost )
     {
-        OutputDebugStringA( "Property::GetDerivedMostProperty\n" );
+        Log::LogMessage( "Property::GetDerivedMostProperty\n" );
         return E_NOTIMPL;
     }
     
     HRESULT Property::GetMemoryBytes( 
         IDebugMemoryBytes2** ppMemoryBytes )
     {
-        OutputDebugStringA( "Property::GetMemoryBytes\n" );
+        Log::LogMessage( "Property::GetMemoryBytes\n" );
         return E_NOTIMPL;
     }
     
     HRESULT Property::GetMemoryContext( 
         IDebugMemoryContext2** ppMemory )
     {
-        OutputDebugStringA( "Property::GetMemoryContext\n" );
+        Log::LogMessage( "Property::GetMemoryContext\n" );
 
         if ( ppMemory == NULL )
             return E_INVALIDARG;
@@ -273,14 +273,14 @@ namespace Mago
     HRESULT Property::GetSize( 
         DWORD* pdwSize )
     {
-        OutputDebugStringA( "Property::GetSize\n" );
+        Log::LogMessage( "Property::GetSize\n" );
         return E_NOTIMPL;
     }
     
     HRESULT Property::GetReference( 
         IDebugReference2** ppReference )
     {
-        OutputDebugStringA( "Property::GetReference\n" );
+        Log::LogMessage( "Property::GetReference\n" );
         return E_NOTIMPL;
     }
     
@@ -288,7 +288,7 @@ namespace Mago
         REFGUID guidExtendedInfo,
         VARIANT* pExtendedInfo )
     {
-        OutputDebugStringA( "Property::GetExtendedInfo\n" );
+        Log::LogMessage( "Property::GetExtendedInfo\n" );
         return E_NOTIMPL;
     }
 
@@ -298,7 +298,7 @@ namespace Mago
 
     HRESULT Property::GetStringCharLength( ULONG* pLen )
     {
-        OutputDebugStringA( "Property::GetStringCharLength\n" );
+        Log::LogMessage( "Property::GetStringCharLength\n" );
 
         return MagoEE::GetRawStringLength( mExprContext, mObjVal.ObjVal, *(uint32_t*) pLen );
     }
@@ -308,7 +308,7 @@ namespace Mago
         WCHAR* rgString,
         ULONG* pceltFetched )
     {
-        OutputDebugStringA( "Property::GetStringChars\n" );
+        Log::LogMessage( "Property::GetStringChars\n" );
 
         return MagoEE::FormatRawString(
             mExprContext,
@@ -320,19 +320,19 @@ namespace Mago
     
     HRESULT Property::CreateObjectID()
     {
-        OutputDebugStringA( "Property::CreateObjectID\n" );
+        Log::LogMessage( "Property::CreateObjectID\n" );
         return E_NOTIMPL;
     }
     
     HRESULT Property::DestroyObjectID()
     {
-        OutputDebugStringA( "Property::DestroyObjectID\n" );
+        Log::LogMessage( "Property::DestroyObjectID\n" );
         return E_NOTIMPL;
     }
     
     HRESULT Property::GetCustomViewerCount( ULONG* pcelt )
     {
-        OutputDebugStringA( "Property::GetCustomViewerCount\n" );
+        Log::LogMessage( "Property::GetCustomViewerCount\n" );
         return E_NOTIMPL;
     }
     
@@ -342,7 +342,7 @@ namespace Mago
         DEBUG_CUSTOM_VIEWER* rgViewers,
         ULONG* pceltFetched )
     {
-        OutputDebugStringA( "Property::GetCustomViewerList\n" );
+        Log::LogMessage( "Property::GetCustomViewerList\n" );
         return E_NOTIMPL;
     }
     
@@ -352,7 +352,7 @@ namespace Mago
         DWORD dwTimeout,
         BSTR* errorString )
     {
-        OutputDebugStringA( "Property::SetValueAsStringWithError\n" );
+        Log::LogMessage( "Property::SetValueAsStringWithError\n" );
         return E_NOTIMPL;
     }
 

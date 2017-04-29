@@ -66,7 +66,7 @@ namespace Mago
             BSTR* pbstrError,
             UINT* pichError )
     {
-        OutputDebugStringA( "ExprContext::ParseText\n" );
+        Log::LogMessage( "ExprContext::ParseText\n" );
 
         HRESULT hr = S_OK;
         RefPtr<Expr>    expr;

@@ -520,7 +520,7 @@ namespace MagoCore
 
         mExec.Shutdown();
 
-        OutputDebugStringA( "Poll loop shutting down.\n" );
+        Log::LogMessage( "Poll loop shutting down.\n" );
         return hr;
     }
 

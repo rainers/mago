@@ -254,7 +254,7 @@ namespace Mago
 
     HRESULT Engine::ContinueFromSynchronousEvent( IDebugEvent2* pEvent )
     {
-        OutputDebugStringA( "ContinueFromSynchronousEvent\n" );
+        Log::LogMessage( "ContinueFromSynchronousEvent\n" );
 
         // TODO: verify that it's our program destroy event
         ShutdownIfNeeded();

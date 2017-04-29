@@ -201,7 +201,7 @@ namespace Mago
     HRESULT StackFrame::GetExpressionContext( 
        IDebugExpressionContext2** ppExprCxt )
     {
-        OutputDebugStringA( "StackFrame::GetExpressionContext\n" );
+        Log::LogMessage( "StackFrame::GetExpressionContext\n" );
 
         HRESULT hr = S_OK;
 
@@ -257,7 +257,7 @@ namespace Mago
     HRESULT StackFrame::GetDebugProperty( 
        IDebugProperty2** ppDebugProp )
     {
-        OutputDebugStringA( "StackFrame::GetDebugProperty\n" );
+        Log::LogMessage( "StackFrame::GetDebugProperty\n" );
 
         if ( ppDebugProp == NULL )
             return E_INVALIDARG;
@@ -289,7 +289,7 @@ namespace Mago
        ULONG*                    pcelt,
        IEnumDebugPropertyInfo2** ppEnum )
     {
-        OutputDebugStringA( "StackFrame::EnumProperties\n" );
+        Log::LogMessage( "StackFrame::EnumProperties\n" );
 
         HRESULT hr = S_OK;
         CComPtr<IDebugProperty2>    rootProp;
