@@ -190,6 +190,11 @@ namespace Mago
         if( keydecl != NULL && keydecl->GetType( keytype ) && keytype != NULL )
         {
             type = keytype->Unaliased();
+            if( type != keytype )
+            {
+                type->AddRef();
+                keytype->Release();
+            }
             hr = S_OK;
         }
         if( keydecl )

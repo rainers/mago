@@ -96,6 +96,13 @@ private:
     ScopedArray& operator=( const ScopedArray& );
 };
 
+template <typename T, typename Copy>
+struct ScopedStruct : public T
+{
+    ScopedStruct() { Copy::init( this ); }
+    ~ScopedStruct() { Copy::destroy( this ); }
+    ScopedStruct& operator =(const ScopedStruct& other) { Copy::copy( this, &other ); }
+};
 
 // maybe we can use perfect forwarding in C++0x to make a MakeCComObjectInit that can forward arguments to Init()
 

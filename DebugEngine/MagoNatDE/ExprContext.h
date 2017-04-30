@@ -32,7 +32,7 @@ namespace Mago
 
     public:
         ExprContext();
-        ~ExprContext();
+        virtual ~ExprContext();
 
     DECLARE_NOT_AGGREGATABLE(ExprContext)
 

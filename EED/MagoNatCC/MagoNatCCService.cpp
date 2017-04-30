@@ -185,6 +185,8 @@ template<class T>
 class CCDataItem : public IUnknown
 {
 public:
+    virtual ~CCDataItem() {}
+
     // COM like ref counting
     virtual ULONG STDMETHODCALLTYPE AddRef()
     {
@@ -456,24 +458,6 @@ public:
     }
 
     Mago::IRegisterSet* getRegSet() { return mModule->mRegSet; }
-
-    // COM like ref counting
-    virtual ULONG STDMETHODCALLTYPE AddRef()
-    {
-        long newRef = InterlockedIncrement( &mRefCount );
-        return newRef;
-    }
-    virtual ULONG STDMETHODCALLTYPE Release()
-    {
-        long newRef = InterlockedDecrement( &mRefCount );
-        _ASSERT( newRef >= 0 );
-        if ( newRef == 0 )
-            delete this;
-        return newRef;
-    }
-
-private:
-    long mRefCount = 0;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -664,7 +648,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
 
     int radix = pInspectionContext->Radix();
     int timeout = pInspectionContext->Timeout();
-    DEBUG_PROPERTY_INFO info;
+    ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
     tryHR(pProperty->GetPropertyInfo(DEBUGPROP_INFO_ALL, radix, timeout, nullptr, 0, &info));
     
     Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
@@ -785,7 +769,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetItems(
     for (ULONG i = 0; i < Count; i++)
     {
         ULONG fetched;
-        DEBUG_PROPERTY_INFO info;
+        ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
         Mago::_CopyPropertyInfo::init(&info);
         HRESULT hr = pEnum->Next(1, &info, &fetched);
         if (SUCCEEDED(hr) && fetched == 1 && info.pProperty)
@@ -794,7 +778,6 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetItems(
             hr = createEvaluationResult(pEnumContext->InspectionContext(), pEnumContext->StackFrame(), info, &pResultObject);
             if (SUCCEEDED(hr))
                 result.Items.Members[i] = pResultObject;
-            Mago::_CopyPropertyInfo::destroy(&info);
         }
     }
     pCompletionRoutine->OnComplete(result);
