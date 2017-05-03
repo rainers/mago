@@ -193,6 +193,8 @@ namespace MagoST
                     case SymTagBaseClass:
                         type = mId;
                         break;
+                    default:
+                        break;
                     }
                 }
                 pSymbol->Release();
@@ -421,7 +423,27 @@ namespace MagoST
             {
                 indexes.resize( count );
                 if( count > 0 )
+                {
                     hr = pSymbol->get_typeIds( count, &count, indexes.data() );
+                    if( hr != S_OK )
+                    {
+                        IDiaEnumSymbols* pEnumSymbols = NULL;
+                        hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &pEnumSymbols );
+                        if( hr == S_OK && pEnumSymbols )
+                        {
+                            for( DWORD i = 0; i < count && hr == S_OK; i++ )
+                            {
+                                DWORD fetched;
+                                IDiaSymbol* argSymbol = nullptr;
+                                if( ( hr = pEnumSymbols->Next( 1, &argSymbol, &fetched ) ) != S_OK )
+                                    break;
+                                hr = argSymbol->get_typeId( indexes.data() + i );
+                                argSymbol->Release();
+                            }
+                            pEnumSymbols->Release();
+                        }
+                    }
+                }
             }
             pSymbol->Release();
             return hr == S_OK;
