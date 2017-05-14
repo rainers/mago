@@ -39,7 +39,7 @@ namespace Mago
 
         startupInfo.cb = sizeof startupInfo;
 
-        ret = OpenRootRegKey( false, hKey );
+        ret = OpenRootRegKey( false, false, hKey );
         if ( ret != ERROR_SUCCESS )
             return HRESULT_FROM_WIN32( ret );
 

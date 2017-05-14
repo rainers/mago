@@ -43,8 +43,17 @@ enum StringIds
     IDS_UNHANDLED_EXCEPTION,
 };
 
+struct MagoOptions
+{
+	bool hideInternalNames;
+	bool showStaticsInAggr;
+};
+
+extern MagoOptions gOptions;
+
 const wchar_t* GetString( DWORD strId );
 bool GetString( DWORD strId, CString& str );
 
-LSTATUS OpenRootRegKey( bool readWrite, HKEY& hKey );
+LSTATUS OpenRootRegKey( bool user, bool readWrite, HKEY& hKey );
 LSTATUS GetRegString( HKEY hKey, const wchar_t* valueName, wchar_t* charBuf, int& charLen );
+LSTATUS GetRegValue( HKEY hKey, const wchar_t* valueName, DWORD* pValue );

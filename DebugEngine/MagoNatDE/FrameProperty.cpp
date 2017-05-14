@@ -206,6 +206,9 @@ namespace Mago
                 if ( !symInfo->GetName( pstrName ) )
                     continue;
 
+                if ( gOptions.hideInternalNames && pstrName.GetName()[0] == '_' && pstrName.GetName()[1] == '_' )
+                    continue;
+
                 hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), bstrName.m_str );
                 if ( FAILED( hr ) )
                     continue;

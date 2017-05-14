@@ -100,10 +100,11 @@ bool GetString( DWORD strId, CString& str )
     return true;
 }
 
-LSTATUS OpenRootRegKey( bool readWrite, HKEY& hKey )
+LSTATUS OpenRootRegKey( bool user, bool readWrite, HKEY& hKey )
 {
     REGSAM samDesired = readWrite ? (KEY_READ | KEY_WRITE) : KEY_READ;
-    return RegOpenKeyEx( HKEY_LOCAL_MACHINE, MAGO_SUBKEY, 0, samDesired, &hKey );
+    HKEY hive = user ? HKEY_CURRENT_USER : HKEY_LOCAL_MACHINE;
+    return RegOpenKeyEx( hive, MAGO_SUBKEY, 0, samDesired, &hKey );
 }
 
 LSTATUS GetRegString( HKEY hKey, const wchar_t* valueName, wchar_t* charBuf, int& charLen )
@@ -148,3 +149,54 @@ LSTATUS GetRegString( HKEY hKey, const wchar_t* valueName, wchar_t* charBuf, int
 
     return ERROR_SUCCESS;
 }
+
+LSTATUS GetRegValue( HKEY hKey, const wchar_t* valueName, DWORD* pValue )
+{
+    if ( pValue == NULL )
+        return ERROR_INVALID_PARAMETER;
+
+    DWORD   regType = 0;
+    DWORD   bytesRead = sizeof( *pValue );
+    LSTATUS ret = 0;
+
+    ret = RegQueryValueEx(
+        hKey,
+        valueName,
+        NULL,
+        &regType,
+        (BYTE*) pValue,
+        &bytesRead );
+    if ( ret != ERROR_SUCCESS )
+        return ret;
+
+    if ( regType != REG_DWORD )
+        return ERROR_UNSUPPORTED_TYPE;
+
+    return ERROR_SUCCESS;
+}
+
+MagoOptions gOptions;
+
+bool readMagoOptions()
+{
+    HKEY hKey;
+    LSTATUS hr = OpenRootRegKey( true, false, hKey );
+    if( hr != S_OK )
+        return false;
+
+    DWORD val;
+    if( GetRegValue( hKey, L"hideInternalNames", &val ) == S_OK )
+        gOptions.hideInternalNames = val != 0;
+    else
+        gOptions.hideInternalNames = false;
+
+    if( GetRegValue( hKey, L"showStaticsInAggr", &val ) == S_OK )
+        gOptions.showStaticsInAggr = val != 0;
+    else
+        gOptions.showStaticsInAggr = false;
+
+    RegCloseKey( hKey );
+    return true;
+}
+
+static bool initMagoOption = readMagoOptions();
