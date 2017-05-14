@@ -408,7 +408,8 @@ namespace MagoEE
 
             if ( mAAVersion == -1 )
             {
-                if ( bb32.b.length > 4 && ( bb32.b.length & ( bb32.b.length - 1 ) ) == 0 )
+                if ( ( bb32.b.length <= 4 && bb32.b.ptr != address + sizeof bb32 ) || // init bucket in Impl
+                     ( bb32.b.length > 4 && ( bb32.b.length & ( bb32.b.length - 1 ) ) == 0 ) )
                 {
                     mAAVersion = 1; // power of 2 indicates new AA
                     hr = mBinder->ReadMemory( address, sizeof bb32_v1, sizeRead, (uint8_t*)&bb32_v1 );
@@ -459,7 +460,8 @@ namespace MagoEE
 
             if ( mAAVersion == -1 )
             {
-                if ( mBB.b.length > 4 && ( mBB.b.length & ( mBB.b.length - 1 ) ) == 0 )
+                if ( ( mBB.b.length <= 4 && mBB.b.ptr != address + sizeof mBB ) || // init bucket in Impl
+                     ( mBB.b.length > 4 && ( mBB.b.length & ( mBB.b.length - 1 ) ) == 0 ) )
                 {
                     mAAVersion = 1; // power of 2 indicates new AA
                     hr = mBinder->ReadMemory( address, sizeof mBB_V1, sizeRead, (uint8_t*)&mBB_V1 );
