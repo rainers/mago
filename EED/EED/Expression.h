@@ -672,6 +672,8 @@ namespace MagoEE
         RefPtr<ExpressionList>  Args;
 
         CallExpr( Expression* child, ExpressionList* args );
+        virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
+        virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
     };
 
 

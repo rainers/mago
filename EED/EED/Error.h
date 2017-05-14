@@ -34,6 +34,9 @@ enum
     E_MAGOEE_BAD_INDEX,
     E_MAGOEE_SYMBOL_NOT_FOUND,
     E_MAGOEE_ELEMENT_NOT_FOUND,
+    E_MAGOEE_TOO_MANY_ARGUMENTS,
+    E_MAGOEE_TOO_FEW_ARGUMENTS,
+    E_MAGOEE_CALL_NOT_IMPLEMENTED,
 
     // TODO: maybe something like RUNTIME_ERROR or DEBUG_INFO_ERROR
     //  for cases like this: Decl->GetType( _Type.Ref() )   (see ThisExpr::Semantic)

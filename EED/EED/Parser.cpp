@@ -742,7 +742,7 @@ Done:
 
         NextToken();
 
-        for ( ; ; NextToken() )
+        for ( ; ; )
         {
             RefPtr<Expression>  arg = ParseAssignExpr();
 

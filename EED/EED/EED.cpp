@@ -315,6 +315,9 @@ namespace MagoEE
         L"Bad indexing operation",
         L"Symbol not found",
         L"Element not found",
+        L"Too many function arguments",
+        L"Too few function arguments",
+        L"Calling functions not implemented",
     };
 
     // returns: S_FALSE on error not found

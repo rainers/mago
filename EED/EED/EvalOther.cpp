@@ -1326,4 +1326,56 @@ namespace MagoEE
 
         return S_OK;
     }
+
+    HRESULT CallExpr::Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
+    {
+        HRESULT hr;
+
+        hr = Child->Semantic( evalData, typeEnv, binder );
+        if ( FAILED( hr ) )
+            return hr;
+        if ( Child->_Type == NULL )
+            return E_MAGOEE_NO_TYPE;
+
+        ITypeFunction* func = Child->_Type->AsTypeFunction();
+        if( !func )
+            return E_MAGOEE_BAD_TYPES_FOR_OP;
+
+        ParameterList* paramList = func->GetParams();
+        if( !paramList )
+            return E_MAGOEE_TYPE_RESOLVE_FAILED;
+
+        auto it = paramList->List.begin();
+
+        for( Expression* expr : Args->List )
+        {
+            if( it == paramList->List.end() )
+                return E_MAGOEE_TOO_MANY_ARGUMENTS;
+
+            hr = expr->Semantic( evalData, typeEnv, binder );
+            if ( FAILED( hr ) )
+                return hr;
+            if ( expr->Kind != DataKind_Value )
+                return E_MAGOEE_VALUE_EXPECTED;
+            if ( expr->_Type == NULL )
+                return E_MAGOEE_NO_TYPE;
+
+            if( !expr->_Type->Equals( it->Get()->_Type ) )
+                return E_MAGOEE_BAD_TYPES_FOR_OP;
+            ++it;
+        }
+        if( it != paramList->List.end() )
+            return E_MAGOEE_TOO_FEW_ARGUMENTS;
+
+        _Type = func->GetReturnType();
+        Kind = DataKind_Value;
+        return S_OK;
+    }
+
+    HRESULT CallExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
+    {
+        //_ASSERT( false );
+        return E_MAGOEE_CALL_NOT_IMPLEMENTED;
+    }
+
 }
