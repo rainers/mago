@@ -119,6 +119,7 @@ namespace Mago
         MagoEE::ITypeEnv* GetTypeEnv();
         MagoEE::NameTable* GetStringTable();
         MagoST::SymHandle GetFunctionSH();
+        Mago::IRegisterSet* GetRegisterSet();
         const std::vector<MagoST::SymHandle>& GetBlockSH();
         Address64 GetPC();
 

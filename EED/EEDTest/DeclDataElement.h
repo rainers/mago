@@ -46,6 +46,7 @@ public:
     virtual bool IsType();
     virtual bool IsBaseClass();
     virtual bool IsStaticField();
+    virtual bool IsRegister();
 
     virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl );
     virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );

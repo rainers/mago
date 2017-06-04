@@ -222,6 +222,11 @@ bool DiaDecl::IsStaticField()
     return false;
 }
 
+bool DiaDecl::IsRegister()
+{
+    return false;
+}
+
 HRESULT DiaDecl::FindObject( const wchar_t* name, Declaration*& decl )
 {
     return HRESULT_FROM_WIN32( ERROR_NOT_FOUND );

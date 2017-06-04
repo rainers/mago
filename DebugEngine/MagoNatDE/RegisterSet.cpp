@@ -236,6 +236,11 @@ namespace Mago
         return (RegisterType) mRegDesc[regId].Type;
     }
 
+    bool RegisterSet::is64Bit()
+    {
+        return mRegDesc[mPCId].Type == RegType_Int64;
+    }
+
     uint64_t RegisterSet::GetPC()
     {
         RegisterValue regVal = { 0 };
@@ -357,4 +362,10 @@ namespace Mago
 
         return (RegisterType) mRegDesc[regId].Type;
     }
+
+    bool TinyRegisterSet::is64Bit()
+    {
+        return mRegDesc[mPCId].Type == RegType_Int64;
+    }
+
 }

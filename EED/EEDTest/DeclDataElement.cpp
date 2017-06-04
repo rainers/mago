@@ -100,6 +100,11 @@ bool DeclDataElement::IsStaticField()
     return false;
 }
 
+bool DeclDataElement::IsRegister()
+{
+    return false;
+}
+
 HRESULT DeclDataElement::FindObject( const wchar_t* name, Declaration*& decl )
 {
     return E_FAIL;

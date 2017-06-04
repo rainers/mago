@@ -613,7 +613,7 @@ namespace MagoEE
         ClearEvalData();
 
         hr = FindObject( Id->Str, binder, Decl.Ref() );
-        if ( FAILED( hr ) )
+        if( FAILED( hr ) )
             return hr;
 
         Decl->GetType( _Type.Ref() );
@@ -692,7 +692,7 @@ namespace MagoEE
 
             obj.Addr = thisAddr + offset;
         }
-        else
+        else if( !Decl->IsRegister() )
         {
             if( !Decl->GetAddress( obj.Addr ) )
                 return E_MAGOEE_NO_ADDRESS;

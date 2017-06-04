@@ -415,11 +415,12 @@ public:
         {
             UINT32 read;
             Mago::RegisterValue regVal = { 0 };
-            tryHR(regs->GetRegisterValue(reg, &regVal.Value, sizeof (regVal.Value), &read));
+            if(regs->GetRegisterValue(reg, &regVal.Value, sizeof (regVal.Value), &read) != S_OK)
+                return E_MAGOEE_BADREGISTER;
 
             int archRegId = mModule->mArchData->GetArchRegId( reg );
             if ( archRegId < 0 )
-                return E_NOT_FOUND;
+                return E_MAGOEE_BADREGISTER;
 
             regVal.Type = mModule->mRegSet->GetRegisterType( archRegId );
             switch ( regVal.Type )
@@ -445,7 +446,7 @@ public:
                 break;
 
             default:
-                return E_FAIL;
+                return E_MAGOEE_BADREGISTER;
             }
             return S_OK;
         }

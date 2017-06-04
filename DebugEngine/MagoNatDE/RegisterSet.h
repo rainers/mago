@@ -72,6 +72,7 @@ namespace Mago
         virtual HRESULT SetPC(uint64_t addr) = 0;
         virtual bool GetThreadContext( const void*& context, uint32_t& contextSize ) = 0;
         virtual RegisterType GetRegisterType( uint32_t regId ) = 0;
+        virtual bool is64Bit() = 0;
     };
 
 
@@ -103,6 +104,7 @@ namespace Mago
         virtual HRESULT SetPC(uint64_t addr);
         virtual bool GetThreadContext( const void*& context, uint32_t& contextSize );
         virtual RegisterType GetRegisterType( uint32_t regId );
+        virtual bool is64Bit();
     };
 
 
@@ -139,5 +141,6 @@ namespace Mago
         virtual HRESULT SetPC(uint64_t addr);
         virtual bool GetThreadContext( const void*& context, uint32_t& contextSize );
         virtual RegisterType GetRegisterType( uint32_t regId );
+        virtual bool is64Bit();
     };
 }

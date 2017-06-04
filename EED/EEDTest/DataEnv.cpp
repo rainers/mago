@@ -353,6 +353,11 @@ int DataEnvBinder::GetAAVersion ()
     return -1;
 }
 
+HRESULT DataEnvBinder::GetClassName( MagoEE::Address addr, std::wstring& className )
+{
+    return E_NOTIMPL;
+}
+
 HRESULT DataEnvBinder::SetValue( MagoEE::Declaration* decl, const MagoEE::DataValue& value )
 {
     MagoEE::Address addr = 0;

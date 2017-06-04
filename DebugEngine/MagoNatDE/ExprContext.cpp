@@ -145,7 +145,15 @@ namespace Mago
         {
             hr = FindGlobalSymbol( u8Name, u8NameLen, symHandle );
             if ( hr != S_OK )
+            {
+                decl = RegisterCVDecl::CreateRegisterSymbol( this, u8Name );
+                if( decl )
+                {
+                    decl->AddRef();
+                    return S_OK;
+                }
                 return E_NOT_FOUND;
+            }
         }
 
         hr = MakeDeclarationFromSymbol( symHandle, origDecl.Ref() );
@@ -866,6 +874,11 @@ namespace Mago
     MagoST::SymHandle ExprContext::GetFunctionSH()
     {
         return mFuncSH;
+    }
+
+    Mago::IRegisterSet* ExprContext::GetRegisterSet()
+    {
+        return mRegSet;
     }
 
     const std::vector<MagoST::SymHandle>& ExprContext::GetBlockSH()

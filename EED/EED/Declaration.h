@@ -42,6 +42,7 @@ namespace MagoEE
         virtual bool IsConstant() = 0;
         virtual bool IsType() = 0;
         virtual bool IsBaseClass() = 0;
+        virtual bool IsRegister() = 0;
 
         virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl ) = 0;
         virtual bool EnumMembers( IEnumDeclarationMembers*& members ) = 0;

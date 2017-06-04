@@ -57,6 +57,7 @@ namespace Mago
         virtual bool IsConstant();
         virtual bool IsType();
         virtual bool IsBaseClass();
+        virtual bool IsRegister();
 
         virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
         virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
@@ -141,6 +142,16 @@ namespace Mago
             void* context );
     };
 
+    class RegisterCVDecl : public GeneralCVDecl
+    {
+    public:
+        RegisterCVDecl( ExprContext* symStore, uint32_t reg );
+        ~RegisterCVDecl();
+    
+        virtual bool IsRegister();
+
+        static RegisterCVDecl* CreateRegisterSymbol( ExprContext* symStore, const char* name );
+    };
 
     class TypeCVDeclMembers : public MagoEE::IEnumDeclarationMembers
     {
@@ -204,6 +215,7 @@ namespace Mago
         virtual bool IsConstant();
         virtual bool IsType();
         virtual bool IsBaseClass();
+        virtual bool IsRegister();
 
         virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl );
         virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );

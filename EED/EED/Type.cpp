@@ -304,7 +304,12 @@ namespace MagoEE
 
     uint32_t TypeBasic::GetSize()
     {
-        switch ( Ty )
+        return GetTypeSize( Ty );
+    }
+
+    uint32_t TypeBasic::GetTypeSize( ENUMTY ty )
+    {
+        switch ( ty )
         {
         case Tvoid:     return 0;
         case Tint8:     case Tuns8:     return 1;

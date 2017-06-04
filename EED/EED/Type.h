@@ -153,6 +153,7 @@ namespace MagoEE
 
         static bool IsSigned( ENUMTY ty );
         static const wchar_t* GetTypeName( ENUMTY ty );
+        static uint32_t GetTypeSize( ENUMTY ty );
     };
 
 
