@@ -866,16 +866,19 @@ namespace MagoEE
         {
             name = L"[" + mClassName + L"]";
             fullName = L"*cast(" + mClassName + L"*)&(" + mParentExprText + L")";
+            result.IsMostDerivedClass = true;
         }
         else if ( decl->IsBaseClass() )
         {
             if ( !NameBaseClass( decl, name, fullName ) )
                 return E_FAIL;
+            result.IsBaseClass = true;
         }
         else if( decl->IsStaticField() )
         {
             if ( !NameStaticMember( decl, name, fullName ) )
                 return E_FAIL;
+            result.IsStaticField = true;
         }
         else
         {

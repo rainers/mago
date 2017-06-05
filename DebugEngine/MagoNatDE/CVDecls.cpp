@@ -932,6 +932,11 @@ namespace Mago
         if ( (tag != MagoST::SymTagData) && (tag != MagoST::SymTagBaseClass) )
             return -1;
 
+        LocationType locType;
+        if( !gOptions.showStaticsInAggr && symInfo->GetLocation( locType ) )
+            if( locType == LocIsStatic )
+                return -1;
+
         return 1;
     }
 

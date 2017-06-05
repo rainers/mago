@@ -302,11 +302,14 @@ protected:
         tryHR(mDataSource->InitDebugInfo(diasession, mAddrMap));
         tryHR(mDataSource->OpenSession(mSession.Ref()));
         mModule->SetSession(mSession);
-		DkmArray<Microsoft::VisualStudio::Debugger::DkmModuleInstance*> pModules = { 0 };
+        DkmArray<Microsoft::VisualStudio::Debugger::DkmModuleInstance*> pModules = { 0 };
         module->GetModuleInstances(&pModules);
         if(pModules.Length > 0)
+        {
+            mSession->SetLoadAddress(pModules.Members[0]->BaseAddress());
             mModule->SetCoreModule(new CCCoreModule(pModules.Members[0]));
-		DkmFreeArray(pModules);
+        }
+        DkmFreeArray(pModules);
 
         tryHR(MakeCComObject(mProgram));
 

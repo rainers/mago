@@ -238,6 +238,12 @@ namespace Mago
                 info.dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
             if ( mFormatOpt.specifier == MagoEE::FormatSpecRaw && result.HasRawChildren )
                 info.dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
+            if ( result.IsBaseClass )
+                info.dwAttrib |= DBG_ATTRIB_BASECLASS;
+            if ( result.IsMostDerivedClass )
+                info.dwAttrib |= DBG_ATTRIB_MOSTDERIVEDCLASS;
+            if ( result.IsStaticField )
+                info.dwAttrib |= DBG_ATTRIB_STORAGE_STATIC;
             info.dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
 

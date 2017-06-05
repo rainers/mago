@@ -28,6 +28,9 @@ namespace MagoEE
         bool        HasString;
         bool        HasChildren;
         bool        HasRawChildren;
+        bool        IsStaticField; // for struct enumerations
+        bool        IsBaseClass;
+        bool        IsMostDerivedClass;
     };
 
     class IEEDParsedExpr

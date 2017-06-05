@@ -496,7 +496,7 @@ namespace Mago
                 mDRuntime->SetAAVersion( 1 );
 
             if ( FindGlobalSymbolAddress( mod, "_D14TypeInfo_Class6__vtblZ", addr ) )
-                mDRuntime->SetClassInfoVtblAddr( mod->GetAddress() + addr );
+                mDRuntime->SetClassInfoVtblAddr( addr );
         }
     }
 
