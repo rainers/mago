@@ -129,6 +129,9 @@ namespace Mago
         registered = true;
 
         rpcRet = RpcServerListen( 1, RPC_C_LISTEN_MAX_CALLS_DEFAULT, TRUE );
+        if( rpcRet == RPC_S_ALREADY_LISTENING )
+            rpcRet = RPC_S_OK; // ignore
+
         if ( rpcRet != RPC_S_OK )
         {
             hr = HRESULT_FROM_WIN32( rpcRet );

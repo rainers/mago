@@ -40,6 +40,7 @@ namespace Mago
             mLastBPId( 0 ),
             mLastModId( 0 )
     {
+        readMagoOptions();
     }
 
     HRESULT Engine::FinalConstruct()

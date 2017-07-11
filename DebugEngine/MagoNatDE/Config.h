@@ -51,6 +51,8 @@ struct MagoOptions
 
 extern MagoOptions gOptions;
 
+bool readMagoOptions();
+
 const wchar_t* GetString( DWORD strId );
 bool GetString( DWORD strId, CString& str );
 
