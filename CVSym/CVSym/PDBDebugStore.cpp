@@ -515,11 +515,14 @@ namespace MagoST
         mInit = true;
 
         // Obtain access to the provider
+        GUID msdia140 = { 0xe6756135, 0x1e65, 0x4d17, { 0x85, 0x76, 0x61, 0x07, 0x61, 0x39, 0x8c, 0x3c } };
         GUID msdia120 = { 0x3BFCEA48, 0x620F, 0x4B6B, { 0x81, 0xF7, 0xB9, 0xAF, 0x75, 0x45, 0x4C, 0x7D } };
         GUID msdia110 = { 0x761D3BCD, 0x1304, 0x41D5, { 0x94, 0xE8, 0xEA, 0xC5, 0x4E, 0x4A, 0xC1, 0x72 } };
         GUID msdia100 = { 0xB86AE24D, 0xBF2F, 0x4AC9, { 0xB5, 0xA2, 0x34, 0xB1, 0x4E, 0x4C, 0xE1, 0x1D } }; // same as msdia80
 
-        hr = CoCreateInstance( msdia120, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &mSource );
+        hr = CoCreateInstance( msdia140, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &mSource );
+        if ( FAILED( hr ) )
+            hr = CoCreateInstance( msdia120, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &mSource );
         if ( FAILED( hr ) )
             hr = CoCreateInstance( msdia110, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &mSource );
         if ( FAILED( hr ) )
