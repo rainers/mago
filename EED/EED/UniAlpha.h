@@ -20,7 +20,7 @@ namespace MagoEE
     int Utf8To16( const char* utf8Str, int utf8Len, wchar_t* utf16Str, int utf16Len );
     int Utf16To8( const wchar_t* utf16Str, int utf16Len, char* utf8Str, int utf8Len );
     int Utf16To32( const wchar_t* utf16Str, int utf16Len, dchar_t* utf32Str, int utf32Len );
-    int Utf32To16( bool ignoreErrors, const dchar_t* utf32Str, int utf32Len, wchar_t* utf16Str, int utf16Len );
+    int Utf32To16( bool ignoreErrors, const dchar_t* utf32Str, int utf32Len, wchar_t* utf16Str, int utf16Len, bool& truncated );
 
     void AppendChar32( std::wstring& str, dchar_t c );
     void AppendChar32( std::vector<char>& str, dchar_t c );

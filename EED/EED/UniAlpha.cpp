@@ -497,7 +497,7 @@ namespace MagoEE
         return len;
     }
 
-    int Utf32To16( bool ignoreErrors, const dchar_t* utf32Str, int utf32Len, wchar_t* utf16Str, int utf16Len )
+    int Utf32To16( bool ignoreErrors, const dchar_t* utf32Str, int utf32Len, wchar_t* utf16Str, int utf16Len, bool& truncated )
     {
         _ASSERT( (utf16Len == 0) || (utf16Str != NULL) );
 
@@ -505,6 +505,7 @@ namespace MagoEE
         int             len = 0;
         const dchar_t*  s = utf32Str;
 
+        truncated = false;
         if ( utf32Len < 0 )
             utf32Len = (int) dcslen( utf32Str ) + 1;      // include terminator in length to convert
 
@@ -563,7 +564,10 @@ namespace MagoEE
                     utf16Str[len] = (wchar_t) c;
                 // the user wanted to translate, but we can't fit any more
                 else if ( utf16Len > 0 )
+                {
+                    truncated = true;
                     break;
+                }
                 len++;
             }
         }

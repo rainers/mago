@@ -258,14 +258,23 @@ namespace MagoEE
         T* srcBuf, 
         size_t srcCharLen, 
         wchar_t* destBuf, 
-        size_t destCharLen );
+        size_t destCharLen,
+        bool& truncated );
 
     template <> int Translate( 
         char* srcBuf, 
         size_t srcCharLen, 
         wchar_t* destBuf, 
-        size_t destCharLen )
+        size_t destCharLen,
+        bool& truncated )
     {
+        truncated = false;
+        if( destCharLen > 0 && srcCharLen > destCharLen )
+        {
+            srcCharLen = destCharLen; // MultiByteToWideChar returns 0 on overflow
+            truncated = true;
+        }
+
         return MultiByteToWideChar( 
             CP_UTF8, 
             0,                      // ignore errors
@@ -279,13 +288,19 @@ namespace MagoEE
         wchar_t* srcBuf, 
         size_t srcCharLen, 
         wchar_t* destBuf, 
-        size_t destCharLen )
+        size_t destCharLen,
+        bool& truncated )
     {
         if ( destCharLen > 0 )
         {
             _ASSERT( destBuf != NULL );
 
-            srcCharLen = std::min( srcCharLen, destCharLen );
+            truncated = false;
+            if( srcCharLen > destCharLen )
+            {
+                srcCharLen = destCharLen;
+                truncated = true;
+            }
 
             errno_t err = wmemcpy_s( destBuf, srcCharLen, srcBuf, srcCharLen );
             _ASSERT( err == 0 );
@@ -298,14 +313,16 @@ namespace MagoEE
         dchar_t* srcBuf, 
         size_t srcCharLen, 
         wchar_t* destBuf, 
-        size_t destCharLen )
+        size_t destCharLen,
+        bool& truncated )
     {
         return Utf32To16( 
             true, 
             srcBuf,
             srcCharLen,
             destBuf,
-            destCharLen );
+            destCharLen,
+            truncated );
     }
 
     template <class T>
@@ -314,6 +331,7 @@ namespace MagoEE
         size_t bufByteSize,
         wchar_t* transBuf,
         size_t transBufCharSize,
+        bool& truncated,
         bool& foundTerm
         )
     {
@@ -326,7 +344,7 @@ namespace MagoEE
         if ( end != NULL )
             unitsAvail = end - (T*) buf;
 
-        int nChars = Translate( (T*) buf, unitsAvail, transBuf, transBufCharSize );
+        int nChars = Translate( (T*) buf, unitsAvail, transBuf, transBufCharSize, truncated );
 
         foundTerm = (end != NULL);
 
@@ -340,6 +358,7 @@ namespace MagoEE
         bool maxLengthKnown,
         uint32_t maxLength,
         std::wstring& outStr, 
+        bool& truncated, 
         bool& foundTerm )
     {
         const int   MaxBytes = 400;
@@ -362,15 +381,15 @@ namespace MagoEE
         switch ( unitSize )
         {
         case 1:
-            nChars = Translate<char>( buf, sizeRead, translatedBuf, _countof( translatedBuf ), foundTerm );
+            nChars = Translate<char>( buf, sizeRead, translatedBuf, _countof( translatedBuf ), truncated, foundTerm );
             break;
 
         case 2:
-            nChars = Translate<wchar_t>( buf, sizeRead, translatedBuf, _countof( translatedBuf ), foundTerm );
+            nChars = Translate<wchar_t>( buf, sizeRead, translatedBuf, _countof( translatedBuf ), truncated, foundTerm );
             break;
 
         case 4:
-            nChars = Translate<dchar_t>( buf, sizeRead, translatedBuf, _countof( translatedBuf ), foundTerm );
+            nChars = Translate<dchar_t>( buf, sizeRead, translatedBuf, _countof( translatedBuf ), truncated, foundTerm );
             break;
 
         default:
@@ -379,12 +398,16 @@ namespace MagoEE
 
         outStr.append( translatedBuf, nChars );
 
+        if( maxLengthKnown && sizeToRead < maxLength * unitSize )
+            truncated = true;
+
         return S_OK;
     }
 
     void _formatString( IValueBinder* binder, Address addr, uint64_t slen, Type* elementType, std::wstring& outStr )
     {
         bool        foundTerm = true;
+        bool        truncated = false;
         uint32_t    len = MaxStringLen;
 
         // cap it somewhere under the range of a long
@@ -403,6 +426,7 @@ namespace MagoEE
             true,
             len,
             outStr,
+            truncated,
             foundTerm );
 
         outStr.append( 1, L'"' );
@@ -412,6 +436,9 @@ namespace MagoEE
             outStr.append( 1, L'w' );
         else if ( ty == Tuns32 )
             outStr.append( 1, L'd' );
+
+        if ( truncated )
+            outStr.append( L"..." );
     }
 
     HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
@@ -573,14 +600,17 @@ namespace MagoEE
         if ( pointed->IsChar() )
         {
             bool    foundTerm = false;
+            bool    truncated = false;
 
             outStr.append( L" \"" );
 
-            FormatString( binder, objVal.Value.Addr, pointed->GetSize(), false, 0, outStr, foundTerm );
+            FormatString( binder, objVal.Value.Addr, pointed->GetSize(), false, 0, outStr, truncated, foundTerm );
             // don't worry about an error here, we still want to show the address
 
             if ( foundTerm )
                 outStr.append( 1, L'"' );
+            if ( truncated )
+                outStr.append( L"..." );
         }
 
         return S_OK;
@@ -635,6 +665,7 @@ namespace MagoEE
         HRESULT     hr = S_OK;
         HeapPtr     chunk( (uint8_t*) HeapAlloc( GetProcessHeap(), 0, RawStringChunkSize ) );
         bool        foundTerm = false;
+        bool        truncated = false;
         uint32_t    totalSizeToRead = (knownLength * unitSize);
         uint32_t    chunkCount = (totalSizeToRead + RawStringChunkSize - 1) / RawStringChunkSize;
         Address     addr = address;
@@ -665,15 +696,15 @@ namespace MagoEE
             switch ( unitSize )
             {
             case 1:
-                nChars = Translate<char>( chunk, sizeRead, curBufPtr, bufLenLeft, foundTerm );
+                nChars = Translate<char>( chunk, sizeRead, curBufPtr, bufLenLeft, truncated, foundTerm );
                 break;
 
             case 2:
-                nChars = Translate<wchar_t>( chunk, sizeRead, curBufPtr, bufLenLeft, foundTerm );
+                nChars = Translate<wchar_t>( chunk, sizeRead, curBufPtr, bufLenLeft, truncated, foundTerm );
                 break;
 
             case 4:
-                nChars = Translate<dchar_t>( chunk, sizeRead, curBufPtr, bufLenLeft, foundTerm );
+                nChars = Translate<dchar_t>( chunk, sizeRead, curBufPtr, bufLenLeft, truncated, foundTerm );
                 break;
             }
 
