@@ -114,7 +114,9 @@ namespace MagoST
         btComplex = 28,
         btBit = 29,
         btBSTR = 30,
-        btHresult = 31
+        btHresult = 31,
+        btChar16 = 32,  // char16_t
+        btChar32 = 33,  // char32_t
     };
 
 

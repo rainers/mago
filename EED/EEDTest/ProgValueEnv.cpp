@@ -779,7 +779,12 @@ MagoEE::ENUMTY ProgramValueEnv::GetBasicTy( DWORD diaBaseTypeId, DWORD size )
         }
         break;
 
+    case btChar16:
     case btWChar:
+        ty = MagoEE::Twchar;
+        break;
+
+    case btChar32:
         ty = MagoEE::Twchar;
         break;
 

@@ -1157,6 +1157,11 @@ namespace Mago
             break;
 
         case btWChar:
+        case btChar16:
+            ty = MagoEE::Twchar;
+            break;
+
+        case btChar32:
             ty = MagoEE::Twchar;
             break;
 
@@ -1414,11 +1419,12 @@ namespace Mago
 
         bool isArray = false;
         bool isString = false;
+        bool usesWchar = false;
         bool usesDchar = false;
         if( name.GetLength() == 6 && strncmp( name.GetName(), "string", 6 ) == 0 )
             isArray = isString = true;
         else if( name.GetLength() == 7 && strncmp( name.GetName(), "wstring", 7 ) == 0 )
-            isArray = isString = true;
+            isArray = isString = usesWchar = true;
         else if( name.GetLength() == 7 && strncmp( name.GetName(), "dstring", 7 ) == 0 )
             isArray = isString = usesDchar = true;
         else if( name.GetLength() == 6 && strncmp( name.GetName(), "dArray", 6 ) == 0 )
@@ -1442,19 +1448,19 @@ namespace Mago
                 MagoEE::ITypeNext* nexttype = ptrtype->AsTypeNext();
                 if( nexttype != NULL )
                 {
+                    RefPtr<MagoEE::Type> ntype;
                     if( usesDchar )
-                    {
-                        MagoEE::TypeBasic* tb = new MagoEE::TypeBasic( MagoEE::Tdchar );
-                        tb->Mod = isString ? MODimmutable : nexttype->GetNext()->Mod;
-                        hr = mTypeEnv->NewDArray( tb, type );
-                    }
+                        ntype = mTypeEnv->GetType( MagoEE::Tdchar );
+                    else if( usesWchar )
+                        ntype = mTypeEnv->GetType( MagoEE::Twchar );
+                    else if( isString )
+                        ntype = mTypeEnv->GetType( MagoEE::Tchar );
                     else
-                    {
-                        RefPtr<MagoEE::Type> ntype = nexttype->GetNext();
-                        if( isString )
-                            ntype = ntype->MakeInvariant();
-                        hr = mTypeEnv->NewDArray( ntype, type );
-                    }
+                        ntype = nexttype->GetNext();
+
+                    if( isString )
+                        ntype = ntype->MakeInvariant();
+                    hr = mTypeEnv->NewDArray( ntype, type );
                 }
             }
 
