@@ -131,6 +131,22 @@ namespace Mago
         return false;
     }
 
+    bool CVDecl::GetVTableShape( Declaration*& decl )
+    {
+        MagoST::TypeIndex vsIndex;
+
+        if ( !mSymInfo->GetVShape( vsIndex ) )
+            return false;
+
+        MagoST::TypeHandle vsTypeHandle = { 0 };
+        if ( !mSession->GetTypeFromTypeIndex( vsIndex, vsTypeHandle ) )
+            return false;
+
+        HRESULT hr = mSymStore->MakeDeclarationFromSymbol( vsTypeHandle, decl );
+
+        return !FAILED( hr );
+    }
+
     bool CVDecl::IsField()
     {
         MagoST::DataKind   kind = MagoST::DataIsUnknown;
@@ -1014,6 +1030,11 @@ namespace Mago
         return false;
     }
 
+    bool ClassRefDecl::GetVTableShape( Declaration*& decl )
+    {
+        return false;
+    }
+
     bool ClassRefDecl::IsField()
     {
         return false;
@@ -1737,33 +1758,14 @@ namespace Mago
         { "YMM15D3", CV_AMD64_YMM15D3, MagoEE::Tfloat64 },
     };
 
-    class RegisterSymbolInfo : public ISymbolInfo
+    class ImplSymbolInfo : public ISymbolInfo
     {
-        uint32_t mIndex;
-
     public:
-        RegisterSymbolInfo( uint32_t regIdx ) : mIndex( regIdx ) {}
-
-        virtual SymTag GetSymTag() { return SymTagData; }
-        virtual bool GetName( SymString& name ) 
-        {
-            const char* regname = regDesc[mIndex].name;
-            auto len = strlen( regname );
-            name.set( len, regname, false );
-            return true;
-        }
-        virtual bool GetRegister( uint32_t& reg )
-        {
-            reg = regDesc[ mIndex ].cvreg;
-            return true;
-        }
-        virtual bool GetLength( uint32_t& length )
-        {
-            length = MagoEE::TypeBasic::GetTypeSize( regDesc[mIndex].type );
-            return true;
-        }
-        virtual bool GetDataKind( DataKind& dataKind ) { dataKind = DataIsConstant; return true; }
-        virtual bool GetLocation( LocationType& locType ) { locType = LocIsEnregistered; return true; }
+        virtual bool GetName( SymString& name ) { return false; }
+        virtual bool GetRegister( uint32_t& reg ) { return false; }
+        virtual bool GetLength( uint32_t& length ) { return false; }
+        virtual bool GetDataKind( DataKind& dataKind ) { return false; }
+        virtual bool GetLocation( LocationType& locType ) { return false; }
 
         virtual bool GetType( TypeIndex& index ) { return false; }
         virtual bool GetAddressOffset( uint32_t& offset ) { return false; }
@@ -1802,6 +1804,35 @@ namespace Mago
         virtual bool GetVTableDescriptor( uint32_t index, uint8_t& desc ) { return false; }
         virtual bool GetMod( uint16_t& mod ) { return false; }
 #endif
+    };
+
+    class RegisterSymbolInfo : public ImplSymbolInfo
+    {
+        uint32_t mIndex;
+
+    public:
+        RegisterSymbolInfo( uint32_t regIdx ) : mIndex( regIdx ) {}
+
+        virtual SymTag GetSymTag() { return SymTagData; }
+        virtual bool GetName( SymString& name ) 
+        {
+            const char* regname = regDesc[mIndex].name;
+            auto len = strlen( regname );
+            name.set( len, regname, false );
+            return true;
+        }
+        virtual bool GetRegister( uint32_t& reg )
+        {
+            reg = regDesc[ mIndex ].cvreg;
+            return true;
+        }
+        virtual bool GetLength( uint32_t& length )
+        {
+            length = MagoEE::TypeBasic::GetTypeSize( regDesc[mIndex].type );
+            return true;
+        }
+        virtual bool GetDataKind( DataKind& dataKind ) { dataKind = DataIsConstant; return true; }
+        virtual bool GetLocation( LocationType& locType ) { locType = LocIsEnregistered; return true; }
     };
 
     static std::map<std::string, uint32_t> mapNameToRegIndex;
@@ -1853,4 +1884,36 @@ namespace Mago
 
         return new RegisterCVDecl( symStore, it->second );
     }
+
+    class VTableSymbolInfo : public ImplSymbolInfo
+    {
+        uint32_t mCount;
+
+    public:
+        VTableSymbolInfo( uint32_t cnt) : mCount( cnt ) {}
+
+        virtual SymTag GetSymTag() { return SymTagData; }
+        virtual bool GetOffset( int& offset ) { offset = 0; return true; }
+        virtual bool GetDataKind( DataKind& dataKind ) { dataKind = DataIsConstant; return true; }
+        virtual bool GetLocation( LocationType& locType ) { locType = LocIsThisRel; return true; }
+    };
+
+    VTableCVDecl::VTableCVDecl( ExprContext* symStore, uint32_t count, MagoEE::Type* type )
+        : GeneralCVDecl( symStore, registerInfoData, (ISymbolInfo*) &registerInfoData )
+    {
+        // CVDecl asumes registerInfoData is an instance of mSymInfo
+        mSymInfo = new VTableSymbolInfo( count ); 
+        SetType( type );
+    }
+
+    VTableCVDecl::~VTableCVDecl()
+    {
+        delete (VTableSymbolInfo*) mSymInfo;
+    }
+
+    bool VTableCVDecl::IsField()
+    {
+        return true;
+    }
+
 }

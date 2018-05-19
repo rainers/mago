@@ -86,6 +86,7 @@ namespace MagoEE
 
     };
 
+    bool gShowVTable = false;
 
     HRESULT Init()
     {

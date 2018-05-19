@@ -47,6 +47,7 @@ struct MagoOptions
 {
 	bool hideInternalNames;
 	bool showStaticsInAggr;
+	bool showVTable;
 };
 
 extern MagoOptions gOptions;

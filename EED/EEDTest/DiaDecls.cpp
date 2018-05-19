@@ -142,6 +142,12 @@ bool DiaDecl::GetBaseClassOffset( Declaration* baseClass, int& offset )
     return false;
 }
 
+bool DiaDecl::GetVTableShape( Declaration*& decl )
+{
+    return false;
+}
+
+
 bool DiaDecl::IsField()
 {
     MagoST::DataKind   kind = MagoST::DataIsUnknown;
@@ -484,8 +490,7 @@ HRESULT TypeDiaDecl::FindObject( const wchar_t* name, Declaration*& decl )
         if ( !GetType( type.Ref() ) )
             return E_FAIL;
 
-        hr = ProgramValueEnv::MakeDeclarationFromDataSymbol( mSession, childInfoData, childSymInfo, mTypeEnv, type, decl
- );
+        hr = ProgramValueEnv::MakeDeclarationFromDataSymbol( mSession, childInfoData, childSymInfo, mTypeEnv, type, decl );
         if ( FAILED( hr ) )
             return hr;
     }

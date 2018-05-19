@@ -724,7 +724,8 @@ namespace MagoEE
 
     EEDEnumStruct::EEDEnumStruct( bool skipHeadRef )
         :   mCountDone( 0 ),
-            mSkipHeadRef( skipHeadRef )
+            mSkipHeadRef( skipHeadRef ),
+            mHasVTable( false )
     {
     }
 
@@ -748,7 +749,8 @@ namespace MagoEE
             parentValCopy._Type = parentValCopy._Type->AsTypeNext()->GetNext();
         }
 
-        if ( parentValCopy._Type->AsTypeStruct() == NULL )
+        ITypeStruct* typeStruct = parentValCopy._Type->AsTypeStruct();
+        if ( typeStruct == NULL )
             return E_INVALIDARG;
 
         decl = parentValCopy._Type->GetDeclaration();
@@ -769,7 +771,7 @@ namespace MagoEE
 
         MagoEE::UdtKind kind;
         if ( decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class &&
-             wcsncmp( parentExprText, L"*cast(", 6 ) != 0 )  // already inside the base/derived class enumeration?
+             wcsncmp( parentExprText, L"cast(", 5 ) != 0 )  // already inside the base/derived class enumeration?
         {
             Address addr = 0;
             uint32_t sizeRead;
@@ -780,6 +782,13 @@ namespace MagoEE
             // don't show runtime class if it is the same as the compile time type
             if( !mClassName.empty() && mClassName == decl->GetName() )
                 mClassName.clear();
+
+            if( gShowVTable )
+            {
+                // if the class has a virtual function table, fake a member "__vfptr" (it is skipped by normal member iteration)
+                RefPtr<Declaration> vshape;
+                mHasVTable = decl->GetVTableShape( vshape.Ref() ) && vshape;
+            }
         }
 
         mMembers = members;
@@ -789,7 +798,7 @@ namespace MagoEE
 
     uint32_t EEDEnumStruct::GetCount()
     {
-        return mMembers->GetCount() + ( mClassName.empty() ? 0 : 1 );
+        return mMembers->GetCount() + ( mClassName.empty() ? 0 : 1 ) + ( mHasVTable ? 1 : 0 );
     }
 
     uint32_t EEDEnumStruct::GetIndex()
@@ -803,6 +812,13 @@ namespace MagoEE
         mMembers->Reset();
     }
 
+    uint32_t EEDEnumStruct::VShapePos() const
+    {
+        if ( !mHasVTable )
+            return UINT32_MAX;
+        return mClassName.empty() ? 0 : 1;
+    }
+
     HRESULT EEDEnumStruct::Skip( uint32_t count )
     {
         if ( count > (GetCount() - mCountDone) )
@@ -812,6 +828,11 @@ namespace MagoEE
         }
 
         if( count > 0 && mCountDone == 0 && !mClassName.empty() )
+        {
+            mCountDone++;
+            count--;
+        }
+        if ( count > 0 && mCountDone == VShapePos() )
         {
             mCountDone++;
             count--;
@@ -856,34 +877,42 @@ namespace MagoEE
         name.clear();
         fullName.clear();
 
-        if( mCountDone > 0 || mClassName.empty() )
-            if ( !mMembers->Next( decl.Ref() ) )
-                return E_FAIL;
-
-        mCountDone++;
-
-        if ( !decl )
+        if( mCountDone == 0 && !mClassName.empty() )
         {
             name = L"[" + mClassName + L"]";
-            fullName = L"*cast(" + mClassName + L"*)&(" + mParentExprText + L")";
+            fullName = L"cast(" + mClassName + L")(" + mParentExprText + L")";
             result.IsMostDerivedClass = true;
+            mCountDone++;
         }
-        else if ( decl->IsBaseClass() )
+        else if ( mCountDone == VShapePos() )
         {
-            if ( !NameBaseClass( decl, name, fullName ) )
-                return E_FAIL;
-            result.IsBaseClass = true;
-        }
-        else if( decl->IsStaticField() )
-        {
-            if ( !NameStaticMember( decl, name, fullName ) )
-                return E_FAIL;
-            result.IsStaticField = true;
+            name = L"__vfptr";
+            fullName = L"(" + mParentExprText + L").__vfptr";
+            mCountDone++;
         }
         else
         {
-            if ( !NameRegularMember( decl, name, fullName ) )
+            if ( !mMembers->Next( decl.Ref() ) )
                 return E_FAIL;
+
+            mCountDone++;
+            if ( decl->IsBaseClass() )
+            {
+                if ( !NameBaseClass( decl, name, fullName ) )
+                    return E_FAIL;
+                result.IsBaseClass = true;
+            }
+            else if( decl->IsStaticField() )
+            {
+                if ( !NameStaticMember( decl, name, fullName ) )
+                    return E_FAIL;
+                result.IsStaticField = true;
+            }
+            else
+            {
+                if ( !NameRegularMember( decl, name, fullName ) )
+                    return E_FAIL;
+            }
         }
 
         hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );

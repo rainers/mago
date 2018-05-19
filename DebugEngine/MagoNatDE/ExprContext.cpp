@@ -977,6 +977,10 @@ namespace Mago
             hr = MakeDeclarationFromTypedefSymbol( infoData, symInfo, decl );
             break;
 
+        case SymTagVTableShape:
+            hr = MakeDeclarationFromVTableShapeSymbol( infoData, symInfo, decl );
+            break;
+
         default:
             return E_FAIL;
         }
@@ -1131,6 +1135,39 @@ namespace Mago
             return E_OUTOFMEMORY;
 
         cvDecl->SetType( type );
+
+        decl = cvDecl.Detach();
+
+        return S_OK;
+    }
+
+    HRESULT ExprContext::MakeDeclarationFromVTableShapeSymbol( 
+        const MagoST::SymInfoData& infoData,
+        MagoST::ISymbolInfo* symInfo, 
+        MagoEE::Declaration*& decl )
+    {
+        HRESULT                 hr = S_OK;
+        RefPtr<MagoEE::Type>    type;
+        RefPtr<MagoEE::Type>    ptype;
+        RefPtr<GeneralCVDecl>   cvDecl;
+        uint32_t count;
+
+        // build a static array of void pointers
+        if ( !symInfo->GetCount( count ) )
+            return E_FAIL;
+
+        MagoEE::Type* vptype = mTypeEnv->GetVoidPointerType();
+        hr = mTypeEnv->NewSArray( vptype, count, type.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = mTypeEnv->NewPointer( type, ptype.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        cvDecl = new VTableCVDecl( this, count, ptype );
+        if ( cvDecl == NULL )
+            return E_OUTOFMEMORY;
 
         decl = cvDecl.Detach();
 

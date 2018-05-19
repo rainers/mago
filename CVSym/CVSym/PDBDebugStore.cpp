@@ -395,7 +395,15 @@ namespace MagoST
         }
         virtual bool GetProperties( uint16_t& props ) { UNREF_PARAM( props ); return false; }
         virtual bool GetDerivedList( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
-        virtual bool GetVShape( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
+        virtual bool GetVShape( TypeIndex& index )
+        {
+            IDiaSymbol* pSymbol = NULL;
+            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+                return false;
+
+            HRESULT hr = pSymbol->get_virtualTableShapeId( &index );
+            return hr == S_OK;
+        }
 
         virtual bool GetCallConv( uint8_t& callConv ) { UNREF_PARAM( callConv ); return false; }
         virtual bool GetParamCount( uint16_t& count ) { UNREF_PARAM( count ); return false; }

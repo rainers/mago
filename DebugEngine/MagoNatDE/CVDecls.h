@@ -50,6 +50,7 @@ namespace Mago
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
         virtual bool GetUdtKind( MagoEE::UdtKind& kind );
         virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
+        virtual bool GetVTableShape( Declaration*& decl );
 
         virtual bool IsField();
         virtual bool IsStaticField();
@@ -153,6 +154,15 @@ namespace Mago
         static RegisterCVDecl* CreateRegisterSymbol( ExprContext* symStore, const char* name );
     };
 
+    class VTableCVDecl : public GeneralCVDecl
+    {
+    public:
+        VTableCVDecl( ExprContext* symStore, uint32_t count, MagoEE::Type* type );
+        ~VTableCVDecl();
+    
+        virtual bool IsField();
+    };
+
     class TypeCVDeclMembers : public MagoEE::IEnumDeclarationMembers
     {
         long                        mRefCount;
@@ -208,6 +218,7 @@ namespace Mago
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
         virtual bool GetUdtKind( MagoEE::UdtKind& kind );
         virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
+        virtual bool GetVTableShape( Declaration*& decl );
 
         virtual bool IsField();
         virtual bool IsStaticField();

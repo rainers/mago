@@ -1262,6 +1262,13 @@ namespace MagoEE
         HRESULT hr = S_OK;
         RefPtr<Declaration> childDecl;
 
+        if ( wcscmp( name, L"__vfptr" ) == 0 )
+            if ( GetUdtKind() == Udt_Class )
+            {
+                if( mDecl->GetVTableShape( childDecl.Ref() ) )
+                    return childDecl;
+            }
+
         hr = mDecl->FindObject( name, childDecl.Ref() );
         if ( FAILED( hr ) )
             return NULL;
@@ -1459,7 +1466,6 @@ namespace MagoEE
 
         return Type::FindProperty( name );
     }
-
 
     //----------------------------------------------------------------------------
     //  TypeTypedef

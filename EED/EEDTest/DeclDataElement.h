@@ -39,6 +39,7 @@ public:
     virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
     virtual bool GetUdtKind( MagoEE::UdtKind& kind );
     virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
+    virtual bool GetVTableShape( Declaration*& decl );
 
     virtual bool IsField();
     virtual bool IsVar();

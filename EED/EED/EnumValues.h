@@ -141,6 +141,7 @@ namespace MagoEE
     {
         uint32_t        mCountDone;
         bool            mSkipHeadRef;
+        bool            mHasVTable;
 
         RefPtr<IEnumDeclarationMembers> mMembers;
         std::wstring    mClassName;
@@ -182,5 +183,7 @@ namespace MagoEE
             Declaration* decl, 
             std::wstring& name,
             std::wstring& fullName );
+
+        uint32_t VShapePos() const;
     };
 }

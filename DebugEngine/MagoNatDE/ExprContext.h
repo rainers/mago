@@ -183,12 +183,17 @@ namespace Mago
             MagoST::ISymbolInfo* symInfo, 
             MagoEE::Declaration*& decl );
 
-        HRESULT MakeDeclarationFromBaseClassSymbol( 
+        HRESULT MakeDeclarationFromBaseClassSymbol(
             const MagoST::SymInfoData& infoData,
-            MagoST::ISymbolInfo* symInfo, 
+            MagoST::ISymbolInfo* symInfo,
             MagoEE::Declaration*& decl );
 
-        HRESULT GetTypeFromTypeSymbol( 
+        HRESULT MakeDeclarationFromVTableShapeSymbol(
+            const MagoST::SymInfoData& infoData,
+            MagoST::ISymbolInfo* symInfo,
+            MagoEE::Declaration*& decl );
+
+        HRESULT GetTypeFromTypeSymbol(
             MagoST::TypeIndex typeIndex,
             MagoEE::Type*& type );
 

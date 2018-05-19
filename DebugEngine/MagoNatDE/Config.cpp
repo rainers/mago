@@ -9,6 +9,7 @@
 #include "Config.h"
 #include "MagoNatDE_i.h"
 
+#include "../MagoNatEE/Common.h"
 
 #define MAGO_SUBKEY             L"SOFTWARE\\MagoDebugger"
 
@@ -194,6 +195,13 @@ bool readMagoOptions()
         gOptions.showStaticsInAggr = val != 0;
     else
         gOptions.showStaticsInAggr = false;
+
+    if( GetRegValue( hKey, L"showVTable", &val ) == S_OK )
+        gOptions.showVTable = val != 0;
+    else
+        gOptions.showVTable = true;
+
+    MagoEE::gShowVTable = gOptions.showVTable;
 
     RegCloseKey( hKey );
     return true;
