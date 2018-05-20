@@ -612,6 +612,17 @@ namespace MagoEE
             if ( truncated )
                 outStr.append( L"..." );
         }
+        else
+        {
+            std::wstring symName;
+            hr = binder->SymbolFromAddr( objVal.Value.Addr, symName );
+            if( hr == S_OK )
+            {
+                outStr.append( L" (" );
+                outStr.append( symName );
+                outStr.append( L")" );
+            }
+        }
 
         return S_OK;
     }

@@ -681,22 +681,11 @@ namespace Mago
 
         uint16_t    sec = 0;
         uint32_t    offset = 0;
-        sec = session->GetSecOffsetFromVA( mPC, offset );
-        if ( sec == 0 )
-            return E_NOT_FOUND;
 
         // TODO: verify that it's a function or public symbol (or something else?)
-        hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, sec, offset, symHandle );
+        hr = session->FindGlobalSymbolByAddr( mPC, symHandle, sec, offset );
         if ( FAILED( hr ) )
-        {
-            hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_StaticSymbols, sec, offset, symHandle );
-            if ( FAILED( hr ) )
-            {
-                hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_PublicSymbols, sec, offset, symHandle );
-                if ( FAILED( hr ) )
-                    return hr;
-            }
-        }
+            return hr;
 
         mFuncSH = symHandle;
 

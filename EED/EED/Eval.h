@@ -118,5 +118,6 @@ namespace MagoEE
         virtual HRESULT SetValue( Address addr, Type* type, const DataValue& value ) = 0;
 
         virtual HRESULT ReadMemory( Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer ) = 0;
+        virtual HRESULT SymbolFromAddr( Address addr, std::wstring& symName ) = 0;
     };
 }

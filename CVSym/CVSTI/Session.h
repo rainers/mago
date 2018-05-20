@@ -62,6 +62,8 @@ namespace MagoST
             size_t nameLen, 
             SymHandle& handle );
 
+        virtual HRESULT FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset );
+
         virtual HRESULT FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle );
         virtual HRESULT FindOuterSymbolByRVA( SymbolHeapId heapId, DWORD rva, SymHandle& handle );
         virtual HRESULT FindOuterSymbolByVA( SymbolHeapId heapId, DWORD64 va, SymHandle& handle );

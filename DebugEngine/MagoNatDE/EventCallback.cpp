@@ -692,8 +692,7 @@ namespace Mago
         hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, section, offset, symHandle );
         if ( hr != S_OK )
         {
-            hr = session->FindOuterSymbolByAddr( 
-                MagoST::SymHeap_StaticSymbols, section, offset, symHandle );
+            hr = session->FindOuterSymbolByAddr(  MagoST::SymHeap_StaticSymbols, section, offset, symHandle );
         }
         if ( hr == S_OK )
         {

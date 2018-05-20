@@ -68,4 +68,5 @@ public:
     virtual HRESULT SetValue( MagoEE::Address addr, MagoEE::Type* type, const MagoEE::DataValue& value );
 
     virtual HRESULT ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer );
+    virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName );
 };

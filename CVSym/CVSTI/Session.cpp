@@ -142,6 +142,21 @@ namespace MagoST
         return S_FALSE;
     }
 
+    HRESULT Session::FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset )
+    {
+        sec = GetSecOffsetFromVA( va, offset );
+        if ( sec == 0 )
+            return E_NOT_FOUND;
+
+        HRESULT hr = FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, sec, offset, symHandle );
+        if ( FAILED( hr ) )
+            hr = FindOuterSymbolByAddr( MagoST::SymHeap_StaticSymbols, sec, offset, symHandle );
+        if ( FAILED( hr ) )
+            hr = FindOuterSymbolByAddr( MagoST::SymHeap_PublicSymbols, sec, offset, symHandle );
+
+        return hr;
+    }
+
     HRESULT Session::FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle )
     {
         return mStore->FindSymbol( heapId, segment, offset, handle );

@@ -248,6 +248,8 @@ namespace MagoEE
             fullName.append( L")" );
         fullName.append( name );
 
+        mCountDone++;
+
         hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
         if ( FAILED( hr ) )
             return hr;
@@ -259,8 +261,6 @@ namespace MagoEE
         hr = parsedExpr->Evaluate( options, mBinder, result );
         if ( FAILED( hr ) )
             return hr;
-
-        mCountDone++;
 
         return S_OK;
     }

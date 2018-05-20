@@ -720,6 +720,53 @@ namespace Mago
         return S_OK;
     }
 
+    std::wstring SymStringToWString( const SymString& sym )
+    {
+        int len = MultiByteToWideChar( CP_UTF8, 0, sym.GetName(), sym.GetLength(), NULL, 0 );
+        std::wstring wname;
+        wname.resize(len);
+        MultiByteToWideChar( CP_UTF8, 0, sym.GetName(), sym.GetLength(), (wchar_t*)wname.data(), len);
+        return wname;
+    }
+
+    HRESULT ExprContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName )
+    {
+        RefPtr<MagoST::ISession>    session;
+        MagoST::SymHandle           symHandle = { 0 };
+
+        if ( GetSession( session.Ref() ) != S_OK )
+            return E_NOT_FOUND;
+
+        uint16_t    sec = 0;
+        uint32_t    offset = 0;
+        HRESULT hr = session->FindGlobalSymbolByAddr( addr, symHandle, sec, offset );
+        if ( FAILED( hr ) )
+            return hr;
+
+        MagoST::SymInfoData infoData = { 0 };
+        MagoST::ISymbolInfo* symInfo;
+        hr = session->GetSymbolInfo( symHandle, infoData, symInfo );
+        if ( FAILED( hr ) )
+            return hr;
+
+        uint16_t    symSec = 0;
+        uint32_t    symOffset = 0;
+        if ( !symInfo->GetAddressOffset( symOffset ) )
+            return E_FAIL;
+        if ( !symInfo->GetAddressSegment( symSec ) )
+            return E_FAIL;
+
+        if( symSec != sec || symOffset != offset )
+            return E_NOT_FOUND;
+
+        SymString pstrName;
+        if ( !symInfo->GetName( pstrName ) )
+            return E_FAIL;
+
+        symName = SymStringToWString( pstrName );
+        return S_OK;
+    }
+
     ////////////////////////////////////////////////////////////////////////////// 
 
     HRESULT ExprContext::Init( 

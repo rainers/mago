@@ -391,3 +391,8 @@ HRESULT DataEnvBinder::ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, ui
 {
     return E_NOTIMPL;
 }
+
+HRESULT DataEnvBinder::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName )
+{
+    return E_NOTIMPL;
+}

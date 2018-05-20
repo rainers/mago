@@ -109,6 +109,8 @@ namespace Mago
             uint32_t& sizeWritten, 
             uint8_t* buffer );
 
+        virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName );
+
         virtual HRESULT GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value );
 
         virtual Address64 GetTebBase();
