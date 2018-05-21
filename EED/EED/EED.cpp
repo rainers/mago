@@ -201,6 +201,11 @@ namespace MagoEE
         }
         else if ( parentVal._Type->IsPointer() )
         {
+            // no children for void pointers
+            if ( auto ptype = parentVal._Type->AsTypeNext() )
+                if ( ptype->GetNext()->GetBackingTy() == Tvoid )
+                    return E_FAIL;
+
             en = new EEDEnumPointer();
         }
         else if ( parentVal._Type->IsSArray() )
@@ -276,7 +281,10 @@ namespace MagoEE
             // HasChildren/HasRawChildren
             if ( type->IsPointer() )
             {
-                result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
+                if( type->AsTypeNext()->GetNext()->GetBackingTy() == Tvoid )
+                    result.HasChildren = result.HasRawChildren = false;
+                else
+                    result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
             }
             else if ( ITypeSArray* sa = type->AsTypeSArray() )
             {

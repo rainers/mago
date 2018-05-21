@@ -85,7 +85,7 @@ namespace MagoEE
         {
             int width = type->GetSize() * 2;
             
-            swprintf_s( buf, L"0x%0*I64X", width, number );
+            swprintf_s( buf, L"0x%0*I64x", width, number );
         }
         else    // it's 10, or make it 10
         {
@@ -618,9 +618,9 @@ namespace MagoEE
             hr = binder->SymbolFromAddr( objVal.Value.Addr, symName );
             if( hr == S_OK )
             {
-                outStr.append( L" (" );
+                outStr.append( L" {" );
                 outStr.append( symName );
-                outStr.append( L")" );
+		outStr.append( L"}" );
             }
         }
 
