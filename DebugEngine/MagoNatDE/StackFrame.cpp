@@ -681,9 +681,10 @@ namespace Mago
 
         uint16_t    sec = 0;
         uint32_t    offset = 0;
+        uint32_t    symOff = 0;
 
         // TODO: verify that it's a function or public symbol (or something else?)
-        hr = session->FindGlobalSymbolByAddr( mPC, symHandle, sec, offset );
+        hr = session->FindGlobalSymbolByAddr( mPC, symHandle, sec, offset, symOff );
         if ( FAILED( hr ) )
             return hr;
 

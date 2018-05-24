@@ -396,3 +396,8 @@ HRESULT DataEnvBinder::SymbolFromAddr( MagoEE::Address addr, std::wstring& symNa
 {
     return E_NOTIMPL;
 }
+
+HRESULT DataEnvBinder::CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::DataObject& value )
+{
+    return E_NOTIMPL;
+}

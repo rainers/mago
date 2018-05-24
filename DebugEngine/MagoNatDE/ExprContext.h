@@ -111,6 +111,8 @@ namespace Mago
 
         virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName );
 
+        virtual HRESULT CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::DataObject& value );
+
         virtual HRESULT GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value );
 
         virtual Address64 GetTebBase();

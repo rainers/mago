@@ -142,24 +142,28 @@ namespace MagoST
         return S_FALSE;
     }
 
-    HRESULT Session::FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset )
+    HRESULT Session::FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff )
     {
         sec = GetSecOffsetFromVA( va, offset );
         if ( sec == 0 )
             return E_NOT_FOUND;
 
-        HRESULT hr = FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, sec, offset, symHandle );
+        DWORD off = 0;
+        HRESULT hr = FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, sec, offset, symHandle, off );
         if ( FAILED( hr ) )
-            hr = FindOuterSymbolByAddr( MagoST::SymHeap_StaticSymbols, sec, offset, symHandle );
+            hr = FindOuterSymbolByAddr( MagoST::SymHeap_StaticSymbols, sec, offset, symHandle, off );
         if ( FAILED( hr ) )
-            hr = FindOuterSymbolByAddr( MagoST::SymHeap_PublicSymbols, sec, offset, symHandle );
+            hr = FindOuterSymbolByAddr( MagoST::SymHeap_PublicSymbols, sec, offset, symHandle, off );
+
+        if ( !FAILED( hr ) )
+            symOff = off;
 
         return hr;
     }
 
-    HRESULT Session::FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle )
+    HRESULT Session::FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff )
     {
-        return mStore->FindSymbol( heapId, segment, offset, handle );
+        return mStore->FindSymbol( heapId, segment, offset, handle, symOff );
     }
 
     HRESULT Session::FindOuterSymbolByRVA( SymbolHeapId heapId, DWORD rva, SymHandle& handle )
@@ -171,7 +175,8 @@ namespace MagoST
         if ( sec == 0 )
             return HRESULT_FROM_WIN32( ERROR_NOT_FOUND );
 
-        return mStore->FindSymbol( heapId, sec, offset, handle );
+        DWORD symOff;
+        return mStore->FindSymbol( heapId, sec, offset, handle, symOff );
     }
 
     HRESULT Session::FindOuterSymbolByVA( SymbolHeapId heapId, DWORD64 va, SymHandle& handle )

@@ -620,7 +620,7 @@ namespace MagoEE
             {
                 outStr.append( L" {" );
                 outStr.append( symName );
-		outStr.append( L"}" );
+                outStr.append( L"}" );
             }
         }
 

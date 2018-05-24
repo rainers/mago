@@ -328,6 +328,7 @@ namespace MagoEE
         L"Too few function arguments",
         L"Calling functions not implemented",
         L"failed to read register",
+        L"unsupported calling convention",
     };
 
     // returns: S_FALSE on error not found

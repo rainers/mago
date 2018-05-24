@@ -688,11 +688,12 @@ namespace Mago
     {
         HRESULT hr = S_OK;
         MagoST::SymHandle symHandle;
+        DWORD symOff = 0;
 
-        hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, section, offset, symHandle );
+        hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, section, offset, symHandle, symOff );
         if ( hr != S_OK )
         {
-            hr = session->FindOuterSymbolByAddr(  MagoST::SymHeap_StaticSymbols, section, offset, symHandle );
+            hr = session->FindOuterSymbolByAddr(  MagoST::SymHeap_StaticSymbols, section, offset, symHandle, symOff );
         }
         if ( hr == S_OK )
         {

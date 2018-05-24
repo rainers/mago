@@ -39,7 +39,7 @@ namespace MagoEE
         virtual HRESULT NewTypedef( const wchar_t* name, Type* aliasedType, Type*& type ) = 0;
         virtual HRESULT NewParam( StorageClass storage, Type* type, Parameter*& param ) = 0;
         virtual HRESULT NewParams( ParameterList*& paramList ) = 0;
-        virtual HRESULT NewFunction( Type* returnType, ParameterList* params, int varArgs, Type*& type ) = 0;
+        virtual HRESULT NewFunction( Type* returnType, ParameterList* params, uint8_t callConv, int varArgs, Type*& type ) = 0;
         virtual HRESULT NewDelegate( Type* funcType, Type*& type ) = 0;
     };
 }

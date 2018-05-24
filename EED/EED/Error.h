@@ -21,6 +21,7 @@ enum
 {
     E_MAGOEE_BASE = MAKE_HRESULT( SEVERITY_ERROR, MagoEE::HR_FACILITY, 0 ),
 
+    // needs to be in sync with gErrStrs[]
     E_MAGOEE_SYNTAX_ERROR,
     E_MAGOEE_BAD_TYPES_FOR_OP,
     E_MAGOEE_VALUE_EXPECTED,
@@ -38,6 +39,7 @@ enum
     E_MAGOEE_TOO_FEW_ARGUMENTS,
     E_MAGOEE_CALL_NOT_IMPLEMENTED,
     E_MAGOEE_BADREGISTER,
+    E_MAGOEE_BADCALLCONV,
 
     // TODO: maybe something like RUNTIME_ERROR or DEBUG_INFO_ERROR
     //  for cases like this: Decl->GetType( _Type.Ref() )   (see ThisExpr::Semantic)

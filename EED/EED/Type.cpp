@@ -968,10 +968,11 @@ namespace MagoEE
     //  TypeFunction
     //----------------------------------------------------------------------------
 
-    TypeFunction::TypeFunction( ParameterList* params, Type* retType, int varArgs )
+    TypeFunction::TypeFunction( ParameterList* params, Type* retType, uint8_t callConv, int varArgs )
         :   TypeNext( Tfunction, retType ),
             Params( params ),
             VarArgs( varArgs ),
+            mCallConv( callConv ),
             mIsPure( false ),
             mIsNoThrow( false ),
             mIsProperty( false ),
@@ -981,7 +982,7 @@ namespace MagoEE
 
     RefPtr<Type> TypeFunction::Copy()
     {
-        RefPtr<Type>    type = new TypeFunction( Params.Get(), Next.Get(), VarArgs );
+        RefPtr<Type>    type = new TypeFunction( Params.Get(), Next.Get(), mCallConv, VarArgs );
         ITypeFunction* funcType = type->AsTypeFunction();
         funcType->SetPure( mIsPure );
         funcType->SetNoThrow( mIsNoThrow );
@@ -1006,6 +1007,9 @@ namespace MagoEE
             return false;
 
         if ( VarArgs != otherFunc->GetVarArgs() )
+            return false;
+
+        if ( mCallConv != otherFunc->GetCallConv() )
             return false;
 
         ParameterList*  otherParams = otherFunc->GetParams();
@@ -1144,6 +1148,17 @@ namespace MagoEE
         return mTrust;
     }
 
+    uint8_t TypeFunction::GetCallConv()
+    {
+        return mCallConv;
+    }
+
+    void TypeFunction::SetCallConv( uint8_t value )
+    {
+        mCallConv = value;
+    }
+
+
     void TypeFunction::SetPure( bool value )
     {
         mIsPure = value;
@@ -1151,7 +1166,7 @@ namespace MagoEE
 
     void TypeFunction::SetNoThrow( bool value )
     {
-        mIsNoThrow= value;
+        mIsNoThrow = value;
     }
 
     void TypeFunction::SetProperty( bool value )

@@ -739,9 +739,13 @@ namespace Mago
 
         uint16_t    sec = 0;
         uint32_t    offset = 0;
-        HRESULT hr = session->FindGlobalSymbolByAddr( addr, symHandle, sec, offset );
+        uint32_t    symOff = 0;
+        HRESULT hr = session->FindGlobalSymbolByAddr( addr, symHandle, sec, offset, symOff );
         if ( FAILED( hr ) )
             return hr;
+
+        if ( symOff != 0 )
+            return E_NOT_FOUND;
 
         MagoST::SymInfoData infoData = { 0 };
         MagoST::ISymbolInfo* symInfo;
@@ -749,22 +753,17 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        uint16_t    symSec = 0;
-        uint32_t    symOffset = 0;
-        if ( !symInfo->GetAddressOffset( symOffset ) )
-            return E_FAIL;
-        if ( !symInfo->GetAddressSegment( symSec ) )
-            return E_FAIL;
-
-        if( symSec != sec || symOffset != offset )
-            return E_NOT_FOUND;
-
         SymString pstrName;
         if ( !symInfo->GetName( pstrName ) )
             return E_FAIL;
 
         symName = SymStringToWString( pstrName );
         return S_OK;
+    }
+
+    HRESULT ExprContext::CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::DataObject& value )
+    {
+        return E_MAGOEE_CALL_NOT_IMPLEMENTED;
     }
 
     ////////////////////////////////////////////////////////////////////////////// 
@@ -1013,6 +1012,7 @@ namespace Mago
         switch ( tag )
         {
         case SymTagData:
+        case SymTagFunction:
             hr = MakeDeclarationFromDataSymbol( infoData, symInfo, decl );
             break;
 
@@ -1477,8 +1477,12 @@ namespace Mago
             params->List.push_back( param );
         }
 
+        uint8_t callConv;
+        if ( !symInfo->GetCallConv( callConv ) )
+            return E_FAIL;
+
         // TODO: calling convention/var args
-        hr = mTypeEnv->NewFunction( retType, params, 0, type );
+        hr = mTypeEnv->NewFunction( retType, params, callConv, 0, type );
         if ( FAILED( hr ) )
             return hr;
 

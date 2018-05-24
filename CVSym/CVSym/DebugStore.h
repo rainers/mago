@@ -40,7 +40,7 @@ namespace MagoST
         virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle ) = 0;
         virtual HRESULT GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle ) = 0;
 
-        virtual HRESULT FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle ) = 0;
+        virtual HRESULT FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff ) = 0;
 
         virtual HRESULT GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo ) = 0;
 
@@ -142,7 +142,7 @@ namespace MagoST
         virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle );
         virtual HRESULT GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle );
 
-        virtual HRESULT FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle );
+        virtual HRESULT FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff );
 
         virtual HRESULT GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo );
 
@@ -200,7 +200,7 @@ namespace MagoST
         HRESULT SetSymbolScopeForDirEntry( OMFDirEntry* entry, SymbolScope& scope );
 
         HRESULT FindFirstSymHashSymbol( const char* nameChars, size_t nameLen, OMFDirEntry* entry, EnumNamedSymbolsData& data );
-        HRESULT FindSymHashSymbol( WORD segment, DWORD offset, OMFDirEntry* entry, SymHandle& handle );
+        HRESULT FindSymHashSymbol( WORD segment, DWORD offset, OMFDirEntry* entry, SymHandle& handle, DWORD& symOff );
 
         HRESULT GetSymbolHeapBaseForDirEntry( OMFDirEntry* entry, BYTE*& heapBase );
         HRESULT GetSymHashSymbolHeapBase( OMFDirEntry* entry, BYTE*& heapBase );

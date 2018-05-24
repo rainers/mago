@@ -1374,8 +1374,25 @@ namespace MagoEE
 
     HRESULT CallExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
     {
-        //_ASSERT( false );
-        return E_MAGOEE_CALL_NOT_IMPLEMENTED;
+        if( mode == EvalMode_Address )
+            return E_MAGOEE_NO_ADDRESS;
+
+        if( Args->List.size() != 0 )
+            return E_MAGOEE_TOO_MANY_ARGUMENTS;
+
+        auto ne = Child->AsNamingExpression();
+        if ( ne == NULL )
+            return E_MAGOEE_TYPE_RESOLVE_FAILED;
+
+        Address addr;
+        if( !ne->Decl->GetAddress( addr ) )
+            return E_MAGOEE_NO_ADDRESS;
+
+        ITypeFunction* func = Child->_Type->AsTypeFunction();
+
+        obj._Type = _Type;
+        HRESULT hr = binder->CallFunction( addr, func->GetCallConv(), obj );
+        return hr;
     }
 
 }

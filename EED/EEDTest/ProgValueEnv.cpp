@@ -1099,8 +1099,12 @@ RefPtr<Type> ProgramValueEnv::GetFunctionTypeFromTypeSymbol(
         params->List.push_back( param );
     }
 
-    // TODO: calling convention/var args
-    hr = typeEnv->NewFunction( retType, params, 0, type.Ref() );
+    uint8_t callConv;
+    if ( !symInfo->GetCallConv( callConv ) )
+        throw L"Couldn't get calling convention.";
+
+    // TODO: var args
+    hr = typeEnv->NewFunction( retType, params, callConv, 0, type.Ref() );
     if ( FAILED( hr ) )
         throw L"Couldn't make new function type.";
 

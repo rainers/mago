@@ -317,11 +317,13 @@ namespace MagoEE
         virtual int     GetVarArgs() = 0;
         virtual ParameterList*  GetParams() = 0;
 
+        virtual uint8_t GetCallConv() = 0;
         virtual bool    IsPure() = 0;
         virtual bool    IsNoThrow() = 0;
         virtual bool    IsProperty() = 0;
         virtual TRUST   GetTrust() = 0;
 
+        virtual void    SetCallConv( uint8_t value ) = 0;
         virtual void    SetPure( bool value ) = 0;
         virtual void    SetNoThrow( bool value ) = 0;
         virtual void    SetProperty( bool value ) = 0;
@@ -337,12 +339,13 @@ namespace MagoEE
         bool                    mIsPure;
         bool                    mIsNoThrow;
         bool                    mIsProperty;
+        uint8_t                 mCallConv; // as CV_call_e in cvconst.h
         TRUST                   mTrust;
         RefPtr<ParameterList>   Params;
         int                     VarArgs;
 
     public:
-        TypeFunction( ParameterList* params, Type* retType, int varArgs );
+        TypeFunction( ParameterList* params, Type* retType, uint8_t callConv, int varArgs );
         virtual RefPtr<Type>    Copy();
         virtual bool IsFunction();
         virtual bool Equals( Type* other );
@@ -354,11 +357,13 @@ namespace MagoEE
         virtual int     GetVarArgs();
         virtual ParameterList*  GetParams();
 
+        virtual uint8_t GetCallConv();
         virtual bool    IsPure();
         virtual bool    IsNoThrow();
         virtual bool    IsProperty();
         virtual TRUST   GetTrust();
 
+        virtual void    SetCallConv( uint8_t value );
         virtual void    SetPure( bool value );
         virtual void    SetNoThrow( bool value );
         virtual void    SetProperty( bool value );

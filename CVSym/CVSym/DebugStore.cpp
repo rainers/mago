@@ -568,17 +568,17 @@ namespace MagoST
         return S_OK;
     }
 
-    HRESULT DebugStore::FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle )
+    HRESULT DebugStore::FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff )
     {
         if ( heapId >= SymHeap_Max )
             return E_INVALIDARG;
         if ( mSymsDir[heapId] == NULL )
             return E_FAIL;
 
-        return FindSymHashSymbol( segment, offset, mSymsDir[heapId], handle );
+        return FindSymHashSymbol( segment, offset, mSymsDir[heapId], handle, symOff );
     }
 
-    HRESULT DebugStore::FindSymHashSymbol( WORD segment, DWORD offset, OMFDirEntry* entry, SymHandle& handle )
+    HRESULT DebugStore::FindSymHashSymbol( WORD segment, DWORD offset, OMFDirEntry* entry, SymHandle& handle, DWORD& symOff )
     {
         SymHandleIn*    internalHandle = (SymHandleIn*) &handle;
         OMFSymHash*     symHash = GetCVPtr<OMFSymHash>( entry->lfo );
@@ -613,14 +613,16 @@ namespace MagoST
         uint32_t length = 0;
         uint32_t addrOffset = 0;
 
+        QuickGetAddrOffset( internalHandle->Sym, addrOffset );
+
         // if it's a procedure, then validate the offset is inside it
         if ( QuickGetLength( internalHandle->Sym, length ) )
         {
-            if ( !QuickGetAddrOffset( internalHandle->Sym, addrOffset )
-                || (offset < addrOffset) || (offset >= (addrOffset + length)) )
+            if ( (offset < addrOffset) || (offset >= (addrOffset + length)) )
                 return E_FAIL;
         }
 
+        symOff = addrOffset - offset;
         return S_OK;
     }
 

@@ -50,6 +50,8 @@
 
 #define tryHR(x) do { HRESULT _hr = (x); if(FAILED(_hr)) return _hr; } while(false)
 
+Evaluation::IL::DkmILCallingConvention::e toCallingConvention(uint8_t callConv);
+
 // stub to read/write memory from process, all other functions supposed to not be called
 class CCDebuggerProxy : public Mago::IDebuggerProxy
 {
@@ -332,11 +334,12 @@ protected:
             return E_NOT_FOUND;
 
         // TODO: verify that it's a function or public symbol (or something else?)
-        HRESULT hr = mSession->FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, sec, offset, funcSH );
+        DWORD symOff = 0;
+        HRESULT hr = mSession->FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, sec, offset, funcSH, symOff );
         if ( FAILED( hr ) )
-            hr = mSession->FindOuterSymbolByAddr( MagoST::SymHeap_StaticSymbols, sec, offset, funcSH );
+            hr = mSession->FindOuterSymbolByAddr( MagoST::SymHeap_StaticSymbols, sec, offset, funcSH, symOff);
         if ( FAILED( hr ) )
-            hr = mSession->FindOuterSymbolByAddr( MagoST::SymHeap_PublicSymbols, sec, offset, funcSH );
+            hr = mSession->FindOuterSymbolByAddr( MagoST::SymHeap_PublicSymbols, sec, offset, funcSH, symOff);
         if ( FAILED( hr ) )
             return hr;
 
@@ -461,6 +464,72 @@ public:
         return mStackFrame->Thread()->TebAddress();
     }
 
+    virtual HRESULT CallFunction(MagoEE::Address addr, uint8_t callConv, MagoEE::DataObject& obj)
+    {
+        using namespace Evaluation::IL;
+
+        // push function address
+        int ptrSize = mModule->mArchData->GetPointerSize();
+
+        RefPtr<DkmReadOnlyCollection<BYTE>> paddr;
+        tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&addr, ptrSize, &paddr.Ref()));
+
+        RefPtr<DkmILPushConstant> ppush = nullptr;
+        tryHR(DkmILPushConstant::Create(paddr, &ppush.Ref()));
+
+        // call function
+        UINT32 ArgumentCount = 0;
+        UINT32 ReturnValueSize = obj._Type->GetSize();
+        DkmILCallingConvention::e CallingConvention = ptrSize == 4 ? toCallingConvention(callConv) : DkmILCallingConvention::StdCall;
+        if (CallingConvention == DkmILCallingConvention::e(-1))
+            return E_MAGOEE_BADCALLCONV;
+        DkmILFunctionEvaluationFlags::e Flags = DkmILFunctionEvaluationFlags::Default;
+        RefPtr<DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>> argFlags;
+        tryHR(DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>::Create(nullptr, 0, &argFlags.Ref()));
+        UINT32 UniformComplexReturnElementSize = 0;
+
+        RefPtr<DkmILExecuteFunction> pcall;
+        tryHR(DkmILExecuteFunction::Create(ArgumentCount, ReturnValueSize, CallingConvention, Flags, argFlags, 0, &pcall.Ref()));
+
+        // return top of stack
+        RefPtr<DkmILReturnTop> preturn = nullptr;
+        tryHR(DkmILReturnTop::Create(&preturn.Ref()));
+
+        RefPtr<DkmReadOnlyCollection<DkmILInstruction*>> pinstr;
+        DkmILInstruction* instructions[3] = { ppush, pcall, preturn };
+        tryHR(DkmReadOnlyCollection<DkmILInstruction*>::Create(instructions, 3, &pinstr.Ref()));
+
+        // run instructions
+        RefPtr<DkmCompiledILInspectionQuery> pquery;
+        tryHR(DkmCompiledILInspectionQuery::Create(mStackFrame->RuntimeInstance(), pinstr, &pquery.Ref()));
+
+        RefPtr<Evaluation::DkmILContext> pcontext;
+        tryHR(Evaluation::DkmILContext::Create(mStackFrame, nullptr, &pcontext.Ref()));
+
+        DkmILEvaluationResult* results[1] = { nullptr };
+        DkmArray<DkmILEvaluationResult*> arrResults;
+        DkmILFailureReason::e failureReason;
+        HRESULT hr = pquery->Execute(nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None, &arrResults, &failureReason);
+
+        if (!FAILED(hr))
+        {
+            if (arrResults.Length > 0 && arrResults.Members[0])
+            {
+                DkmReadOnlyCollection<BYTE>* res = arrResults.Members[0]->ResultBytes();
+                if (res && res->Count() == ReturnValueSize)
+                    if (ReturnValueSize <= sizeof(MagoEE::DataValue))
+                    {
+                        memcpy(&obj.Value, res->Items(), ReturnValueSize);
+                        hr = S_OK;
+                    }
+            }
+            else
+                hr = ReturnValueSize == 0 ? S_OK : E_FAIL;
+        }
+        DkmFreeArray(arrResults);
+        return hr;
+    }
+
     Mago::IRegisterSet* getRegSet() { return mModule->mRegSet; }
 };
 
@@ -548,25 +617,45 @@ Evaluation::DkmEvaluationResultTypeModifierFlags::e toResultModifierFlags(DBG_AT
     return resultFlags;
 }
 
+Evaluation::IL::DkmILCallingConvention::e toCallingConvention(uint8_t callConv)
+{
+    switch (callConv)
+    {
+    case CV_CALL_NEAR_C:
+        return Evaluation::IL::DkmILCallingConvention::CDecl;
+    case CV_CALL_NEAR_PASCAL: // reverse order of args, so ok up to 1 arg
+    case CV_CALL_NEAR_STD:
+        return Evaluation::IL::DkmILCallingConvention::StdCall;
+    case CV_CALL_THISCALL:
+        return Evaluation::IL::DkmILCallingConvention::ThisCall;
+    case CV_CALL_NEAR_FAST:
+        return Evaluation::IL::DkmILCallingConvention::FastCall;
+    }
+    return Evaluation::IL::DkmILCallingConvention::e (-1);
+}
+
 HRESULT createEvaluationResult(Evaluation::DkmInspectionContext* pInspectionContext, CallStack::DkmStackWalkFrame* pStackFrame,
                                DEBUG_PROPERTY_INFO& info, Evaluation::DkmSuccessEvaluationResult** ppResultObject)
 {
-    HRESULT hr;
+    HRESULT hr = E_FAIL;
     CComPtr<Evaluation::DkmDataAddress> dataAddr;
     CComPtr<IDebugMemoryContext2> memctx;
-    hr = info.pProperty->GetMemoryContext(&memctx);
-    if(hr == S_OK) // doesn't fail for properties without context
+    if (info.pProperty)
     {
-        CComPtr<Mago::IMagoMemoryContext> magoCtx;
-        hr = memctx->QueryInterface(&magoCtx);
-        if(SUCCEEDED(hr))
+        hr = info.pProperty->GetMemoryContext(&memctx);
+        if(hr == S_OK) // doesn't fail for properties without context
         {
-            UINT64 addr = 0;
-            tryHR(magoCtx->GetAddress(addr));
-            tryHR(Evaluation::DkmDataAddress::Create(pInspectionContext->RuntimeInstance(), addr, nullptr, &dataAddr));
+            CComPtr<Mago::IMagoMemoryContext> magoCtx;
+            hr = memctx->QueryInterface(&magoCtx);
+            if(SUCCEEDED(hr))
+            {
+                UINT64 addr = 0;
+                tryHR(magoCtx->GetAddress(addr));
+                // ignore error: fails for instruction addresses
+                Evaluation::DkmDataAddress::Create(pInspectionContext->RuntimeInstance(), addr, nullptr, &dataAddr);
+            }
         }
     }
-
     Evaluation::DkmEvaluationResultFlags::e resultFlags = toResultFlags(info.dwAttrib);
     if (dataAddr)
         resultFlags |= Evaluation::DkmEvaluationResultFlags::Address;
@@ -586,7 +675,7 @@ HRESULT createEvaluationResult(Evaluation::DkmInspectionContext* pInspectionCont
         dataAddr, // address
         nullptr, // UI visiualizers
         nullptr, // external modules
-        DkmDataItem(info.pProperty, __uuidof(Mago::Property)),
+        info.pProperty ? DkmDataItem(info.pProperty, __uuidof(Mago::Property)) : DkmDataItem::Null(),
         ppResultObject);
     return hr;
 }
@@ -634,27 +723,27 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     RefPtr<MagoEE::IEEDParsedExpr> pExpr;
     hr = MagoEE::ParseText(exprText.c_str(), exprContext->GetTypeEnv(), exprContext->GetStringTable(), pExpr.Ref());
     if (FAILED(hr))
-        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+    return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalOptions options = { 0 };
     hr = pExpr->Bind(options, exprContext);
     if (FAILED(hr))
-        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+    return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalResult value = { 0 };
     hr = pExpr->Evaluate(options, exprContext, value);
     if (FAILED(hr))
-        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+    return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     RefPtr<Mago::Property> pProperty;
     tryHR(MakeCComObject(pProperty));
     tryHR(pProperty->Init(exprText.c_str(), exprText.c_str(), value, exprContext, fmtopt));
 
+    ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
     int radix = pInspectionContext->Radix();
     int timeout = pInspectionContext->Timeout();
-    ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
     tryHR(pProperty->GetPropertyInfo(DEBUGPROP_INFO_ALL, radix, timeout, nullptr, 0, &info));
-    
+
     Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
     tryHR(createEvaluationResult(pInspectionContext, pStackFrame, info, &pResultObject));
 

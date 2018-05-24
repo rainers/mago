@@ -742,7 +742,7 @@ Done:
 
         NextToken();
 
-        for ( ; ; )
+        while ( GetTokenCode() != TOKrparen )
         {
             RefPtr<Expression>  arg = ParseAssignExpr();
 

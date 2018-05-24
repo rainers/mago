@@ -687,6 +687,7 @@ Done:
                     bool isproperty = false;
                     TRUST trust = TRUSTdefault;
                     int varArgs = 0;
+                    uint8_t callConv = 0; // C call
 
                     NextToken();
                     params = ParseParams( varArgs );
@@ -727,7 +728,7 @@ Done:
                         NextToken();
                     }
 
-                    RefPtr<TypeFunction>    funcType = new TypeFunction( params.Get(), type2.Get(), varArgs );
+                    RefPtr<TypeFunction> funcType = new TypeFunction( params.Get(), type2.Get(), callConv, varArgs );
                     funcType->SetPure( ispure );
                     funcType->SetNoThrow( isnothrow );
                     funcType->SetProperty( isproperty );

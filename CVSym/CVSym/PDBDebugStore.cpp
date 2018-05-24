@@ -222,7 +222,11 @@ namespace MagoST
             if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
                 return false;
 
-            HRESULT hr = pSymbol->get_addressOffset( (DWORD*) &offset );
+            HRESULT hr;
+            // try thunk target address instead?
+            hr = pSymbol->get_targetOffset( (DWORD*) &offset );
+            if( hr != S_OK )
+                hr = pSymbol->get_addressOffset( (DWORD*) &offset );
             pSymbol->Release();
             return hr == S_OK;
         }
@@ -234,7 +238,10 @@ namespace MagoST
                 return false;
 
             DWORD section = 0;
-            HRESULT hr = pSymbol->get_addressSection( &section );
+            HRESULT hr;
+            hr = pSymbol->get_targetSection( &section );
+            if( hr != S_OK )
+                hr = pSymbol->get_addressSection( &section );
             pSymbol->Release();
             segment = (uint16_t) section;
             return hr == S_OK;
@@ -402,10 +409,23 @@ namespace MagoST
                 return false;
 
             HRESULT hr = pSymbol->get_virtualTableShapeId( &index );
+            pSymbol->Release();
             return hr == S_OK;
         }
 
-        virtual bool GetCallConv( uint8_t& callConv ) { UNREF_PARAM( callConv ); return false; }
+        virtual bool GetCallConv( uint8_t& callConv )
+        {
+            IDiaSymbol* pSymbol = NULL;
+            if (FAILED(mStore->getSession()->symbolById(mId, &pSymbol)))
+                return false;
+
+            DWORD cc;
+            HRESULT hr = pSymbol->get_callingConvention( &cc );
+            if (!FAILED(hr))
+                callConv = (uint8_t)cc;
+            pSymbol->Release();
+            return hr == S_OK;
+        }
         virtual bool GetParamCount( uint16_t& count ) { UNREF_PARAM( count ); return false; }
         virtual bool GetParamList( TypeIndex& index )
         {
@@ -780,7 +800,7 @@ namespace MagoST
         return S_OK;
     }
 
-    HRESULT PDBDebugStore::FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle )
+    HRESULT PDBDebugStore::FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff )
     {
         UNREFERENCED_PARAMETER( heapId );
 
@@ -793,21 +813,24 @@ namespace MagoST
         mSession->findSymbolByAddr( segment, offset, SymTagFunction, &pSymbol2 );
         mSession->findSymbolByAddr( segment, offset, SymTagData, &pSymbol3 );
         IDiaSymbol* pSymbol = pSymbol1;
-        DWORD symoff = 0;
+        DWORD bestoff = 0;
         DWORD off, sec;
         if( pSymbol1 && pSymbol1->get_addressSection( &sec ) == S_OK && sec == segment )
-            (pSymbol = pSymbol1)->get_addressOffset(&symoff);
+            (pSymbol = pSymbol1)->get_addressOffset( &bestoff );
 
         if( pSymbol2 && pSymbol2->get_addressSection( &sec ) == S_OK && sec == segment )
-            if( pSymbol2->get_addressOffset(&off) == S_OK && off >= symoff )
-                pSymbol = pSymbol2, symoff = off;
+            if( pSymbol2->get_addressOffset( &off ) == S_OK && off >= bestoff )
+                pSymbol = pSymbol2, bestoff = off;
         if( pSymbol3 && pSymbol3->get_addressSection( &sec ) == S_OK && sec == segment )
-            if( pSymbol3->get_addressOffset(&off) == S_OK && off >= symoff )
-                pSymbol = pSymbol3, symoff = off;
+            if( pSymbol3->get_addressOffset(&off) == S_OK && off >= bestoff )
+                pSymbol = pSymbol3, bestoff = off;
         
         HRESULT hr = E_FAIL;
         if( pSymbol )
             hr = pSymbol->get_symIndexId( &handleIn.id );
+        
+        if (!FAILED(hr))
+            symOff = bestoff - offset;
 
         if( pSymbol1 )
             pSymbol1->Release();
