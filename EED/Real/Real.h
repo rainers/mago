@@ -69,5 +69,5 @@ struct Real10
     static const int    Digits = 18;
 
     static errno_t  Parse( const wchar_t* str, Real10& val );
-    void    ToString( wchar_t* str, int len ) const;
+    void    ToString( wchar_t* str, int len, int digits ) const;
 };

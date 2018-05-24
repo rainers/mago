@@ -641,13 +641,13 @@ errno_t Real10::Parse( const wchar_t* str, Real10& val )
 }
 
 
-void Real10::ToString( wchar_t* str, int len ) const
+void Real10::ToString( wchar_t* str, int len, int digits ) const
 {
     char    s[Float80DecStrLen+1] = "";
     int     bufLen = (len > _countof( s )) ? _countof( s ) : len;
 
     // TODO: let the user change digit count
-    g_xfmt( s, (void*) Words, 10, bufLen );
+    g_xfmt( s, (void*) Words, digits, bufLen );
 
     for ( char* p = s; *p != '\0'; p++, str++ )
         *str = (wchar_t) *p;

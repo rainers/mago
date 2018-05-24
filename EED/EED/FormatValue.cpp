@@ -8,6 +8,7 @@
 #include "Common.h"
 #include "EED.h"
 #include "FormatValue.h"
+#include "Properties.h"
 #include "Type.h"
 #include "UniAlpha.h"
 
@@ -30,11 +31,11 @@ namespace MagoEE
     // next chunk.
 
 
-    HRESULT FormatSimpleReal( const Real10& val, std::wstring& outStr )
+    HRESULT FormatSimpleReal( const Real10& val, int digits, std::wstring& outStr )
     {
         wchar_t buf[ Real10::Float80DecStrLen + 1 ] = L"";
 
-        val.ToString( buf, _countof( buf ) );
+        val.ToString( buf, _countof( buf ), digits + 2 ); // a more digit than what's exact
 
         outStr.append( buf );
 
@@ -44,8 +45,11 @@ namespace MagoEE
     HRESULT FormatComplex( const DataObject& objVal, std::wstring& outStr )
     {
         HRESULT hr = S_OK;
+        int digits;
+        if ( !PropertyFloatDigits::GetDigits(objVal._Type, digits) )
+            return E_INVALIDARG;
 
-        hr = FormatSimpleReal( objVal.Value.Complex80Value.RealPart, outStr );
+        hr = FormatSimpleReal( objVal.Value.Complex80Value.RealPart, digits, outStr );
         if ( FAILED( hr ) )
             return hr;
 
@@ -53,7 +57,7 @@ namespace MagoEE
         if ( objVal.Value.Complex80Value.ImaginaryPart.GetSign() >= 0 )
             outStr.append( 1, L'+' );
 
-        hr = FormatSimpleReal( objVal.Value.Complex80Value.ImaginaryPart, outStr );
+        hr = FormatSimpleReal( objVal.Value.Complex80Value.ImaginaryPart, digits, outStr );
         if ( FAILED( hr ) )
             return hr;
 
@@ -170,6 +174,7 @@ namespace MagoEE
 
         HRESULT hr = S_OK;
         Type*   type = NULL;
+        int     digits;
 
         if ( (objVal._Type == NULL) || !objVal._Type->IsScalar() )
             return E_FAIL;
@@ -192,13 +197,13 @@ namespace MagoEE
         {
             hr = FormatComplex( objVal, outStr );
         }
-        else if ( type->IsReal() )
+        else if ( type->IsReal() && PropertyFloatDigits::GetDigits( type, digits ) )
         {
-            hr = FormatSimpleReal( objVal.Value.Float80Value, outStr );
+            hr = FormatSimpleReal( objVal.Value.Float80Value, digits, outStr );
         }
-        else if ( type->IsImaginary() )
+        else if ( type->IsImaginary() && PropertyFloatDigits::GetDigits( type, digits ) )
         {
-            hr = FormatSimpleReal( objVal.Value.Float80Value, outStr );
+            hr = FormatSimpleReal( objVal.Value.Float80Value, digits, outStr );
             outStr.append( 1, L'i' );
         }
         else

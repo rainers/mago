@@ -379,22 +379,30 @@ namespace MagoEE
         return true;
     }
 
+    bool PropertyFloatDigits::GetDigits( Type* parentType, int& digits )
+    {
+        if ( (parentType == NULL) || !parentType->IsFloatingPoint() )
+            return false;
+
+        switch ( parentType->GetBackingTy() )
+        {
+        case Tfloat32:  case Timaginary32:  case Tcomplex32:  digits = numeric_limits<float>::digits10; break;
+        case Tfloat64:  case Timaginary64:  case Tcomplex64:  digits = numeric_limits<double>::digits10; break;
+        case Tfloat80:  case Timaginary80:  case Tcomplex80:  digits = Real10::Digits; break;
+        default:
+            return false;
+        }
+
+        return true;
+    }
+
     bool PropertyFloatDigits::GetValue( Type* parentType, Declaration* parentDecl, DataValue& result )
     {
         UNREFERENCED_PARAMETER( parentDecl );
 
-        if ( (parentType == NULL) || !parentType->IsFloatingPoint() )
-            return false;
-
         int v = 0;
-        switch ( parentType->GetBackingTy() )
-        {
-        case Tfloat32:  case Timaginary32:  case Tcomplex32:  v = numeric_limits<float>::digits10; break;
-        case Tfloat64:  case Timaginary64:  case Tcomplex64:  v = numeric_limits<double>::digits10; break;
-        case Tfloat80:  case Timaginary80:  case Tcomplex80:  v = Real10::Digits; break;
-        default:
+        if( !GetDigits( parentType, v ) )
             return false;
-        }
 
         result.UInt64Value = v;
         return true;
