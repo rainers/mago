@@ -51,11 +51,14 @@ namespace Mago
 
         HRESULT hr = S_OK;
         RefPtr<Property>    prop;
-        MagoEE::EvalOptions options = { 0 };
+        MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
         MagoEE::EvalResult  result = { 0 };
 
-        if ( (dwFlags & EVAL_NOSIDEEFFECTS) == 0 )
+        if ((dwFlags & EVAL_NOSIDEEFFECTS) == 0)
             options.AllowAssignment = true;
+        if ((dwFlags & EVAL_NOFUNCEVAL) == 0)
+            options.AllowFuncExec = true;
+        options.Timeout = dwTimeout;
 
         hr = mParsedExpr->Evaluate( options, mContext, result );
         if ( FAILED( hr ) )

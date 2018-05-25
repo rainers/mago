@@ -3701,7 +3701,7 @@ std::shared_ptr<DataObj> VerifyTestElement::EvaluateText( ITypeEnv* typeEnv, ISc
     if ( FAILED( hr ) )
         ThrowError( L"Couldn't parse expression text." );
 
-    MagoEE::EvalOptions options = { 0 };
+    MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
     MagoEE::EvalResult  result = { 0 };
     DataEnvBinder       binder( dataEnv, scope );
 

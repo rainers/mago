@@ -51,6 +51,7 @@
 #define tryHR(x) do { HRESULT _hr = (x); if(FAILED(_hr)) return _hr; } while(false)
 
 Evaluation::IL::DkmILCallingConvention::e toCallingConvention(uint8_t callConv);
+CComPtr<DkmString> toDkmString(const wchar_t* str);
 
 // stub to read/write memory from process, all other functions supposed to not be called
 class CCDebuggerProxy : public Mago::IDebuggerProxy
@@ -464,6 +465,30 @@ public:
         return mStackFrame->Thread()->TebAddress();
     }
 
+    virtual HRESULT SymbolFromAddr(MagoEE::Address addr, std::wstring& symName)
+    {
+        HRESULT hr = ExprContext::SymbolFromAddr(addr, symName);
+        if (FAILED(hr))
+            return hr;
+        if (symName.length() > 0 && symName[0] == '?')
+        {
+            // Undecorate C++ symbols
+            CComPtr<Symbols::DkmInstructionSymbol> pInstruction;
+            if (mStackFrame->GetInstructionSymbol(&pInstruction) == S_OK)
+            {
+                if (Symbols::DkmModule* module = pInstruction->Module())
+                {
+                    RefPtr<DkmString> undec;
+                    if (module->UndecorateName(toDkmString (symName.c_str()), 0x7ff, &undec.Ref()) == S_OK)
+                    {
+                        symName = undec->Value();
+                    }
+                }
+            }
+        }
+        return S_OK;
+    }
+
     virtual HRESULT CallFunction(MagoEE::Address addr, uint8_t callConv, MagoEE::DataObject& obj)
     {
         using namespace Evaluation::IL;
@@ -725,7 +750,15 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     if (FAILED(hr))
     return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
-    MagoEE::EvalOptions options = { 0 };
+    MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
+    options.Radix = pInspectionContext->Radix();
+    options.Timeout = pInspectionContext->Timeout();
+    Evaluation::DkmEvaluationFlags::e evalFlags = pInspectionContext->EvaluationFlags();
+    if ((evalFlags & Evaluation::DkmEvaluationFlags::NoSideEffects) == 0)
+        options.AllowAssignment = true;
+    if ((evalFlags & Evaluation::DkmEvaluationFlags::NoFuncEval) == 0)
+        options.AllowFuncExec = true;
+
     hr = pExpr->Bind(options, exprContext);
     if (FAILED(hr))
     return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
@@ -740,9 +773,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     tryHR(pProperty->Init(exprText.c_str(), exprText.c_str(), value, exprContext, fmtopt));
 
     ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
-    int radix = pInspectionContext->Radix();
-    int timeout = pInspectionContext->Timeout();
-    tryHR(pProperty->GetPropertyInfo(DEBUGPROP_INFO_ALL, radix, timeout, nullptr, 0, &info));
+    tryHR(pProperty->GetPropertyInfo(DEBUGPROP_INFO_ALL, options.Radix, options.Timeout, nullptr, 0, &info));
 
     Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
     tryHR(createEvaluationResult(pInspectionContext, pStackFrame, info, &pResultObject));

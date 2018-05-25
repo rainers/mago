@@ -1377,6 +1377,9 @@ namespace MagoEE
         if( mode == EvalMode_Address )
             return E_MAGOEE_NO_ADDRESS;
 
+        if (!evalData.Options.AllowFuncExec)
+            return E_ACCESSDENIED;
+
         if( Args->List.size() != 0 )
             return E_MAGOEE_TOO_MANY_ARGUMENTS;
 
@@ -1389,6 +1392,9 @@ namespace MagoEE
             return E_MAGOEE_NO_ADDRESS;
 
         ITypeFunction* func = Child->_Type->AsTypeFunction();
+
+        if ( !evalData.Options.AllowAssignment && !func->IsPure() )
+            return E_ACCESSDENIED;
 
         obj._Type = _Type;
         HRESULT hr = binder->CallFunction( addr, func->GetCallConv(), obj );

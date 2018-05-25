@@ -80,7 +80,7 @@ namespace Mago
         HRESULT     hr = S_OK;
         uint32_t    countLeft = mEEEnum->GetCount() - mEEEnum->GetIndex();
         uint32_t    i = 0;
-        MagoEE::EvalOptions options = { 0 };
+        MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
         wstring     name;
         wstring     fullName;
 

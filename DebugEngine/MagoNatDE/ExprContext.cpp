@@ -83,7 +83,8 @@ namespace Mago
             return hr;
         }
 
-        MagoEE::EvalOptions options = { 0 };
+        MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
+        options.Radix = nRadix;
 
         hr = parsedExpr->Bind( options, this );
         if ( FAILED( hr ) )

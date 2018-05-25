@@ -329,6 +329,8 @@ namespace MagoEE
         L"Calling functions not implemented",
         L"failed to read register",
         L"unsupported calling convention",
+        L"function calls not allowed",
+        L"function call has side effects",
     };
 
     // returns: S_FALSE on error not found

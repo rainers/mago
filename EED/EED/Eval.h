@@ -75,6 +75,11 @@ namespace MagoEE
     struct EvalOptions
     {
         bool    AllowAssignment;
+        bool    AllowFuncExec;
+        uint8_t Radix;
+        int     Timeout;
+
+        static EvalOptions defaults;
     };
 
     struct FormatOptions
