@@ -69,5 +69,5 @@ public:
 
     virtual HRESULT ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer );
     virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName );
-    virtual HRESULT CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::DataObject& value );
+    virtual HRESULT CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::Address arg, MagoEE::DataObject& value );
 };

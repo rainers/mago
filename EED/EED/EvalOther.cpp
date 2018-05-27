@@ -807,8 +807,7 @@ namespace MagoEE
         {
             Decl->GetType( _Type.Ref() );
 
-            if ( Decl->IsVar()
-                || Decl->IsConstant() )
+            if ( Decl->IsVar() || Decl->IsConstant() || Decl->IsFunction() )
             {
                 Kind = DataKind_Value;
             }
@@ -888,7 +887,7 @@ namespace MagoEE
             return EvaluateStdProperty( evalData, binder, obj );
         }
 
-        if ( Decl->IsField() )
+        if ( Decl->IsField() || _Type->IsDelegate() )
         {
             // apply the parent's address
             int         offset = 0;
@@ -905,10 +904,21 @@ namespace MagoEE
             if ( parent.Value.Addr == 0 )
                 return E_FAIL;
 
-            if ( !Decl->GetOffset( offset ) )
-                return E_FAIL;
+            if( _Type->IsDelegate() )
+            {
+                if( !Decl->GetAddress( obj.Value.Delegate.FuncAddr ) )
+                    return E_MAGOEE_NO_ADDRESS;
 
-            obj.Addr = parent.Value.Addr + offset;
+                obj.Value.Delegate.ContextAddr = parent.Value.Addr;
+                return S_OK;
+            }
+            else
+            {
+                if ( !Decl->GetOffset( offset ) )
+                    return E_FAIL;
+
+                obj.Addr = parent.Value.Addr + offset;
+            }
         }
         // else is some other value: constant, var
         else
@@ -1327,6 +1337,10 @@ namespace MagoEE
         return S_OK;
     }
 
+    //----------------------------------------------------------------------------
+    //  CallExpr
+    //----------------------------------------------------------------------------
+
     HRESULT CallExpr::Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
     {
         HRESULT hr;
@@ -1337,8 +1351,12 @@ namespace MagoEE
         if ( Child->_Type == NULL )
             return E_MAGOEE_NO_TYPE;
 
-        ITypeFunction* func = Child->_Type->AsTypeFunction();
-        if( !func )
+        auto type = Child->_Type;
+        if ( type->IsDelegate() ) // delegate has pointer to function as "next"
+            if( auto ptrtype = type->AsTypeNext()->GetNext()->AsTypeNext() )
+                type = ptrtype->GetNext();
+        ITypeFunction* func = type->AsTypeFunction();
+        if ( !func )
             return E_MAGOEE_BAD_TYPES_FOR_OP;
 
         ParameterList* paramList = func->GetParams();
@@ -1374,30 +1392,53 @@ namespace MagoEE
 
     HRESULT CallExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
     {
-        if( mode == EvalMode_Address )
+        HRESULT hr;
+
+        if ( mode == EvalMode_Address )
             return E_MAGOEE_NO_ADDRESS;
 
-        if (!evalData.Options.AllowFuncExec)
+        if ( !evalData.Options.AllowFuncExec )
             return E_ACCESSDENIED;
 
-        if( Args->List.size() != 0 )
+        if ( Args->List.size() != 0 )
             return E_MAGOEE_TOO_MANY_ARGUMENTS;
 
         auto ne = Child->AsNamingExpression();
-        if ( ne == NULL )
+        if (ne == NULL)
             return E_MAGOEE_TYPE_RESOLVE_FAILED;
 
-        Address addr;
-        if( !ne->Decl->GetAddress( addr ) )
-            return E_MAGOEE_NO_ADDRESS;
+        DataObject callee = { 0 };
+        if ( Child->Kind == DataKind_Value )
+        {
+            hr = Child->Evaluate( EvalMode_Value, evalData, binder, callee );
+            if (FAILED(hr))
+                return hr;
+        }
+        else
+        {
+            if( !ne->Decl || !ne->Decl->GetAddress( callee.Addr ) )
+                return E_MAGOEE_NO_ADDRESS;
+        }
 
-        ITypeFunction* func = Child->_Type->AsTypeFunction();
+        Address addr = callee.Addr;
+        Address ctxt = 0;
+
+        auto type = Child->_Type;
+        if ( type->IsDelegate() ) // delegate has pointer to function as "next"
+            if( auto ptrtype = type->AsTypeNext()->GetNext()->AsTypeNext() )
+            {
+                type = ptrtype->GetNext();
+                addr = callee.Value.Delegate.FuncAddr;
+                ctxt = callee.Value.Delegate.ContextAddr;
+            }
+
+        ITypeFunction* func = type->AsTypeFunction();
 
         if ( !evalData.Options.AllowAssignment && !func->IsPure() )
             return E_ACCESSDENIED;
 
         obj._Type = _Type;
-        HRESULT hr = binder->CallFunction( addr, func->GetCallConv(), obj );
+        hr = binder->CallFunction( addr, func->GetCallConv(), ctxt, obj );
         return hr;
     }
 

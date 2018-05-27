@@ -104,9 +104,50 @@ namespace MagoST
         return mStore->FindNextSymbol( handle );
     }
 
-    HRESULT Session::GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle )
+    HRESULT Session::GetCurrentSymbol(const EnumNamedSymbolsData& searchHandle, SymHandle& handle)
     {
-        return mStore->GetCurrentSymbol( searchHandle, handle );
+        return mStore->GetCurrentSymbol(searchHandle, handle);
+    }
+
+    HRESULT Session::FindGlobalSymbolAddress( const char* symbol, uint64_t& symaddr )
+    {
+        HRESULT hr = S_OK;
+
+        MagoST::EnumNamedSymbolsData enumData = { 0 };
+
+        hr = FindFirstSymbol( MagoST::SymHeap_GlobalSymbols, symbol, strlen( symbol ), enumData );
+        if (hr != S_OK)
+            hr = FindFirstSymbol( MagoST::SymHeap_StaticSymbols, symbol, strlen( symbol ), enumData);
+        if (hr != S_OK)
+            hr = FindFirstSymbol( MagoST::SymHeap_PublicSymbols, symbol, strlen( symbol ), enumData);
+        if (hr != S_OK)
+            return hr;
+
+        MagoST::SymHandle handle;
+
+        hr = GetCurrentSymbol( enumData, handle );
+        if ( FAILED( hr ) )
+            return hr;
+
+        MagoST::SymInfoData infoData = { 0 };
+        MagoST::ISymbolInfo* symInfo = NULL;
+
+        hr = GetSymbolInfo(handle, infoData, symInfo);
+        if ( FAILED( hr ) )
+            return hr;
+
+        uint16_t section = 0;
+        uint32_t offset = 0;
+
+        if ( !symInfo->GetAddressSegment( section ) || !symInfo->GetAddressOffset( offset ) )
+            return E_FAIL;
+
+        uint64_t addr = GetVAFromSecOffset( section, offset );
+        if ( addr == 0 )
+            return E_FAIL;
+
+        symaddr = addr;
+        return S_OK;
     }
 
     HRESULT Session::FindChildSymbol( SymHandle parentHandle, const char* nameChars, size_t nameLen, SymHandle& handle )

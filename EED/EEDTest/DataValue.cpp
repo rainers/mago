@@ -60,7 +60,7 @@ void DataObj::AppendValue( std::wstring& str )
     }
     else if ( mType->IsReal() )
     {
-        Value.Float80Value.ToString( buf, _countof( buf ) );
+        Value.Float80Value.ToString( buf, _countof( buf ), 20 );
         if ( Value.Float80Value.IsNan() && Value.Float80Value.GetSign() < 0 )
             str.append( L"-" );
         str.append( buf );
@@ -79,7 +79,7 @@ void DataObj::AppendValue( std::wstring& str )
     }
     else if ( mType->IsImaginary() )
     {
-        Value.Float80Value.ToString( buf, _countof( buf ) );
+        Value.Float80Value.ToString( buf, _countof( buf ), 20 );
         if ( Value.Float80Value.IsNan() && Value.Float80Value.GetSign() < 0 )
             str.append( L"-" );
         str.append( buf );
@@ -89,13 +89,13 @@ void DataObj::AppendValue( std::wstring& str )
     {
         str.append( L"(" );
 
-        Value.Complex80Value.RealPart.ToString( buf, _countof( buf ) );
+        Value.Complex80Value.RealPart.ToString( buf, _countof( buf ), 20 );
         if ( Value.Complex80Value.RealPart.IsNan() && Value.Complex80Value.RealPart.GetSign() < 0 )
             str.append( L"-" );
         str.append( buf );
         str.append( L" + " );
 
-        Value.Complex80Value.ImaginaryPart.ToString( buf, _countof( buf ) );
+        Value.Complex80Value.ImaginaryPart.ToString( buf, _countof( buf ), 20 );
         if ( Value.Complex80Value.ImaginaryPart.IsNan() && Value.Complex80Value.ImaginaryPart.GetSign() < 0 )
             str.append( L"-" );
         str.append( buf );

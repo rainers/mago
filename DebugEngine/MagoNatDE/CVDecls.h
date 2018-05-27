@@ -59,6 +59,8 @@ namespace Mago
         virtual bool IsType();
         virtual bool IsBaseClass();
         virtual bool IsRegister();
+        virtual bool IsFunction();
+        virtual bool IsStaticFunction();
 
         virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
         virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
@@ -81,6 +83,15 @@ namespace Mago
         virtual bool GetType( MagoEE::Type*& type );
     };
 
+    class FunctionCVDecl : public GeneralCVDecl
+    {
+    public:
+        FunctionCVDecl( ExprContext* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo );
+
+        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool IsFunction();
+        virtual bool IsStaticFunction();
+    };
 
     class TypeCVDecl : public CVDecl
     {
@@ -227,6 +238,8 @@ namespace Mago
         virtual bool IsType();
         virtual bool IsBaseClass();
         virtual bool IsRegister();
+        virtual bool IsFunction();
+        virtual bool IsStaticFunction();
 
         virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl );
         virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );

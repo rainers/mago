@@ -317,38 +317,9 @@ namespace Mago
         if ( !mainMod->GetSymbolSession( session ) )
             return false;
 
-        MagoST::EnumNamedSymbolsData enumData = { 0 };
-
-        hr = session->FindFirstSymbol( MagoST::SymHeap_GlobalSymbols, symbol, strlen(symbol), enumData );
+        uint64_t addr;
+        hr = session->FindGlobalSymbolAddress( symbol, addr );
         if ( hr != S_OK )
-            hr = session->FindFirstSymbol( MagoST::SymHeap_StaticSymbols, symbol, strlen(symbol), enumData );
-        if ( hr != S_OK )
-            hr = session->FindFirstSymbol( MagoST::SymHeap_PublicSymbols, symbol, strlen(symbol), enumData );
-        if ( hr != S_OK )
-            return false;
-
-        MagoST::SymHandle handle;
-
-        hr = session->GetCurrentSymbol( enumData, handle );
-        if ( FAILED( hr ) )
-            return false;
-
-        MagoST::SymInfoData infoData = { 0 };
-        MagoST::ISymbolInfo* symInfo = NULL;
-
-        hr = session->GetSymbolInfo( handle, infoData, symInfo );
-        if ( FAILED( hr ) )
-            return false;
-
-        uint16_t section = 0;
-        uint32_t offset = 0;
-
-        if ( !symInfo->GetAddressSegment( section ) 
-            || !symInfo->GetAddressOffset( offset ) )
-            return false;
-
-        uint64_t addr = session->GetVAFromSecOffset( section, offset );
-        if ( addr == 0 )
             return false;
 
         symaddr = (Address64) addr;

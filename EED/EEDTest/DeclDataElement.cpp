@@ -110,6 +110,16 @@ bool DeclDataElement::IsRegister()
     return false;
 }
 
+bool DeclDataElement::IsFunction()
+{
+    return false;
+}
+
+bool DeclDataElement::IsStaticFunction()
+{
+    return false;
+}
+
 HRESULT DeclDataElement::FindObject( const wchar_t* name, Declaration*& decl )
 {
     return E_FAIL;

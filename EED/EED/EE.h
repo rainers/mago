@@ -71,6 +71,11 @@ enum MOD
     MODinvariant = 4,   // type is immutable
     MODimmutable = 4,   // type is immutable
     MODshared    = 2,   // type is shared
+
+    MODtypesMask = 7,
+
+    MODstatic    = 0x10, // method is static
+    MODvirtual   = 0x20, // method is virtual
 };
 
 

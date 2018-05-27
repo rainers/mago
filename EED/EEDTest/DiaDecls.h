@@ -52,6 +52,8 @@ public:
     virtual bool IsBaseClass();
     virtual bool IsStaticField();
     virtual bool IsRegister();
+    virtual bool IsFunction();
+    virtual bool IsStaticFunction();
 
     virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
     virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );

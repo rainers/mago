@@ -433,7 +433,28 @@ namespace MagoST
             return true;
         }
 
-        virtual bool GetClass( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
+        virtual bool GetClass( TypeIndex& index )
+        {
+            IDiaSymbol* pSymbol = NULL;
+            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+                return false;
+
+            IDiaSymbol* classSymbol = NULL;
+            HRESULT hr = pSymbol->get_classParent( &classSymbol );
+            if( hr == S_OK )
+            {
+                // allow indirection through pointer to class
+                DWORD tag;
+                if ( classSymbol->get_symTag( &tag ) == S_OK && tag == SymTagPointerType )
+                    hr = classSymbol->get_typeId( (DWORD*) &index );
+                else
+                    hr = classSymbol->get_symIndexId( (DWORD*)&index );
+                classSymbol->Release();
+            }
+            pSymbol->Release();
+            return hr == S_OK;
+        }
+
         virtual bool GetThis( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
         virtual bool GetThisAdjust( int32_t& adjust ) { UNREF_PARAM( adjust ); return false; }
 
@@ -493,11 +514,20 @@ namespace MagoST
             if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
                 return false;
 
+            HRESULT hr;
             mod = 0;
-            BOOL isConst;
-            HRESULT hr = pSymbol->get_constType( &isConst );
+            BOOL isConst, isStatic, isVirtual;
+            hr = pSymbol->get_constType( &isConst );
             if( hr == S_OK && isConst )
-                mod |= 1; // EED::MODconst;
+                mod |= 1; // EED::MODconst
+
+            hr = pSymbol->get_isStatic( &isStatic );
+            if ( hr == S_OK && isStatic )
+                mod |= 0x10; // EED::MODstatic
+
+            hr = pSymbol->get_virtual( &isVirtual );
+            if ( hr == S_OK && isVirtual )
+                mod |= 0x20; // EED::MODvirtual
 
             pSymbol->Release();
             return true;
@@ -829,7 +859,7 @@ namespace MagoST
         if( pSymbol )
             hr = pSymbol->get_symIndexId( &handleIn.id );
         
-        if (!FAILED(hr))
+        if ( !FAILED(hr) )
             symOff = bestoff - offset;
 
         if( pSymbol1 )

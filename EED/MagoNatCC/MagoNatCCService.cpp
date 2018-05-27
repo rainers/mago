@@ -489,40 +489,47 @@ public:
         return S_OK;
     }
 
-    virtual HRESULT CallFunction(MagoEE::Address addr, uint8_t callConv, MagoEE::DataObject& obj)
+    virtual HRESULT CallFunction(MagoEE::Address addr, uint8_t callConv, MagoEE::Address arg, MagoEE::DataObject& obj)
     {
         using namespace Evaluation::IL;
 
-        // push function address
         int ptrSize = mModule->mArchData->GetPointerSize();
 
-        RefPtr<DkmReadOnlyCollection<BYTE>> paddr;
-        tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&addr, ptrSize, &paddr.Ref()));
+        // push function address
+        RefPtr<DkmReadOnlyCollection<BYTE>> paddrfn;
+        tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&addr, ptrSize, &paddrfn.Ref()));
+        RefPtr<DkmILPushConstant> ppushfn;
+        tryHR(DkmILPushConstant::Create(paddrfn, &ppushfn.Ref()));
 
-        RefPtr<DkmILPushConstant> ppush = nullptr;
-        tryHR(DkmILPushConstant::Create(paddr, &ppush.Ref()));
+        // push argument (context pointer)
+        RefPtr<DkmReadOnlyCollection<BYTE>> parg;
+        tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&arg, ptrSize, &parg.Ref()));
+        RefPtr<DkmILPushConstant> ppusharg;
+        tryHR(DkmILPushConstant::Create(parg, &ppusharg.Ref()));
 
         // call function
-        UINT32 ArgumentCount = 0;
+        UINT32 ArgumentCount = 1;
         UINT32 ReturnValueSize = obj._Type->GetSize();
         DkmILCallingConvention::e CallingConvention = ptrSize == 4 ? toCallingConvention(callConv) : DkmILCallingConvention::StdCall;
         if (CallingConvention == DkmILCallingConvention::e(-1))
             return E_MAGOEE_BADCALLCONV;
-        DkmILFunctionEvaluationFlags::e Flags = DkmILFunctionEvaluationFlags::Default;
+        DkmILFunctionEvaluationFlags::e Flags = DkmILFunctionEvaluationFlags::HasThisPointer;
+
+        DkmILFunctionEvaluationArgumentFlags::e argFlag = DkmILFunctionEvaluationArgumentFlags::ThisPointer;
         RefPtr<DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>> argFlags;
-        tryHR(DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>::Create(nullptr, 0, &argFlags.Ref()));
+        tryHR(DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>::Create(&argFlag, 1, &argFlags.Ref()));
         UINT32 UniformComplexReturnElementSize = 0;
 
         RefPtr<DkmILExecuteFunction> pcall;
         tryHR(DkmILExecuteFunction::Create(ArgumentCount, ReturnValueSize, CallingConvention, Flags, argFlags, 0, &pcall.Ref()));
 
         // return top of stack
-        RefPtr<DkmILReturnTop> preturn = nullptr;
+        RefPtr<DkmILReturnTop> preturn;
         tryHR(DkmILReturnTop::Create(&preturn.Ref()));
 
         RefPtr<DkmReadOnlyCollection<DkmILInstruction*>> pinstr;
-        DkmILInstruction* instructions[3] = { ppush, pcall, preturn };
-        tryHR(DkmReadOnlyCollection<DkmILInstruction*>::Create(instructions, 3, &pinstr.Ref()));
+        DkmILInstruction* instructions[4] = { ppushfn, ppusharg, pcall, preturn };
+        tryHR(DkmReadOnlyCollection<DkmILInstruction*>::Create(instructions, 4, &pinstr.Ref()));
 
         // run instructions
         RefPtr<DkmCompiledILInspectionQuery> pquery;

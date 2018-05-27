@@ -235,6 +235,15 @@ namespace Mago
         return false;
     }
 
+    bool CVDecl::IsFunction()
+    {
+        return mSymInfo->GetSymTag() == MagoST::SymTagFunction;
+    }
+
+    bool CVDecl::IsStaticFunction()
+    {
+        return false;
+    }
 
     HRESULT CVDecl::FindObject( const wchar_t* name, Declaration*& decl )
     {
@@ -279,6 +288,78 @@ namespace Mago
         mType = type;
     }
 
+
+//----------------------------------------------------------------------------
+//  GeneralCVDecl
+//----------------------------------------------------------------------------
+
+    FunctionCVDecl::FunctionCVDecl(
+            ExprContext* symStore,
+            const MagoST::SymInfoData& infoData, 
+            MagoST::ISymbolInfo* symInfo )
+    : GeneralCVDecl( symStore, infoData, symInfo )
+    {
+    }
+
+    bool FunctionCVDecl::GetAddress( MagoEE::Address& addr )
+    {
+        HRESULT     hr = S_OK;
+        uint32_t    offset = 0;
+        uint16_t    sec = 0;
+
+        TypeIndex classIndex;
+        if ( mSymInfo->GetClass( classIndex ) )
+        {
+            TypeHandle handle;
+            if( mSession->GetTypeFromTypeIndex( classIndex, handle ) )
+            {
+                MagoST::SymInfoData infoData;
+                ISymbolInfo* classSym;
+
+                if( mSession->GetTypeInfo( handle, infoData, classSym ) == S_OK )
+                {
+                    SymString name, className;
+                    if( mSymInfo->GetName( name ) && classSym->GetName( className ) )
+                    {
+                        std::string stdName( name.GetName(), name.GetLength() );
+                        std::string fqName( className.GetName(), className.GetLength() );
+
+                        fqName.append( "." ).append( stdName );
+                        if( mSession->FindGlobalSymbolAddress( fqName.c_str(), addr ) == S_OK )
+                            return true;
+                    }
+                }
+            }
+        }
+
+        if ( !mSymInfo->GetAddressOffset( offset ) )
+            return false;
+        if ( !mSymInfo->GetAddressSegment( sec ) )
+            return false;
+
+        addr = mSession->GetVAFromSecOffset( sec, offset );
+        if ( addr == 0 )
+            return false;
+
+        return true;
+    }
+
+    bool FunctionCVDecl::IsFunction()
+    {
+        return true;
+    }
+
+    bool FunctionCVDecl::IsStaticFunction()
+    {
+        TypeIndex classIndex;
+        if ( mSymInfo->GetClass( classIndex ) )
+        {
+            uint16_t mod;
+            if ( mSymInfo->GetMod( mod ) )
+                return ( mod & MODstatic ) != 0;
+        }
+        return true;
+    }
 
 //----------------------------------------------------------------------------
 //  TypeCVDecl
@@ -665,6 +746,23 @@ namespace Mago
             hr = mSymStore->MakeDeclarationFromSymbol( childTH, decl );
             if ( FAILED( hr ) )
                 return hr;
+
+            if ( decl && decl->IsFunction() )
+            {
+                if (!decl->IsStaticFunction())
+                {
+                    RefPtr<MagoEE::Type> type;
+                    RefPtr<MagoEE::Type> dgtype;
+                    if( decl->GetType( type.Ref() ) )
+                    {
+                        hr = mTypeEnv->NewDelegate( type, dgtype.Ref() );
+                        if ( FAILED(hr) )
+                            return hr;
+                    }
+                    // TODO: add SetType to interface?
+                    ((FunctionCVDecl*)decl)->SetType( dgtype );
+                }
+            }
         }
 
         return S_OK;
@@ -1066,6 +1164,16 @@ namespace Mago
     }
 
     bool ClassRefDecl::IsRegister()
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::IsFunction()
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::IsStaticFunction()
     {
         return false;
     }

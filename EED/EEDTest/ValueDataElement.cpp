@@ -284,7 +284,7 @@ void RealValueElement::PrintElement()
 {
     wchar_t str[ Real10::Float80DecStrLen + 1 ] = L"";
 
-    Value.ToString( str, _countof( str ) );
+    Value.ToString( str, _countof( str ), 20 );
     printf( "real( %ls )\n", str );
 }
 
@@ -344,10 +344,10 @@ void ComplexValueElement::PrintElement()
 {
     wchar_t str[ Real10::Float80DecStrLen + 1 ] = L"";
 
-    Value.RealPart.ToString( str, _countof( str ) );
+    Value.RealPart.ToString( str, _countof( str ), 20 );
     printf( "complex( %ls + ", str );
 
-    Value.ImaginaryPart.ToString( str, _countof( str ) );
+    Value.ImaginaryPart.ToString( str, _countof( str ), 20 );
     printf( "%lsi )\n", str );
 }
 

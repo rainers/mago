@@ -56,6 +56,8 @@ namespace MagoST
         virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle );
         virtual HRESULT GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle );
 
+        virtual HRESULT FindGlobalSymbolAddress( const char* symbol, uint64_t& symaddr );
+
         virtual HRESULT FindChildSymbol(
             SymHandle parentHandle, 
             const char* nameChars, 

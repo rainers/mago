@@ -84,7 +84,7 @@ namespace Mago
         }
 
         MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
-        options.Radix = nRadix;
+        options.Radix = (uint8_t) nRadix;
 
         hr = parsedExpr->Bind( options, this );
         if ( FAILED( hr ) )
@@ -762,7 +762,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::DataObject& value )
+    HRESULT ExprContext::CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::Address arg, MagoEE::DataObject& value )
     {
         return E_MAGOEE_CALL_NOT_IMPLEMENTED;
     }
@@ -962,8 +962,11 @@ namespace Mago
         switch ( tag )
         {
         case SymTagData:
-        case SymTagFunction:
             hr = MakeDeclarationFromDataSymbol( infoData, symInfo, decl );
+            break;
+
+        case SymTagFunction:
+            hr = MakeDeclarationFromFunctionSymbol( infoData, symInfo, decl );
             break;
 
         case SymTagTypedef:
@@ -1013,8 +1016,11 @@ namespace Mago
         switch ( tag )
         {
         case SymTagData:
-        case SymTagFunction:
             hr = MakeDeclarationFromDataSymbol( infoData, symInfo, decl );
+            break;
+
+        case SymTagFunction:
+            hr = MakeDeclarationFromFunctionSymbol( infoData, symInfo, decl );
             break;
 
         case SymTagBaseClass:
@@ -1049,7 +1055,7 @@ namespace Mago
             return E_FAIL;
 
         hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
-        if ( FAILED( hr ) )
+        if ( FAILED( hr ) || !type )
             return hr;
 
         return MakeDeclarationFromDataSymbol( infoData, symInfo, type, decl );
@@ -1092,7 +1098,32 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::MakeDeclarationFromTypedefSymbol( 
+    HRESULT ExprContext::MakeDeclarationFromFunctionSymbol(
+        const MagoST::SymInfoData& infoData,
+        MagoST::ISymbolInfo* symInfo,
+        MagoEE::Declaration*& decl )
+    {
+        HRESULT                 hr = S_OK;
+        MagoST::TypeIndex       typeIndex = 0;
+        RefPtr<MagoEE::Type>    type;
+        RefPtr<MagoST::ISession> session;
+
+        if ( !symInfo->GetType( typeIndex ) )
+            return E_FAIL;
+
+        hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
+        if (FAILED(hr) || !type)
+            return hr;
+
+        RefPtr<FunctionCVDecl>   cvDecl;
+        cvDecl = new FunctionCVDecl( this, infoData, symInfo );
+        cvDecl->SetType( type );
+
+        decl = cvDecl.Detach();
+        return S_OK;
+    }
+
+    HRESULT ExprContext::MakeDeclarationFromTypedefSymbol(
         const MagoST::SymInfoData& infoData, 
         MagoST::ISymbolInfo* symInfo, 
         MagoEE::Declaration*& decl )
@@ -1127,7 +1158,7 @@ namespace Mago
         typeInfo->GetName( pstrName2 );
 
         hr = GetTypeFromTypeSymbol( typeIndex, refType.Ref() );
-        if ( FAILED( hr ) )
+        if ( FAILED( hr ) || !refType )
             return hr;
 
         if ( (pstrName2.GetName() != NULL)
@@ -1175,7 +1206,7 @@ namespace Mago
             return E_FAIL;
 
         hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
-        if ( FAILED( hr ) )
+        if ( FAILED( hr ) || !type )
             return hr;
 
         cvDecl = new GeneralCVDecl( this, infoData, symInfo );
@@ -1298,6 +1329,7 @@ namespace Mago
         return ty;
     }
 
+    // can return S_OK, but type == NULL if type resolves to Tnone
     HRESULT ExprContext::GetTypeFromTypeSymbol( 
         MagoST::TypeIndex typeIndex,
         MagoEE::Type*& type )
@@ -1343,7 +1375,7 @@ namespace Mago
                     return E_NOT_FOUND;
 
                 hr = GetTypeFromTypeSymbol( pointedTypeIndex, pointed.Ref() );
-                if ( FAILED( hr ) )
+                if ( FAILED( hr ) || !pointed )
                     return E_NOT_FOUND;
 
 #if USE_REFERENCE_TYPE
@@ -1383,7 +1415,7 @@ namespace Mago
                     return E_NOT_FOUND;
 
                 hr = GetTypeFromTypeSymbol( elemTypeIndex, elemType.Ref() );
-                if ( FAILED( hr ) )
+                if ( FAILED( hr ) || !elemType )
                     return hr;
 
                 elemSize = elemType->GetSize();
@@ -1439,7 +1471,7 @@ namespace Mago
             return E_FAIL;
 
         hr = GetTypeFromTypeSymbol( retTI, retType.Ref() );
-        if ( FAILED( hr ) )
+        if ( FAILED( hr ) || !retType )
             return hr;
 
         hr = mTypeEnv->NewParams( params.Ref() );
@@ -1470,6 +1502,8 @@ namespace Mago
             hr = GetTypeFromTypeSymbol( paramTIs[i], paramType.Ref() );
             if ( FAILED( hr ) )
                 return hr;
+            if ( !paramType ) // Tnone, skip only for single/last argument?
+                continue;
 
             hr = mTypeEnv->NewParam( 0, paramType, param.Ref() );
             if ( FAILED( hr ) )
@@ -1482,7 +1516,7 @@ namespace Mago
         if ( !symInfo->GetCallConv( callConv ) )
             return E_FAIL;
 
-        // TODO: calling convention/var args
+        // TODO: var args
         hr = mTypeEnv->NewFunction( retType, params, callConv, 0, type );
         if ( FAILED( hr ) )
             return hr;
@@ -1621,7 +1655,7 @@ namespace Mago
 
         ty = GetBasicTy( baseTypeId, size );
         if ( ty == MagoEE::Tnone )
-            return E_NOT_FOUND;
+            return S_FALSE; // do not fail, but keep type at null
 
         type = mTypeEnv->GetType( ty );
         if ( type == NULL )
@@ -1629,8 +1663,8 @@ namespace Mago
 
         RefPtr<MagoEE::Type> mtype;
         uint16_t mod;
-        if ( symInfo->GetMod( mod ) && mod != 0 )
-            type = mtype = type->MakeMod( (MOD) mod );
+        if ( symInfo->GetMod( mod ) && ( mod & MODtypesMask ) != 0 )
+            type = mtype = type->MakeMod( (MOD) ( mod & MODtypesMask ) );
 
         type->AddRef();
         return S_OK;
@@ -1675,7 +1709,7 @@ namespace Mago
                 for ( uint32_t i = 0; i < count; i++ )
                 {
                     hr = GetTypeFromTypeSymbol( typeIndexes[i], types[i].Ref() );
-                    if ( FAILED( hr ) )
+                    if ( FAILED( hr ) || !types[i] )
                         return hr;
                 }
 
