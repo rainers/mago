@@ -216,6 +216,9 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
 
         // TODO: for now we only care about the first one
         hr = mSymSession->GetCurrentSymbol( enumData, childSH );
+        
+        mSymSession->FindSymbolDone( enumData );
+
         if ( FAILED( hr ) )
             return hr;
     }

@@ -303,7 +303,6 @@ namespace Mago
 
     bool FunctionCVDecl::GetAddress( MagoEE::Address& addr )
     {
-        HRESULT     hr = S_OK;
         uint32_t    offset = 0;
         uint16_t    sec = 0;
 
@@ -324,8 +323,19 @@ namespace Mago
                         std::string stdName( name.GetName(), name.GetLength() );
                         std::string fqName( className.GetName(), className.GetLength() );
 
+                        TypeIndex fntype;
+                        RefPtr<MagoEE::Type> fn;
+                        if( mSymInfo->GetType( fntype ) )
+                            mSymStore->GetTypeFromTypeSymbol( fntype, fn.Ref() );
+
+                        auto fnTest = [&](TypeIndex type) 
+                        {
+                            RefPtr<MagoEE::Type> pointed;
+                            mSymStore->GetTypeFromTypeSymbol( type, pointed.Ref() );
+                            return pointed && fn ? pointed->Equals(fn) : pointed == fn;
+                        };
                         fqName.append( "." ).append( stdName );
-                        if( mSession->FindGlobalSymbolAddress( fqName.c_str(), addr ) == S_OK )
+                        if( mSession->FindGlobalSymbolAddress( fqName.c_str(), addr, fnTest ) == S_OK )
                             return true;
                     }
                 }

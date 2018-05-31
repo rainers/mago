@@ -202,6 +202,7 @@ namespace Mago
             MagoST::ISymbolInfo* symInfo,
             MagoEE::Declaration*& decl );
 
+	public:
         HRESULT GetTypeFromTypeSymbol(
             MagoST::TypeIndex typeIndex,
             MagoEE::Type*& type );

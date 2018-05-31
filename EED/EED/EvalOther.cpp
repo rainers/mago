@@ -1401,7 +1401,7 @@ namespace MagoEE
             return E_ACCESSDENIED;
 
         if ( Args->List.size() != 0 )
-            return E_MAGOEE_TOO_MANY_ARGUMENTS;
+            return E_MAGOEE_CALLARGS_NOT_IMPLEMENTED;
 
         auto ne = Child->AsNamingExpression();
         if (ne == NULL)
@@ -1411,7 +1411,7 @@ namespace MagoEE
         if ( Child->Kind == DataKind_Value )
         {
             hr = Child->Evaluate( EvalMode_Value, evalData, binder, callee );
-            if (FAILED(hr))
+            if ( FAILED( hr) )
                 return hr;
         }
         else
@@ -1435,7 +1435,7 @@ namespace MagoEE
         ITypeFunction* func = type->AsTypeFunction();
 
         if ( !evalData.Options.AllowAssignment && !func->IsPure() )
-            return E_ACCESSDENIED;
+            return E_MAGOEE_HASSIDEEFFECT;
 
         obj._Type = _Type;
         hr = binder->CallFunction( addr, func->GetCallConv(), ctxt, obj );

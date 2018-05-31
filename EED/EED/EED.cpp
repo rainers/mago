@@ -327,10 +327,11 @@ namespace MagoEE
         L"Too many function arguments",
         L"Too few function arguments",
         L"Calling functions not implemented",
-        L"failed to read register",
-        L"unsupported calling convention",
-        L"function calls not allowed",
-        L"function call has side effects",
+        L"Cannot call functions with arguments",
+        L"Failed to read register",
+        L"Unsupported calling convention",
+        L"Function calls not allowed",
+        L"Function call may have side effects",
     };
 
     // returns: S_FALSE on error not found

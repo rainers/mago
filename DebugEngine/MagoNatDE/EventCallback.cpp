@@ -309,7 +309,7 @@ namespace Mago
 
     // find the entry point that the user defined in their program
 
-    bool FindGlobalSymbolAddress(Module* mainMod, const char* symbol, Address64& symaddr)
+    bool FindGlobalSymbolAddress( Module* mainMod, const char* symbol, Address64& symaddr )
     {
         HRESULT hr = S_OK;
         RefPtr<MagoST::ISession> session;

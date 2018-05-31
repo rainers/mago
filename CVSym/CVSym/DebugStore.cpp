@@ -568,6 +568,11 @@ namespace MagoST
         return S_OK;
     }
 
+    HRESULT DebugStore::FindSymbolDone( EnumNamedSymbolsData& handle )
+    {
+        return S_OK;
+    }
+
     HRESULT DebugStore::FindSymbol( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff )
     {
         if ( heapId >= SymHeap_Max )

@@ -719,7 +719,9 @@ HRESULT createEvaluationError(Evaluation::DkmInspectionContext* pInspectionConte
     std::wstring errStr;
     Evaluation::DkmFailedEvaluationResult* pResultObject = nullptr;
 
-    tryHR(MagoEE::GetErrorString(hrErr, errStr));
+    if (MagoEE::GetErrorString(hrErr, errStr) != S_OK)
+        MagoEE::GetErrorString(E_MAGOEE_BASE, errStr);
+
     tryHR(Evaluation::DkmFailedEvaluationResult::Create(
         pInspectionContext, pStackFrame, 
         expr->Text(), expr->Text(), toDkmString(errStr.c_str()), 

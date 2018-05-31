@@ -891,6 +891,9 @@ namespace Mago
 
         // TODO: for now we only care about the first one
         hr = session->GetCurrentSymbol( enumData, globalSH );
+
+        session->FindSymbolDone( enumData );
+
         if ( FAILED( hr ) )
             return hr;
 
@@ -979,7 +982,7 @@ namespace Mago
             {
                 RefPtr<MagoEE::Type> type;
                 hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
-                if( !FAILED( hr ) && type )
+                if( !FAILED( hr ) )
                     decl = type->GetDeclaration();
                 if( !decl )
                     hr = E_FAIL;
@@ -1055,7 +1058,7 @@ namespace Mago
             return E_FAIL;
 
         hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
-        if ( FAILED( hr ) || !type )
+        if ( FAILED( hr ) )
             return hr;
 
         return MakeDeclarationFromDataSymbol( infoData, symInfo, type, decl );
@@ -1112,7 +1115,7 @@ namespace Mago
             return E_FAIL;
 
         hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
-        if (FAILED(hr) || !type)
+        if ( FAILED(hr) )
             return hr;
 
         RefPtr<FunctionCVDecl>   cvDecl;
@@ -1158,7 +1161,7 @@ namespace Mago
         typeInfo->GetName( pstrName2 );
 
         hr = GetTypeFromTypeSymbol( typeIndex, refType.Ref() );
-        if ( FAILED( hr ) || !refType )
+        if ( FAILED( hr ) )
             return hr;
 
         if ( (pstrName2.GetName() != NULL)
@@ -1206,7 +1209,7 @@ namespace Mago
             return E_FAIL;
 
         hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
-        if ( FAILED( hr ) || !type )
+        if ( FAILED( hr ) )
             return hr;
 
         cvDecl = new GeneralCVDecl( this, infoData, symInfo );
@@ -1329,7 +1332,6 @@ namespace Mago
         return ty;
     }
 
-    // can return S_OK, but type == NULL if type resolves to Tnone
     HRESULT ExprContext::GetTypeFromTypeSymbol( 
         MagoST::TypeIndex typeIndex,
         MagoEE::Type*& type )
@@ -1375,7 +1377,7 @@ namespace Mago
                     return E_NOT_FOUND;
 
                 hr = GetTypeFromTypeSymbol( pointedTypeIndex, pointed.Ref() );
-                if ( FAILED( hr ) || !pointed )
+                if ( FAILED( hr ) )
                     return E_NOT_FOUND;
 
 #if USE_REFERENCE_TYPE
@@ -1415,7 +1417,7 @@ namespace Mago
                     return E_NOT_FOUND;
 
                 hr = GetTypeFromTypeSymbol( elemTypeIndex, elemType.Ref() );
-                if ( FAILED( hr ) || !elemType )
+                if ( FAILED( hr ) )
                     return hr;
 
                 elemSize = elemType->GetSize();
@@ -1456,7 +1458,6 @@ namespace Mago
         RefPtr<MagoEE::ParameterList>   params;
         MagoST::TypeIndex       retTI = 0;
         RefPtr<MagoEE::Type>    retType;
-        uint32_t                paramCount = 0;
         MagoST::TypeIndex       paramListTI = 0;
         MagoST::TypeHandle      paramListTH = { 0 };
         MagoST::SymInfoData     paramListInfoData = { 0 };
@@ -1471,7 +1472,7 @@ namespace Mago
             return E_FAIL;
 
         hr = GetTypeFromTypeSymbol( retTI, retType.Ref() );
-        if ( FAILED( hr ) || !retType )
+        if ( FAILED( hr ) )
             return hr;
 
         hr = mTypeEnv->NewParams( params.Ref() );
@@ -1488,13 +1489,10 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        if ( !paramListInfo->GetCount( paramCount ) )
-            return E_FAIL;
-
         if ( !paramListInfo->GetTypes( paramTIs ) )
             return E_FAIL;
 
-        for ( uint32_t i = 0; i < paramCount; i++ )
+        for ( uint32_t i = 0; i < paramTIs.size(); i++ )
         {
             RefPtr<MagoEE::Type>        paramType;
             RefPtr<MagoEE::Parameter>   param;
@@ -1502,8 +1500,6 @@ namespace Mago
             hr = GetTypeFromTypeSymbol( paramTIs[i], paramType.Ref() );
             if ( FAILED( hr ) )
                 return hr;
-            if ( !paramType ) // Tnone, skip only for single/last argument?
-                continue;
 
             hr = mTypeEnv->NewParam( 0, paramType, param.Ref() );
             if ( FAILED( hr ) )
@@ -1655,7 +1651,7 @@ namespace Mago
 
         ty = GetBasicTy( baseTypeId, size );
         if ( ty == MagoEE::Tnone )
-            return S_FALSE; // do not fail, but keep type at null
+            return E_NOT_FOUND;
 
         type = mTypeEnv->GetType( ty );
         if ( type == NULL )
@@ -1676,7 +1672,6 @@ namespace Mago
         MagoEE::Type*& type )
     {
         HRESULT     hr = S_OK;
-        uint32_t    count = 0;
         uint32_t    oemId = 0;
         uint32_t    oemSymId = 0;
 
@@ -1688,9 +1683,6 @@ namespace Mago
         if ( !symInfo->GetOemSymbolId( oemSymId ) )
             return E_FAIL;
 
-        if ( !symInfo->GetCount( count ) )
-            return E_FAIL;
-
         switch ( oemSymId )
         {
         case DMD_OEM_DARRAY:
@@ -1700,16 +1692,16 @@ namespace Mago
                 RefPtr<MagoEE::Type>           types[2];
                 std::vector<MagoST::TypeIndex> typeIndexes;
 
-                if ( count != 2 )
-                    return E_FAIL;
-
                 if ( !symInfo->GetTypes( typeIndexes ) )
                     return E_FAIL;
 
-                for ( uint32_t i = 0; i < count; i++ )
+                if ( typeIndexes.size() != 2 )
+                    return E_FAIL;
+
+                for ( uint32_t i = 0; i < typeIndexes.size(); i++ )
                 {
                     hr = GetTypeFromTypeSymbol( typeIndexes[i], types[i].Ref() );
-                    if ( FAILED( hr ) || !types[i] )
+                    if ( FAILED( hr ) )
                         return hr;
                 }
 

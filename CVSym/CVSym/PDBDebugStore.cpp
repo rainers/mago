@@ -10,6 +10,10 @@
 #include "ISymbolInfo.h"
 #include "Util.h"
 
+#ifndef NDEBUG
+#include "../../DebugEngine/Exec/Log.h"
+#endif
+
 #include <dia2.h>
 #include <assert.h>
 
@@ -31,6 +35,7 @@ namespace PDBStore
 
     struct EnumNamedSymbolsDataIn
     {
+        IDiaEnumSymbols* pEnumSymbols;
         DWORD id;
     };
 
@@ -157,6 +162,29 @@ namespace MagoST
             mStore = store;
             mId = id;
         }
+
+#ifndef NDEBUG
+        virtual void dump(DWORD id) const
+        {
+            IDiaSymbol* pSymbol = NULL;
+            if( !FAILED( mStore->getSession()->symbolById( id, &pSymbol ) ) )
+            {
+                char str[1280];
+                DWORD tag = SymTagNull;
+                pSymbol->get_symTag( &tag );
+
+                BSTR bstrName = NULL;
+                pSymbol->get_name( &bstrName );
+
+                sprintf(str, "Id: 0x%x Tag: 0x%0x, Name:%S\n", id, tag, bstrName );
+                Log::LogMessage( str );
+
+                SysFreeString( bstrName );
+
+                pSymbol->Release();
+            }
+        }
+#endif
 
         virtual SymTag GetSymTag()
         {
@@ -462,6 +490,7 @@ namespace MagoST
         virtual bool GetOemSymbolId( uint32_t& oemSymId ) { UNREF_PARAM( oemSymId ); return false; }
         virtual bool GetTypes( std::vector<TypeIndex>& indexes )
         {
+	    // supposed to work for OEM types and argument lists
             IDiaSymbol* pSymbol = NULL;
             if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
                 return false;
@@ -476,6 +505,7 @@ namespace MagoST
                     hr = pSymbol->get_typeIds( count, &count, indexes.data() );
                     if( hr != S_OK )
                     {
+                        indexes.resize( 0 );
                         IDiaEnumSymbols* pEnumSymbols = NULL;
                         hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &pEnumSymbols );
                         if( hr == S_OK && pEnumSymbols )
@@ -486,7 +516,22 @@ namespace MagoST
                                 IDiaSymbol* argSymbol = nullptr;
                                 if( ( hr = pEnumSymbols->Next( 1, &argSymbol, &fetched ) ) != S_OK )
                                     break;
-                                hr = argSymbol->get_typeId( indexes.data() + i );
+
+                                // filter out btNoType arguments
+                                DWORD typeID;
+                                if( argSymbol->get_typeId( &typeID ) == S_OK )
+                                {
+                                    IDiaSymbol* typeSymbol = NULL;
+                                    if( mStore->getSession()->symbolById( typeID, &typeSymbol ) == S_OK )
+                                    {
+                                        DWORD baseType;
+                                        if( typeSymbol->get_baseType( &baseType ) != S_OK || baseType != btNoType )
+                                        {
+                                            indexes.push_back( typeID );
+                                        }
+                                        typeSymbol->Release();
+                                    }
+                                }
                                 argSymbol->Release();
                             }
                             pEnumSymbols->Release();
@@ -495,7 +540,7 @@ namespace MagoST
                 }
             }
             pSymbol->Release();
-            return hr == S_OK;
+            return SUCCEEDED( hr );
         }
 
         virtual bool GetAttribute( uint16_t& attr ) { UNREF_PARAM( attr ); return false; }
@@ -796,30 +841,45 @@ namespace MagoST
 
             HRESULT hr = mGlobal->findChildren( SymTagNull, wname.get (), nsCaseSensitive, &pEnumSymbols );
             
-            IDiaSymbol* pSymbol = NULL;
-            if ( !FAILED( hr ) && pEnumSymbols )
-                hr = pEnumSymbols->Item( 0, &pSymbol );
+            if( !FAILED( hr ) && pEnumSymbols )
+            {
+                IDiaSymbol* pSymbol = NULL;
+                DWORD fetched = 0;
+                hr = pEnumSymbols->Next( 1, &pSymbol, &fetched );
+                if ( hr == S_OK && pSymbol )
+                {
+                    hr = pSymbol->get_symIndexId( &dataIn.id );
+                    pSymbol->Release();
+                    if( hr == S_OK )
+                    {
+                        dataIn.pEnumSymbols = pEnumSymbols;
+                        return S_OK;
+                    }
+                    pEnumSymbols->Release();
+                }
+            }
 
-            if ( !FAILED( hr ) && pSymbol )
-                hr = pSymbol->get_symIndexId( &dataIn.id );
-
-            if ( pSymbol )
-                pSymbol->Release();
-            if ( pEnumSymbols )
-                pEnumSymbols->Release();
-
-            return hr;
+            return E_FAIL;
         }
         return E_NOTIMPL;
     }
 
 
-    HRESULT PDBDebugStore::FindNextSymbol( EnumNamedSymbolsData& handle )
+    HRESULT PDBDebugStore::FindNextSymbol( EnumNamedSymbolsData& searchData )
     {
-        UNREFERENCED_PARAMETER( handle );
-        // not used
-        assert(false);
-        return E_NOTIMPL;
+        PDBStore::EnumNamedSymbolsDataIn& dataIn = (PDBStore::EnumNamedSymbolsDataIn&) searchData;
+        if( dataIn.pEnumSymbols == NULL )
+            return E_INVALIDARG;
+
+        IDiaSymbol* pSymbol = NULL;
+        DWORD fetched = 0;
+        HRESULT hr = dataIn.pEnumSymbols->Next( 1, &pSymbol, &fetched );
+        if ( hr != S_OK || !pSymbol )
+            return E_FAIL;
+
+        hr = pSymbol->get_symIndexId( &dataIn.id );
+        pSymbol->Release();
+        return hr;
     }
 
     HRESULT PDBDebugStore::GetCurrentSymbol( const EnumNamedSymbolsData& searchData, SymHandle& handle )
@@ -827,6 +887,14 @@ namespace MagoST
         const PDBStore::EnumNamedSymbolsDataIn& dataIn = (const PDBStore::EnumNamedSymbolsDataIn&) searchData;
         PDBStore::SymHandleIn& symIn = (PDBStore::SymHandleIn&) handle;
         symIn.id = dataIn.id;
+        return S_OK;
+    }
+
+    HRESULT PDBDebugStore::FindSymbolDone( EnumNamedSymbolsData& searchData )
+    {
+        const PDBStore::EnumNamedSymbolsDataIn& dataIn = (const PDBStore::EnumNamedSymbolsDataIn&) searchData;
+        if ( dataIn.pEnumSymbols )
+            dataIn.pEnumSymbols->Release();
         return S_OK;
     }
 

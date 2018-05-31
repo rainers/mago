@@ -109,7 +109,12 @@ namespace MagoST
         return mStore->GetCurrentSymbol(searchHandle, handle);
     }
 
-    HRESULT Session::FindGlobalSymbolAddress( const char* symbol, uint64_t& symaddr )
+    HRESULT Session::FindSymbolDone( EnumNamedSymbolsData& handle )
+    {
+        return mStore->FindSymbolDone( handle );
+    }
+
+    HRESULT Session::FindGlobalSymbolAddress( const char* symbol, uint64_t& symaddr, std::function<bool(TypeIndex)> fnTest )
     {
         HRESULT hr = S_OK;
 
@@ -117,23 +122,35 @@ namespace MagoST
 
         hr = FindFirstSymbol( MagoST::SymHeap_GlobalSymbols, symbol, strlen( symbol ), enumData );
         if (hr != S_OK)
-            hr = FindFirstSymbol( MagoST::SymHeap_StaticSymbols, symbol, strlen( symbol ), enumData);
+            hr = FindFirstSymbol( MagoST::SymHeap_StaticSymbols, symbol, strlen( symbol ), enumData );
         if (hr != S_OK)
-            hr = FindFirstSymbol( MagoST::SymHeap_PublicSymbols, symbol, strlen( symbol ), enumData);
+            hr = FindFirstSymbol( MagoST::SymHeap_PublicSymbols, symbol, strlen( symbol ), enumData );
         if (hr != S_OK)
             return hr;
 
         MagoST::SymHandle handle;
-
-        hr = GetCurrentSymbol( enumData, handle );
-        if ( FAILED( hr ) )
-            return hr;
-
         MagoST::SymInfoData infoData = { 0 };
         MagoST::ISymbolInfo* symInfo = NULL;
 
-        hr = GetSymbolInfo(handle, infoData, symInfo);
-        if ( FAILED( hr ) )
+        while( hr == S_OK )
+        {
+            hr = GetCurrentSymbol( enumData, handle );
+            if( hr == S_OK )
+                hr = GetSymbolInfo( handle, infoData, symInfo );
+            if( !fnTest )
+                break;
+
+            TypeIndex index;
+            if( symInfo->GetType( index ) )
+                if( fnTest( index ) )
+                    break;
+
+            hr = FindNextSymbol( enumData );
+        }
+
+        FindSymbolDone( enumData );
+
+        if ( hr != S_OK )
             return hr;
 
         uint16_t section = 0;
@@ -348,6 +365,7 @@ namespace MagoST
         if ( FAILED( hr ) )
             return hr;
 
+	HRESULT found = S_FALSE;
         for ( ; mStore->NextType( scope, childHandle ); )
         {
             ISymbolInfo*    symInfo = NULL;
@@ -362,12 +380,42 @@ namespace MagoST
 
             if ( (nameLen == pstrName.GetLength()) && (memcmp( nameChars, pstrName.GetName(), nameLen ) == 0) )
             {
-                handle = childHandle;
-                return S_OK;
+		if ( symInfo->GetSymTag() != SymTagFunction )
+		{
+		    handle = childHandle;
+		    return S_OK;
+		}
+
+		// until we support overload sets, prefer an overload with zero arguments
+		TypeIndex funcType;
+		TypeHandle funcTypeHandle;
+	        SymInfoData funcInfoData = { 0 };
+		ISymbolInfo* funcInfo = nullptr;
+		if( !symInfo->GetType( funcType ) )
+		    continue;
+		if( !GetTypeFromTypeIndex( funcType, funcTypeHandle ) )
+		    continue;
+		hr = mStore->GetTypeInfo( funcTypeHandle, funcInfoData, funcInfo );
+		if ( hr != S_OK )
+		    continue;
+
+		std::vector<TypeIndex> indexes;
+		if ( !funcInfo->GetTypes( indexes ) )
+		    continue;
+		if ( indexes.size() == 0 )
+		{
+		    handle = childHandle;
+		    return S_OK;
+		}
+		else if ( found == S_FALSE )
+		{
+		    handle = childHandle;
+		    found = S_OK;
+		}
             }
         }
 
-        return S_FALSE;
+        return found;
     }
 
     // source files
