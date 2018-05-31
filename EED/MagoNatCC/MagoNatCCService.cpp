@@ -489,7 +489,7 @@ public:
         return S_OK;
     }
 
-    virtual HRESULT CallFunction(MagoEE::Address addr, uint8_t callConv, MagoEE::Address arg, MagoEE::DataObject& obj)
+    virtual HRESULT CallFunction(MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& obj)
     {
         using namespace Evaluation::IL;
 
@@ -510,10 +510,13 @@ public:
         // call function
         UINT32 ArgumentCount = 1;
         UINT32 ReturnValueSize = obj._Type->GetSize();
+        uint8_t callConv = func->GetCallConv();
         DkmILCallingConvention::e CallingConvention = ptrSize == 4 ? toCallingConvention(callConv) : DkmILCallingConvention::StdCall;
         if (CallingConvention == DkmILCallingConvention::e(-1))
             return E_MAGOEE_BADCALLCONV;
         DkmILFunctionEvaluationFlags::e Flags = DkmILFunctionEvaluationFlags::HasThisPointer;
+        if (obj._Type->IsFloatingPoint())
+            Flags |= DkmILFunctionEvaluationFlags::FloatingPointReturn;
 
         DkmILFunctionEvaluationArgumentFlags::e argFlag = DkmILFunctionEvaluationArgumentFlags::ThisPointer;
         RefPtr<DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>> argFlags;
@@ -551,7 +554,7 @@ public:
                 if (res && res->Count() == ReturnValueSize)
                     if (ReturnValueSize <= sizeof(MagoEE::DataValue))
                     {
-                        memcpy(&obj.Value, res->Items(), ReturnValueSize);
+                        hr = FromRawValue( res->Items(), obj._Type, obj.Value );
                         hr = S_OK;
                     }
             }

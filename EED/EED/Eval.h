@@ -13,6 +13,7 @@ namespace MagoEE
     class Type;
     class Declaration;
     class ITypeEnv;
+    class ITypeFunction;
     struct String;
 
 
@@ -124,6 +125,6 @@ namespace MagoEE
 
         virtual HRESULT ReadMemory( Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer ) = 0;
         virtual HRESULT SymbolFromAddr( Address addr, std::wstring& symName ) = 0;
-        virtual HRESULT CallFunction( Address addr, uint8_t callConv, Address arg, DataObject& value ) = 0;
+        virtual HRESULT CallFunction( Address addr, ITypeFunction* func, Address arg, DataObject& value ) = 0;
     };
 }

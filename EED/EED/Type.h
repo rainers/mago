@@ -331,8 +331,6 @@ namespace MagoEE
     };
 
 
-    // TODO: should there be a calling convention?
-
     // in DMD source this is also a TypeNext
     class TypeFunction : public TypeNext, public ITypeFunction
     {

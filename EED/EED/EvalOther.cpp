@@ -1398,7 +1398,7 @@ namespace MagoEE
             return E_MAGOEE_NO_ADDRESS;
 
         if ( !evalData.Options.AllowFuncExec )
-            return E_ACCESSDENIED;
+            return E_MAGOEE_NOFUNCCALL;
 
         if ( Args->List.size() != 0 )
             return E_MAGOEE_CALLARGS_NOT_IMPLEMENTED;
@@ -1438,7 +1438,7 @@ namespace MagoEE
             return E_MAGOEE_HASSIDEEFFECT;
 
         obj._Type = _Type;
-        hr = binder->CallFunction( addr, func->GetCallConv(), ctxt, obj );
+        hr = binder->CallFunction( addr, func, ctxt, obj );
         return hr;
     }
 

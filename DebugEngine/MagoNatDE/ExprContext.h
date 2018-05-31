@@ -111,7 +111,7 @@ namespace Mago
 
         virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName );
 
-        virtual HRESULT CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::Address arg, MagoEE::DataObject& value );
+        virtual HRESULT CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& value );
 
         virtual HRESULT GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, MagoEE::DataValue& value );
 

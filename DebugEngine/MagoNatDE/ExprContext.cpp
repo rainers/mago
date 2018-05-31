@@ -762,7 +762,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::CallFunction( MagoEE::Address addr, uint8_t callConv, MagoEE::Address arg, MagoEE::DataObject& value )
+    HRESULT ExprContext::CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& value )
     {
         return E_MAGOEE_CALL_NOT_IMPLEMENTED;
     }
