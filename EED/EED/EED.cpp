@@ -194,36 +194,54 @@ namespace MagoEE
 
         HRESULT hr = S_OK;
         RefPtr<EEDEnumValues>   en;
+        DataObject pointeeObj = { 0 };
+        std::wstring pointeeExpr;
+        const DataObject* pparentVal = &parentVal;
 
-        if ( parentVal._Type->IsReference() )
+    L_retry:
+        if ( pparentVal->_Type->IsReference() )
         {
             en = new EEDEnumStruct( true );
         }
-        else if ( parentVal._Type->IsPointer() )
+        else if ( pparentVal->_Type->IsPointer() )
         {
             // no children for void pointers
-            if ( auto ptype = parentVal._Type->AsTypeNext() )
-                if ( ptype->GetNext()->GetBackingTy() == Tvoid )
-                    return E_FAIL;
+            auto ntype = pparentVal->_Type->AsTypeNext()->GetNext();
+            if ( ntype == NULL || ntype->GetBackingTy() == Tvoid )
+                 return E_FAIL;
 
+            if ( ntype->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() || ntype->AsTypeStruct() )
+            {
+                pointeeObj._Type = ntype;
+                pointeeObj.Addr = pparentVal->Value.Addr;
+
+                hr = binder->GetValue( pointeeObj.Addr, pointeeObj._Type, pointeeObj.Value );
+                if( hr == S_OK )
+                {
+                    pointeeExpr.append( L"*(" ).append( parentExprText ).append( 1, L')' );
+                    parentExprText = pointeeExpr.c_str();
+                    pparentVal = &pointeeObj;
+                    goto L_retry;
+                }
+            }
             en = new EEDEnumPointer();
         }
-        else if ( parentVal._Type->IsSArray() )
+        else if ( pparentVal->_Type->IsSArray() )
         {
             en = new EEDEnumSArray();
         }
-        else if ( parentVal._Type->IsDArray() )
+        else if ( pparentVal->_Type->IsDArray() )
         {
             if ( fmtopts.specifier == FormatSpecRaw )
                 en = new EEDEnumRawDArray();
             else
                 en = new EEDEnumDArray();
         }
-        else if ( parentVal._Type->IsAArray() )
+        else if ( pparentVal->_Type->IsAArray() )
         {
             en = new EEDEnumAArray( binder->GetAAVersion() );
         }
-        else if ( parentVal._Type->AsTypeStruct() != NULL )
+        else if ( pparentVal->_Type->AsTypeStruct() != NULL )
         {
             en = new EEDEnumStruct();
         }
@@ -233,7 +251,7 @@ namespace MagoEE
         if ( en == NULL )
             return E_OUTOFMEMORY;
 
-        hr = en->Init( binder, parentExprText, parentVal, typeEnv, strTable );
+        hr = en->Init( binder, parentExprText, *pparentVal, typeEnv, strTable );
         if ( FAILED( hr ) )
             return hr;
 

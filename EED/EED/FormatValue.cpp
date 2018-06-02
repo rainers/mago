@@ -591,25 +591,25 @@ namespace MagoEE
         return hr;
     }
 
-    HRESULT FormatPointer( IValueBinder* binder, const DataObject& objVal, std::wstring& outStr )
+    HRESULT FormatPointer( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         _ASSERT( objVal._Type->IsPointer() );
 
         HRESULT hr = S_OK;
-        RefPtr<Type>    pointed = objVal._Type->AsTypeNext()->GetNext();
+        RefPtr<Type>    pointeeType = objVal._Type->AsTypeNext()->GetNext();
 
         hr = FormatAddress( objVal.Value.Addr, objVal._Type, outStr );
         if ( FAILED( hr ) )
             return hr;
 
-        if ( pointed->IsChar() )
+        if ( pointeeType->IsChar() )
         {
             bool    foundTerm = false;
             bool    truncated = false;
 
             outStr.append( L" \"" );
 
-            FormatString( binder, objVal.Value.Addr, pointed->GetSize(), false, 0, outStr, truncated, foundTerm );
+            FormatString( binder, objVal.Value.Addr, pointeeType->GetSize(), false, 0, outStr, truncated, foundTerm );
             // don't worry about an error here, we still want to show the address
 
             if ( foundTerm )
@@ -621,11 +621,35 @@ namespace MagoEE
         {
             std::wstring symName;
             hr = binder->SymbolFromAddr( objVal.Value.Addr, symName );
-            if( hr == S_OK )
+            if ( hr == S_OK )
             {
                 outStr.append( L" {" );
                 outStr.append( symName );
                 outStr.append( L"}" );
+            }
+
+            if ( objVal.Value.Addr != NULL )
+            {
+                DataObject pointeeObj = { 0 };
+                pointeeObj._Type = pointeeType;
+                pointeeObj.Addr = objVal.Value.Addr;
+
+                hr = binder->GetValue( pointeeObj.Addr, pointeeObj._Type, pointeeObj.Value );
+                if ( !FAILED( hr ) )
+                {
+                    std::wstring memberStr;
+                    hr = FormatValue( binder, pointeeObj, fmtopt, memberStr );
+                    if ( !FAILED( hr ) && !memberStr.empty() )
+                    {
+                        if( memberStr[0] == '{' )
+                            outStr.append( L" " );
+                        else
+                            outStr.append( L" {" );
+                        outStr.append( memberStr );
+                        if( memberStr[0] != '{' )
+                            outStr.append( L"}" );
+                    }
+                }
             }
         }
 
@@ -849,7 +873,7 @@ namespace MagoEE
 
         if ( type->IsPointer() )
         {
-            hr = FormatPointer( binder, objVal, outStr );
+            hr = FormatPointer( binder, objVal, fmtopt, outStr );
         }
         else if ( type->IsBasic() )
         {
