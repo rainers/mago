@@ -272,15 +272,25 @@ namespace MagoEE
         fullName.append( name );
 
         uint32_t index = mCountDone++;
-        if ( mParentVal.Addr == 0 )
-            return E_MAGOEE_NO_ADDRESS;
 
-        auto sa = mParentVal._Type->AsTypeSArray();
-        if( sa == NULL )
+        Address addr;
+        if ( mParentVal._Type->IsSArray() )
+        {
+            result.ObjVal._Type = mParentVal._Type->AsTypeSArray()->GetElement();
+            addr = mParentVal.Addr;
+        }
+        else if ( mParentVal._Type->IsDArray() )
+        {
+            result.ObjVal._Type = mParentVal._Type->AsTypeDArray()->GetElement();
+            addr = mParentVal.Value.Array.Addr;
+        }
+        else
             return E_FAIL;
 
-        result.ObjVal._Type = sa->GetElement();
-        result.ObjVal.Addr = mParentVal.Addr + index * sa->GetElement()->GetSize();
+        if ( addr == 0 )
+            return E_MAGOEE_NO_ADDRESS;
+
+        result.ObjVal.Addr = addr + index * result.ObjVal._Type->GetSize();
 
         HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
         if ( FAILED( hr ) )
