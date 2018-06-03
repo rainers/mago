@@ -35,6 +35,11 @@ namespace MagoEE
             const DataObject& parentVal,
             ITypeEnv* typeEnv,
             NameTable* strTable );
+
+        virtual HRESULT EvaluateExpr( 
+            const EvalOptions& options, 
+            EvalResult& result, 
+            std::wstring& expr );
     };
 
 

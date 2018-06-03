@@ -55,6 +55,29 @@ namespace MagoEE
         return S_OK;
     }
 
+    // fallback when unable to evaluate directly from parent value
+    HRESULT EEDEnumValues::EvaluateExpr( 
+        const EvalOptions& options, 
+        EvalResult& result, 
+        std::wstring& expr )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<IEEDParsedExpr>  parsedExpr;
+
+        hr = ParseText( expr.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = parsedExpr->Bind( options, mBinder );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = parsedExpr->Evaluate( options, mBinder, result );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
 
     //------------------------------------------------------------------------
     //  EEDEnumPointer
@@ -120,7 +143,6 @@ namespace MagoEE
         if ( mCountDone >= GetCount() )
             return E_FAIL;
 
-        HRESULT hr = S_OK;
         RefPtr<IEEDParsedExpr>  parsedExpr;
 
         name.clear();
@@ -129,20 +151,23 @@ namespace MagoEE
         fullName.append( mParentExprText );
         fullName.append( 1, L')' );
 
-        hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = parsedExpr->Bind( options, mBinder );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = parsedExpr->Evaluate( options, mBinder, result );
-        if ( FAILED( hr ) )
-            return hr;
-
         mCountDone++;
 
+        if ( mParentVal.Value.Addr == 0 )
+            return E_MAGOEE_NO_ADDRESS;
+
+        auto tn = mParentVal._Type->AsTypeNext();
+        if( tn == NULL )
+            return E_FAIL;
+
+        result.ObjVal._Type = tn->GetNext();
+        result.ObjVal.Addr = mParentVal.Value.Addr;
+
+        HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+        if ( FAILED( hr ) )
+            return hr;
+
+        FillValueTraits( result, nullptr );
         return S_OK;
     }
 
@@ -230,8 +255,6 @@ namespace MagoEE
         // "[indexInt]", and add some padding
         const int   MaxIndexStrLen = MaxIntStrLen + 2 + 10;
 
-        HRESULT hr = S_OK;
-        RefPtr<IEEDParsedExpr>  parsedExpr;
         wchar_t indexStr[ MaxIndexStrLen + 1 ] = L"";
 
         swprintf_s( indexStr, L"[%d]", mCountDone );
@@ -248,20 +271,22 @@ namespace MagoEE
             fullName.append( L")" );
         fullName.append( name );
 
-        mCountDone++;
+        uint32_t index = mCountDone++;
+        if ( mParentVal.Addr == 0 )
+            return E_MAGOEE_NO_ADDRESS;
 
-        hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
+        auto sa = mParentVal._Type->AsTypeSArray();
+        if( sa == NULL )
+            return E_FAIL;
+
+        result.ObjVal._Type = sa->GetElement();
+        result.ObjVal.Addr = mParentVal.Addr + index * sa->GetElement()->GetSize();
+
+        HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
         if ( FAILED( hr ) )
             return hr;
 
-        hr = parsedExpr->Bind( options, mBinder );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = parsedExpr->Evaluate( options, mBinder, result );
-        if ( FAILED( hr ) )
-            return hr;
-
+        FillValueTraits( result, nullptr );
         return S_OK;
     }
 
@@ -329,8 +354,6 @@ namespace MagoEE
         if ( mCountDone >= GetCount() )
             return E_FAIL;
 
-        HRESULT hr = S_OK;
-        RefPtr<IEEDParsedExpr>  parsedExpr;
         const wchar_t* field = (mCountDone == 0 ? L"length" : L"ptr");
 
         name.clear();
@@ -346,21 +369,8 @@ namespace MagoEE
         fullName.append( L"." );
         fullName.append( name );
 
-        hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = parsedExpr->Bind( options, mBinder );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = parsedExpr->Evaluate( options, mBinder, result );
-        if ( FAILED( hr ) )
-            return hr;
-
         mCountDone++;
-
-        return S_OK;
+        return EvaluateExpr( options, result, fullName );
     }
 
 
@@ -747,6 +757,7 @@ namespace MagoEE
         if ( mSkipHeadRef && parentValCopy._Type->IsReference() )
         {
             parentValCopy._Type = parentValCopy._Type->AsTypeNext()->GetNext();
+            parentValCopy.Addr = parentValCopy.Value.Addr;
         }
 
         ITypeStruct* typeStruct = parentValCopy._Type->AsTypeStruct();
@@ -760,12 +771,7 @@ namespace MagoEE
         if ( !decl->EnumMembers( members.Ref() ) )
             return E_INVALIDARG;
 
-        hr = EEDEnumValues::Init(
-            binder,
-            parentExprText,
-            parentValCopy,
-            typeEnv,
-            strTable );
+        hr = EEDEnumValues::Init( binder, parentExprText, parentValCopy, typeEnv, strTable );
         if ( FAILED( hr ) )
             return hr;
 
@@ -872,7 +878,6 @@ namespace MagoEE
 
         HRESULT hr = S_OK;
         RefPtr<Declaration>     decl;
-        RefPtr<IEEDParsedExpr>  parsedExpr;
 
         name.clear();
         fullName.clear();
@@ -889,6 +894,31 @@ namespace MagoEE
             name = L"__vfptr";
             fullName = L"(" + mParentExprText + L").__vfptr";
             mCountDone++;
+
+            Address addr = mParentVal._Type->IsReference() ? mParentVal.Value.Addr : mParentVal.Addr;
+            if ( addr == 0 )
+                return E_MAGOEE_NO_ADDRESS;
+
+            RefPtr<Declaration> vshape;
+            decl = mParentVal._Type->GetDeclaration();
+            if( ! decl->GetVTableShape( vshape.Ref() ) )
+                return E_FAIL;
+
+            int offset = 0;
+            if ( !vshape->GetOffset( offset ) )
+                return E_FAIL;
+
+            if( !vshape->GetType( result.ObjVal._Type.Ref() ) )
+                return E_FAIL;
+
+            result.ObjVal.Addr = addr + offset;
+
+            hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+            if( FAILED( hr ) )
+                return hr;
+
+            FillValueTraits( result, nullptr );
+            return S_OK;
         }
         else
         {
@@ -908,26 +938,35 @@ namespace MagoEE
                     return E_FAIL;
                 result.IsStaticField = true;
             }
-            else
+            else if( decl->IsField() )
             {
                 if ( !NameRegularMember( decl, name, fullName ) )
                     return E_FAIL;
+
+                Address addr = mParentVal._Type->IsReference() ? mParentVal.Value.Addr : mParentVal.Addr;
+
+                if ( addr == 0 )
+                    return E_MAGOEE_NO_ADDRESS;
+
+                int offset = 0;
+                if ( !decl->GetOffset( offset ) )
+                    return E_FAIL;
+
+                if( !decl->GetType( result.ObjVal._Type.Ref() ) )
+                    return E_FAIL;
+
+                result.ObjVal.Addr = addr + offset;
+
+                hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                FillValueTraits( result, nullptr );
+                return S_OK;
             }
         }
 
-        hr = ParseText( fullName.c_str(), mTypeEnv, mStrTable, parsedExpr.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = parsedExpr->Bind( options, mBinder );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = parsedExpr->Evaluate( options, mBinder, result );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return S_OK;
+        return EvaluateExpr( options, result, fullName );
     }
 
     bool EEDEnumStruct::NameBaseClass( 
