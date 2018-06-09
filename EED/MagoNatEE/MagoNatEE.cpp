@@ -73,7 +73,7 @@ namespace MagoEE
             HRESULT         hr = S_OK;
             std::wstring    stdStr;
 
-            hr = MagoEE::FormatValue( binder, objVal, fmtopt, stdStr );
+            hr = MagoEE::FormatValue( binder, objVal, fmtopt, stdStr, kMaxFormatValueLength );
             if ( FAILED( hr ) )
                 return hr;
 

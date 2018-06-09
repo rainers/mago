@@ -446,7 +446,7 @@ namespace MagoEE
             outStr.append( L"..." );
     }
 
-    HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
+    HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
         _ASSERT( type->IsSArray() );
 
@@ -467,7 +467,7 @@ namespace MagoEE
             outStr.append( L"[" );
             for ( uint32_t i = 0; i < length; i++ )
             {
-                if ( outStr.length () > 64 )
+                if ( outStr.length () >= maxLength )
                 {
                     outStr.append( L", ..." );
                     break;
@@ -482,7 +482,7 @@ namespace MagoEE
                     return hr;
 
                 std::wstring elemStr;
-                hr = FormatValue( binder, elementObj, fmtopt, elemStr );
+                hr = FormatValue( binder, elementObj, fmtopt, elemStr, kMaxFormatValueLength - maxLength );
                 if ( FAILED( hr ) )
                     return hr;
 
@@ -536,7 +536,7 @@ namespace MagoEE
         return FormatAddress( addr, type, outStr );
     }
 
-    HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
+    HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
         HRESULT         hr = S_OK;
 
@@ -558,7 +558,7 @@ namespace MagoEE
             if ( member->IsBaseClass() || member->IsStaticField() )
                 continue;
 
-            if ( outStr.length () > 64 )
+            if ( outStr.length () > maxLength )
             {
                 outStr.append( L", ..." );
                 break;
@@ -576,7 +576,7 @@ namespace MagoEE
                 return hr;
 
             std::wstring memberStr;
-            hr = FormatValue( binder, memberObj, fmtopt, memberStr );
+            hr = FormatValue( binder, memberObj, fmtopt, memberStr, maxLength - outStr.length() );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -591,7 +591,7 @@ namespace MagoEE
         return hr;
     }
 
-    HRESULT FormatPointer( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
+    HRESULT FormatPointer( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
         _ASSERT( objVal._Type->IsPointer() );
 
@@ -628,7 +628,7 @@ namespace MagoEE
                 outStr.append( L"}" );
             }
 
-            if ( objVal.Value.Addr != NULL )
+            if ( objVal.Value.Addr != NULL && outStr.length() < maxLength )
             {
                 DataObject pointeeObj = { 0 };
                 pointeeObj._Type = pointeeType;
@@ -638,7 +638,7 @@ namespace MagoEE
                 if ( !FAILED( hr ) )
                 {
                     std::wstring memberStr;
-                    hr = FormatValue( binder, pointeeObj, fmtopt, memberStr );
+                    hr = FormatValue( binder, pointeeObj, fmtopt, memberStr, maxLength - outStr.length() );
                     if ( !FAILED( hr ) && !memberStr.empty() )
                     {
                         if( memberStr[0] == '{' )
@@ -861,7 +861,7 @@ namespace MagoEE
         return FormatRawStringInternal( binder, address, unitSize, knownLen, bufCharLen, bufCharLenWritten, buf );
     }
 
-    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
+    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
         HRESULT hr = S_OK;
         Type*   type = NULL;
@@ -873,7 +873,7 @@ namespace MagoEE
 
         if ( type->IsPointer() )
         {
-            hr = FormatPointer( binder, objVal, fmtopt, outStr );
+            hr = FormatPointer( binder, objVal, fmtopt, outStr, maxLength );
         }
         else if ( type->IsBasic() )
         {
@@ -885,7 +885,7 @@ namespace MagoEE
         }
         else if ( type->IsSArray() )
         {
-            hr = FormatSArray( binder, objVal.Addr, objVal._Type, fmtopt, outStr );
+            hr = FormatSArray( binder, objVal.Addr, objVal._Type, fmtopt, outStr, maxLength );
         }
         else if ( type->IsDArray() )
         {
@@ -897,7 +897,7 @@ namespace MagoEE
         }
         else if ( type->AsTypeStruct() )
         {
-            hr = FormatStruct( binder, objVal.Addr, type, fmtopt, outStr );
+            hr = FormatStruct( binder, objVal.Addr, type, fmtopt, outStr, maxLength );
         }
         else
             hr = E_FAIL;
