@@ -11,7 +11,6 @@
 
 
 struct BB64;
-struct TypeInfo_Struct64;
 struct DArray64;
 
 
@@ -20,7 +19,8 @@ namespace Mago
     class IDebuggerProxy;
     class ICoreProcess;
     struct Throwable64;
-
+    struct TypeInfo_Struct64;
+    struct TypeInfo_Class64;
 
     class DRuntime
     {
@@ -29,6 +29,7 @@ namespace Mago
         int                     mPtrSize;
         int                     mAAVersion;
         Address64               mClassInfoVtblAddr;
+        Address64               mInterfaceInfoVtblAddr;
 
     public:
         DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess );
@@ -36,7 +37,8 @@ namespace Mago
         void SetAAVersion( int ver );
         int GetAAVersion() const { return mAAVersion; }
 
-        void SetClassInfoVtblAddr( Address64 addr );
+        void SetClassInfoVtblAddr(Address64 addr);
+        void SetInterfaceInfoVtblAddr( Address64 addr );
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 
@@ -93,6 +95,7 @@ namespace Mago
 
         HRESULT ReadBB( Address64 addr, BB64& bb, BB64_V1& bb_v1 );
         HRESULT ReadTypeInfoStruct( Address64 addr, TypeInfo_Struct64& ti );
+        HRESULT ReadTypeInfoClass( Address64 addr, TypeInfo_Class64& ti );
         HRESULT ReadAddress( Address64 baseAddr, uint64_t index, uint64_t& ptrValue );
         HRESULT ReadDArray( Address64 addr, DArray64& darray );
         HRESULT ReadThrowable( Address64 addr, Throwable64& throwable );

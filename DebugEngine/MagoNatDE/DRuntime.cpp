@@ -12,51 +12,108 @@
 #include "ArchData.h"
 #include <MagoEED.h>
 
-
-struct TypeInfo_Struct32
-{
-    uint32_t    vptr;
-    uint32_t    monitor;
-
-    DArray32    name;       // string
-    DArray32    m_init;     // void[]
-    uint32_t    xtoHash;    // size_t   function(in void*)
-    uint32_t    xopEquals;  // bool     function(in void*, in void*)
-    uint32_t    xopCmp;     // int      function(in void*, in void*)
-    uint32_t    xtoString;  // char[]   function(in void*)
-    uint32_t    m_flags;
-    uint32_t    xdtor;      // void function(void*)
-    uint32_t    xpostblit;  // void function(void*)
-    uint32_t    m_align;
-    // ...
-};
-
-struct TypeInfo_Struct64
-{
-    uint64_t    vptr;
-    uint64_t    monitor;
-
-    DArray64    name;       // string
-    DArray64    m_init;     // void[]
-    uint64_t    xtoHash;    // size_t   function(in void*)
-    uint64_t    xopEquals;  // bool     function(in void*, in void*)
-    uint64_t    xopCmp;     // int      function(in void*, in void*)
-    uint64_t    xtoString;  // char[]   function(in void*)
-    uint32_t    m_flags;
-    uint64_t    xdtor;      // void function(void*)
-    uint64_t    xpostblit;  // void function(void*)
-    uint32_t    m_align;
-};
-
-
 namespace Mago
 {
+    struct TypeInfo_Struct32
+    {
+        uint32_t    vptr;
+        uint32_t    monitor;
+
+        DArray32    name;       // string
+        DArray32    m_init;     // void[]
+        uint32_t    xtoHash;    // size_t   function(in void*)
+        uint32_t    xopEquals;  // bool     function(in void*, in void*)
+        uint32_t    xopCmp;     // int      function(in void*, in void*)
+        uint32_t    xtoString;  // char[]   function(in void*)
+        uint32_t    m_flags;
+        uint32_t    xdtor;      // void function(void*)
+        uint32_t    xpostblit;  // void function(void*)
+        uint32_t    m_align;
+        // ...
+    };
+
+    struct TypeInfo_Struct64
+    {
+        uint64_t    vptr;
+        uint64_t    monitor;
+
+        DArray64    name;       // string
+        DArray64    m_init;     // void[]
+        uint64_t    xtoHash;    // size_t   function(in void*)
+        uint64_t    xopEquals;  // bool     function(in void*, in void*)
+        uint64_t    xopCmp;     // int      function(in void*, in void*)
+        uint64_t    xtoString;  // char[]   function(in void*)
+        uint32_t    m_flags;
+        uint64_t    xdtor;      // void function(void*)
+        uint64_t    xpostblit;  // void function(void*)
+        uint32_t    m_align;
+    };
+
+    ////////////////////////////////////////////////////////////////////////
+    // struct Interface;
+    // class MemberInfo;
+    // struct OffsetTypeInfo;
+    // class Object;
+
+    // D class info
+    struct TypeInfo_Class32
+    {
+        uint32_t pvtbl;                 // vtable pointer of TypeInfo_Class object
+        uint32_t monitor;
+
+        DArray32 init;                  // byte[]; class static initializer
+        DArray32 name;                  // string; class name
+        DArray32 vtbl;                  // void*[]; virtual function pointer table
+        DArray32 interfaces;            // Interface[]
+        uint32_t base;                  // TypeInfo_Class
+        uint32_t destructor;            // void*
+        uint32_t classInvariant;        // void function(Object)
+        uint32_t m_flags;
+        //  1:      // is IUnknown or is derived from IUnknown
+        //  2:      // has no possible pointers into GC memory
+        //  4:      // has offTi[] member
+        //  8:      // has constructors
+        // 16:      // has xgetMembers member
+        // 32:      // has typeinfo member
+        uint32_t deallocator;           // void*
+        DArray32 m_offTi;               // OffsetTypeInfo[]
+        uint32_t defaultConstructor;    // void function(Object)
+        // ...
+    };
+
+    // D class info
+    struct TypeInfo_Class64
+    {
+        uint64_t pvtbl;                 // vtable pointer of TypeInfo_Class object
+        uint64_t monitor;
+
+        DArray64 init;                  // byte[]; class static initializer
+        DArray64 name;                  // string; class name
+        DArray64 vtbl;                  // void*[]; virtual function pointer table
+        DArray64 interfaces;            // Interface[]
+        uint64_t base;                  // TypeInfo_Class
+        uint64_t destructor;            // void*
+        uint64_t classInvariant;        // void function(Object)
+        uint32_t m_flags;
+        //  1:      // is IUnknown or is derived from IUnknown
+        //  2:      // has no possible pointers into GC memory
+        //  4:      // has offTi[] member
+        //  8:      // has constructors
+        // 16:      // has xgetMembers member
+        // 32:      // has typeinfo member
+        uint64_t deallocator;           // void*
+        DArray64 m_offTi;               // OffsetTypeInfo[]
+        uint64_t defaultConstructor;    // void function(Object)
+        // ...
+    };
+
     DRuntime::DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess )
         :   mDebugger( debugger ),
             mCoreProc( coreProcess ),
             mPtrSize( 0 ),
             mAAVersion( -1 ),
-            mClassInfoVtblAddr( 0 )
+            mClassInfoVtblAddr( 0 ),
+            mInterfaceInfoVtblAddr( 0 )
     {
         _ASSERT( debugger != NULL );
         _ASSERT( coreProcess != NULL );
@@ -847,6 +904,47 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT DRuntime::ReadTypeInfoClass( Address64 addr, TypeInfo_Class64& ti )
+    {
+        HRESULT hr = S_OK;
+
+        if ( mPtrSize == 4 )
+        {
+            TypeInfo_Class32 ti32;
+
+            hr = ReadMemory( addr, sizeof ti32, &ti32 );
+            if ( FAILED( hr ) )
+                return hr;
+
+            ti.pvtbl = ti32.pvtbl;
+            ti.monitor = ti32.monitor;
+            ti.init.length = ti32.init.length;
+            ti.init.ptr = ti32.init.ptr;
+            ti.name.length = ti32.name.length;
+            ti.name.ptr = ti32.name.ptr;
+            ti.vtbl.length = ti32.vtbl.length;
+            ti.vtbl.ptr = ti32.vtbl.ptr;
+            ti.interfaces.length = ti32.interfaces.length;
+            ti.interfaces.ptr = ti32.interfaces.ptr;
+            ti.base = ti32.base;
+            ti.destructor = ti32.destructor;
+            ti.classInvariant = ti32.classInvariant;
+            ti.m_flags = ti32.m_flags;
+            ti.deallocator = ti32.deallocator;
+            ti.m_offTi.length = ti32.m_offTi.length;
+            ti.m_offTi.ptr = ti32.m_offTi.ptr;
+            ti.defaultConstructor = ti32.defaultConstructor;
+        }
+        else
+        {
+            hr = ReadMemory( addr, sizeof ti, &ti );
+            if ( FAILED( hr ) )
+                return hr;
+        }
+
+        return S_OK;
+    }
+
     HRESULT DRuntime::ReadAddress( Address64 baseAddr, uint64_t index, uint64_t& ptrValue )
     {
         HRESULT hr = S_OK;
@@ -898,103 +996,47 @@ namespace Mago
     }
 
 
-    ////////////////////////////////////////////////////////////////////////
-    // struct Interface;
-    // class MemberInfo;
-    // struct OffsetTypeInfo;
-    // class Object;
-
-    // D class info
-    struct TypeInfo_Class32
-    {
-        uint32_t pvtbl;                 // vtable pointer of TypeInfo_Class object
-        uint32_t monitor;
-
-        DArray32 init;                  // byte[]; class static initializer
-        DArray32 name;                  // string; class name
-        DArray32 vtbl;                  // void*[]; virtual function pointer table
-        DArray32 interfaces;            // Interface[]
-        uint32_t base;                  // TypeInfo_Class
-        uint32_t destructor;            // void*
-        uint32_t classInvariant;        // void function(Object)
-        uint32_t m_flags;
-        //  1:      // is IUnknown or is derived from IUnknown
-        //  2:      // has no possible pointers into GC memory
-        //  4:      // has offTi[] member
-        //  8:      // has constructors
-        // 16:      // has xgetMembers member
-        // 32:      // has typeinfo member
-        uint32_t deallocator;           // void*
-        DArray32 m_offTi;               // OffsetTypeInfo[]
-        uint32_t defaultConstructor;    // void function(Object)
-        // ...
-    };
-
-    // D class info
-    struct TypeInfo_Class64
-    {
-        uint64_t pvtbl;                 // vtable pointer of TypeInfo_Class object
-        uint64_t monitor;
-
-        DArray64 init;                  // byte[]; class static initializer
-        DArray64 name;                  // string; class name
-        DArray64 vtbl;                  // void*[]; virtual function pointer table
-        DArray64 interfaces;            // Interface[]
-        uint64_t base;                  // TypeInfo_Class
-        uint64_t destructor;            // void*
-        uint64_t classInvariant;        // void function(Object)
-        uint32_t m_flags;
-        //  1:      // is IUnknown or is derived from IUnknown
-        //  2:      // has no possible pointers into GC memory
-        //  4:      // has offTi[] member
-        //  8:      // has constructors
-        // 16:      // has xgetMembers member
-        // 32:      // has typeinfo member
-        uint64_t deallocator;           // void*
-        DArray64 m_offTi;               // OffsetTypeInfo[]
-        uint64_t defaultConstructor;    // void function(Object)
-        // ...
-    };
-
     HRESULT DRuntime::GetClassName( Address64 addr, BSTR* pbstrClassName )
     {
         _ASSERT( pbstrClassName != NULL );
 
+        bool checkInterface = true;
         Address64 vtbl, classinfo, ci_vtbl;
         uint32_t read, unread;
+    L_retryInterface:
         HRESULT hr = ReadAddress( addr, 0, vtbl );
         if ( SUCCEEDED( hr ) )
         {
             hr = ReadAddress( vtbl, 0, classinfo );
             if ( SUCCEEDED( hr ) )
             {
-                if( mClassInfoVtblAddr )
+                if( mClassInfoVtblAddr && mInterfaceInfoVtblAddr )
                 {
                     hr = ReadAddress( classinfo, 0, ci_vtbl );
                     if ( FAILED( hr ) )
                         return hr;
-                    if( ci_vtbl != mClassInfoVtblAddr )
+                    if( ci_vtbl != mClassInfoVtblAddr && ci_vtbl != mInterfaceInfoVtblAddr )
                         return E_FAIL;
                 }
 
-                DArray64 className;
-                Address64 nameAddr = classinfo;
-
-                if ( mPtrSize == 4 )
-                    nameAddr += offsetof( TypeInfo_Class32, name );
-                else
-                    nameAddr += offsetof( TypeInfo_Class64, name );
-
-                hr = ReadDArray( nameAddr, className );
+                TypeInfo_Class64 ti;
+                hr = ReadTypeInfoClass( classinfo, ti );
                 if ( SUCCEEDED( hr ) )
                 {
-                    if ( className.length < 4096 )
+                    if (checkInterface && ti.init.ptr < 0x10000 )
                     {
-                        char* buf = new char[(size_t) className.length];
+                        // emulate _d_toObject() for interfaces
+                        addr = addr - ti.init.ptr;
+                        checkInterface = false;
+                        goto L_retryInterface;
+                    }
+                    if ( ti.name.length < 4096 )
+                    {
+                        char* buf = new char[(size_t) ti.name.length];
                         if ( buf == NULL )
                             return E_OUTOFMEMORY;
-                        hr = mDebugger->ReadMemory( mCoreProc, className.ptr, 
-                                                    (uint32_t) className.length, read, unread, (uint8_t*) buf );
+                        hr = mDebugger->ReadMemory( mCoreProc, ti.name.ptr,
+                                                    (uint32_t) ti.name.length, read, unread, (uint8_t*) buf );
                         if ( SUCCEEDED( hr ) )
                         {
                             // read at most className.length
@@ -1127,9 +1169,13 @@ namespace Mago
         mAAVersion = ver;
     }
 
-    void DRuntime::SetClassInfoVtblAddr( Address64 addr )
+    void DRuntime::SetClassInfoVtblAddr(Address64 addr)
     {
         mClassInfoVtblAddr = addr;
+    }
+    void DRuntime::SetInterfaceInfoVtblAddr(Address64 addr)
+    {
+        mInterfaceInfoVtblAddr = addr;
     }
 
 }

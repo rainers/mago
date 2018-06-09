@@ -304,6 +304,10 @@ namespace MagoEE
                     {
                         srcAddr += offset;
                     }
+                    else if ( nextDest->AsTypeStruct()->GetBaseClassOffset( nextSrc, offset ) )
+                    {
+                        srcAddr -= offset;
+                    }
                 }
 
                 dest.Value.Addr = srcAddr;
