@@ -29,7 +29,6 @@ namespace Mago
         int                     mPtrSize;
         int                     mAAVersion;
         Address64               mClassInfoVtblAddr;
-        Address64               mInterfaceInfoVtblAddr;
 
     public:
         DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess );
@@ -38,7 +37,6 @@ namespace Mago
         int GetAAVersion() const { return mAAVersion; }
 
         void SetClassInfoVtblAddr(Address64 addr);
-        void SetInterfaceInfoVtblAddr( Address64 addr );
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 

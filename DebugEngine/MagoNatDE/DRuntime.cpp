@@ -112,8 +112,7 @@ namespace Mago
             mCoreProc( coreProcess ),
             mPtrSize( 0 ),
             mAAVersion( -1 ),
-            mClassInfoVtblAddr( 0 ),
-            mInterfaceInfoVtblAddr( 0 )
+            mClassInfoVtblAddr( 0 )
     {
         _ASSERT( debugger != NULL );
         _ASSERT( coreProcess != NULL );
@@ -1010,26 +1009,24 @@ namespace Mago
             hr = ReadAddress( vtbl, 0, classinfo );
             if ( SUCCEEDED( hr ) )
             {
-                if( mClassInfoVtblAddr && mInterfaceInfoVtblAddr )
-                {
-                    hr = ReadAddress( classinfo, 0, ci_vtbl );
-                    if ( FAILED( hr ) )
-                        return hr;
-                    if( ci_vtbl != mClassInfoVtblAddr && ci_vtbl != mInterfaceInfoVtblAddr )
-                        return E_FAIL;
-                }
-
                 TypeInfo_Class64 ti;
                 hr = ReadTypeInfoClass( classinfo, ti );
                 if ( SUCCEEDED( hr ) )
                 {
-                    if (checkInterface && ti.init.ptr < 0x10000 )
+                    if ( checkInterface && ti.init.ptr < 0x10000 )
                     {
                         // emulate _d_toObject() for interfaces
                         addr = addr - ti.init.ptr;
                         checkInterface = false;
                         goto L_retryInterface;
                     }
+                    if( mClassInfoVtblAddr )
+                    {
+                        // verify class info vtbl pointer
+                        if( ti.pvtbl != mClassInfoVtblAddr )
+                            return E_FAIL;
+                    }
+
                     if ( ti.name.length < 4096 )
                     {
                         char* buf = new char[(size_t) ti.name.length];
@@ -1172,10 +1169,6 @@ namespace Mago
     void DRuntime::SetClassInfoVtblAddr(Address64 addr)
     {
         mClassInfoVtblAddr = addr;
-    }
-    void DRuntime::SetInterfaceInfoVtblAddr(Address64 addr)
-    {
-        mInterfaceInfoVtblAddr = addr;
     }
 
 }

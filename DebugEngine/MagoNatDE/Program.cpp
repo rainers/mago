@@ -497,8 +497,6 @@ namespace Mago
 
             if ( FindGlobalSymbolAddress( mod, "_D14TypeInfo_Class6__vtblZ", addr ) )
                 mDRuntime->SetClassInfoVtblAddr( addr );
-            if ( FindGlobalSymbolAddress( mod, "_D18TypeInfo_Interface6__vtblZ", addr ) )
-                mDRuntime->SetInterfaceInfoVtblAddr( addr );
         }
     }
 
