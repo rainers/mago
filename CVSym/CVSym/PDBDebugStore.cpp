@@ -855,8 +855,8 @@ namespace MagoST
                         dataIn.pEnumSymbols = pEnumSymbols;
                         return S_OK;
                     }
-                    pEnumSymbols->Release();
                 }
+                pEnumSymbols->Release();
             }
 
             return E_FAIL;

@@ -15,7 +15,12 @@ CMagoNatEEModule _AtlModule;
 // DLL Entry Point
 extern "C" BOOL WINAPI DllMain(HINSTANCE /*hInstance*/, DWORD dwReason, LPVOID lpReserved)
 {
-    BOOL rc = _AtlModule.DllMain(dwReason, lpReserved); 
+#ifdef _DEBUG
+    if (dwReason == DLL_PROCESS_ATTACH)
+        _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
+    BOOL rc = _AtlModule.DllMain(dwReason, lpReserved);
 
     switch ( dwReason )
     {
@@ -25,10 +30,6 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE /*hInstance*/, DWORD dwReason, LPVOID l
 
     case DLL_PROCESS_DETACH:
         MagoEE::Uninit();
-#ifdef _DEBUG
-        _AtlComModule.Term(); // not run with _AtlModule.DllMain
-        _CrtDumpMemoryLeaks();
-#endif
         break;
 
     case DLL_THREAD_ATTACH:

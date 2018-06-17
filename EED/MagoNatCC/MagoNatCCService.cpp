@@ -411,6 +411,7 @@ public:
 
     virtual HRESULT GetSession(MagoST::ISession*& session)
     {
+        _ASSERT(session == NULL);
         session = mModule->mSession;
         session->AddRef();
         return S_OK;
