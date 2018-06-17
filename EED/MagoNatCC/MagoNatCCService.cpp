@@ -494,22 +494,29 @@ public:
         using namespace Evaluation::IL;
 
         int ptrSize = mModule->mArchData->GetPointerSize();
+        DkmILInstruction* instructions[8];
+        int cntInstr = 0;
 
         // push function address
         RefPtr<DkmReadOnlyCollection<BYTE>> paddrfn;
         tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&addr, ptrSize, &paddrfn.Ref()));
         RefPtr<DkmILPushConstant> ppushfn;
         tryHR(DkmILPushConstant::Create(paddrfn, &ppushfn.Ref()));
+        instructions[cntInstr++] = ppushfn;
 
         // push argument (context pointer)
         RefPtr<DkmReadOnlyCollection<BYTE>> parg;
         tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&arg, ptrSize, &parg.Ref()));
         RefPtr<DkmILPushConstant> ppusharg;
         tryHR(DkmILPushConstant::Create(parg, &ppusharg.Ref()));
+        instructions[cntInstr++] = ppusharg;
 
         // call function
         UINT32 ArgumentCount = 1;
         UINT32 ReturnValueSize = obj._Type->GetSize();
+        bool returnsDXAX = obj._Type->IsDArray() || obj._Type->IsDelegate();
+        if (returnsDXAX)
+            ReturnValueSize = ptrSize;
         uint8_t callConv = func->GetCallConv();
         DkmILCallingConvention::e CallingConvention = ptrSize == 4 ? toCallingConvention(callConv) : DkmILCallingConvention::StdCall;
         if (CallingConvention == DkmILCallingConvention::e(-1))
@@ -525,14 +532,28 @@ public:
 
         RefPtr<DkmILExecuteFunction> pcall;
         tryHR(DkmILExecuteFunction::Create(ArgumentCount, ReturnValueSize, CallingConvention, Flags, argFlags, 0, &pcall.Ref()));
+        instructions[cntInstr++] = pcall;
+
+        RefPtr<DkmILRegisterRead> pregreaddx;
+        RefPtr<DkmILReturnTop> pregretax;
+        if (returnsDXAX)
+        {
+            // TODO: does not work yet, EDX/RDX not the function return value
+            tryHR(DkmILReturnTop::Create(&pregretax.Ref()));
+            instructions[cntInstr++] = pregretax;
+
+            tryHR(DkmILRegisterRead::Create(ptrSize == 4 ? CV_REG_EDX : CV_AMD64_RDX, &pregreaddx.Ref()));
+            instructions[cntInstr++] = pregreaddx;
+        }
 
         // return top of stack
         RefPtr<DkmILReturnTop> preturn;
         tryHR(DkmILReturnTop::Create(&preturn.Ref()));
+        instructions[cntInstr++] = preturn;
 
+        // build instruction list
         RefPtr<DkmReadOnlyCollection<DkmILInstruction*>> pinstr;
-        DkmILInstruction* instructions[4] = { ppushfn, ppusharg, pcall, preturn };
-        tryHR(DkmReadOnlyCollection<DkmILInstruction*>::Create(instructions, 4, &pinstr.Ref()));
+        tryHR(DkmReadOnlyCollection<DkmILInstruction*>::Create(instructions, cntInstr, &pinstr.Ref()));
 
         // run instructions
         RefPtr<DkmCompiledILInspectionQuery> pquery;
@@ -551,12 +572,32 @@ public:
             if (arrResults.Length > 0 && arrResults.Members[0])
             {
                 DkmReadOnlyCollection<BYTE>* res = arrResults.Members[0]->ResultBytes();
-                if (res && res->Count() == ReturnValueSize)
+                if (returnsDXAX)
+                {
+                    if (returnsDXAX && res && res->Count() == ptrSize)
+                    {
+                        uint8_t buf[16]; // enough for two pointers
+                        memcpy(buf, res->Items(), ptrSize);
+                        if (arrResults.Length > 1 && arrResults.Members[1])
+                        {
+                            res = arrResults.Members[1]->ResultBytes();
+                            if (res && res->Count() == ptrSize)
+                            {
+                                memcpy(buf + ptrSize, res->Items(), ptrSize);
+                                hr = FromRawValue(buf, obj._Type, obj.Value);
+                                hr = S_OK;
+                            }
+                        }
+                    }
+                }
+                else if (res && res->Count() == ReturnValueSize)
+                {
                     if (ReturnValueSize <= sizeof(MagoEE::DataValue))
                     {
-                        hr = FromRawValue( res->Items(), obj._Type, obj.Value );
+                        hr = FromRawValue(res->Items(), obj._Type, obj.Value);
                         hr = S_OK;
                     }
+                }
             }
             else
                 hr = ReturnValueSize == 0 ? S_OK : E_FAIL;
