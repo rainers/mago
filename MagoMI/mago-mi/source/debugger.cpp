@@ -443,7 +443,7 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 	}
 
 	if (isVarUpdate) {
-		name = cmd.unnamedValue(1);
+		name = cmd.unnamedValue(0);
 	}
 	bool allVars = isVarUpdate && name == L"*";
 	if (isVarUpdate) {
@@ -481,12 +481,12 @@ void Debugger::handleVariableCommand(MICommand & cmd) {
 		}
 	}
 
-	if (!found) {
+	if (!found && allVars == false) {
 		writeErrorMessage(cmd.requestId, std::wstring(L"No symbol ") + quoteString(expr));
 		return;
 	}
 
-	if (name.empty() || addr.empty() || expr.empty()) {
+	if (isVarCreate && (name.empty() || addr.empty() || expr.empty())) {
 		writeErrorMessage(cmd.requestId, L"Invalid -var-create command");
 		return;
 	}
