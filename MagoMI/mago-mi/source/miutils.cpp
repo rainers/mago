@@ -397,8 +397,8 @@ std::wstring getBaseName(std::wstring fname) {
 	return fname;
 }
 
-void LocalVariableInfo::dumpMiVariable(WstringBuffer & buf, bool includeTypes, bool includeValues) {
-	if (!includeTypes && !includeValues) {
+void LocalVariableInfo::dumpMiVariable(WstringBuffer & buf, bool includeTypes, bool includeValues, bool fullSyntax) {
+	if (!includeTypes && !includeValues && !fullSyntax) {
 		//if (buf.last() != '[')
 		buf.appendStringLiteral(varName);
 	}
