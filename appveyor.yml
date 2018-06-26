@@ -44,6 +44,9 @@ build_script:
   - cd c:\projects\mago
   - set VS_SDK_PATH=%VSSDK120Install%
   - copy PropSheets\Template_MagoDbg_properties.props PropSheets\MagoDbg_properties.props
+  - devenv /Build "Release|Win32" /Project "MagoNatDE" magodbg_2010.sln
+  - devenv /Build "Release|x64" /Project "MagoRemote" magodbg_2010.sln
+  - devenv /Build "Release StaticDE|Win32" /Project "MagoNatCC" magodbg_2010.sln
   - devenv /Build "Release StaticDE|Win32" /Project "mago-mi" magodbg_2010.sln
 
 after_build:
@@ -51,7 +54,10 @@ after_build:
   - cd c:\projects\mago
   - ps: |
         echo 'Creating artifacts...'
+        Push-AppveyorArtifact bin\Win32\Release\MagoNatDE.dll
+        Push-AppveyorArtifact bin\Win32\Release\MagoNatCC.dll
         Push-AppveyorArtifact bin\Win32\Release\mago-mi.exe
+        Push-AppveyorArtifact bin\x64\Release\MagoRemote.exe
 
 on_failure:
   - cd c:\projects
