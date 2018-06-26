@@ -48,12 +48,10 @@ build_script:
 
 after_build:
   # publish as artifact
-  - cd c:\projects
+  - cd c:\projects\mago
   - ps: |
-        If ($Env:VS -eq '12') {
-            echo 'Creating artifacts...'
-            Push-AppveyorArtifact bin\Win32\Release\mago-mi.exe
-        }
+        echo 'Creating artifacts...'
+        Push-AppveyorArtifact bin\Win32\Release\mago-mi.exe
 
 on_failure:
   - cd c:\projects
