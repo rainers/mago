@@ -432,7 +432,7 @@ public:
 	std::wstring varValue;
 	bool expandable;
 	bool readonly;
-	void dumpMiVariable(WstringBuffer & buf, bool includeTypes, bool includeValues);
+	void dumpMiVariable(WstringBuffer & buf, bool includeTypes, bool includeValues, bool fullSyntax);
 	LocalVariableInfo() : varKind(VAR_KIND_UNKNOWN), expandable(false), readonly(false) {}
 	virtual ~LocalVariableInfo() {}
 };

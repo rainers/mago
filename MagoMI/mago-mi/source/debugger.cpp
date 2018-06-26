@@ -541,12 +541,13 @@ void Debugger::handleStackListVariablesCommand(MICommand & cmd, bool localsOnly,
 		return;
 	}
 	bool includeArgs = !localsOnly;
+	bool fullSyntax = !localsOnly;
 	LocalVariableList list;
 	if (frame && getLocalVariables(frame, list, includeArgs)) {
 		for (unsigned i = 0; i < list.size(); i++) {
 			if (i != 0)
 				buf.append(L",");
-			list[i]->dumpMiVariable(buf, level != PRINT_NO_VALUES ? true : false, level != PRINT_NO_VALUES ? true : false);
+			list[i]->dumpMiVariable(buf, level != PRINT_NO_VALUES ? true : false, level != PRINT_NO_VALUES ? true : false, fullSyntax);
 		}
 	}
 	
