@@ -1,0 +1,66 @@
+#---------------------------------#
+#      general configuration      #
+#---------------------------------#
+
+#version: 1.0.{build}-{branch}
+
+# Do not build on tags (GitHub only)
+skip_tags: true
+
+#---------------------------------#
+#    environment configuration    #
+#---------------------------------#
+
+# Operating system (build VM template)
+
+environment:
+  matrix:
+    - os: Visual Studio 2015
+      VS: 14
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+
+# scripts that are called at very beginning, before repo cloning
+init:
+  - git config --global core.autocrlf input
+
+# scripts that run after cloning repository
+install:
+  # show environment
+  - cd c:\projects
+  - if not "%VS%" == "15" call "c:\Program Files (x86)\Microsoft Visual Studio %VS%.0\VC\vcvarsall.bat" x86
+  - if     "%VS%" == "15" call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+  # Print environment info
+  - set
+  - cl
+
+#---------------------------------#
+#       build configuration       #
+#---------------------------------#
+
+before_build:
+  - cd c:\projects
+
+build_script:
+  - cd c:\projects\mago
+  - set VS_SDK_PATH=%VSSDK120Install%
+  - copy PropSheets\Template_MagoDbg_properties.props PropSheets\MagoDbg_properties.props
+  - devenv /Build "Release StaticDE|Win32" /Project "mago-mi" magodbg_2010.sln
+
+after_build:
+  # publish as artifact
+  - cd c:\projects
+  - ps: |
+        If ($Env:VS -eq '12') {
+            echo 'Creating artifacts...'
+            Push-AppveyorArtifact bin\Win32\Release\mago-mi.exe
+        }
+
+on_failure:
+  - cd c:\projects
+
+#---------------------------------#
+#       test configuration        #
+#---------------------------------#
+
+test_script:
+  - cd c:\projects
