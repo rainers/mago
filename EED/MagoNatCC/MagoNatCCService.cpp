@@ -728,8 +728,10 @@ HRESULT createEvaluationResult(Evaluation::DkmInspectionContext* pInspectionCont
             {
                 UINT64 addr = 0;
                 tryHR(magoCtx->GetAddress(addr));
-                // ignore error: fails for instruction addresses
-                Evaluation::DkmDataAddress::Create(pInspectionContext->RuntimeInstance(), addr, nullptr, &dataAddr);
+                // always create an instruction address, too
+                CComPtr<DkmInstructionAddress> instrAddr;
+                pStackFrame->Process()->CreateNativeInstructionAddress(addr, &instrAddr);
+                Evaluation::DkmDataAddress::Create(pInspectionContext->RuntimeInstance(), addr, instrAddr, &dataAddr);
             }
         }
     }

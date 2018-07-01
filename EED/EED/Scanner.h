@@ -67,6 +67,7 @@ namespace MagoEE
         wchar_t PeekChar( int index );
         void NextChar();
         TokenNode*  NewNode();
+        bool hasHexSuffix();
 
         void Scan();
         void ScanNumber();

@@ -566,7 +566,11 @@ namespace MagoEE
     void Scanner::ScanNumber()
     {
         // it might be binary, octal, or hexadecimal
-        if ( GetChar() == L'0' )
+        if ( hasHexSuffix() )
+        {
+            ScanHex();
+        }
+        else if ( GetChar() == L'0' )
         {
             wchar_t peekChar = PeekChar();
             
@@ -696,6 +700,16 @@ namespace MagoEE
         ConvertNumberString( numStr.c_str(), 2, flags, &mTok );
     }
 
+    bool Scanner::hasHexSuffix()
+    {
+        int i = 0;
+        while ( IsHexDigit( PeekChar( i ) ) )
+            i++;
+        if ( i <= 0 )
+            return false;
+        return PeekChar( i ) == L'h' || PeekChar( i ) == L'H';
+    }
+
     void Scanner::ScanHex()
     {
         std::wstring    numStr;
@@ -721,7 +735,11 @@ namespace MagoEE
             }
             // TODO: should we fail if there's an alpha (uni alpha) right next to the number?
             else
+            {
+                if ( GetChar() == L'h' || GetChar() == L'H' )
+                    NextChar(); // skip suffix
                 break;
+            }
         }
 
         flags = ScanIntSuffix();
