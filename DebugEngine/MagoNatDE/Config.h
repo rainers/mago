@@ -48,6 +48,7 @@ struct MagoOptions
 	bool hideInternalNames;
 	bool showStaticsInAggr;
 	bool showVTable;
+	bool flatClassFields;
 };
 
 extern MagoOptions gOptions;

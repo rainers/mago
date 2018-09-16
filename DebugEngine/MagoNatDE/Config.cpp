@@ -201,6 +201,11 @@ bool readMagoOptions()
     else
         gOptions.showVTable = true;
 
+    if( GetRegValue( hKey, L"flatClassFields", &val ) == S_OK )
+        gOptions.flatClassFields = val != 0;
+    else
+        gOptions.flatClassFields = false;
+
     MagoEE::gShowVTable = gOptions.showVTable;
 
     RegCloseKey( hKey );

@@ -183,7 +183,7 @@ namespace Mago
         MagoST::SymInfoData         mSymInfoData;
         MagoST::ISymbolInfo*        mSymInfo;
 
-        MagoST::TypeScope           mListScope;
+        std::vector<MagoST::TypeScope> mListScopes;
         uint32_t                    mCount;
         uint32_t                    mIndex;
 
@@ -204,7 +204,7 @@ namespace Mago
     private:
         uint16_t CountMembers();
         // -1 for non-printable, 0 for no more, 1 for ok
-        int NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH );
+        int NextMember( MagoST::TypeHandle& memberTH );
     };
 
 

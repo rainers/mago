@@ -934,7 +934,7 @@ namespace Mago
 
         int res;
         // skip any invalid ones that we skipped during CountMembers
-        while ( (res = NextMember( mListScope, childTH )) < 0 )
+        while ( (res = NextMember( childTH )) < 0 )
         {
         }
         if ( res <= 0 )
@@ -957,12 +957,12 @@ namespace Mago
 
         mIndex = 0;
         mCount = 0;
-        memset( &mListScope, 0, sizeof mListScope );
 
         if ( mSymInfo->GetSymTag() != MagoST::SymTagUDT )
             return false;
 
         count = CountMembers();
+        mListScopes.resize(1);
 
         if ( !mSymInfo->GetFieldList( flistIndex ) )
             return false;
@@ -970,7 +970,7 @@ namespace Mago
         if ( !mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
             return false;
 
-        if ( mSession->SetChildTypeScope( flistHandle, mListScope ) != S_OK )
+        if ( mSession->SetChildTypeScope( flistHandle, mListScopes[0] ) != S_OK )
             return false;
 
         mCount = count;
@@ -993,7 +993,7 @@ namespace Mago
             MagoST::TypeHandle  memberTH;
 
             // skip any invalid ones that we skipped during CountMembers
-            while ( NextMember( mListScope, memberTH ) < 0 )
+            while ( NextMember( memberTH ) < 0 )
             {
             }
         }
@@ -1005,7 +1005,6 @@ namespace Mago
     {
         MagoST::TypeIndex   flistIndex = 0;
         MagoST::TypeHandle  flistHandle = { 0 };
-        MagoST::TypeScope   flistScope = { 0 };
         uint16_t            maxCount = 0;
         uint16_t            count = 0;
 
@@ -1018,16 +1017,16 @@ namespace Mago
         if ( !mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
             return 0;
 
-        if ( mSession->SetChildTypeScope( flistHandle, flistScope ) != S_OK )
+        mListScopes.resize(1);
+        if ( mSession->SetChildTypeScope( flistHandle, mListScopes[0] ) != S_OK )
             return 0;
 
-        // TODO: DMD is writing the wrong field list count
-        //       when it's fixed, we should check maxCount again
+        // let NextMember() filter what fields to show
         for ( uint16_t i = 0; /*i < maxCount*/; i++ )
         {
             MagoST::TypeHandle      memberTH = { 0 };
 
-            int res = NextMember( flistScope, memberTH );
+            int res = NextMember( memberTH );
             if( res < 0 )
                 continue;
             if ( res == 0 )
@@ -1039,14 +1038,18 @@ namespace Mago
         return count;
     }
 
-    int TypeCVDeclMembers::NextMember( MagoST::TypeScope& scope, MagoST::TypeHandle& memberTH )
+    int TypeCVDeclMembers::NextMember( MagoST::TypeHandle& memberTH )
     {
         MagoST::SymInfoData     infoData;
         MagoST::ISymbolInfo*    symInfo = NULL;
         MagoST::SymTag          tag = MagoST::SymTagNull;
 
-        if ( !mSession->NextType( scope, memberTH ) )
-            return 0;
+        while ( !mSession->NextType( mListScopes.back(), memberTH ) )
+        {
+            if (mListScopes.size() == 1)
+                return 0;
+            mListScopes.pop_back();
+        }
 
         if ( mSession->GetTypeInfo( memberTH, infoData, symInfo ) != S_OK )
             return 0;
@@ -1055,6 +1058,25 @@ namespace Mago
 
         if ( (tag != MagoST::SymTagData) && (tag != MagoST::SymTagBaseClass) )
             return -1;
+
+        if ( tag == MagoST::SymTagBaseClass && gOptions.flatClassFields )
+        {
+            MagoST::TypeIndex   flistIndex = 0;
+            MagoST::TypeHandle  flistHandle = { 0 };
+
+            if (!symInfo->GetFieldList( flistIndex ) )
+                return -1;
+
+            if (!mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
+                return -1;
+
+            MagoST::TypeScope baseScope;
+            if ( mSession->SetChildTypeScope( flistHandle, baseScope ) != S_OK )
+                return -1;
+
+            mListScopes.push_back( baseScope );
+            return -1;
+        }
 
         LocationType locType;
         if( !gOptions.showStaticsInAggr && symInfo->GetLocation( locType ) )
