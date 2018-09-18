@@ -84,6 +84,15 @@ public:
         _In_ Evaluation::DkmEvaluationResult* pResult,
         _Deref_out_opt_ DkmString** ppStringValue
     );
+
+    // IDkmLanguageReturnValueEvaluator
+    virtual HRESULT STDMETHODCALLTYPE EvaluateReturnValue(
+        _In_ Evaluation::DkmInspectionContext* pInspectionContext,
+        _In_ DkmWorkList* pWorkList,
+        _In_ CallStack::DkmStackWalkFrame* pStackFrame,
+        _In_ Evaluation::DkmRawReturnValue* pRawReturnValue,
+        _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluateReturnValueAsyncResult>* pCompletionRoutine
+    );
 };
 
 OBJECT_ENTRY_AUTO(CMagoNatCCService::ClassId, CMagoNatCCService)

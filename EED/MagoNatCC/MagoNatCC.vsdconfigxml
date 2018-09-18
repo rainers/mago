@@ -31,6 +31,12 @@ For more information about this file, see https://github.com/Microsoft/ConcordEx
           </Filter>
           <Interface Name="IDkmLanguageExpressionEvaluator"/>
         </InterfaceGroup>
+        <InterfaceGroup>
+          <Filter>
+            <LanguageId RequiredValue="guidDLanguageId"/>
+          </Filter>
+          <Interface Name="IDkmLanguageReturnValueEvaluator"/>
+        </InterfaceGroup>
       </Implements>
     </Class>
     

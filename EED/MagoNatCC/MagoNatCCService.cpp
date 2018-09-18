@@ -466,9 +466,9 @@ public:
         return mStackFrame->Thread()->TebAddress();
     }
 
-    virtual HRESULT SymbolFromAddr(MagoEE::Address addr, std::wstring& symName)
+    virtual HRESULT SymbolFromAddr(MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType)
     {
-        HRESULT hr = ExprContext::SymbolFromAddr(addr, symName);
+        HRESULT hr = ExprContext::SymbolFromAddr(addr, symName, pType);
         if (FAILED(hr))
             return hr;
         if (symName.length() > 0 && symName[0] == '?')
@@ -606,6 +606,122 @@ public:
         DkmFreeArray(arrResults);
         return hr;
     }
+
+	bool returnInRegister(MagoEE::Type* type)
+	{
+		if (type->IsSArray())
+			return false;
+
+		int ptrSize = mModule->mArchData->GetPointerSize();
+		if (type->GetSize() > ptrSize)
+			return false;
+
+		MagoEE::ITypeStruct* struc = type->AsTypeStruct();
+		if (!struc)
+			return true;
+
+		return struc->IsPOD();
+	}
+
+	HRESULT EvalReturnValue(Evaluation::DkmInspectionContext* pInspectionContext, 
+	                        Evaluation::DkmNativeRawReturnValue* pNativeRetValue, DEBUG_PROPERTY_INFO& info)
+	{
+		std::wstring funcName;
+		DkmInstructionAddress* funcAddr = pNativeRetValue->ReturnFrom();
+		auto cpuinfo = funcAddr->CPUInstructionPart();
+		if (!cpuinfo)
+			return E_INVALIDARG;
+
+		MagoST::SymHandle funcSH;
+		std::vector<MagoST::SymHandle> blockSH;
+		uint64_t rva = cpuinfo->InstructionPointer;
+		tryHR(mModule->FindFunction(rva, funcSH, blockSH));
+
+		RefPtr<MagoEE::Type> type;
+		tryHR(SymbolFromAddr(rva, funcName, &type.Ref()));
+		funcName.append(L"()");
+
+		MagoEE::ITypeFunction* func = type->AsTypeFunction();
+		if (!func)
+			return E_INVALIDARG;
+		auto retType = func->GetReturnType();
+		if (!retType || retType->GetBackingTy() == MagoEE::Tvoid)
+			return E_INVALIDARG; // do not show void function return
+
+		std::wstring funcType;
+		retType->ToString(funcType);
+
+		MagoEE::EvalResult value = { 0 };
+		uint8_t buf[16]; // enough for two pointers
+		const uint8_t* pbuf = buf;
+		UINT32 ReturnValueSize = retType->GetSize();
+		bool returnsDXAX = retType->IsDArray() || retType->IsDelegate();
+		int ptrSize = mModule->mArchData->GetPointerSize();
+		if (returnsDXAX || returnInRegister(retType))
+		{
+			auto regs = pNativeRetValue->Registers();
+			auto getReg = [regs](CV_HREG_e reg, uint8_t* pbuf) -> bool
+			{
+				DWORD cnt = regs->Count();
+				for (DWORD i = 0; i < cnt; i++)
+					if (regs->Items()[i]->Identifier() == reg)
+						if (auto bytes = regs->Items()[i]->Value())
+						{
+							memcpy(pbuf, bytes->Items(), bytes->Count());
+							return true;
+						}
+				return false;
+			};
+			if (retType->IsFloatingPoint())
+			{
+				if (!getReg(ptrSize > 4 ? CV_REG_XMM0 : CV_REG_ST0, buf))
+					return E_INVALIDARG;
+			}
+			else
+			{
+				if (!getReg(ptrSize > 4 ? CV_AMD64_RAX : CV_REG_EAX, buf))
+					return E_INVALIDARG;
+			}
+			if (returnsDXAX && !getReg(ptrSize > 4 ? CV_AMD64_RDX : CV_REG_EDX, buf + ptrSize))
+				return E_INVALIDARG;
+		}
+		else if (auto mem = pNativeRetValue->Memory())
+		{
+			if (mem->Count() < ReturnValueSize)
+				return E_INVALIDARG;
+			pbuf = mem->Items();
+		}
+		else
+			return E_INVALIDARG;
+		value.ObjVal._Type = retType;
+
+		MagoEE::FormatOptions fmtopt;
+		fmtopt.radix = pInspectionContext->Radix();
+		uint32_t maxLength = MagoEE::kMaxFormatValueLength;
+		std::wstring valStr;
+
+		if (retType->AsTypeStruct())
+		{
+			tryHR(FormatRawStructValue(this, pbuf, retType, fmtopt, valStr, maxLength));
+		}
+		else
+		{
+			tryHR(FromRawValue(pbuf, retType, value.ObjVal.Value));
+			tryHR(FormatValue(this, value.ObjVal, fmtopt, valStr, maxLength));
+		}
+
+		MagoEE::FillValueTraits(value, nullptr);
+
+		RefPtr<Mago::Property> pProperty;
+		tryHR(MakeCComObject(pProperty));
+		tryHR(pProperty->Init(funcName.c_str(), funcName.c_str(), value, this, fmtopt));
+
+		info.bstrName = SysAllocString(funcName.c_str());
+		info.bstrFullName = SysAllocString(funcName.c_str());
+		info.bstrValue = SysAllocString(valStr.c_str());
+		info.bstrType = SysAllocString(funcType.c_str());
+		return S_OK;
+	}
 
     Mago::IRegisterSet* getRegSet() { return mModule->mRegSet; }
 };
@@ -804,7 +920,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     RefPtr<MagoEE::IEEDParsedExpr> pExpr;
     hr = MagoEE::ParseText(exprText.c_str(), exprContext->GetTypeEnv(), exprContext->GetStringTable(), pExpr.Ref());
     if (FAILED(hr))
-    return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
     options.Radix = pInspectionContext->Radix();
@@ -817,12 +933,12 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
 
     hr = pExpr->Bind(options, exprContext);
     if (FAILED(hr))
-    return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalResult value = { 0 };
     hr = pExpr->Evaluate(options, exprContext, value);
     if (FAILED(hr))
-    return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     RefPtr<Mago::Property> pProperty;
     tryHR(MakeCComObject(pProperty));
@@ -993,4 +1109,34 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetUnderlyingString(
         str.get()[fetched] = 0;
     *ppStringValue = toDkmString(str.get()).Detach();
     return S_OK;
+}
+
+// IDkmLanguageReturnValueEvaluator
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateReturnValue(
+    _In_ Evaluation::DkmInspectionContext* pInspectionContext,
+    _In_ DkmWorkList* pWorkList,
+    _In_ CallStack::DkmStackWalkFrame* pStackFrame,
+    _In_ Evaluation::DkmRawReturnValue* pRawReturnValue,
+    _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluateReturnValueAsyncResult>* pCompletionRoutine)
+{
+	auto pNativeRetValue = Evaluation::DkmNativeRawReturnValue::TryCast(pRawReturnValue);
+	if (!pNativeRetValue)
+		return E_NOTIMPL;
+
+	RefPtr<CCExprContext> exprContext;
+	tryHR(MakeCComObject(exprContext));
+	auto process = pInspectionContext->RuntimeInstance()->Process();
+	tryHR(exprContext->Init(process, pStackFrame));
+
+	ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
+	tryHR(exprContext->EvalReturnValue(pInspectionContext, pNativeRetValue, info));
+
+	Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
+	tryHR(createEvaluationResult(pInspectionContext, pStackFrame, info, &pResultObject));
+
+	Evaluation::DkmEvaluateReturnValueAsyncResult result;
+	result.ErrorCode = S_OK;
+	result.pResultObject = pResultObject;
+	pCompletionRoutine->OnComplete(result);
+	return S_OK;
 }

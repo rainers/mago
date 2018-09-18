@@ -1309,6 +1309,39 @@ namespace MagoEE
         return mDecl->GetBaseClassOffset( baseClass->GetDeclaration(), offset );
     }
 
+    bool TypeStruct::IsPOD()
+	{
+		RefPtr<IEnumDeclarationMembers> members;
+		if ( !mDecl->EnumMembers( members.Ref() ) )
+			return false; // undefined?
+
+		uint32_t cnt = members->GetCount();
+		for ( int i = 0; i < cnt; i++ )
+		{
+			RefPtr<Declaration> decl;
+			if ( !members->Next( decl.Ref() ) )
+				return false;
+			if ( decl->IsStaticField() )
+				continue;
+			if ( decl->IsBaseClass() )
+				return false;
+			if( decl->IsFunction() )
+				if( wcscmp( decl->GetName(), L"__dtor" ) == 0 )
+					return false;
+			if( decl->IsField() )
+			{
+				if ( wcscmp( decl->GetName(), L"this" ) == 0 )
+					return false;
+				RefPtr<Type> ftype;
+				if ( decl->GetType( ftype.Ref() ) )
+					if( auto s = ftype->AsTypeStruct() )
+						if( !s->IsPOD() )
+							return false;
+			}
+		}
+		return true;
+	}
+
     bool TypeStruct::Equals( Type* other )
     {
         if ( Ty != other->Ty )

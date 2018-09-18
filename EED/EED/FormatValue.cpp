@@ -14,6 +14,9 @@
 
 #include <algorithm>
 
+// TODO: refactor: move FromRawValue from MagoNatDE to EED
+HRESULT FromRawValue(const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value);
+
 namespace MagoEE
 {
     const uint32_t  MaxStringLen = 1048576;
@@ -536,7 +539,8 @@ namespace MagoEE
         return FormatAddress( addr, type, outStr );
     }
 
-    HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    HRESULT _FormatStruct( IValueBinder* binder, Address addr, const char* srcBuf, Type* type,
+                           const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
         HRESULT         hr = S_OK;
 
@@ -571,12 +575,21 @@ namespace MagoEE
             if ( member->GetOffset( offset ) )
                 memberObj.Addr += offset;
 
-            hr = binder->GetValue( memberObj.Addr, memberObj._Type, memberObj.Value );
-            if ( FAILED( hr ) )
-                return hr;
-
             std::wstring memberStr;
-            hr = FormatValue( binder, memberObj, fmtopt, memberStr, maxLength - outStr.length() );
+            if ( srcBuf && memberObj._Type->AsTypeStruct() )
+            {
+                hr = _FormatStruct( binder, 0, srcBuf + memberObj.Addr, memberObj._Type, fmtopt, memberStr, maxLength - outStr.length() );
+            }
+            else
+            {
+                if( srcBuf )
+                    hr = FromRawValue( srcBuf + memberObj.Addr, memberObj._Type, memberObj.Value );
+                else
+                    hr = binder->GetValue( memberObj.Addr, memberObj._Type, memberObj.Value );
+
+                if ( !FAILED( hr ) )
+                    hr = FormatValue( binder, memberObj, fmtopt, memberStr, maxLength - outStr.length() );
+            }
             if ( FAILED( hr ) )
                 return hr;
 
@@ -590,6 +603,16 @@ namespace MagoEE
 
         return hr;
     }
+
+	HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+	{
+		return _FormatStruct( binder, addr, nullptr, type, fmtopt, outStr, maxLength );
+	}
+
+	HRESULT FormatRawStructValue( IValueBinder* binder, const void* srcBuf, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+	{
+		return _FormatStruct( binder, 0, (const char*)srcBuf, type, fmtopt, outStr, maxLength );
+	}
 
     HRESULT FormatPointer( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
@@ -620,7 +643,7 @@ namespace MagoEE
         else
         {
             std::wstring symName;
-            hr = binder->SymbolFromAddr( objVal.Value.Addr, symName );
+            hr = binder->SymbolFromAddr( objVal.Value.Addr, symName, nullptr );
             if ( hr == S_OK )
             {
                 outStr.append( L" {" );

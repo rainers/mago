@@ -730,7 +730,7 @@ namespace Mago
         return wname;
     }
 
-    HRESULT ExprContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName )
+    HRESULT ExprContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )
     {
         RefPtr<MagoST::ISession>    session;
         MagoST::SymHandle           symHandle = { 0 };
@@ -753,6 +753,15 @@ namespace Mago
         hr = session->GetSymbolInfo( symHandle, infoData, symInfo );
         if ( FAILED( hr ) )
             return hr;
+
+        if ( pType )
+        {
+            MagoST::TypeIndex typeIndex;
+            symInfo->GetType( typeIndex );
+            hr = GetTypeFromTypeSymbol( typeIndex, *pType );
+            if ( FAILED( hr ) )
+                return hr;
+        }
 
         SymString pstrName;
         if ( !symInfo->GetName( pstrName ) )
