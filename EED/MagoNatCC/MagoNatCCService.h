@@ -8,6 +8,8 @@
 
 #include "MagoNatCC.Contract.h"
 
+struct IEnumDebugPropertyInfo2;
+
 class ATL_NO_VTABLE CMagoNatCCService :
     // Inherit from CMagoNatCCServiceContract to provide the list of interfaces that
     // this class implements (interface list comes from MagoNatCC.vsdconfigxml)
@@ -15,7 +17,7 @@ class ATL_NO_VTABLE CMagoNatCCService :
 
     // Inherit from CComObjectRootEx to provide ATL support for reference counting and
     // object creation.
-	public CComObjectRootEx<CComMultiThreadModel>,
+    public CComObjectRootEx<CComMultiThreadModel>,
 
     // Inherit from CComCoClass to provide ATL support for exporting this class from
     // DllGetClassObject
@@ -28,6 +30,13 @@ protected:
     ~CMagoNatCCService()
     {
     }
+
+    HRESULT STDMETHODCALLTYPE _GetItems(
+        _In_ Evaluation::DkmEvaluationResultEnumContext* pEnumContext,
+        _In_ IEnumDebugPropertyInfo2* pEnum,
+        _In_ UINT32 StartIndex,
+        _In_ UINT32 Count,
+        DkmArray<Evaluation::DkmEvaluationResult*>& Items);
 
 public:
     DECLARE_NO_REGISTRY();

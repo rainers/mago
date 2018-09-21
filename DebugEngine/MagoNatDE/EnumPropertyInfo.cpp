@@ -30,6 +30,8 @@ namespace Mago
         dest->dwAttrib = source->dwAttrib;
         dest->dwFields = source->dwFields;
 
+        if (dest->pProperty != NULL)
+            dest->pProperty->Release();
         dest->pProperty = source->pProperty;
         if ( dest->pProperty != NULL )
             dest->pProperty->AddRef();
