@@ -188,7 +188,7 @@
     </ResourceCompile>
     <Link>
       <RegisterOutput>false</RegisterOutput>
-      <AdditionalDependencies>rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;dbgmetric.lib;ad2de.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\CVSym\$(Configuration);$(ProjectDir)..\..\EED\$(Configuration);$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\MagoNatDE.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -439,7 +439,7 @@
     </ResourceCompile>
     <Link>
       <RegisterOutput>false</RegisterOutput>
-      <AdditionalDependencies>rpcrt4.lib;Exec.lib;dbgmetric.lib;ad2de.lib;CVSTI.lib;MagoNatEE.lib;dbghelp.lib;Real.lib;gdtoa.lib;udis86.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;dbgmetric.lib;ad2de.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\CVSym\$(Configuration);$(ProjectDir)..\..\EED\$(Configuration);$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\MagoNatDE.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
