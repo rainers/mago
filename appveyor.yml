@@ -42,8 +42,6 @@ before_build:
 
 build_script:
   - cd c:\projects\mago
-  - set VS_SDK_PATH=%VSSDK120Install%
-  - copy PropSheets\Template_MagoDbg_properties.props PropSheets\MagoDbg_properties.props
   - devenv /Build "Release|Win32" /Project "MagoNatDE" magodbg_2010.sln
   - devenv /Build "Release|x64" /Project "MagoRemote" magodbg_2010.sln
   - devenv /Build "Release StaticDE|Win32" /Project "MagoNatCC" magodbg_2010.sln
