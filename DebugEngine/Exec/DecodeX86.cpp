@@ -262,15 +262,15 @@ InstructionType GetInstructionTypeAndSize( uint8_t* mem, int memLen, CpuSizeMode
 
         if ( prefixes.Pre32.RepF2 )
         {
-            if ( (mem[1] == 0xA6) || (mem[1] == 0xA7) || (mem[1] == 0xAE) || (mem[1] == 0xAF) )
-                instSize = 2;
+            if ( (mem[0] == 0xA6) || (mem[0] == 0xA7) || (mem[0] == 0xAE) || (mem[0] == 0xAF) )
+                instSize = 1;
         }
         else if ( prefixes.Pre32.RepF3 )
         {
-            if ( ((mem[1] >= 0x6C) && (mem[1] <= 0x6F))
-                || ((mem[1] >= 0xA4) && (mem[1] <= 0xA7))
-                || ((mem[1] >= 0xAA) && (mem[1] <= 0xAF)) )
-                instSize = 2;
+            if (   ((mem[0] >= 0x6C) && (mem[0] <= 0x6F))
+                || ((mem[0] >= 0xA4) && (mem[0] <= 0xA7))
+                || ((mem[0] >= 0xAA) && (mem[0] <= 0xAF)) )
+                instSize = 1;
         }
 
         if ( instSize > 0 )
