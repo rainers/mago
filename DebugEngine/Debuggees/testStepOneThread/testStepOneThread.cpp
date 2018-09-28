@@ -38,6 +38,18 @@ void __declspec( naked ) Scenario1Func1()
     }
 }
 
+void __declspec( naked ) Scenario1Func0()
+{
+    _asm
+    {
+        mov ecx, 5
+        int 3
+        mov al, 65
+        call Scenario1Func1
+        ret
+    }
+}
+
 void Scenario1()
 {
     char    array[10] = { 0 };
@@ -45,10 +57,7 @@ void Scenario1()
     _asm
     {
         lea edi, array
-        mov ecx, 5
-        int 3
-        mov al, 65
-        call Scenario1Func1
+        call Scenario1Func0
     }
 
     for ( int i = 0; i < 7; i++ )

@@ -10,7 +10,6 @@ Dependencies:
 - inttypes.h and stdint.h
 - CPPTest 1.0
 - VS 2008 SDK
-- Boost 1.40
 
 
 Build:

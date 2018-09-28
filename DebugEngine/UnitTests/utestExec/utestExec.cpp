@@ -14,7 +14,6 @@
 #include "StepOneThreadSuite.h"
 
 using namespace std;
-using namespace boost;
 
 
 enum OutputType
@@ -135,6 +134,7 @@ int _tmain(int argc, _TCHAR* argv[])
     Options options;
 
     InitDebug();
+    CoInitializeEx( NULL, COINIT_MULTITHREADED );
 
     if ( !ParseCommandLine( argc, argv, options ) )
         return EXIT_FAILURE;

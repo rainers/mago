@@ -11,7 +11,6 @@
 #include "Utility.h"
 
 using namespace std;
-using namespace boost;
 
 
 const DWORD     DefaultTimeoutMillis = 500;
