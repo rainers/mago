@@ -14,9 +14,6 @@
 
 #include <algorithm>
 
-// TODO: refactor: move FromRawValue from MagoNatDE to EED
-HRESULT FromRawValue(const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value);
-
 namespace MagoEE
 {
     const uint32_t  MaxStringLen = 1048576;

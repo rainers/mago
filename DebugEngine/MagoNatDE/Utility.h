@@ -146,12 +146,6 @@ struct Real10;
 
 void ConvertVariantToDataVal( const MagoST::Variant& var, MagoEE::DataValue& dataVal );
 
-uint64_t ReadInt( const void* srcBuf, uint32_t bufOffset, size_t size, bool isSigned );
-Real10 ReadFloat( const void* srcBuf, uint32_t bufOffset, MagoEE::Type* type );
-HRESULT WriteInt( uint8_t* buffer, uint32_t bufSize, MagoEE::Type* type, uint64_t val );
-HRESULT WriteFloat( uint8_t* buffer, uint32_t bufSize, MagoEE::Type* type, const Real10& val );
-HRESULT FromRawValue( const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue& value );
-
 typedef bool (*EqualsFunc)( const void* leftBuf, const void* rightBuf );
 
 bool EqualFloat32( const void* leftBuf, const void* rightBuf );

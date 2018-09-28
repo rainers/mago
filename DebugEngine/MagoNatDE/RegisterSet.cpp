@@ -7,6 +7,7 @@
 
 #include "Common.h"
 #include "RegisterSet.h"
+#include <MagoEED.h>
 
 
 namespace Mago
@@ -144,7 +145,7 @@ namespace Mago
             const RegisterDesc& parentRegDesc = mRegDesc[regDesc.ParentRegId];
             uint64_t    n = 0;
 
-            n = ReadInt( mContextBuf.Get(), parentRegDesc.ContextOffset, parentRegDesc.ContextSize, false );
+            n = MagoEE::ReadInt( mContextBuf.Get(), parentRegDesc.ContextOffset, parentRegDesc.ContextSize, false );
 
             n = (n >> regDesc.SubregOffset) & regDesc.SubregMask;
 
@@ -190,7 +191,7 @@ namespace Mago
 
             newN = value.GetInt();
 
-            oldN = ReadInt( 
+            oldN = MagoEE::ReadInt( 
                 mContextBuf.Get(), 
                 parentRegDesc.ContextOffset, 
                 parentRegDesc.ContextSize, 

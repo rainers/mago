@@ -14,6 +14,7 @@
 #include "Eval.h"
 #include "Type.h"
 #include "FormatValue.h"
+#include "FromRawValue.h"
 #include "Array.h"
 
 
