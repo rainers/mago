@@ -85,6 +85,9 @@ const wchar_t*  Module::GetPath()
 
 const wchar_t*  Module::GetSymbolSearchPath()
 {
+    if ( mDebuggerProxy == NULL )
+        return NULL;
+
     return mDebuggerProxy->GetSymbolSearchPath().data();
 }
 

@@ -12,6 +12,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
     wchar_t dir[ MAX_PATH ] = L"";
 
+    // Buffer everything, so the test doesn't get partial results.
+    setvbuf( stderr, NULL, _IOFBF, 1000 );
+    setvbuf( stdout, NULL, _IOFBF, 1000 );
+    setvbuf( stdin, NULL, _IOFBF, 1000 );
+
     GetCurrentDirectory( _countof( dir ), dir );
 
     fwprintf( stderr, L"%ls\n", argv[3] );

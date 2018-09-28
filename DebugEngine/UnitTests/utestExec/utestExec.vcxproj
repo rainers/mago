@@ -162,6 +162,7 @@
   <ItemGroup>
     <ClCompile Include="EventCallbackBase.cpp" />
     <ClCompile Include="EventSuite.cpp" />
+    <ClCompile Include="MultiEventCallbackBase.cpp" />
     <ClCompile Include="StartStopSuite.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -176,6 +177,7 @@
   <ItemGroup>
     <ClInclude Include="EventCallbackBase.h" />
     <ClInclude Include="EventSuite.h" />
+    <ClInclude Include="MultiEventCallbackBase.h" />
     <ClInclude Include="StartStopSuite.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="StepOneThreadSuite.h" />

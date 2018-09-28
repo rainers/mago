@@ -8,8 +8,6 @@
 #include "stdafx.h"
 #include "EventCallbackBase.h"
 
-using namespace boost;
-
 
 const char* gEventNames[] = 
 {
@@ -103,7 +101,7 @@ void EventCallbackBase::ClearEvents()
     mEvents.clear();
 }
 
-shared_ptr<EventNode> EventCallbackBase::GetLastEvent()
+std::shared_ptr<EventNode> EventCallbackBase::GetLastEvent()
 {
     return mLastEvent;
 }
@@ -137,7 +135,7 @@ void EventCallbackBase::Release()
     }
 }
 
-void EventCallbackBase::TrackEvent( const shared_ptr<EventNode>& node )
+void EventCallbackBase::TrackEvent( const std::shared_ptr<EventNode>& node )
 {
     if ( mTrackEvents )
         mEvents.push_back( node );
@@ -150,7 +148,7 @@ void EventCallbackBase::OnProcessStart( IProcess* process )
     mLastThreadId = 0;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<EventNode>   node( new EventNode() );
+        std::shared_ptr<EventNode>   node( new EventNode() );
         node->Code = ExecEvent_ProcessStart;
         TrackEvent( node );
     }
@@ -163,7 +161,7 @@ void EventCallbackBase::OnProcessExit( IProcess* process, DWORD exitCode )
     mLastThreadId = 0;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<ProcessExitEventNode>   node( new ProcessExitEventNode() );
+        std::shared_ptr<ProcessExitEventNode>   node( new ProcessExitEventNode() );
         node->ExitCode = exitCode;
         TrackEvent( node );
     }
@@ -174,7 +172,7 @@ void EventCallbackBase::OnThreadStart( IProcess* process, Thread* thread )
     mLastThreadId = thread->GetId();
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<EventNode>   node( new EventNode() );
+        std::shared_ptr<EventNode>   node( new EventNode() );
         node->Code = ExecEvent_ThreadStart;
         node->ThreadId = thread->GetId();
         TrackEvent( node );
@@ -186,7 +184,7 @@ void EventCallbackBase::OnThreadExit( IProcess* process, DWORD threadId, DWORD e
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<ThreadExitEventNode>   node( new ThreadExitEventNode() );
+        std::shared_ptr<ThreadExitEventNode>   node( new ThreadExitEventNode() );
         node->ThreadId = threadId;
         node->ExitCode = exitCode;
         TrackEvent( node );
@@ -208,7 +206,7 @@ void EventCallbackBase::OnModuleLoad( IProcess* process, IModule* module )
 
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<ModuleLoadEventNode>   node( new ModuleLoadEventNode() );
+        std::shared_ptr<ModuleLoadEventNode>   node( new ModuleLoadEventNode() );
         node->Module = module;
         TrackEvent( node );
     }
@@ -223,7 +221,7 @@ void EventCallbackBase::OnModuleUnload( IProcess* process, Address baseAddr )
 
         if ( it != mModules.end() )
         {
-            shared_ptr< ModuleUnloadEventNode >   node( new ModuleUnloadEventNode() );
+            std::shared_ptr< ModuleUnloadEventNode >   node( new ModuleUnloadEventNode() );
 
             node->Module = it->second;
 
@@ -242,7 +240,7 @@ void EventCallbackBase::OnOutputString( IProcess* process, const wchar_t* output
     mLastThreadId = 0;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<OutputStringEventNode>   node( new OutputStringEventNode() );
+        std::shared_ptr<OutputStringEventNode>   node( new OutputStringEventNode() );
         node->String = outputString;
         TrackEvent( node );
     }
@@ -254,7 +252,7 @@ void EventCallbackBase::OnLoadComplete( IProcess* process, DWORD threadId )
     mLoadCompleted = true;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<EventNode>   node( new EventNode() );
+        std::shared_ptr<EventNode>   node( new EventNode() );
         node->Code = ExecEvent_LoadComplete;
         node->ThreadId = threadId;
         TrackEvent( node );
@@ -266,7 +264,7 @@ RunMode EventCallbackBase::OnException( IProcess* process, DWORD threadId, bool 
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<ExceptionEventNode>   node( new ExceptionEventNode() );
+        std::shared_ptr<ExceptionEventNode>   node( new ExceptionEventNode() );
         node->ThreadId = threadId;
         node->FirstChance = firstChance;
         node->Exception = *exceptRec;
@@ -280,7 +278,7 @@ RunMode EventCallbackBase::OnBreakpoint( IProcess* process, uint32_t threadId, A
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<BreakpointEventNode>   node( new BreakpointEventNode() );
+        std::shared_ptr<BreakpointEventNode>   node( new BreakpointEventNode() );
         node->ThreadId = threadId;
         node->Address = address;
         
@@ -294,7 +292,7 @@ void EventCallbackBase::OnStepComplete( IProcess* process, uint32_t threadId )
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<EventNode>   node( new EventNode() );
+        std::shared_ptr<EventNode>   node( new EventNode() );
         node->Code = ExecEvent_StepComplete;
         node->ThreadId = threadId;
         TrackEvent( node );
@@ -306,7 +304,7 @@ void EventCallbackBase::OnAsyncBreakComplete( IProcess* process, uint32_t thread
     mLastThreadId = threadId;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<EventNode>   node( new EventNode() );
+        std::shared_ptr<EventNode>   node( new EventNode() );
         node->Code = ExecEvent_AsyncBreakComplete;
         node->ThreadId = threadId;
         TrackEvent( node );
@@ -318,7 +316,7 @@ void EventCallbackBase::OnError( IProcess* process, HRESULT hrErr, EventCode eve
     mLastThreadId = 0;
     if ( mTrackEvents || mTrackLastEvent )
     {
-        shared_ptr<ErrorEventNode>   node( new ErrorEventNode() );
+        std::shared_ptr<ErrorEventNode>   node( new ErrorEventNode() );
         node->Event = event;
         TrackEvent( node );
     }
