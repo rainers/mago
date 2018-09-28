@@ -567,8 +567,9 @@ void EventSuite::TestExceptionNotHandledAllChances()
 
         if ( state == State_SecondNotHandled )
         {
-            TEST_ASSERT( mCallback->GetProcessExited() );
-            state = State_Done;
+            TEST_ASSERT( mCallback->GetProcessExited() || mCallback->GetLastEvent()->Code == ExecEvent_ThreadExit );
+            if ( mCallback->GetProcessExited() )
+                state = State_Done;
         }
 
         if ( process->IsStopped() )

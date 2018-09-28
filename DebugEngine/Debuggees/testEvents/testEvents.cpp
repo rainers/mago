@@ -149,6 +149,9 @@ int RunAttach( int scenario, unsigned int cookie1 )
     }
 }
 
+int RunAsyncBreak( int scenario );
+int RunMultiProcess( int scenario, unsigned int cookie1 );
+
 int _tmain(int argc, _TCHAR* argv[])
 {
     if ( (argc > 1) && (_wcsicmp( argv[1], L"exception" ) == 0) )
@@ -168,6 +171,18 @@ int _tmain(int argc, _TCHAR* argv[])
         if ( argc < 4 )
             return -1;
         return RunAttach( _wtoi( argv[2] ), _wtoi( argv[3] ) );
+    }
+    else if ( (argc > 1) && (_wcsicmp( argv[1], L"break" ) == 0) )
+    {
+        if ( argc < 3 )
+            return -1;
+        return RunAsyncBreak( _wtoi( argv[2] ) );
+    }
+    else if ( (argc > 1) && (_wcsicmp( argv[1], L"multi" ) == 0) )
+    {
+        if ( argc < 4 )
+            return -1;
+        return RunMultiProcess( _wtoi( argv[2] ), _wtoi( argv[3] ) );
     }
 
     const wchar_t   RepeatingWstr[] = L"The daily news in Japanese is:  \x6bce\x65e5\x306e\x30cb\x30e5\x30fc\x30b9.";
@@ -218,3 +233,60 @@ int _tmain(int argc, _TCHAR* argv[])
     return 0;
 }
 
+int RunAsyncBreak( int scenario )
+{
+    OutputDebugStringA( "}" );
+
+    while ( true )
+    {
+        __try
+        {
+            _asm
+            {
+                mov ebx, 0000h
+                div bl
+            }
+            break;
+        }
+        __except ( 1 )
+        {
+        }
+    }
+
+    return 1911;
+}
+
+int RunMultiProcess( int scenario, unsigned int cookie1 )
+{
+    if ( scenario < 0 || scenario > 1 )
+        return -1;
+
+    unsigned int otherScenario = (scenario + 1) % 2;
+    wchar_t eventName[64] = L"";
+
+    swprintf_s( eventName, L"utestExec_multi-%u-%u", scenario, cookie1 );
+    HANDLE hSelfEvent = CreateEvent( NULL, FALSE, FALSE, eventName );
+    if ( hSelfEvent == NULL && GetLastError() != ERROR_ALREADY_EXISTS )
+        return -1;
+
+    swprintf_s( eventName, L"utestExec_multi-%u-%u", otherScenario, cookie1 );
+    HANDLE hOtherEvent = CreateEvent( NULL, FALSE, FALSE, eventName );
+    if ( hOtherEvent == NULL && GetLastError() != ERROR_ALREADY_EXISTS )
+        return -1;
+
+    if ( !SetEvent( hSelfEvent ) )
+        return -1;
+    if ( WAIT_OBJECT_0 != WaitForSingleObject( hOtherEvent, 50000 ) )
+        return -1;
+
+    OutputDebugStringA( "}" );
+
+    if ( !SetEvent( hSelfEvent ) )
+        return -1;
+    if ( WAIT_OBJECT_0 != WaitForSingleObject( hOtherEvent, 50000 ) )
+        return -1;
+
+    OutputDebugStringA( "]" );
+
+    return 0;
+}
