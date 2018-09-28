@@ -104,8 +104,6 @@ HRESULT Exec::Init( IEventCallback* callback, MagoCore::DebuggerProxy* debuggerP
         return E_ALREADY_INIT;
     if ( callback == NULL )
         return E_INVALIDARG;
-    if ( debuggerProxy == NULL )
-        return E_INVALIDARG;
 
     HRESULT hr = S_OK;
 

@@ -113,7 +113,7 @@ public:
     // event handling methods and some control methods must be made from that 
     // thread.
     //
-    HRESULT Init( IEventCallback* callback, MagoCore::DebuggerProxy* debuggerProxy );
+    HRESULT Init( IEventCallback* callback, MagoCore::DebuggerProxy* debuggerProxy = NULL );
 
     // Stops debugging all processes, and frees resources. 
     //

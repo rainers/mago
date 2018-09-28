@@ -31,10 +31,12 @@ enum ExecEvent
 struct EventNode
 {
     ExecEvent   Code;
+    uint32_t    ProcessId;
     uint32_t    ThreadId;
 
     EventNode()
         :   Code( ExecEvent_None ),
+            ProcessId( 0 ),
             ThreadId( 0 )
     {
     }

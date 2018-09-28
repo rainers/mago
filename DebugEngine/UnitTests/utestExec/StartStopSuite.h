@@ -33,6 +33,8 @@ private:
     void TestDetachRunning();
     void TestDetachStopped();
     void TestAttach();
+    void TestAsyncBreak();
+    void TestMultiProcess();
 
     void TestDetachCore( bool detachWhileRunning );
 

@@ -8,6 +8,8 @@
 #include "stdafx.h"
 #include "StepOneThreadSuite.h"
 #include "EventCallbackBase.h"
+#include <dia2.h>
+#include <atlbase.h>
 
 
 enum Action
@@ -20,6 +22,7 @@ enum Action
 struct ExpectedEvent
 {
     ExecEvent   Code;
+    int         FunctionIndex;
     uintptr_t   AddressOffset;
     DWORD       ExceptionCode;
 };
@@ -30,6 +33,7 @@ struct WantedAction
     bool        StepIn;
     bool        SourceMode;
     bool        CanStepInFunction;
+    int         FunctionIndex;
     uintptr_t   BPAddressOffset;
 };
 
@@ -39,9 +43,89 @@ struct Step
     WantedAction    Action;
 };
 
+enum
+{
+    Func_None,
+    Func_Scenario1Func0,
+    Func_Scenario1Func1,
+    Func_Scenario1Func2,
+    Func_Scenario1Func3,
+};
+
+struct Symbol
+{
+    const wchar_t*  Name;
+    DWORD           RelativeAddress;
+};
+
+
+// dia2.h has the wrong IID?
+// {2F609EE1-D1C8-4E24-8288-3326BADCD211}
+EXTERN_C const GUID DECLSPEC_SELECTANY guidIDiaSession =
+{ 0x2F609EE1, 0xD1C8, 0x4E24, { 0x82, 0x88, 0x33, 0x26, 0xBA, 0xDC, 0xD2, 0x11 } };
+
 
 const DWORD DefaultTimeoutMillis = 500;
 
+
+static HRESULT FindSymbols( const wchar_t* exePath, Symbol* symbols, int count )
+{
+    HRESULT                 hr;
+    CComPtr<IDiaDataSource> source;
+    CComPtr<IDiaSession>    session;
+    CComPtr<IDiaSymbol>     global;
+
+    // Obtain access to the provider
+    GUID msdia140 = { 0xe6756135, 0x1e65, 0x4d17, { 0x85, 0x76, 0x61, 0x07, 0x61, 0x39, 0x8c, 0x3c } };
+    GUID msdia120 = { 0x3BFCEA48, 0x620F, 0x4B6B, { 0x81, 0xF7, 0xB9, 0xAF, 0x75, 0x45, 0x4C, 0x7D } };
+    GUID msdia110 = { 0x761D3BCD, 0x1304, 0x41D5, { 0x94, 0xE8, 0xEA, 0xC5, 0x4E, 0x4A, 0xC1, 0x72 } };
+    GUID msdia100 = { 0xB86AE24D, 0xBF2F, 0x4AC9, { 0xB5, 0xA2, 0x34, 0xB1, 0x4E, 0x4C, 0xE1, 0x1D } }; // same as msdia80
+
+    hr = CoCreateInstance( msdia140, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &source );
+    if ( FAILED( hr ) )
+        hr = CoCreateInstance( msdia120, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &source );
+    if ( FAILED( hr ) )
+        hr = CoCreateInstance( msdia110, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &source );
+    if ( FAILED( hr ) )
+        hr = CoCreateInstance( msdia100, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &source );
+    if ( FAILED( hr ) )
+        return hr;
+    //hr = mSource->loadDataForExe( filename, searchPath, callback );
+    hr = source->loadDataForExe( exePath, NULL, NULL );
+    if ( FAILED( hr ) )
+        return hr;
+    // Open a session for querying symbols
+    hr = source->openSession( &session );
+    if ( FAILED( hr ) )
+        return hr;
+    // Retrieve a reference to the global scope
+    hr = session->get_globalScope( &global );
+    if ( hr != S_OK )
+        return hr;
+
+    for ( int i = 0; i < count; i++ )
+    {
+        Symbol& symbol = symbols[i];
+        CComPtr<IDiaEnumSymbols> enumSymbols;
+
+        hr = global->findChildren( SymTagNull, symbol.Name, nsCaseSensitive, &enumSymbols );
+        if ( FAILED( hr ) )
+            return hr;
+
+        CComPtr<IDiaSymbol> pSymbol;
+        DWORD fetched = 0;
+
+        hr = enumSymbols->Next( 1, &pSymbol, &fetched );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = pSymbol->get_relativeVirtualAddress( &symbol.RelativeAddress );
+        if ( FAILED( hr ) )
+            return hr;
+    }
+
+    return S_OK;
+}
 
 StepOneThreadSuite::StepOneThreadSuite()
 {
@@ -79,26 +163,26 @@ void StepOneThreadSuite::StepInstructionInAssembly()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1012, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1014, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1017, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x101C, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x101C, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x101E, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1000, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1023, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1070, 0 }, { Action_Go, true, false } },
-        { { ExecEvent_ProcessExit, 0, 0 }, { Action_Go, true, false } },
+        { { ExecEvent_Breakpoint,   Func_Scenario1Func0, 0x0005, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0006, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0008, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0000, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0002, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0004, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0007, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x000C, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x000C, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x000E, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func3, 0x0000, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0013, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0005, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x000D, 0 }, { Action_Go, true, false } },
+        { { ExecEvent_ProcessExit,  Func_None,           0,      0 }, { Action_Go, true, false } },
     };
 
     RunDebuggee( steps, _countof( steps ) );
@@ -108,26 +192,26 @@ void StepOneThreadSuite::StepInstructionInSourceHaveSource()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
-        { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, true, true } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1012, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1014, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1017, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x101C, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x101C, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x101E, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1000, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1023, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1070, 0 }, { Action_Go, true, true } },
-        { { ExecEvent_ProcessExit, 0, 0 }, { Action_Go, true, true } },
+        { { ExecEvent_Breakpoint,   Func_Scenario1Func0, 0x0005, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0006, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0008, 0 }, { Action_StepInstruction, true, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0000, 0 }, { Action_StepInstruction, true, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0002, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0004, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0007, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x000C, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x000C, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x000E, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func3, 0x0000, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0013, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0005, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x000D, 0 }, { Action_Go, true, true } },
+        { { ExecEvent_ProcessExit,  Func_None,           0,      0 }, { Action_Go, true, true } },
     };
 
     RunDebuggee( steps, _countof( steps ) );
@@ -137,13 +221,13 @@ void StepOneThreadSuite::StepInstructionInSourceNoSource()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
-        { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepRange, true, true } },
-        { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1070, 0 }, { Action_Go, true, true } },
-        { { ExecEvent_ProcessExit, 0, 0 }, { Action_Go, true, true } },
+        { { ExecEvent_Breakpoint,   Func_Scenario1Func0, 0x0005, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0006, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0008, 0 }, { Action_StepInstruction, true, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0000, 0 }, { Action_StepRange, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0005, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x000D, 0 }, { Action_Go, true, true } },
+        { { ExecEvent_ProcessExit,  Func_None,           0,      0 }, { Action_Go, true, true } },
     };
 
     RunDebuggee( steps, _countof( steps ) );
@@ -153,20 +237,20 @@ void StepOneThreadSuite::StepInstructionOver()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x1010, 0 }, { Action_StepInstruction, false, false } },
-        { { ExecEvent_StepComplete, 0x1012, 0 }, { Action_StepInstruction, false, false } },
-        { { ExecEvent_StepComplete, 0x1014, 0 }, { Action_StepInstruction, false, false } },
-        { { ExecEvent_StepComplete, 0x1017, 0 }, { Action_StepInstruction, false, false } },
-        { { ExecEvent_StepComplete, 0x101C, 0 }, { Action_StepInstruction, false, false } },
-        { { ExecEvent_StepComplete, 0x101E, 0 }, { Action_StepInstruction, false, false } },
-        { { ExecEvent_StepComplete, 0x1023, 0 }, { Action_StepInstruction, false, false } },
-        { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, false, false } },
-        { { ExecEvent_StepComplete, 0x1070, 0 }, { Action_Go, true, false } },
-        { { ExecEvent_ProcessExit, 0, 0 }, { Action_Go, true, false } },
+        { { ExecEvent_Breakpoint,   Func_Scenario1Func0, 0x0005, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0006, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0008, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0000, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0000, 0 }, { Action_StepInstruction, false, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0002, 0 }, { Action_StepInstruction, false, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0004, 0 }, { Action_StepInstruction, false, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0007, 0 }, { Action_StepInstruction, false, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x000C, 0 }, { Action_StepInstruction, false, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x000E, 0 }, { Action_StepInstruction, false, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func2, 0x0013, 0 }, { Action_StepInstruction, false, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0005, 0 }, { Action_StepInstruction, false, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x000D, 0 }, { Action_Go, true, false } },
+        { { ExecEvent_ProcessExit,  Func_None,           0,      0 }, { Action_Go, true, false } },
     };
 
     RunDebuggee( steps, _countof( steps ) );
@@ -176,14 +260,14 @@ void StepOneThreadSuite::StepInstructionOverInterruptedByBP()
 {
     Step    steps[] = 
     {
-        { { ExecEvent_Breakpoint, 0x1068, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1069, 0 }, { Action_StepInstruction, true, false } },
-        { { ExecEvent_StepComplete, 0x106B, 0 }, { Action_StepInstruction, true, true, true } },
-        { { ExecEvent_StepComplete, 0x1030, 0 }, { Action_StepInstruction, false, true, false, 0x101C } },
-        { { ExecEvent_Breakpoint, 0x101C, 0 }, { Action_Go, true, true } },
-        { { ExecEvent_StepComplete, 0x1035, 0 }, { Action_StepInstruction, true, true } },
-        { { ExecEvent_StepComplete, 0x1070, 0 }, { Action_Go, true, true } },
-        { { ExecEvent_ProcessExit, 0, 0 }, { Action_Go, true, true } },
+        { { ExecEvent_Breakpoint,   Func_Scenario1Func0, 0x0005, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0006, 0 }, { Action_StepInstruction, true, false } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x0008, 0 }, { Action_StepInstruction, true, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0000, 0 }, { Action_StepInstruction, false, true, false, Func_Scenario1Func2, 0x000C } },
+        { { ExecEvent_Breakpoint,   Func_Scenario1Func2, 0x000C, 0 }, { Action_Go, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func1, 0x0005, 0 }, { Action_StepInstruction, true, true } },
+        { { ExecEvent_StepComplete, Func_Scenario1Func0, 0x000D, 0 }, { Action_Go, true, true } },
+        { { ExecEvent_ProcessExit,  Func_None,           0,      0 }, { Action_Go, true, true } },
     };
 
     RunDebuggee( steps, _countof( steps ) );
@@ -199,6 +283,16 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
     wchar_t     cmdLine[ MAX_PATH ] = L"";
     IProcess*   proc = NULL;
     const wchar_t*  Debuggee = StepOneThreadDebuggee;
+
+    Symbol funcs[] =
+    {
+        { NULL, 0 },
+        { L"Scenario1Func0", 0 },
+        { L"Scenario1Func1", 0 },
+        { L"Scenario1Func2", 0 },
+        { L"Scenario1Func3", 0 },
+    };
+    TEST_ASSERT_RETURN( SUCCEEDED( FindSymbols( Debuggee, funcs, _countof( funcs ) ) ) );
 
     swprintf_s( cmdLine, L"\"%s\" 1", Debuggee );
 
@@ -277,7 +371,8 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
                 || (curStep->Event.Code == ExecEvent_StepComplete) 
                 || (curStep->Event.Code == ExecEvent_Breakpoint) )
             {
-                uintptr_t   addr = (curStep->Event.AddressOffset + baseAddr);
+                uintptr_t   funcRva = funcs[curStep->Event.FunctionIndex].RelativeAddress;
+                uintptr_t   addr = (funcRva + curStep->Event.AddressOffset + baseAddr);
 
                 if ( context.Eip != addr )
                 {
@@ -291,7 +386,8 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
 
             if ( curStep->Action.BPAddressOffset != 0 )
             {
-                uintptr_t   addr = (curStep->Action.BPAddressOffset + baseAddr);
+                uintptr_t   funcRva = funcs[curStep->Action.FunctionIndex].RelativeAddress;
+                uintptr_t   addr = (funcRva + curStep->Action.BPAddressOffset + baseAddr);
                 TEST_ASSERT_RETURN( SUCCEEDED( exec.SetBreakpoint( process.Get(), addr ) ) );
             }
 

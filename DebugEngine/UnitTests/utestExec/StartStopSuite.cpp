@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "StartStopSuite.h"
 #include "EventCallbackBase.h"
+#include "MultiEventCallbackBase.h"
 
 using namespace std;
 
@@ -35,6 +36,8 @@ StartStopSuite::StartStopSuite()
     TEST_ADD( StartStopSuite::TestDetachRunning );
     TEST_ADD( StartStopSuite::TestDetachStopped );
     TEST_ADD( StartStopSuite::TestAttach );
+    TEST_ADD( StartStopSuite::TestAsyncBreak );
+    TEST_ADD( StartStopSuite::TestMultiProcess );
 }
 
 void StartStopSuite::setup()
@@ -303,9 +306,14 @@ void StartStopSuite::TestTerminateRunning()
     TEST_ASSERT( !mCallback->GetProcessExited() );
 
     TEST_ASSERT_RETURN( SUCCEEDED( exec.Terminate( proc.Get() ) ) );
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.WaitForEvent( DefaultTimeoutMillis ) ) );
-    // this should dispatch EXIT_PROCESS
-    TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
+    for ( int i = 0; i < 10 && !mCallback->GetProcessExited(); i++ )
+    {
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.WaitForEvent( DefaultTimeoutMillis ) ) );
+        // this should dispatch EXIT_PROCESS
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
+        if ( proc->IsStopped() )
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, false ) ) );
+    }
     TEST_ASSERT( mCallback->GetProcessExited() );
     TEST_ASSERT( mCallback->GetProcessExitCode() == 0 );
 
@@ -720,6 +728,12 @@ void StartStopSuite::TryOptions( bool newConsole )
     TEST_ASSERT( !ReadFile( outFileRead.Get(), outResponse, (DWORD) strlen( expectedEnv ), &bytesRead, &readOutOverlapped ) );
     TEST_ASSERT( GetLastError() == ERROR_IO_PENDING );
 
+    // TODO: detect being stuck in a loop:
+    //  EXCEPTION_DEBUG_EVENT (1) : PID=29444, TID=31488, exc=c0000005 at 73C005B0
+    //  EXCEPTION_DEBUG_EVENT (1) : PID=29444, TID=31488, exc=c0000005 at 73C005B0
+    //  EXCEPTION_DEBUG_EVENT (1) : PID=29444, TID=31488, exc=c0000005 at 73C005B0
+    //  ...
+
     for ( ; !mCallback->GetProcessExited(); )
     {
         HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
@@ -740,7 +754,7 @@ void StartStopSuite::TryOptions( bool newConsole )
                 AssertConsoleWindow( newConsole, proc->GetId() );
             }
 
-            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, true ) ) );
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, false ) ) );
         }
     }
 
@@ -838,5 +852,211 @@ void StartStopSuite::AssertProcessFinished( uint32_t pid, uint32_t expectedExitC
         TEST_ASSERT( exitCode == expectedExitCode );
         TEST_ASSERT( waitRet != (DWORD) -1 );
         TEST_ASSERT_MSG( waitRet == WAIT_OBJECT_0, "Debuggee should not be running after Exec is destroyed." );
+    }
+}
+
+void StartStopSuite::TestAsyncBreak()
+{
+    enum State
+    {
+        State_Init,
+        State_Sync1,
+        State_GotBreak,
+        State_Done
+    };
+
+    Exec    exec;
+    State   state = State_Init;
+
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( mCallback ) ) );
+
+    LaunchInfo          info = { 0 };
+    wchar_t             cmdLine[MAX_PATH] = L"";
+    RefPtr<IProcess>    proc;
+    const wchar_t*      Debuggee = EventsDebuggee;
+
+    swprintf_s( cmdLine, L"\"%s\" break 1", Debuggee );
+
+    info.CommandLine = cmdLine;
+    info.Exe = Debuggee;
+
+    mCallback->SetTrackLastEvent( true );
+
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, proc.Ref() ) ) );
+
+    uint32_t    pid = proc->GetId();
+
+    for ( int i = 0; !mCallback->GetProcessExited(); i++ )
+    {
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
+        bool handled = false;
+
+        // this should happen after process exit
+        if ( hr == E_TIMEOUT )
+            break;
+
+        TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
+
+        if ( state == State_Init )
+        {
+            if ( mCallback->GetLastEvent()->Code == ExecEvent_OutputString )
+            {
+                state = State_Sync1;
+                TEST_ASSERT_RETURN( SUCCEEDED( exec.AsyncBreak( proc ) ) );
+            }
+        }
+        else if ( state == State_Sync1 )
+        {
+            if ( mCallback->GetLastEvent()->Code == ExecEvent_Breakpoint )
+                state = State_GotBreak;
+        }
+        else if ( state == State_GotBreak )
+        {
+            if ( mCallback->GetLastEvent()->Code == ExecEvent_Exception
+                && ((ExceptionEventNode*) mCallback->GetLastEvent().get())->Exception.ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO )
+            {
+                CONTEXT context = { 0 };
+
+                hr = exec.GetThreadContext(
+                    proc.Get(),
+                    mCallback->GetLastEvent()->ThreadId,
+                    CONTEXT_INTEGER,
+                    0,
+                    &context,
+                    sizeof context );
+                TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+
+                context.Ebx = 1;
+
+                hr = exec.SetThreadContext(
+                    proc.Get(),
+                    mCallback->GetLastEvent()->ThreadId,
+                    &context,
+                    sizeof context );
+                TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+
+                // The div instruction will run again, but now dividing by non-zero.
+                handled = true;
+                state = State_Done;
+            }
+        }
+
+        if ( proc->IsStopped() )
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, handled ) ) );
+    }
+
+    TEST_ASSERT( state == State_Done );
+    TEST_ASSERT( mCallback->GetLoadCompleted() );
+    TEST_ASSERT( mCallback->GetProcessExited() );
+    TEST_ASSERT( mCallback->GetProcessExitCode() == 1911 );
+
+    AssertProcessFinished( pid );
+}
+
+void StartStopSuite::TestMultiProcess()
+{
+    enum
+    {
+        Debuggees   = 2,
+    };
+
+    enum State
+    {
+        State_Init,
+        State_Sync1,
+        State_Done
+    };
+
+    struct DebuggeeState
+    {
+        RefPtr<IProcess>    Proc;
+        int                 Synched;
+    };
+
+    Exec    exec;
+    State   state = State_Init;
+
+    RefPtr<MultiEventCallbackBase> callback = new MultiEventCallbackBase();
+
+    callback->SetTrackLastEvent( true );
+
+    TEST_ASSERT_RETURN( SUCCEEDED( exec.Init( callback ) ) );
+
+    LaunchInfo          info = { 0 };
+    wchar_t             cmdLine[MAX_PATH] = L"";
+    DebuggeeState       debuggeeStates[Debuggees];
+    const wchar_t*      Debuggee = EventsDebuggee;
+    unsigned int        synched = 0;
+    unsigned int        totalExited = 0;
+
+    for ( unsigned int i = 0; i < Debuggees; i++ )
+    {
+        swprintf_s( cmdLine, L"\"%s\" multi %u %u", Debuggee, i, GetCurrentProcessId() );
+
+        info.CommandLine = cmdLine;
+        info.Exe = Debuggee;
+
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.Launch( &info, debuggeeStates[i].Proc.Ref() ) ) );
+        debuggeeStates[i].Synched = 0;
+    }
+
+    for ( ; totalExited < Debuggees; )
+    {
+        HRESULT hr = exec.WaitForEvent( DefaultTimeoutMillis );
+        bool handled = false;
+
+        // this should happen after process exit
+        if ( hr == E_TIMEOUT )
+            break;
+
+        TEST_ASSERT_RETURN( SUCCEEDED( hr ) );
+        TEST_ASSERT_RETURN( SUCCEEDED( exec.DispatchEvent() ) );
+
+        DWORD pid = callback->GetLastEvent()->ProcessId;
+        IProcess* proc = callback->GetProcess( pid );
+
+        if ( callback->GetLastEvent()->Code == ExecEvent_ProcessExit )
+            totalExited++;
+
+        if ( state == State_Init || state == State_Sync1 )
+        {
+            if ( callback->GetLastEvent()->Code == ExecEvent_OutputString )
+            {
+                unsigned int i;
+                for ( i = 0; i < Debuggees; i++ )
+                {
+                    if ( pid == debuggeeStates[i].Proc->GetId() )
+                    {
+                        TEST_ASSERT_RETURN( debuggeeStates[i].Synched == (state == State_Init ? 0 : 1) );
+                        debuggeeStates[i].Synched++;
+                        break;
+                    }
+                }
+                TEST_ASSERT_RETURN( i < Debuggees );
+                synched++;
+                if ( synched == Debuggees )
+                {
+                    state = (State) (state + 1);
+                    synched = 0;
+                }
+            }
+        }
+
+        if ( proc->IsStopped() )
+            TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( proc, handled ) ) );
+    }
+
+    TEST_ASSERT( state == State_Done );
+
+    for ( unsigned int i = 0; i < Debuggees; i++ )
+    {
+        DWORD pid = debuggeeStates[i].Proc->GetId();
+
+        TEST_ASSERT( callback->GetLoadCompleted( pid ) );
+        TEST_ASSERT( callback->GetProcessExited( pid ) );
+        TEST_ASSERT( callback->GetProcessExitCode( pid ) == 0 );
+
+        AssertProcessFinished( pid );
     }
 }
