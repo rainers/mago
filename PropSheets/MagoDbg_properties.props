@@ -7,6 +7,7 @@
     <VSSDKPath Condition="'$(VSSDKPath)' == ''">$(VSSDK120Install)</VSSDKPath>
     <VSSDKPath Condition="'$(VSSDKPath)' == ''">$(VSSDK140Install)</VSSDKPath>
     <VSSDKPath Condition="'$(VSSDKPath)' == ''">$(VSSDK150Install)</VSSDKPath>
+    <CPPTEST_1_1_0_SRC_PATH Condition="'$(CPPTEST_1_1_0_SRC_PATH)' == ''">$(SolutionDir)\cpptest\src</CPPTEST_1_1_0_SRC_PATH>
     <IncludePath>$(STDINT_INC_PATH);$(BOOST_1_40_0_PATH);$(VSSDKPath)\VisualStudioIntegration\Common\Inc;$(CPPTEST_1_1_0_SRC_PATH);$(VSINSTALLDIR)\DIA SDK\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(VSSDKPath)\VisualStudioIntegration\Common\Lib\Retail;$(CPPTEST_1_1_0_LIB_PATH);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
