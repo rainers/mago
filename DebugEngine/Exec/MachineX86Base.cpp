@@ -1035,9 +1035,6 @@ HRESULT MachineX86Base::DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRe
 
     if ( event == NULL )
     {
-        // always treat the SS exception as a step complete, instead of an exception
-        // even if the user wasn't stepping
-        result = MacRes_PendingCallbackEmbeddedStep;
         return S_OK;
     }
 
@@ -1052,7 +1049,6 @@ HRESULT MachineX86Base::DispatchSingleStep( const EXCEPTION_DEBUG_INFO* exceptRe
         if ( FAILED( hr ) )
             return hr;
 
-        result = MacRes_PendingCallbackEmbeddedStep;
         return S_OK;
     }
 

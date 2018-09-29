@@ -384,19 +384,25 @@ void EventSuite::TryHandlingException( bool firstTimeHandled, bool expectedChanc
                         exec.Terminate( process.Get() );
                     }
                 }
+                else if ( node->Exception.ExceptionCode == EXCEPTION_SINGLE_STEP )
+                {
+                    if ( state == State_SecondHandled )
+                    {
+                        state = State_Done;
+                        TEST_ASSERT( context.Eax == 237 );
+                    }
+                    else
+                    {
+                        TEST_FAIL( "Unexpected exception." );
+                        exec.Terminate( process.Get() );
+                    }
+                }
                 else
                 {
                     TEST_ASSERT( node->FirstChance );
                     TEST_FAIL( "Unexpected exception." );
                     exec.Terminate( process.Get() );
                 }
-            }
-            else if ( (mCallback->GetLastEvent().get() != NULL) 
-                && (mCallback->GetLastEvent()->Code == ExecEvent_StepComplete)
-                && (state == State_SecondHandled) )
-            {
-                state = State_Done;
-                TEST_ASSERT( context.Eax == 237 );
             }
 
             TEST_ASSERT_RETURN( SUCCEEDED( exec.Continue( process, handled ) ) );
