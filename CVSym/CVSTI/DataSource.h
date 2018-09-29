@@ -8,6 +8,7 @@
 #pragma once
 
 #include "IDataSource.h"
+#include <memory>
 
 namespace MagoST
 {
