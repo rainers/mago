@@ -118,6 +118,8 @@ static HRESULT FindSymbols( const wchar_t* exePath, Symbol* symbols, int count )
         hr = enumSymbols->Next( 1, &pSymbol, &fetched );
         if ( FAILED( hr ) )
             return hr;
+        if ( hr != S_OK )
+            return E_FAIL;
 
         hr = pSymbol->get_relativeVirtualAddress( &symbol.RelativeAddress );
         if ( FAILED( hr ) )
@@ -376,7 +378,7 @@ void StepOneThreadSuite::RunDebuggee( Step* steps, int stepsCount )
 
                 if ( context.Eip != addr )
                 {
-                    sprintf_s( msg, "Expected instruction pointer at %p, got %08x.", addr, context.Eip );
+                    sprintf_s( msg, "Expected instruction pointer at %08x, got %08x.", addr, context.Eip );
                     TEST_FAIL_MSG( msg );
                     break;
                 }

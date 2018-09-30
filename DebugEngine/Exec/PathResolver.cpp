@@ -62,13 +62,13 @@ HRESULT PathResolver::DriveResolveDeviceName( const std::wstring& devPath, HANDL
         goto Error;
     }
 
-    for ( int i = 0; i < 26; i++ )
+    for ( unsigned int i = 0; i < 26; i++ )
     {
         // is the drive letter mapped?
         if ( (driveBits & (1 << i)) == 0 )
             continue;
 
-        const wchar_t   DriveName[3] = { L'A' + wchar_t( i ), L':', 0 };
+        const wchar_t   DriveName[3] = { wchar_t( L'A' + i ), L':', 0 };
         DWORD           nameLen = 0;
 
         hr = QueryDosDeviceWithScratch( DriveName );

@@ -194,7 +194,7 @@ void EventCallbackBase::OnThreadExit( IProcess* process, DWORD threadId, DWORD e
 void EventCallbackBase::OnModuleLoad( IProcess* process, IModule* module )
 {
     if ( mVerbose )
-        printf( "  %p %ls\n", (uintptr_t) module->GetImageBase(), module->GetPath() );
+        printf( "  %08x %ls\n", (uintptr_t) module->GetImageBase(), module->GetPath() );
 
     mLastThreadId = 0;
     mModules.insert( ModuleMap::value_type( module->GetImageBase(), module ) );
@@ -373,7 +373,7 @@ void EventCallbackBase::PrintCallstacksX64( IProcess* process )
             it != stack.end();
             it++ )
         {
-            printf( "    RIP=%016x, RBP=%016x\n", it->Rip, it->Rbp );
+            printf( "    RIP=%016llx, RBP=%016llx\n", it->Rip, it->Rbp );
         }
     }
 

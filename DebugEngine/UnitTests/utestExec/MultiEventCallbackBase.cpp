@@ -266,7 +266,7 @@ void MultiEventCallbackBase::OnThreadExit( IProcess* process, DWORD threadId, DW
 void MultiEventCallbackBase::OnModuleLoad( IProcess* process, IModule* module )
 {
     if ( mVerbose )
-        printf( "  %p %ls\n", (uintptr_t) module->GetImageBase(), module->GetPath() );
+        printf( "  %08x %ls\n", (uintptr_t) module->GetImageBase(), module->GetPath() );
 
     auto it = mProcesses.find( process->GetId() );
     if ( it == mProcesses.end() )
@@ -500,7 +500,7 @@ void MultiEventCallbackBase::PrintCallstacksX64( IProcess* process )
             it != stack.end();
             it++ )
         {
-            printf( "    RIP=%016x, RBP=%016x\n", it->Rip, it->Rbp );
+            printf( "    RIP=%016llx, RBP=%016llx\n", it->Rip, it->Rbp );
         }
     }
 
