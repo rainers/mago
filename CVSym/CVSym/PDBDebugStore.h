@@ -8,6 +8,7 @@
 #pragma once
 
 #include "DebugStore.h"
+#include <memory>
 
 struct IDiaDataSource;
 struct IDiaSession;

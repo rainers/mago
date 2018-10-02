@@ -649,8 +649,7 @@ HRESULT Exec::HandleException( Process* proc, const DEBUG_EVENT& debugEvent )
                     goto Error;
             }
         }
-        else if ( result == MacRes_PendingCallbackStep 
-            || result == MacRes_PendingCallbackEmbeddedStep )
+        else if ( result == MacRes_PendingCallbackStep )
         {
             proc->Unlock();
             mCallback->OnStepComplete( proc, debugEvent.dwThreadId );

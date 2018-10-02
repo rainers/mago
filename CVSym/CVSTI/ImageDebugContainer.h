@@ -8,6 +8,7 @@
 #pragma once
 
 #include "IDebugContainer.h"
+#include <memory>
 
 
 namespace MagoST

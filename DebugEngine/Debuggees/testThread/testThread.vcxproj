@@ -55,7 +55,8 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation Condition="'$(PlatformToolset)' == 'v120' or  '$(PlatformToolset)' == 'v140'">true</GenerateDebugInformation>
+      <GenerateDebugInformation Condition="'$(PlatformToolset)' != 'v120' and '$(PlatformToolset)' != 'v140'">DebugFull</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>

@@ -89,10 +89,7 @@ public:
         case IMAGE_FILE_MACHINE_AMD64: macName = "x64"; break;
         }
 
-        if ( sizeof( Address ) == sizeof( uintptr_t ) )
-            printf( "  %p %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetPath() );
-        else
-            printf( "  %08I64x %d %s '%ls'\n", module->GetImageBase(), module->GetSize(), macName, module->GetPath() );
+        printf( "  %p %d %s '%ls'\n", (void*) module->GetImageBase(), module->GetSize(), macName, module->GetPath() );
 
         if ( mMod == NULL )
         {
@@ -103,10 +100,7 @@ public:
 
     virtual void OnModuleUnload( IProcess* process, Address baseAddr )
     {
-        if ( sizeof( Address ) == sizeof( uintptr_t ) )
-            printf( "  %p\n", baseAddr );
-        else
-            printf( "  %08I64x\n", baseAddr );
+        printf( "  %p\n", (void*) baseAddr );
     }
 
     virtual void OnOutputString( IProcess* process, const wchar_t* outputString )
@@ -138,19 +132,13 @@ public:
 
     virtual RunMode OnException( IProcess* process, DWORD threadId, bool firstChance, const EXCEPTION_RECORD* exceptRec )
     {
-        if ( sizeof( Address ) == sizeof( uintptr_t ) )
-            printf( "  %p %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
-        else
-            printf( "  %08I64x %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
+        printf( "  %p %08x\n", exceptRec->ExceptionAddress, exceptRec->ExceptionCode );
         return RunMode_Break;
     }
 
     virtual RunMode OnBreakpoint( IProcess* process, uint32_t threadId, Address address, bool embedded )
     {
-        if ( sizeof( Address ) == sizeof( uintptr_t ) )
-            printf( "  breakpoint at %p\n", address );
-        else
-            printf( "  breakpoint at %08I64x\n", address );
+        printf( "  breakpoint at %p\n", (void*) address );
 
         mHitBp = true;
 

@@ -16,7 +16,6 @@ enum MachineResult
     MacRes_PendingCallbackBP,
     MacRes_PendingCallbackStep,
     MacRes_PendingCallbackEmbeddedBP,
-    MacRes_PendingCallbackEmbeddedStep,
 };
 
 class IEventCallback;
