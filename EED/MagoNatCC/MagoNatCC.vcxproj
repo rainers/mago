@@ -71,7 +71,6 @@
       <RegisterOutput>false</RegisterOutput>
       <AdditionalDependencies>rpcrt4.lib;ad2de.lib;dbghelp.lib;$(ConcordSDKDir)Common\lib\$(PlatformTarget)\vsdebugeng.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\MagoNatCC.def</ModuleDefinitionFile>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <DelayLoadDLLs>udis86.dll</DelayLoadDLLs>
@@ -114,7 +113,6 @@ if errorlevel 1 exit /B 1
       <RegisterOutput>false</RegisterOutput>
       <AdditionalDependencies>rpcrt4.lib;ad2de.lib;dbghelp.lib;$(ConcordSDKDir)Common\lib\$(PlatformTarget)\vsdebugeng.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>.\MagoNatCC.def</ModuleDefinitionFile>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

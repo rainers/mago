@@ -19,6 +19,10 @@
     <Midl>
       <AdditionalIncludeDirectories>$(VSSDKPath)\VisualStudioIntegration\Common\IDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </Midl>
+    <Link>
+      <GenerateDebugInformation Condition="'$(PlatformToolset)' == 'v120' or  '$(PlatformToolset)' == 'v140'">true</GenerateDebugInformation>
+      <GenerateDebugInformation Condition="'$(PlatformToolset)' != 'v120' and '$(PlatformToolset)' != 'v140'">DebugFull</GenerateDebugInformation>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
