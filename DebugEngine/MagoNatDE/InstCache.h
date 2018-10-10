@@ -58,7 +58,10 @@ namespace Mago
         Address64       mEndAddr;
         Address64       mCurAddr;
         Address64       mAnchorAddr;
+        IDebugDisassemblyStream2* mDisasmStream;
+
         BYTE            mInstBuf[ MaxInstructionSize ];
+        std::string     mSymbolizeBuf;
 
     public:
         InstReader( uint32_t blockCount, InstBlock** blocks, Address64 startAddr, Address64 endAddr, 
@@ -75,7 +78,7 @@ namespace Mago
         BYTE* GetInstBuffer( uint32_t& length );
         uint32_t TruncateBeforeAnchor();
 
-        static int Symbolize( ud_t* ud, uint64_t addr );
+        static const char* Symbolize( ud_t* ud, uint64_t addr, int64_t *offset );
     };
 
 

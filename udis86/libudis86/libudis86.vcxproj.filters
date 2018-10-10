@@ -18,9 +18,6 @@
     <ClCompile Include="decode.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="input.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="itab.c">
       <Filter>Source Files</Filter>
     </ClCompile>

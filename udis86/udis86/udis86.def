@@ -3,13 +3,8 @@ EXPORTS
     ud_init
     ud_set_mode
     ud_set_pc
-    ud_set_input_hook
-    ud_set_input_buffer
-    ud_set_input_file
     ud_set_vendor
     ud_set_syntax
-    ud_input_skip
-    ud_input_end
     ud_decode
     ud_disassemble
     ud_translate_intel
@@ -20,3 +15,4 @@ EXPORTS
     ud_insn_hex
     ud_insn_len
     ud_lookup_mnemonic
+    ud_set_input_buffer

@@ -75,7 +75,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="decode.c" />
-    <ClCompile Include="input.c" />
     <ClCompile Include="itab.c" />
     <ClCompile Include="syn-att.c" />
     <ClCompile Include="syn-intel.c" />

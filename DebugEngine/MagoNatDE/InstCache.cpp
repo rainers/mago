@@ -12,6 +12,8 @@
 #include "ICoreProcess.h"
 
 #include <algorithm>
+#include <locale>
+#include <codecvt>
 
 namespace Mago
 {
@@ -49,7 +51,8 @@ namespace Mago
             mStartAddr( startAddr ),
             mEndAddr( endAddr ),
             mCurAddr( startAddr ),
-            mAnchorAddr( anchorAddr )
+            mAnchorAddr( anchorAddr ),
+            mDisasmStream( disasmStream )
     {
         _ASSERT( (blockCount > 0) && (blockCount <= 2) );
         _ASSERT( blocks != NULL );
@@ -68,8 +71,8 @@ namespace Mago
 
         if ( disasmStream != NULL )
         {
-            mDisasm.symbolizer = &Symbolize;
-            mDisasm.sym_context = disasmStream;
+            mDisasm.sym_resolver = &Symbolize;
+            mDisasm.sym_context = this;
         }
     }
 
@@ -79,11 +82,11 @@ namespace Mago
     }
 
     // callback from udis86 to translate an address to a symbol
-    int InstReader::Symbolize( ud_t* ud, uint64_t addr )
+    const char* InstReader::Symbolize( ud_t* ud, uint64_t addr, int64_t *offset )
     {
-        IDebugDisassemblyStream2* dds = (IDebugDisassemblyStream2*) ud->sym_context;
+        InstReader* ir = (InstReader*) ud->sym_context;
         CComPtr<IDebugCodeContext2> pCodeContext;
-        HRESULT hr = dds->GetCodeContext( addr, &pCodeContext );
+        HRESULT hr = ir->mDisasmStream->GetCodeContext( addr, &pCodeContext );
         if( FAILED( hr ) )
             return 0;
 
@@ -92,16 +95,23 @@ namespace Mago
         if( FAILED( hr ) || info.bstrFunction == NULL )
             return 0;
 
-        ud->insn_fill += wcstombs( ud->insn_buffer + ud->insn_fill, info.bstrFunction, 100 );
+        std::wstring sym = info.bstrFunction;
         if( info.dwFields & CIF_ADDRESSOFFSET )
-            ud->insn_fill += wcstombs( ud->insn_buffer + ud->insn_fill, info.bstrAddressOffset, 30 );
-        ud->insn_fill += sprintf( (char*) ud->insn_buffer + ud->insn_fill, " (0x%I64x)", addr );
-            
+            sym.append( info.bstrAddressOffset );
+
+        std::wstring_convert< std::codecvt_utf8<wchar_t>> convert;
+        ir->mSymbolizeBuf = convert.to_bytes( sym );
+
+        static char strAddr[32];
+        sprintf( strAddr, " (0x%I64x)", addr );
+        ir->mSymbolizeBuf.append( strAddr );
+
         SysFreeString( info.bstrFunction );
         if( info.bstrAddressOffset != NULL )
             SysFreeString( info.bstrAddressOffset );
 
-        return 1;
+        *offset = 0;
+        return ir->mSymbolizeBuf.c_str();
     }
 
     // If the last disassembled instruction crosses the anchor, then the last 
@@ -129,10 +139,13 @@ namespace Mago
         uint32_t    instLen = 0;
 
         instBuf = GetInstBuffer( instBufLen );
-        ud_set_input_buffer( &mDisasm, instBuf, instBufLen );
+        if( instBuf )
+        {
+            ud_set_input_buffer( &mDisasm, instBuf, instBufLen );
+            instLen = ud_decode( &mDisasm );
+            instLen = TruncateBeforeAnchor();
+        }
 
-        instLen = ud_decode( &mDisasm );
-        instLen = TruncateBeforeAnchor();
         mCurAddr += instLen;
 
         return instLen;
@@ -159,7 +172,7 @@ namespace Mago
         ud_set_pc( &mDisasm, curPC );
 
         if( mDisasm.sym_context )
-            mDisasm.symbolizer = symOps ? &Symbolize : NULL;
+            mDisasm.sym_resolver = symOps ? &Symbolize : NULL;
 
         return Disassemble();
     }
