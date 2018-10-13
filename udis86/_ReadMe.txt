@@ -1,10 +1,8 @@
-The version is 1.7.
+The version is 1.7.2 + additional commits up to commit 
+56ff6c87c11de0ffa725b14339004820556e343d from https://github.com/vmt/udis86
 
-The 1.7 version of the project is distributed by Vivek Thampi with no LICENSE file, 
-so for clarity, I gathered that information and put it into a LICENSE text file.
-
-The original distribution of udis86 came with files for building on UNIX-like 
-systems. I left those files out and built my own Visual Studio 2008 projects.
+The original distribution of udis86 comes with files for building on UNIX-like 
+systems and test suite. I left those files out and built my own Visual Studio projects.
 The source depends on a file config.h which is generated from the original build 
 files based on the file config.h.in. I copied config.h.in to config.h and changed it
 as needed.
