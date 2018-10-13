@@ -1549,19 +1549,21 @@ namespace Mago
         bool isString = false;
         bool usesWchar = false;
         bool usesDchar = false;
-        if( name.GetLength() == 6 && strncmp( name.GetName(), "string", 6 ) == 0 )
+        const char* namePtr = name.GetName();
+        size_t nameLen = name.GetLength();
+        if( nameLen == 6 && strncmp( namePtr, "string", 6 ) == 0 )
             isArray = isString = true;
-        else if( name.GetLength() == 7 && strncmp( name.GetName(), "wstring", 7 ) == 0 )
+        else if( nameLen == 7 && strncmp( namePtr, "wstring", 7 ) == 0 )
             isArray = isString = usesWchar = true;
-        else if( name.GetLength() == 7 && strncmp( name.GetName(), "dstring", 7 ) == 0 )
+        else if( nameLen == 7 && strncmp( namePtr, "dstring", 7 ) == 0 )
             isArray = isString = usesDchar = true;
-        else if( name.GetLength() == 6 && strncmp( name.GetName(), "dArray", 6 ) == 0 )
+        else if( nameLen == 6 && strncmp( namePtr, "dArray", 6 ) == 0 )
             isArray = true;
-        if( !isArray && name.GetLength() > 2 )
+        if( !isArray && nameLen > 2 )
         {
-            isArray = strcmp( name.GetName() + name.GetLength() - 2, "[]" ) == 0;
-            usesDchar = isArray && ( ( name.GetLength() == 7 && strncmp( name.GetName(), "dchar[]", 7 ) == 0 ) || 
-                                     ( name.GetLength() == 14 && strncmp( name.GetName(), "const(dchar)[]", 14 ) == 0 ) );
+            isArray = strcmp( namePtr + nameLen - 2, "[]" ) == 0;
+            usesDchar = isArray && ( ( nameLen == 7 && strncmp( namePtr, "dchar[]", 7 ) == 0 ) || 
+                                     ( nameLen == 14 && strncmp( namePtr, "const(dchar)[]", 14 ) == 0 ) );
         }
         if( isArray )
         {
@@ -1599,7 +1601,7 @@ namespace Mago
             return hr;
         }
         
-        if( name.GetLength() == 9 && strncmp( name.GetName(), "dDelegate", 9 ) == 0 )
+        if( nameLen == 9 && strncmp( namePtr, "dDelegate", 9 ) == 0 )
         {
             MagoEE::Declaration* ptrdecl = NULL;
             HRESULT hr = decl->FindObject( L"funcptr", ptrdecl );
@@ -1618,7 +1620,10 @@ namespace Mago
             return hr;
         }
 
-        if( name.GetLength() == 11 && strncmp( name.GetName(), "dAssocArray", 11 ) == 0 )
+        bool isAArray = nameLen == 11 && strncmp(namePtr, "dAssocArray", 11) == 0;
+        if ( !isAArray )
+            isAArray = nameLen > 2 && namePtr[nameLen - 1] == ']' && namePtr[nameLen - 2] != '[';
+        if( isAArray )
         {
             MagoEE::Type* keytype = NULL;
             MagoEE::Type* valtype = NULL;
