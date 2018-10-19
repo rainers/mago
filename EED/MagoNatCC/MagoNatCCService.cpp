@@ -710,7 +710,7 @@ public:
             tryHR(FormatValue(this, value.ObjVal, fmtopt, valStr, maxLength));
         }
 
-        MagoEE::FillValueTraits(value, nullptr);
+        MagoEE::FillValueTraits(this, value, nullptr);
 
         RefPtr<Mago::Property> pProperty;
         tryHR(MakeCComObject(pProperty));

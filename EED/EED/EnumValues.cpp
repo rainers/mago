@@ -167,7 +167,7 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        FillValueTraits( result, nullptr );
+        FillValueTraits( mBinder, result, nullptr );
         return S_OK;
     }
 
@@ -296,7 +296,7 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        FillValueTraits( result, nullptr );
+        FillValueTraits( mBinder, result, nullptr );
         return S_OK;
     }
 
@@ -731,7 +731,7 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        FillValueTraits( result, nullptr );
+        FillValueTraits( mBinder, result, nullptr );
         mCountDone++;
 
         return FindNext();
@@ -927,7 +927,7 @@ namespace MagoEE
             if( FAILED( hr ) )
                 return hr;
 
-            FillValueTraits( result, nullptr );
+            FillValueTraits( mBinder, result, nullptr );
             return S_OK;
         }
         else
@@ -971,7 +971,7 @@ namespace MagoEE
                 if ( FAILED( hr ) )
                     return hr;
 
-                FillValueTraits( result, nullptr );
+                FillValueTraits( mBinder, result, nullptr );
                 return S_OK;
             }
         }

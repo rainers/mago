@@ -86,7 +86,7 @@ namespace MagoEE
         const FormatOptions& fmtopts,
         IEEDEnumValues*& enumerator );
 
-    void FillValueTraits( EvalResult& result, Expression* expr );
+    void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr );
 
     HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr );
 }

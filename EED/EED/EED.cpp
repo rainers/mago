@@ -79,7 +79,7 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
-            FillValueTraits( result, mExpr );
+            FillValueTraits( binder, result, mExpr );
 
             return S_OK;
         }
@@ -260,16 +260,20 @@ namespace MagoEE
         return S_OK;
     }
 
-    void FillValueTraits( EvalResult& result, Expression* expr )
+    void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr )
     {
         result.ReadOnly = true;
         result.HasString = false;
         result.HasChildren = false;
         result.HasRawChildren = false;
 
+        DataObject pointeeObj = { 0 };
+        const DataObject* pparentVal = &result.ObjVal;
+
         if ( !expr || expr->Kind == DataKind_Value )
         {
-            RefPtr<Type>    type = result.ObjVal._Type;
+        L_retry:
+            RefPtr<Type>    type = pparentVal->_Type;
 
             // ReadOnly
             if ( (type->AsTypeStruct() != NULL)
@@ -277,7 +281,7 @@ namespace MagoEE
             {
                 // some types just don't allow assignment
             }
-            else if ( result.ObjVal.Addr != 0 )
+            else if (pparentVal->Addr != 0 )
             {
                 result.ReadOnly = false;
             }
@@ -299,10 +303,25 @@ namespace MagoEE
             // HasChildren/HasRawChildren
             if ( type->IsPointer() )
             {
-                if( type->AsTypeNext()->GetNext()->GetBackingTy() == Tvoid )
+                auto ntype = type->AsTypeNext()->GetNext();
+                if ( ntype == NULL || ntype->GetBackingTy() == Tvoid )
                     result.HasChildren = result.HasRawChildren = false;
-                else
-                    result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
+
+                else if ( ntype->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() || ntype->AsTypeStruct() )
+                {
+                    // auto-follow through pointer
+                    pointeeObj._Type = ntype;
+                    pointeeObj.Addr = pparentVal->Value.Addr;
+
+                    HRESULT hr = binder->GetValue( pointeeObj.Addr, pointeeObj._Type, pointeeObj.Value );
+                    if ( hr == S_OK )
+                    {
+                        pparentVal = &pointeeObj;
+                        goto L_retry;
+                    }
+
+                }
+                result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
             }
             else if ( ITypeSArray* sa = type->AsTypeSArray() )
             {
@@ -317,9 +336,12 @@ namespace MagoEE
             {
                 result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
             }
-            else if ( type->AsTypeStruct() )
+            else if (ITypeStruct* ts = type->AsTypeStruct() )
             {
-                result.HasChildren = result.HasRawChildren = true;
+                RefPtr<Declaration> decl = type->GetDeclaration();
+                RefPtr<IEnumDeclarationMembers> members;
+                if ( decl->EnumMembers( members.Ref() ) )
+                    result.HasChildren = result.HasRawChildren = members->GetCount() > 0;
             }
         }
     }
