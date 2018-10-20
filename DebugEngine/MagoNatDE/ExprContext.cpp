@@ -464,6 +464,11 @@ namespace Mago
         size_t          targetSize = type->GetSize();
         uint32_t        lenRead = 0;
 
+        if ( type->IsSArray() )
+        {
+            value.Addr = addr;
+            return S_OK;
+        }
         // no value to get for complex/aggregate types
         if ( !type->IsScalar() 
             && !type->IsDArray() 

@@ -745,12 +745,20 @@ namespace MagoEE
         return SUCCEEDED( hr );
     }
 
-    bool PropertySArrayPtr::GetValue( Type* parentType, Declaration* parentDecl, DataValue& result )
+    bool PropertySArrayPtr::UsesParentValue()
     {
+        return true;
+    }
+
+    bool PropertySArrayPtr::GetValue( Type* parentType, Declaration* parentDecl, const DataValue& parentVal, DataValue& result )
+    {
+        UNREFERENCED_PARAMETER(parentDecl);
+    
         if ( (parentType == NULL) || !parentType->IsSArray() )
             return false;
 
-        return parentDecl->GetAddress( result.Addr );
+        result.Addr = parentVal.Addr;
+        return true;
     }
 
 
@@ -775,7 +783,7 @@ namespace MagoEE
         return true;
     }
 
-    bool PropertyDArrayLength::GetValue( Type* parentType, Declaration* parentDecl, const DataValue& parentVal , DataValue& result )
+    bool PropertyDArrayLength::GetValue( Type* parentType, Declaration* parentDecl, const DataValue& parentVal, DataValue& result )
     {
         UNREFERENCED_PARAMETER( parentDecl );
 
