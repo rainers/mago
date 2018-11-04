@@ -86,7 +86,8 @@ namespace MagoEE
 
     };
 
-    bool gShowVTable = false;
+	bool gShowVTable = false;
+	bool gExpandableStrings = true;
 
     HRESULT Init()
     {
@@ -329,7 +330,8 @@ namespace MagoEE
             }
             else if ( type->IsDArray() )
             {
-                result.HasChildren = result.ObjVal.Value.Array.Length > 0;
+                if( !result.HasString || gExpandableStrings )
+                    result.HasChildren = result.ObjVal.Value.Array.Length > 0;
                 result.HasRawChildren = true;
             }
             else if( type->IsAArray() )

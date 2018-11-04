@@ -70,6 +70,7 @@ namespace MagoEE
     void Uninit();
 
     extern bool gShowVTable;
+    extern bool gExpandableStrings;
 
     HRESULT MakeTypeEnv( int ptrSize, ITypeEnv*& typeEnv );
     HRESULT MakeNameTable( NameTable*& nameTable );

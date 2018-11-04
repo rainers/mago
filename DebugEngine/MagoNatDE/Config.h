@@ -49,6 +49,7 @@ struct MagoOptions
 	bool showStaticsInAggr;
 	bool showVTable;
 	bool flatClassFields;
+	bool expandableStrings;
 };
 
 extern MagoOptions gOptions;

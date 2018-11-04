@@ -186,25 +186,30 @@ bool readMagoOptions()
         return false;
 
     DWORD val;
-    if( GetRegValue( hKey, L"hideInternalNames", &val ) == S_OK )
+    if ( GetRegValue( hKey, L"hideInternalNames", &val ) == S_OK )
         gOptions.hideInternalNames = val != 0;
     else
         gOptions.hideInternalNames = false;
 
-    if( GetRegValue( hKey, L"showStaticsInAggr", &val ) == S_OK )
+    if ( GetRegValue( hKey, L"showStaticsInAggr", &val ) == S_OK )
         gOptions.showStaticsInAggr = val != 0;
     else
         gOptions.showStaticsInAggr = false;
 
-    if( GetRegValue( hKey, L"showVTable", &val ) == S_OK )
+    if ( GetRegValue( hKey, L"showVTable", &val ) == S_OK )
         gOptions.showVTable = val != 0;
     else
         gOptions.showVTable = true;
 
-    if( GetRegValue( hKey, L"flatClassFields", &val ) == S_OK )
+    if ( GetRegValue( hKey, L"flatClassFields", &val ) == S_OK )
         gOptions.flatClassFields = val != 0;
     else
         gOptions.flatClassFields = false;
+
+    if ( GetRegValue( hKey, L"expandableStrings", &val ) == S_OK )
+        gOptions.expandableStrings = val != 0;
+    else
+        gOptions.expandableStrings = false;
 
     MagoEE::gShowVTable = gOptions.showVTable;
 
