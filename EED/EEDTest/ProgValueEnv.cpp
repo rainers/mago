@@ -507,7 +507,6 @@ RefPtr<MagoEE::Declaration> ProgramValueEnv::GetThis()
 
     hr = E_FAIL;
     for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
-        // take away one for the terminator
         hr = mSymSession->FindChildSymbol( *it, "this", 4, childSH );
     if ( hr != S_OK )
         return NULL;

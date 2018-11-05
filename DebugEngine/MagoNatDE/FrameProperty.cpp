@@ -51,6 +51,9 @@ namespace Mago
             std::wstring& fullName );
 
         HRESULT Init( ExprContext* exprContext );
+
+    private:
+        bool AddClosureNames( MagoST::ISession* session, MagoST::ISymbolInfo* sym, const std::string& symname );
     };
 
     EnumLocalValues::EnumLocalValues()
@@ -206,6 +209,10 @@ namespace Mago
                 if ( !symInfo->GetName( pstrName ) )
                     continue;
 
+                if ( pstrName.GetLength() == 9 && strncmp( pstrName.GetName(), "__closptr", 9 ) == 0 )
+                {
+                    AddClosureNames( session, symInfo, "__closptr" );
+                }
                 if ( gOptions.hideInternalNames && pstrName.GetName()[0] == '_' && pstrName.GetName()[1] == '_' )
                     continue;
 
@@ -221,6 +228,92 @@ namespace Mago
         mExprContext = exprContext;
 
         return S_OK;
+    }
+
+    bool EnumLocalValues::AddClosureNames( MagoST::ISession* session, MagoST::ISymbolInfo* sym, const std::string& symname )
+    {
+        MagoST::TypeIndex       pointeeTI = { 0 };
+        MagoST::TypeHandle      pointeeTH = { 0 };
+        MagoST::SymInfoData     pointeeInfoData = { 0 };
+        MagoST::ISymbolInfo*    pointeeInfo = NULL;
+
+        // get pointer type
+        if ( !sym->GetType( pointeeTI ) )
+            return false;
+        if ( !session->GetTypeFromTypeIndex( pointeeTI, pointeeTH ) )
+            return false;
+        if ( session->GetTypeInfo( pointeeTH, pointeeInfoData, pointeeInfo ) != S_OK )
+            return false;
+        sym = pointeeInfo;
+
+        // dereference pointer type
+        if ( !sym->GetType( pointeeTI ) )
+            return false;
+        if ( !session->GetTypeFromTypeIndex( pointeeTI, pointeeTH ) )
+            return false;
+        if ( session->GetTypeInfo( pointeeTH, pointeeInfoData, pointeeInfo ) != S_OK )
+            return false;
+        sym = pointeeInfo;
+
+        uint16_t            fieldCount = 0;
+        MagoST::TypeIndex   fieldListTI = 0;
+        MagoST::TypeHandle  fieldListTH = { 0 };
+
+        if ( !sym->GetFieldCount( fieldCount ) )
+            return false;
+
+        if ( !sym->GetFieldList( fieldListTI ) )
+            return false;
+
+        if ( !session->GetTypeFromTypeIndex( fieldListTI, fieldListTH ) )
+            return false;
+
+        MagoST::TypeScope   flistScope = { 0 };
+
+        if ( session->SetChildTypeScope( fieldListTH, flistScope ) != S_OK )
+            return false;
+
+        for ( uint16_t i = 0; /*i < fieldCount*/; i++ )
+        {
+            MagoST::TypeHandle      memberTH = { 0 };
+            MagoST::SymInfoData     memberInfoData = { 0 };
+            MagoST::ISymbolInfo*    memberInfo = NULL;
+            MagoST::SymTag          tag = MagoST::SymTagNull;
+            SymString               pstrName;
+
+            if ( !session->NextType( flistScope, memberTH ) )
+                // no more
+                break;
+
+            if ( session->GetTypeInfo( memberTH, memberInfoData, memberInfo ) != S_OK )
+                continue;
+
+            tag = memberInfo->GetSymTag();
+            if ( tag != MagoST::SymTagData )
+                continue;
+
+            if ( !memberInfo->GetName( pstrName ) )
+                continue;
+
+            if ( pstrName.GetLength() == 7 && strncmp( pstrName.GetName(), "__chain", 7 ) == 0 )
+            {
+                AddClosureNames( session, memberInfo, symname + ".__chain" );
+				continue;
+            }
+
+            if ( gOptions.hideInternalNames && pstrName.GetName()[0] == '_' && pstrName.GetName()[1] == '_' )
+                continue;
+
+            auto varname = /*symname + "." +*/ std::string( pstrName.GetName(), pstrName.GetLength() );
+            CComBSTR bstrName;
+            HRESULT hr = Utf8To16( varname.c_str(), varname.length(), bstrName.m_str );
+            if (FAILED(hr))
+                continue;
+
+            mNames.push_back( bstrName );
+            bstrName.Detach();
+        }
+        return true;
     }
 
     ////////////////////////////////////////////////////////////////////////////// 

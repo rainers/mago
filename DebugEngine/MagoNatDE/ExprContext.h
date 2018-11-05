@@ -56,10 +56,10 @@ namespace Mago
 
         //////////////////////////////////////////////////////////// 
         // MagoEE::IValueBinder 
-
         virtual HRESULT FindObject( 
             const wchar_t* name, 
-            MagoEE::Declaration*& decl );
+            MagoEE::Declaration*& decl,
+            uint32_t findFlags );
         virtual HRESULT FindObjectType( 
             MagoEE::Declaration* decl,
             const wchar_t* name, 
@@ -168,6 +168,7 @@ namespace Mago
     private:
         HRESULT FindLocalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& localSH );
         HRESULT FindGlobalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& globalSH );
+        HRESULT FindClosureSymbol( const char* name, size_t nameLen, MagoEE::Declaration*& decl );
 
         static HRESULT FindLocalSymbol( 
             MagoST::ISession* session, 

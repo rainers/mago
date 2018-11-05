@@ -93,6 +93,20 @@ namespace Mago
         virtual bool IsStaticFunction();
     };
 
+    class ClosureVarCVDecl : public GeneralCVDecl
+    {
+        MagoST::SymHandle mClosureSH;
+        std::vector<MagoST::TypeHandle> mChain;
+
+    public:
+        ClosureVarCVDecl( ExprContext* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo,
+                          const MagoST::SymHandle& closureSH, const std::vector<MagoST::TypeHandle>& chain );
+
+        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool IsField();
+        virtual bool IsVar();
+    };
+
     class TypeCVDecl : public CVDecl
     {
         MagoST::TypeHandle  mTypeHandle;

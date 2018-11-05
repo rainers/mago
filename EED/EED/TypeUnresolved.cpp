@@ -152,7 +152,7 @@ namespace MagoEE
             }
         }
 
-        hr = binder->FindObject( fullName.c_str(), decl.Ref() );
+        hr = binder->FindObject( fullName.c_str(), decl.Ref(), IValueBinder::FindObjectAny );
         if ( FAILED( hr ) )
             return NULL;
 
@@ -295,7 +295,7 @@ namespace MagoEE
         if ( resolvedType != NULL )
             return resolvedType;
 
-        hr = binder->FindObject( fullId.c_str(), decl.Ref() );
+        hr = binder->FindObject( fullId.c_str(), decl.Ref(), IValueBinder::FindObjectAny );
         if ( FAILED( hr ) )
             return NULL;
 
@@ -339,7 +339,7 @@ namespace MagoEE
         if ( resolvedType != NULL )
             return resolvedType;
 
-        hr = binder->FindObject( Id->Str, decl.Ref() );
+        hr = binder->FindObject( Id->Str, decl.Ref(), IValueBinder::FindObjectAny );
         if ( FAILED( hr ) )
             return NULL;
 

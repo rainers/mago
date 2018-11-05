@@ -365,7 +365,7 @@ namespace MagoST
         if ( FAILED( hr ) )
             return hr;
 
-	HRESULT found = S_FALSE;
+        HRESULT found = S_FALSE;
         for ( ; mStore->NextType( scope, childHandle ); )
         {
             ISymbolInfo*    symInfo = NULL;
@@ -380,38 +380,38 @@ namespace MagoST
 
             if ( (nameLen == pstrName.GetLength()) && (memcmp( nameChars, pstrName.GetName(), nameLen ) == 0) )
             {
-		if ( symInfo->GetSymTag() != SymTagFunction )
-		{
-		    handle = childHandle;
-		    return S_OK;
-		}
+                if ( symInfo->GetSymTag() != SymTagFunction )
+                {
+                    handle = childHandle;
+                    return S_OK;
+                }
 
-		// until we support overload sets, prefer an overload with zero arguments
-		TypeIndex funcType;
-		TypeHandle funcTypeHandle;
-	        SymInfoData funcInfoData = { 0 };
-		ISymbolInfo* funcInfo = nullptr;
-		if( !symInfo->GetType( funcType ) )
-		    continue;
-		if( !GetTypeFromTypeIndex( funcType, funcTypeHandle ) )
-		    continue;
-		hr = mStore->GetTypeInfo( funcTypeHandle, funcInfoData, funcInfo );
-		if ( hr != S_OK )
-		    continue;
+                // until we support overload sets, prefer an overload with zero arguments
+                TypeIndex funcType;
+                TypeHandle funcTypeHandle;
+                SymInfoData funcInfoData = { 0 };
+                ISymbolInfo* funcInfo = nullptr;
+                if( !symInfo->GetType( funcType ) )
+                    continue;
+                if( !GetTypeFromTypeIndex( funcType, funcTypeHandle ) )
+                    continue;
+                hr = mStore->GetTypeInfo( funcTypeHandle, funcInfoData, funcInfo );
+                if ( hr != S_OK )
+                    continue;
 
-		std::vector<TypeIndex> indexes;
-		if ( !funcInfo->GetTypes( indexes ) )
-		    continue;
-		if ( indexes.size() == 0 )
-		{
-		    handle = childHandle;
-		    return S_OK;
-		}
-		else if ( found == S_FALSE )
-		{
-		    handle = childHandle;
-		    found = S_OK;
-		}
+                std::vector<TypeIndex> indexes;
+                if ( !funcInfo->GetTypes( indexes ) )
+                    continue;
+                if ( indexes.size() == 0 )
+                {
+                    handle = childHandle;
+                    return S_OK;
+                }
+                else if ( found == S_FALSE )
+                {
+                    handle = childHandle;
+                    found = S_OK;
+                }
             }
         }
 

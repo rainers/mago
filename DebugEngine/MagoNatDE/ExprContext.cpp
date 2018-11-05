@@ -124,7 +124,8 @@ namespace Mago
 
     HRESULT ExprContext::FindObject( 
         const wchar_t* name, 
-        MagoEE::Declaration*& decl )
+        MagoEE::Declaration*& decl,
+		uint32_t findFlags )
     {
         HRESULT hr = S_OK;
         CAutoVectorPtr<char>        u8Name;
@@ -141,20 +142,29 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = FindLocalSymbol( u8Name, u8NameLen, symHandle );
-        if ( hr != S_OK )
+        hr = E_NOT_FOUND;
+        if( findFlags & FindObjectLocal )
+            hr = FindLocalSymbol( u8Name, u8NameLen, symHandle );
+        
+        if ( hr != S_OK && ( findFlags & FindObjectClosure ) != 0 )
         {
+            hr = FindClosureSymbol( u8Name, u8NameLen, decl );
+            if ( hr == S_OK )
+                return hr;
+        }
+        
+        if ( hr != S_OK && ( findFlags & FindObjectGlobal ) != 0 )
             hr = FindGlobalSymbol( u8Name, u8NameLen, symHandle );
-            if ( hr != S_OK )
+
+        if ( hr != S_OK && ( findFlags & FindObjectRegister ) != 0 )
+        {
+            decl = RegisterCVDecl::CreateRegisterSymbol( this, u8Name );
+            if( decl )
             {
-                decl = RegisterCVDecl::CreateRegisterSymbol( this, u8Name );
-                if( decl )
-                {
-                    decl->AddRef();
-                    return S_OK;
-                }
-                return E_NOT_FOUND;
+                decl->AddRef();
+                return S_OK;
             }
+            return E_NOT_FOUND;
         }
 
         hr = MakeDeclarationFromSymbol( symHandle, origDecl.Ref() );
@@ -222,7 +232,6 @@ namespace Mago
 
         hr = E_FAIL;
         for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
-            // take away one for the terminator
             hr = session->FindChildSymbol( *it, "this", 4, childSH );
 
         if ( hr != S_OK )
@@ -835,7 +844,6 @@ namespace Mago
 
         HRESULT hr = E_FAIL;
         for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
-            // take away one for the terminator
             hr = session->FindChildSymbol( *it, name, nameLen, localSH );
         
         if ( hr != S_OK )
@@ -843,7 +851,86 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::FindGlobalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& globalSH )
+    HRESULT ExprContext::FindClosureSymbol( const char* name, size_t nameLen, MagoEE::Declaration*& decl )
+    {
+        if ( mBlockSH.empty() )
+            return E_NOT_FOUND;
+
+        RefPtr<MagoST::ISession>    session;
+        if ( GetSession( session.Ref() ) != S_OK )
+            return E_NOT_FOUND;
+
+        MagoST::SymHandle closureSH;
+        HRESULT hr = session->FindChildSymbol( *mBlockSH.begin(), "__closptr", 9, closureSH );
+        if ( hr != S_OK )
+            return E_NOT_FOUND;
+
+        MagoST::SymInfoData     closureInfoData = { 0 };
+        MagoST::ISymbolInfo*    closureInfo = NULL;
+        hr = session->GetSymbolInfo( closureSH, closureInfoData, closureInfo );
+        if (hr != S_OK)
+            return E_NOT_FOUND;
+
+        std::vector<MagoST::TypeHandle> chain;
+        while (true)
+        {
+            MagoST::TypeIndex       pointerTI = { 0 };
+            MagoST::TypeHandle      pointerTH = { 0 };
+            MagoST::SymInfoData     pointerInfoData = { 0 };
+            MagoST::ISymbolInfo*    pointerInfo = NULL;
+
+            // get pointer type
+            if ( !closureInfo->GetType( pointerTI ) ||
+                 !session->GetTypeFromTypeIndex( pointerTI, pointerTH ) ||
+                 session->GetTypeInfo( pointerTH, pointerInfoData, pointerInfo ) != S_OK )
+                break;
+            closureInfo = pointerInfo;
+
+            // dereference pointer type
+            if ( !closureInfo->GetType( pointerTI ) ||
+                 !session->GetTypeFromTypeIndex( pointerTI, pointerTH ) )
+                break;
+
+            MagoST::TypeHandle fieldTH;
+            hr = session->FindChildType( pointerTH, name, nameLen, fieldTH );
+            if ( hr == S_OK )
+            {
+                MagoST::TypeIndex       fieldTI = { 0 };
+                MagoST::SymInfoData     fieldInfoData = { 0 };
+                MagoST::ISymbolInfo*    fieldInfo = NULL;
+                if ( session->GetTypeInfo( fieldTH, fieldInfoData, fieldInfo) != S_OK ||
+                     !fieldInfo->GetType( fieldTI ) )
+                    break;
+
+                MagoST::TypeIndex       typeIndex = 0;
+                RefPtr<MagoEE::Type>    type;
+
+                if ( !fieldInfo->GetType( typeIndex ) )
+                    break;
+
+                hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
+                if ( FAILED( hr ) )
+                    break;
+
+                auto closDecl = new ClosureVarCVDecl( this, fieldInfoData, fieldInfo, closureSH, chain );
+                closDecl->SetType( type );
+                closDecl->AddRef();
+
+                decl = closDecl;
+                return hr;
+            }
+
+            MagoST::TypeHandle  chainTH = { 0 };
+            if ( session->FindChildType( pointerTH, "__chain", 7, chainTH ) != S_OK ||
+                 session->GetTypeInfo( chainTH, closureInfoData, closureInfo ) != S_OK )
+                break;
+
+            chain.push_back( chainTH );
+        }
+        return E_NOT_FOUND;
+    }
+
+	HRESULT ExprContext::FindGlobalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& globalSH )
     {
         RefPtr<MagoST::ISession>    session;
 

@@ -290,7 +290,7 @@ namespace Mago
 
 
 //----------------------------------------------------------------------------
-//  GeneralCVDecl
+//  FunctionCVDecl
 //----------------------------------------------------------------------------
 
     FunctionCVDecl::FunctionCVDecl(
@@ -368,6 +368,83 @@ namespace Mago
             if ( mSymInfo->GetMod( mod ) )
                 return ( mod & MODstatic ) != 0;
         }
+        return true;
+    }
+
+//----------------------------------------------------------------------------
+//  ClosureVarCVDecl
+//----------------------------------------------------------------------------
+
+    ClosureVarCVDecl::ClosureVarCVDecl( ExprContext* symStore, 
+                                        const MagoST::SymInfoData& infoData,
+                                        MagoST::ISymbolInfo* symInfo,
+                                        const MagoST::SymHandle& closureSH,
+                                        const std::vector<MagoST::TypeHandle>& chain )
+        : GeneralCVDecl( symStore, infoData, symInfo ),
+          mClosureSH( closureSH ),
+          mChain( chain )
+    {
+    }
+
+    bool ClosureVarCVDecl::GetAddress( MagoEE::Address& addr )
+    {
+        MagoST::SymInfoData     closureInfoData = { 0 };
+        MagoST::ISymbolInfo*    closureInfo = NULL;
+        HRESULT hr = mSession->GetSymbolInfo( mClosureSH, closureInfoData, closureInfo );
+        if ( hr != S_OK )
+            return false;
+
+        RefPtr<Declaration> closureDecl;
+        hr = mSymStore->MakeDeclarationFromDataSymbol( closureInfoData, closureInfo, closureDecl.Ref() );
+        if( hr != S_OK )
+            return false;
+
+        hr = mSymStore->GetAddress( closureDecl, addr );
+        if( hr != S_OK )
+            return false;
+
+        RefPtr<MagoEE::Type> ptrType;
+        if ( !closureDecl->GetType( ptrType.Ref() ) )
+            return false;
+        uint32_t ptrSize = ptrType->GetSize();
+
+        MagoEE::Address closAddr = 0;
+        uint32_t read;
+        hr = mSymStore->ReadMemory( addr, ptrSize, read, (uint8_t*) &closAddr );
+        if (hr != S_OK || read != ptrSize)
+            return false;
+
+        // walk chain
+        for ( size_t c = 0; c < mChain.size(); c++ )
+        {
+            MagoST::SymInfoData     chainInfoData = { 0 };
+            MagoST::ISymbolInfo*    chainInfo = NULL;
+            hr = mSession->GetTypeInfo( mChain[c], chainInfoData, chainInfo );
+            if (hr != S_OK)
+                return false;
+
+            int32_t offset;
+            if ( !chainInfo->GetOffset(offset) )
+                return false;
+
+            hr = mSymStore->ReadMemory( closAddr + offset, ptrSize, read, (uint8_t*)&closAddr );
+            if ( hr != S_OK || read != ptrSize )
+                return false;
+        }
+        int32_t offset;
+        if( !mSymInfo->GetOffset( offset ) )
+            return false;
+
+        addr = closAddr + offset;
+        return true;
+    }
+
+    bool ClosureVarCVDecl::IsField()
+    {
+        return false;
+    }
+    bool ClosureVarCVDecl::IsVar()
+    {
         return true;
     }
 

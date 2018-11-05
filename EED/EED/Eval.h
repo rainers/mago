@@ -108,7 +108,15 @@ namespace MagoEE
     class IValueBinder
     {
     public:
-        virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl ) = 0;
+        enum
+        {
+            FindObjectLocal = 1 << 0,
+            FindObjectClosure = 1 << 1,
+            FindObjectGlobal = 1 << 2,
+            FindObjectRegister = 1 << 3,
+            FindObjectAny = FindObjectLocal | FindObjectClosure | FindObjectGlobal | FindObjectRegister,
+        };
+        virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl, uint32_t findFlags ) = 0;
 
         virtual HRESULT GetThis( Declaration*& decl ) = 0;
         virtual HRESULT GetSuper( Declaration*& decl ) = 0;

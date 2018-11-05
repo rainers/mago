@@ -52,7 +52,7 @@ class DataEnvBinder : public MagoEE::IValueBinder
 public:
     DataEnvBinder( IValueEnv* env, IScope* scope );
 
-    virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl );
+    virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl, uint32_t findFlags );
 
     virtual HRESULT GetThis( MagoEE::Declaration*& decl );
     virtual HRESULT GetSuper( MagoEE::Declaration*& decl );

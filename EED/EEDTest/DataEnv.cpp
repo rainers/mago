@@ -300,7 +300,7 @@ DataEnvBinder::DataEnvBinder( IValueEnv* env, IScope* scope )
 {
 }
 
-HRESULT DataEnvBinder::FindObject( const wchar_t* name, MagoEE::Declaration*& decl )
+HRESULT DataEnvBinder::FindObject( const wchar_t* name, MagoEE::Declaration*& decl, uint32_t findFlags )
 {
     return mScope->FindObject( name, decl );
 }

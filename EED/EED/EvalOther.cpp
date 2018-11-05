@@ -637,8 +637,15 @@ namespace MagoEE
 
     HRESULT IdExpr::FindObject( const wchar_t* name, IValueBinder* binder, Declaration*& decl )
     {
-        HRESULT hr = binder->FindObject( name, decl );
-        if ( FAILED( hr ) )
+        HRESULT hr = binder->FindObject( name, decl, IValueBinder::FindObjectLocal );
+        if ( hr == S_OK )
+            return S_OK;
+
+        hr = binder->FindObject( name, decl, IValueBinder::FindObjectClosure );
+        if ( hr == S_OK )
+            return S_OK;
+
+        while ( true )
         {
             // now look in the class
 
@@ -648,25 +655,29 @@ namespace MagoEE
 
             hr = binder->GetThis( thisDecl.Ref() );
             if ( FAILED( hr ) )
-                return E_MAGOEE_SYMBOL_NOT_FOUND;
+                break;
 
             if ( !thisDecl->GetType( thisType.Ref() ) )
-                return E_MAGOEE_SYMBOL_NOT_FOUND;
+                break;
 
             if ( thisType->IsPointer() )
                 thisType = thisType->AsTypeNext()->GetNext();
 
             if ( thisType->AsTypeStruct() == NULL )
-                return E_MAGOEE_SYMBOL_NOT_FOUND;
+                break;
 
             childDecl = thisType->AsTypeStruct()->FindObject( name );
             if ( childDecl == NULL )
-                return E_MAGOEE_SYMBOL_NOT_FOUND;
+                break;
 
             decl = childDecl.Detach();
+            return S_OK;
         }
+        hr = binder->FindObject( name, decl, IValueBinder::FindObjectGlobal );
+        if ( hr == S_OK )
+            return S_OK;
 
-        return S_OK;
+        return E_MAGOEE_SYMBOL_NOT_FOUND;
     }
 
     HRESULT IdExpr::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
@@ -762,7 +773,7 @@ namespace MagoEE
         {
             const wchar_t*  name = mNamePath->GetCut( mNamePathLen );
 
-            binder->FindObject( name, Decl.Ref() );
+            binder->FindObject( name, Decl.Ref(), IValueBinder::FindObjectAny );
 
             mNamePath->ReleaseCut();
         }
@@ -1143,7 +1154,7 @@ namespace MagoEE
         {
             const wchar_t*  name = mNamePath->GetCut( mNamePathLen );
 
-            binder->FindObject( name, Decl.Ref() );
+            binder->FindObject( name, Decl.Ref(), IValueBinder::FindObjectAny );
 
             mNamePath->ReleaseCut();
         }
@@ -1228,7 +1239,7 @@ namespace MagoEE
         fullId.append( Instance->Id->Str );
         fullId.append( Instance->ArgumentString->Str );
 
-        hr = binder->FindObject( fullId.c_str(), Decl.Ref() );
+        hr = binder->FindObject( fullId.c_str(), Decl.Ref(), IValueBinder::FindObjectAny );
         if ( FAILED( hr ) )
             return hr;
 
