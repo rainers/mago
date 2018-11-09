@@ -53,7 +53,7 @@ namespace Mago
         HRESULT Init( ExprContext* exprContext );
 
     private:
-        bool AddClosureNames( MagoST::ISession* session, MagoST::ISymbolInfo* sym, const std::string& symname );
+        bool AddClosureNames( MagoST::ISession* session, MagoST::ISymbolInfo* sym, const std::string& symname, bool recurse );
     };
 
     EnumLocalValues::EnumLocalValues()
@@ -184,6 +184,9 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
+        // if both exist, __capture is always the same as __closptr.__chain
+        bool hadClosure = false;
+        bool hadCapture = false;
         const std::vector<MagoST::SymHandle>& blockSH = exprContext->GetBlockSH();
 
         for ( auto it = blockSH.rbegin(); it != blockSH.rend(); it++)
@@ -211,7 +214,14 @@ namespace Mago
 
                 if ( pstrName.GetLength() == 9 && strncmp( pstrName.GetName(), "__closptr", 9 ) == 0 )
                 {
-                    AddClosureNames( session, symInfo, "__closptr" );
+                    AddClosureNames( session, symInfo, "__closptr", !hadCapture );
+                    hadClosure = true;
+                }
+                if ( pstrName.GetLength() == 9 && strncmp( pstrName.GetName(), "__capture", 9 ) == 0 )
+                {
+                    if ( !hadClosure )
+                        AddClosureNames( session, symInfo, "__capture", true );
+                    hadCapture = true;
                 }
                 if ( gOptions.hideInternalNames && pstrName.GetName()[0] == '_' && pstrName.GetName()[1] == '_' )
                     continue;
@@ -230,7 +240,7 @@ namespace Mago
         return S_OK;
     }
 
-    bool EnumLocalValues::AddClosureNames( MagoST::ISession* session, MagoST::ISymbolInfo* sym, const std::string& symname )
+    bool EnumLocalValues::AddClosureNames( MagoST::ISession* session, MagoST::ISymbolInfo* sym, const std::string& symname, bool recurse )
     {
         MagoST::TypeIndex       pointeeTI = { 0 };
         MagoST::TypeHandle      pointeeTH = { 0 };
@@ -273,6 +283,7 @@ namespace Mago
         if ( session->SetChildTypeScope( fieldListTH, flistScope ) != S_OK )
             return false;
 
+        uint16_t cntData = 0;
         for ( uint16_t i = 0; /*i < fieldCount*/; i++ )
         {
             MagoST::TypeHandle      memberTH = { 0 };
@@ -292,15 +303,22 @@ namespace Mago
             if ( tag != MagoST::SymTagData )
                 continue;
 
+            cntData++;
             if ( !memberInfo->GetName( pstrName ) )
                 continue;
 
             if ( pstrName.GetLength() == 7 && strncmp( pstrName.GetName(), "__chain", 7 ) == 0 )
             {
-                AddClosureNames( session, memberInfo, symname + ".__chain" );
-				continue;
+                if( recurse )
+                    AddClosureNames( session, memberInfo, symname + ".__chain", true );
+                continue;
             }
-
+            if( cntData == 1 )
+            {
+                // a __closptr or __capture that does not start with a __chain variable is
+                //  actually a pointer to an aggregate also available through "this", so skip it
+                break;
+            }
             if ( gOptions.hideInternalNames && pstrName.GetName()[0] == '_' && pstrName.GetName()[1] == '_' )
                 continue;
 

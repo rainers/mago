@@ -172,8 +172,8 @@ namespace Mago
             return hr;
 
 #if USE_REFERENCE_TYPE
-        if ( origDecl->IsType() && origDecl->GetUdtKind( udtKind ) 
-            && (udtKind == MagoEE::Udt_Class) )
+        if ( ( findFlags & FindObjectNoClassDeref ) == 0 && origDecl->IsType()
+            && origDecl->GetUdtKind( udtKind ) && ( udtKind == MagoEE::Udt_Class ) )
         {
             decl = new ClassRefDecl( origDecl, mTypeEnv );
             if ( decl == NULL )
@@ -223,25 +223,7 @@ namespace Mago
 
     HRESULT ExprContext::GetThis( MagoEE::Declaration*& decl )
     {
-        HRESULT hr = S_OK;
-        MagoST::SymHandle           childSH = { 0 };
-        RefPtr<MagoST::ISession>    session;
-
-        if ( !mModule->GetSymbolSession( session ) )
-            return E_NOT_FOUND;
-
-        hr = E_FAIL;
-        for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
-            hr = session->FindChildSymbol( *it, "this", 4, childSH );
-
-        if ( hr != S_OK )
-            return E_NOT_FOUND;
-
-        hr = MakeDeclarationFromSymbol( childSH, decl );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return S_OK;
+        return FindObject( L"this", decl, FindObjectLocal | FindObjectClosure | FindObjectNoClassDeref );
     }
 
     HRESULT ExprContext::GetSuper( MagoEE::Declaration*& decl )
@@ -391,7 +373,9 @@ namespace Mago
             break;
 
         default:
-            return E_FAIL;
+            if( !cvDecl->GetAddress( addr ) )
+                return E_FAIL;
+            break;
         }
 
         return S_OK;
@@ -422,6 +406,7 @@ namespace Mago
         case LocIsRegRel:
         case LocIsStatic:
         case LocIsTLS:
+        case LocIsThisRel: // if accessed by a closure
             {
                 MagoEE::Address addr = 0;
 
@@ -860,9 +845,12 @@ namespace Mago
         if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
+        // if both exist, __capture is always the same as __closptr.__chain
         MagoST::SymHandle closureSH;
         HRESULT hr = session->FindChildSymbol( *mBlockSH.begin(), "__closptr", 9, closureSH );
         if ( hr != S_OK )
+            hr = session->FindChildSymbol( *mBlockSH.begin(), "__capture", 9, closureSH );
+        if (hr != S_OK)
             return E_NOT_FOUND;
 
         MagoST::SymInfoData     closureInfoData = { 0 };

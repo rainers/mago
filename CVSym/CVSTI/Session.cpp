@@ -375,12 +375,16 @@ namespace MagoST
             if ( hr != S_OK )
                 continue;
 
+            SymTag tag = symInfo->GetSymTag();
+            if ( tag == SymTagBaseClass )
+                continue;
+
             if ( !symInfo->GetName( pstrName ) )
                 continue;
 
             if ( (nameLen == pstrName.GetLength()) && (memcmp( nameChars, pstrName.GetName(), nameLen ) == 0) )
             {
-                if ( symInfo->GetSymTag() != SymTagFunction )
+                if ( tag != SymTagFunction )
                 {
                     handle = childHandle;
                     return S_OK;
