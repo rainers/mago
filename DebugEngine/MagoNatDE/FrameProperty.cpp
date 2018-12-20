@@ -315,9 +315,11 @@ namespace Mago
             }
             if( cntData == 1 )
             {
+                int32_t offset;
+                if( memberInfo->GetOffset( offset ) && offset == 0 )
                 // a __closptr or __capture that does not start with a __chain variable is
                 //  actually a pointer to an aggregate also available through "this", so skip it
-                break;
+                    break;
             }
             if ( gOptions.hideInternalNames && pstrName.GetName()[0] == '_' && pstrName.GetName()[1] == '_' )
                 continue;
