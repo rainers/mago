@@ -18,6 +18,7 @@
 #include "BpResolutionLocation.h"
 #include "BPBinderCallback.h"
 #include "BPBinders.h"
+#include <memory>
 
 using namespace std;
 
@@ -337,7 +338,7 @@ namespace Mago
         return hr;
     }
 
-    HRESULT MakeBinder( IDebugBreakpointRequest2* bpRequest, auto_ptr<BPBinder>& binder )
+    HRESULT MakeBinder( IDebugBreakpointRequest2* bpRequest, unique_ptr<BPBinder>& binder )
     {
         BP_LOCATION_TYPE    locType = 0;
 
@@ -379,7 +380,7 @@ namespace Mago
 
         HRESULT                 hr = S_OK;
         BpRequestInfo           reqInfo;
-        auto_ptr<BPBinder>      binder;
+		unique_ptr<BPBinder>    binder;
 
         hr = MakeBinder( mBPRequest, binder );
         if ( FAILED( hr ) )
@@ -462,7 +463,7 @@ namespace Mago
 
         HRESULT                 hr = S_OK;
         BpRequestInfo           reqInfo;
-        auto_ptr<BPBinder>      binder;
+		unique_ptr<BPBinder>    binder;
 
         hr = MakeBinder( mBPRequest, binder );
         if ( FAILED( hr ) )

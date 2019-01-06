@@ -8,6 +8,7 @@
 #pragma once
 
 #include <udis86.h>
+#include <memory>
 
 
 namespace Mago
@@ -87,7 +88,7 @@ namespace Mago
         RefPtr<Program>             mProg;
         IDebuggerProxy*             mDebugger;
         Address64                   mAnchorAddr;
-        std::auto_ptr<InstBlock>    mBlockCache[2];
+        std::unique_ptr<InstBlock>  mBlockCache[2];
         uint32_t                    mPtrSize;
 
     public:

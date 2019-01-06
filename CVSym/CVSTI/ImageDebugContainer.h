@@ -18,9 +18,9 @@ namespace MagoST
 
     class ImageDebugContainer : public IDebugContainer
     {
-        std::auto_ptr<BinImage::ImageFile>  mImage;
-        std::auto_ptr<BinImage::DbgFile>    mDbg;
-        IMAGE_DEBUG_DIRECTORY               mDebugDir;
+        std::unique_ptr<BinImage::ImageFile> mImage;
+        std::unique_ptr<BinImage::DbgFile>   mDbg;
+        IMAGE_DEBUG_DIRECTORY                mDebugDir;
 
     public:
         HRESULT LoadExe( const wchar_t* filename, ILoadCallback* callback );

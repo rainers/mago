@@ -18,6 +18,7 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <Import Project="..\..\PropSheets\MagoDbg_winsdk.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0F8AB97B-1363-4DF6-90C0-BA3F34393A40}</ProjectGuid>
     <RootNamespace>editline</RootNamespace>

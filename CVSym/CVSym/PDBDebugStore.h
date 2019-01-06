@@ -98,9 +98,9 @@ namespace MagoST
         DWORD            mMachineType;
         long             mCompilandCount;
 
-        std::auto_ptr<char>  mLastCompilandName;
-        std::auto_ptr<char>  mLastFileInfoName;
-        std::auto_ptr<DWORD> mLastSegInfoOffsets;
-        std::auto_ptr<WORD>  mLastSegInfoLineNumbers;
+        std::unique_ptr<char>  mLastCompilandName;
+        std::unique_ptr<char>  mLastFileInfoName;
+        std::unique_ptr<DWORD> mLastSegInfoOffsets;
+        std::unique_ptr<WORD>  mLastSegInfoLineNumbers;
     };
 }

@@ -27,7 +27,7 @@ using MagoEE::ITypeEnv;
 
 Element* TestFactory::NewElement( const wchar_t* name )
 {
-    auto_ptr<Element>   elem;
+	unique_ptr<Element>   elem;
 
     if ( _wcsicmp( name, L"intvalue" ) == 0 )
     {
@@ -3649,7 +3649,7 @@ std::shared_ptr<DataObj> VerifyTestElement::EvaluateEED( ITypeEnv* typeEnv, ISco
         DataEnv             envCopy( *gAppSettings.TestEvalDataEnv );
         size_t              totalBufLen = envCopy.GetBufferLimit() - envCopy.GetBuffer();
         DataEnv*            refEnv = gAppSettings.TestEvalDataEnv;
-        auto_ptr<DataEnv>   allocRefEnv;
+		unique_ptr<DataEnv> allocRefEnv;
 
         if ( gAppSettings.TempAssignment )
         {

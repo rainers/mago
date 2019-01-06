@@ -39,6 +39,7 @@
     <RootNamespace>MagoNatDE</RootNamespace>
     <Keyword>AtlProj</Keyword>
   </PropertyGroup>
+  <Import Project="..\..\PropSheets\MagoDbg_winsdk.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>

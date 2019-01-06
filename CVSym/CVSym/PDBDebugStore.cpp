@@ -144,7 +144,7 @@ namespace MagoST
     {
         DWORD   flags = 0;
         int nChars = WideCharToMultiByte( CP_UTF8, flags, bstr, -1, NULL, 0, NULL, NULL );
-        std::auto_ptr<char> ptr( new char[nChars] );
+        std::unique_ptr<char> ptr( new char[nChars] );
         nChars = WideCharToMultiByte( CP_UTF8, flags, bstr, -1, ptr.get(), nChars, NULL, NULL );
         SysFreeString( bstr );
         if( nChars > 0 )
@@ -833,7 +833,7 @@ namespace MagoST
         {
             IDiaEnumSymbols* pEnumSymbols = NULL;
             int len = MultiByteToWideChar( CP_UTF8, 0, nameChars, nameLen, NULL, 0 );
-            std::auto_ptr<wchar_t> wname (new wchar_t[len+1]);
+            std::unique_ptr<wchar_t> wname (new wchar_t[len+1]);
             if ( wname.get() == NULL )
                 return E_OUTOFMEMORY;
             MultiByteToWideChar( CP_UTF8, 0, nameChars, nameLen, wname.get (), len);

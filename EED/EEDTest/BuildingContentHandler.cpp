@@ -158,7 +158,7 @@ HRESULT BuildingContentHandler::startElement(
 {
     try
     {
-        auto_ptr<Element>   elem;
+		unique_ptr<Element> elem;
         int                 attrCount = 0;
         const wchar_t*      dotPtr = NULL;
 

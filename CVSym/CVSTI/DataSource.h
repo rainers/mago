@@ -20,7 +20,7 @@ namespace MagoST
     {
         long                            mRefCount;
 
-        std::auto_ptr<IDebugContainer>  mDebugContainer;
+        std::unique_ptr<IDebugContainer> mDebugContainer;
         BYTE*                           mDebugView;
         DWORD                           mDebugSize;
         MagoST::IDebugStore*            mStore;

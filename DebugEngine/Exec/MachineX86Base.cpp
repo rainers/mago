@@ -13,7 +13,7 @@
 #include "Process.h"
 #include "Thread.h"
 #include "ThreadX86.h"
-
+#include <memory>
 
 class Breakpoint;
 
@@ -210,7 +210,7 @@ void MachineX86Base::Release()
 
 HRESULT MachineX86Base::Init()
 {
-    std::auto_ptr< BPAddressTable > addrTable( new BPAddressTable() );
+    std::unique_ptr< BPAddressTable > addrTable( new BPAddressTable() );
 
     if ( addrTable.get() == NULL )
         return E_OUTOFMEMORY;
@@ -544,7 +544,7 @@ HRESULT MachineX86Base::OnCreateThread( Thread* thread )
     _ASSERT( thread != NULL );
 
     HRESULT hr = S_OK;
-    std::auto_ptr< ThreadX86Base >   threadX86( new ThreadX86Base( thread ) );
+    std::unique_ptr< ThreadX86Base >   threadX86( new ThreadX86Base( thread ) );
 
     if ( threadX86.get() == NULL )
         return E_OUTOFMEMORY;

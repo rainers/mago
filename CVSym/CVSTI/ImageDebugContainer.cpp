@@ -20,7 +20,7 @@ namespace MagoST
     HRESULT ImageDebugContainer::LoadExe( const wchar_t* filename, ILoadCallback* callback )
     {
         HRESULT     hr = S_OK;
-        auto_ptr<ImageFile>   image( new ImageFile() );
+        unique_ptr<ImageFile>   image( new ImageFile() );
         DataDirInfo dirInfo = { 0 };
         HandlePtr   hMapping;
         DWORD       viewAlignedAddr = 0;
@@ -174,7 +174,7 @@ namespace MagoST
     {
         HRESULT     hr = S_OK;
         DWORD       debugDirCount = 0;
-        auto_ptr<DbgFile>               dbg( new DbgFile() );
+		unique_ptr<DbgFile>             dbg( new DbgFile() );
         const IMAGE_DEBUG_DIRECTORY*    debugDir = NULL;
 
         if ( dbg.get() == NULL )

@@ -102,7 +102,7 @@ HRESULT ProgramValueEnv::StartProgram()
     LaunchInfo              launchInfo = { 0 };
     RefPtr<IModule>         procMod;
 
-    auto_ptr<Exec>  exec( new Exec() );
+	unique_ptr<Exec>  exec( new Exec() );
 
     callback = new EventCallback();
     callback->SetExec( exec.get() );

@@ -841,7 +841,7 @@ namespace MagoEE
         };
 
         ByteString* mUntypedStr;
-        std::auto_ptr<AlternateStrings> mAlternates;
+        std::unique_ptr<AlternateStrings> mAlternates;
 
     public:
         String*     Value;

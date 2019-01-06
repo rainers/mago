@@ -205,9 +205,9 @@ int _tmain(int argc, _TCHAR* argv[])
         IScope*             scope = NULL;
         IValueEnv*          valueEnv = NULL;
 
-        auto_ptr<TopScope>          topScope;
-        auto_ptr<DataEnv>           dataEnv;
-        auto_ptr<ProgramValueEnv>   progValEnv;
+        unique_ptr<TopScope>          topScope;
+        unique_ptr<DataEnv>           dataEnv;
+        unique_ptr<ProgramValueEnv>   progValEnv;
 
 
         errorHandler = new SAXErrorHandler();

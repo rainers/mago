@@ -13,7 +13,7 @@ using namespace std;
 
 Element* DataFactory::NewElement( const wchar_t* name )
 {
-    auto_ptr<Element>   elem;
+	unique_ptr<Element>   elem;
 
     if ( _wcsicmp( name, L"variable" ) == 0 )
     {

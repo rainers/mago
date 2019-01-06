@@ -56,7 +56,7 @@ namespace MagoST
         ILoadCallback* callback )
     {
         HRESULT hr = S_OK;
-        auto_ptr<ImageDebugContainer>   container( new ImageDebugContainer() );
+        unique_ptr<ImageDebugContainer>   container( new ImageDebugContainer() );
         RefPtr<IAddressMap> addrMap;
 
         if ( container.get() == NULL )

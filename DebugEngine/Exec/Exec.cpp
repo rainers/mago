@@ -15,6 +15,7 @@
 #include "Machine.h"
 #include "MakeMachine.h"
 #include <Psapi.h>
+#include <memory>
 
 using namespace std;
 
@@ -107,11 +108,11 @@ HRESULT Exec::Init( IEventCallback* callback, MagoCore::DebuggerProxy* debuggerP
 
     HRESULT hr = S_OK;
 
-    auto_ptr<ProcessMap>   map( new ProcessMap() );
+	unique_ptr<ProcessMap>   map( new ProcessMap() );
     if ( map.get() == NULL )
         return E_OUTOFMEMORY;
 
-    auto_ptr<PathResolver>  resolver( new PathResolver() );
+    unique_ptr<PathResolver>  resolver( new PathResolver() );
     if ( resolver.get() == NULL )
         return E_OUTOFMEMORY;
 
