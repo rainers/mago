@@ -7,17 +7,10 @@
     <VSSDKPath Condition="'$(VSSDKPath)' == ''">$(VSSDK120Install)</VSSDKPath>
     <VSSDKPath Condition="'$(VSSDKPath)' == ''">$(VSSDK140Install)</VSSDKPath>
     <VSSDKPath Condition="'$(VSSDKPath)' == ''">$(VSSDK150Install)</VSSDKPath>
+    <VSSDKPath Condition="'$(VSSDKPath)' == ''">$(VSInstallDir)VSSDK</VSSDKPath>
     <CPPTEST_1_1_0_SRC_PATH Condition="'$(CPPTEST_1_1_0_SRC_PATH)' == ''">$(SolutionDir)\cpptest\src</CPPTEST_1_1_0_SRC_PATH>
     <IncludePath>$(STDINT_INC_PATH);$(BOOST_1_40_0_PATH);$(VSSDKPath)\VisualStudioIntegration\Common\Inc;$(CPPTEST_1_1_0_SRC_PATH);$(VSINSTALLDIR)\DIA SDK\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(VSSDKPath)\VisualStudioIntegration\Common\Lib\Retail;$(CPPTEST_1_1_0_LIB_PATH);$(LibraryPath)</LibraryPath>
-	<!-- guess the installed Windows SDK -->
-    <WindowsSdkInstallFolder_10 Condition="'$(WindowsSdkInstallFolder_10)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0@InstallationFolder)</WindowsSdkInstallFolder_10>
-    <WindowsSdkInstallFolder_10 Condition="'$(WindowsSdkInstallFolder_10)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0@InstallationFolder)</WindowsSdkInstallFolder_10>
-    <WindowsTargetPlatformVersion_10 Condition="'$(WindowsTargetPlatformVersion_10)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v10.0@ProductVersion)</WindowsTargetPlatformVersion_10>
-    <WindowsTargetPlatformVersion_10 Condition="'$(WindowsTargetPlatformVersion_10)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Microsoft SDKs\Windows\v10.0@ProductVersion)</WindowsTargetPlatformVersion_10>
-    <!-- Sometimes the version in the registry has to .0 suffix, and sometimes it doesn't. Check and add it -->
-    <WindowsTargetPlatformVersion_10 Condition="'$(WindowsTargetPlatformVersion_10)' != '' and !$(WindowsTargetPlatformVersion_10.EndsWith('.0'))">$(WindowsTargetPlatformVersion_10).0</WindowsTargetPlatformVersion_10>
-	<WindowsTargetPlatformVersion Condition="'$(WindowsTargetPlatformVersion_10)' != ''">$(WindowsTargetPlatformVersion_10)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup>
     <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
