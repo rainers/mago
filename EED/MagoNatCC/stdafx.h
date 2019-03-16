@@ -23,6 +23,9 @@
 #include <atlcom.h>
 #include <atlctl.h>
 
+// missing in some versions of <cordebug.h>?
+typedef enum CorGCReferenceType CorGCReferenceType;
+
 #include <vsdebugeng.h>
 #include <vsdebugeng.templates.h>
 
