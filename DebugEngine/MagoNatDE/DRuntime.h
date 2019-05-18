@@ -30,13 +30,20 @@ namespace Mago
         int                     mAAVersion;
         Address64               mClassInfoVtblAddr;
 
+        struct ClassNameCache
+        {
+            uint32_t interfaceOffset;
+            std::wstring className;
+        };
+        std::map<Address64, ClassNameCache> mVtbl2ClassNameCache;
+
     public:
         DRuntime( IDebuggerProxy* debugger, ICoreProcess* coreProcess );
 
         void SetAAVersion( int ver );
         int GetAAVersion() const { return mAAVersion; }
 
-        void SetClassInfoVtblAddr(Address64 addr);
+        void SetClassInfoVtblAddr( Address64 addr );
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 

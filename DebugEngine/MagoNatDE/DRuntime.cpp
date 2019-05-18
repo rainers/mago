@@ -1000,12 +1000,28 @@ namespace Mago
         _ASSERT( pbstrClassName != NULL );
 
         bool checkInterface = true;
-        Address64 vtbl, classinfo, ci_vtbl;
+        Address64 vtbl, classinfo;
         uint32_t read, unread;
     L_retryInterface:
         HRESULT hr = ReadAddress( addr, 0, vtbl );
         if ( SUCCEEDED( hr ) )
         {
+            auto it = mVtbl2ClassNameCache.find( vtbl );
+            if ( it != mVtbl2ClassNameCache.end() )
+            {
+                if( checkInterface && it->second.interfaceOffset > 0 )
+                {
+                    addr = addr - it->second.interfaceOffset;
+                    checkInterface = false;
+                    goto L_retryInterface;
+                }
+                if (it->second.className.empty())
+                    return E_FAIL;
+
+                *pbstrClassName = SysAllocString( it->second.className.data() );
+                return S_OK;
+            }
+
             hr = ReadAddress( vtbl, 0, classinfo );
             if ( SUCCEEDED( hr ) )
             {
@@ -1018,20 +1034,19 @@ namespace Mago
                         // emulate _d_toObject() for interfaces
                         addr = addr - ti.init.ptr;
                         checkInterface = false;
+                        mVtbl2ClassNameCache[vtbl] = { (uint32_t)ti.init.ptr };
                         goto L_retryInterface;
                     }
                     if( mClassInfoVtblAddr )
                     {
                         // verify class info vtbl pointer
                         if( ti.pvtbl != mClassInfoVtblAddr )
-                            return E_FAIL;
+                            hr = E_FAIL;
                     }
 
-                    if ( ti.name.length < 4096 )
+                    if ( SUCCEEDED( hr ) && ti.name.length < 4096 )
                     {
                         char* buf = new char[(size_t) ti.name.length];
-                        if ( buf == NULL )
-                            return E_OUTOFMEMORY;
                         hr = mDebugger->ReadMemory( mCoreProc, ti.name.ptr,
                                                     (uint32_t) ti.name.length, read, unread, (uint8_t*) buf );
                         if ( SUCCEEDED( hr ) )
@@ -1050,6 +1065,10 @@ namespace Mago
                 }
             }
         }
+        if ( SUCCEEDED( hr ) )
+            mVtbl2ClassNameCache[vtbl] = { 0, *pbstrClassName };
+        else
+            mVtbl2ClassNameCache[vtbl] = { 0 };
         return hr;
     }
 
