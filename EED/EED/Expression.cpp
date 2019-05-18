@@ -429,6 +429,10 @@ namespace MagoEE
     {
     }
 
+    ObjectKind CastExpr::GetObjectKind()
+    {
+        return ObjectKind_CastExpression;
+    }
 
     //----------------------------------------------------------------------------
     //  DotExpr

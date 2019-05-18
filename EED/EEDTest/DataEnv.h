@@ -62,7 +62,7 @@ public:
     virtual HRESULT GetValue( MagoEE::Address addr, MagoEE::Type* type, MagoEE::DataValue& value );
     virtual HRESULT GetValue( MagoEE::Address aArrayAddr, const MagoEE::DataObject& key, MagoEE::Address& valueAddr );
     virtual int GetAAVersion();
-    virtual HRESULT GetClassName( MagoEE::Address addr, std::wstring& className );
+    virtual HRESULT GetClassName( MagoEE::Address addr, std::wstring& className, bool derefOnce );
 
     virtual HRESULT SetValue( MagoEE::Declaration* decl, const MagoEE::DataValue& value );
     virtual HRESULT SetValue( MagoEE::Address addr, MagoEE::Type* type, const MagoEE::DataValue& value );

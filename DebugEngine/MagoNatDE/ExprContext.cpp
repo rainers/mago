@@ -500,10 +500,18 @@ namespace Mago
         return GetDRuntime()->GetAAVersion();
     }
 
-    HRESULT ExprContext::GetClassName( MagoEE::Address addr, std::wstring& className )
+    HRESULT ExprContext::GetClassName( MagoEE::Address addr, std::wstring& className, bool derefOnce )
     {
+        HRESULT hr;
+        if ( derefOnce )
+        {
+            uint32_t sizeRead;
+            hr = ReadMemory( addr, mTypeEnv->GetPointerSize(), sizeRead, (uint8_t*)& addr );
+            if ( !SUCCEEDED( hr ) || sizeRead != uint32_t( mTypeEnv->GetPointerSize() ) )
+                return E_FAIL;
+        }
         BSTR bstrClassname;
-        HRESULT hr = GetDRuntime()->GetClassName( addr, &bstrClassname );
+        hr = GetDRuntime()->GetClassName( addr, &bstrClassname );
         if ( SUCCEEDED( hr ) )
         {
             className = bstrClassname;

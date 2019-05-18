@@ -70,11 +70,9 @@ namespace Mago
 
         if ( (dwFields & DEBUGPROP_INFO_TYPE) != 0 )
         {
-            if ( mObjVal.ObjVal._Type != NULL )
+            std::wstring typeStr;
+            if ( GetPropertyType( mExprContext, mObjVal.ObjVal, mExprText, typeStr ) )
             {
-                std::wstring    typeStr;
-                mObjVal.ObjVal._Type->ToString( typeStr );
-
                 pPropertyInfo->bstrType = SysAllocString( typeStr.c_str() );
                 pPropertyInfo->dwFields |= DEBUGPROP_INFO_TYPE;
             }
@@ -88,36 +86,7 @@ namespace Mago
 
         if ( (dwFields & DEBUGPROP_INFO_ATTRIB) != 0 )
         {
-            pPropertyInfo->dwAttrib = 0;
-            if ( mObjVal.HasString )
-                pPropertyInfo->dwAttrib |= DBG_ATTRIB_VALUE_RAW_STRING;
-            if ( mObjVal.ReadOnly )
-                pPropertyInfo->dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
-
-            if ( mFormatOpts.specifier != MagoEE::FormatSpecRaw && mObjVal.HasChildren )
-                pPropertyInfo->dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
-            if ( mFormatOpts.specifier == MagoEE::FormatSpecRaw && mObjVal.HasRawChildren )
-                pPropertyInfo->dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
-
-            if ( mObjVal.ObjVal._Type != NULL )
-            {
-                if( !mObjVal.ObjVal._Type->IsMutable() )
-                    pPropertyInfo->dwAttrib |= DBG_ATTRIB_TYPE_CONSTANT;
-                if( mObjVal.ObjVal._Type->IsShared() )
-                    pPropertyInfo->dwAttrib |= DBG_ATTRIB_TYPE_SYNCHRONIZED;
-
-                if( auto fun = mObjVal.ObjVal._Type->AsTypeFunction() )
-                {
-                    if ( fun->IsProperty() )
-                        pPropertyInfo->dwAttrib |= DBG_ATTRIB_PROPERTY;
-                    else
-                        pPropertyInfo->dwAttrib |= DBG_ATTRIB_METHOD;
-                }
-                else if( auto clss = mObjVal.ObjVal._Type->AsTypeStruct() )
-                    pPropertyInfo->dwAttrib |= DBG_ATTRIB_CLASS;
-                else
-                    pPropertyInfo->dwAttrib |= DBG_ATTRIB_DATA;
-            }
+            pPropertyInfo->dwAttrib = GetPropertyAttr( mExprContext, mObjVal, mFormatOpts );
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
 
@@ -396,5 +365,63 @@ namespace Mago
             return NULL;
 
         return str.Detach();
+    }
+
+    bool GetPropertyType( ExprContext* exprContext, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& typeStr )
+    {
+        if ( objVal._Type == NULL )
+            return false;
+
+        objVal._Type->ToString( typeStr );
+
+        if ( objVal.Addr != 0 &&
+             wcsncmp( exprText, L"cast(", 5) != 0 && objVal._Type->IsReference() )
+        {
+            auto decl = objVal._Type->AsTypeNext()->GetNext()->GetDeclaration();
+            MagoEE::UdtKind kind;
+            std::wstring className;
+            if ( decl && decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class )
+                exprContext->GetClassName( objVal.Addr, className, true );
+            if ( !className.empty() && className != typeStr )
+                typeStr.append( L" {" ).append( className ).append( L"}" );
+        }
+
+        return true;
+    }
+
+    DWORD GetPropertyAttr( ExprContext* exprContext, const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts )
+    {
+        DWORD dwAttrib = 0;
+        if ( objVal.HasString )
+            dwAttrib |= DBG_ATTRIB_VALUE_RAW_STRING;
+        if ( objVal.ReadOnly )
+            dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
+
+        if ( fmtOpts.specifier != MagoEE::FormatSpecRaw && objVal.HasChildren )
+            dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
+        if (fmtOpts.specifier == MagoEE::FormatSpecRaw && objVal.HasRawChildren )
+            dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
+
+        if ( objVal.ObjVal._Type != NULL )
+        {
+            if ( !objVal.ObjVal._Type->IsMutable() )
+                dwAttrib |= DBG_ATTRIB_TYPE_CONSTANT;
+            if ( objVal.ObjVal._Type->IsShared() )
+                dwAttrib |= DBG_ATTRIB_TYPE_SYNCHRONIZED;
+
+            if ( auto fun = objVal.ObjVal._Type->AsTypeFunction() )
+            {
+                if ( fun->IsProperty() )
+                    dwAttrib |= DBG_ATTRIB_PROPERTY;
+                else
+                    dwAttrib |= DBG_ATTRIB_METHOD;
+            }
+            else if ( auto clss = objVal.ObjVal._Type->AsTypeStruct() )
+                dwAttrib |= DBG_ATTRIB_CLASS;
+            else
+                dwAttrib |= DBG_ATTRIB_DATA;
+        }
+
+        return dwAttrib;
     }
 }

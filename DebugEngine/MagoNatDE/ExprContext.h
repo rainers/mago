@@ -84,7 +84,7 @@ namespace Mago
             MagoEE::Address& valueAddr );
 
         virtual int GetAAVersion();
-        virtual HRESULT GetClassName( MagoEE::Address addr, std::wstring& className );
+        virtual HRESULT GetClassName( MagoEE::Address addr, std::wstring& className, bool derefOnce );
 
         virtual HRESULT SetValue( 
             MagoEE::Declaration* decl, 

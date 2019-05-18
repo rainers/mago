@@ -131,4 +131,7 @@ namespace Mago
     private:
         BSTR FormatValue( int radix );
     };
+
+    bool GetPropertyType( ExprContext* exprContext, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& type );
+    DWORD GetPropertyAttr( ExprContext* exprContext, const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts );
 }

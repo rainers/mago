@@ -789,11 +789,7 @@ namespace MagoEE
         if ( decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class &&
              wcsncmp( parentExprText, L"cast(", 5 ) != 0 )  // already inside the base/derived class enumeration?
         {
-            Address addr = 0;
-            uint32_t sizeRead;
-            hr = binder->ReadMemory( parentVal.Addr, typeEnv->GetPointerSize(), sizeRead, (uint8_t*)&addr );
-            if( SUCCEEDED( hr ) && sizeRead == uint32_t( typeEnv->GetPointerSize() ) )
-                binder->GetClassName( addr, mClassName );
+            binder->GetClassName( parentVal.Addr, mClassName, true );
 
             // don't show runtime class if it is the same as the compile time type
             if( !mClassName.empty() && mClassName == decl->GetName() )

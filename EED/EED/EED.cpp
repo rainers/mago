@@ -340,10 +340,33 @@ namespace MagoEE
             }
             else if (ITypeStruct* ts = type->AsTypeStruct() )
             {
-                RefPtr<Declaration> decl = type->GetDeclaration();
-                RefPtr<IEnumDeclarationMembers> members;
-                if ( decl->EnumMembers( members.Ref() ) )
-                    result.HasChildren = result.HasRawChildren = members->GetCount() > 0;
+                if (result.ObjVal.Value.Addr != 0)
+                {
+                    RefPtr<Declaration> decl = type->GetDeclaration();
+                    bool hasVTable = false;
+                    bool hasChildren = false;
+                    bool hasDynamicClass = false;
+                    if ( gShowVTable && expr && expr->GetObjectKind() != ObjectKind_CastExpression )
+                    {
+                        RefPtr<Declaration> vshape;
+                        hasVTable = decl->GetVTableShape( vshape.Ref() ) && vshape;
+                    }
+                    if ( !hasVTable )
+                    {
+                        RefPtr<IEnumDeclarationMembers> members;
+                        if ( decl->EnumMembers( members.Ref() ) )
+                            hasChildren = members->GetCount() > 0;
+                    }
+                    if ( !hasVTable && !hasChildren && ( !expr || expr->GetObjectKind() != ObjectKind_CastExpression ) )
+                    {
+                        MagoEE::UdtKind kind;
+                        std::wstring className;
+                        if ( decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class )
+                            binder->GetClassName( result.ObjVal.Value.Addr, className, false );
+                        hasDynamicClass = !className.empty();
+                    }
+                    result.HasChildren = result.HasRawChildren = hasVTable || hasChildren || hasDynamicClass;
+                }
             }
         }
     }

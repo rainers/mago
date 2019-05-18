@@ -203,11 +203,9 @@ namespace Mago
 
         if ( (mFields & DEBUGPROP_INFO_TYPE) != 0 )
         {
-            if ( result.ObjVal._Type != NULL )
+            std::wstring typeStr;
+            if ( GetPropertyType( mExprContext, result.ObjVal, name, typeStr ) )
             {
-                std::wstring    typeStr;
-                result.ObjVal._Type->ToString( typeStr );
-
                 info.bstrType = SysAllocString( typeStr.c_str() );
                 info.dwFields |= DEBUGPROP_INFO_TYPE;
             }
@@ -231,21 +229,7 @@ namespace Mago
 
         if ( (mFields & DEBUGPROP_INFO_ATTRIB) != 0 )
         {
-            info.dwAttrib = 0;
-            if ( result.HasString )
-                info.dwAttrib |= DBG_ATTRIB_VALUE_RAW_STRING;
-            if ( result.ReadOnly )
-                info.dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
-            if ( mFormatOpt.specifier != MagoEE::FormatSpecRaw && result.HasChildren )
-                info.dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
-            if ( mFormatOpt.specifier == MagoEE::FormatSpecRaw && result.HasRawChildren )
-                info.dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
-            if ( result.IsBaseClass )
-                info.dwAttrib |= DBG_ATTRIB_BASECLASS;
-            if ( result.IsMostDerivedClass )
-                info.dwAttrib |= DBG_ATTRIB_MOSTDERIVEDCLASS;
-            if ( result.IsStaticField )
-                info.dwAttrib |= DBG_ATTRIB_STORAGE_STATIC;
+            info.dwAttrib = GetPropertyAttr( mExprContext, result, mFormatOpt );
             info.dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
 

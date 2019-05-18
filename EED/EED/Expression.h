@@ -599,6 +599,8 @@ namespace MagoEE
         static bool CanImplicitCast( Type* source, Type* dest );
         static bool CanCast( Type* source, Type* dest );
         static void AssignValue( const DataObject& source, DataObject& dest );
+
+        virtual ObjectKind GetObjectKind();
     };
 
 

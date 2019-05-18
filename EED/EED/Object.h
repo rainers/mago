@@ -15,6 +15,7 @@ namespace MagoEE
         ObjectKind_None,
         ObjectKind_ObjectList,
         ObjectKind_Expression,
+        ObjectKind_CastExpression,
         ObjectKind_ExpressionList,
         ObjectKind_Type,
         ObjectKind_NamePart,
