@@ -88,7 +88,7 @@ namespace MagoEE
         if ( fmtopt.radix == 16 )
         {
             int width = type->GetSize() * 2;
-            
+            number &= (1LL << 4 * width) - 1; // avoid sign extension beyond actual width
             swprintf_s( buf, L"0x%0*I64x", width, number );
         }
         else    // it's 10, or make it 10
