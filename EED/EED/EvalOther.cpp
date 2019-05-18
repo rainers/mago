@@ -673,7 +673,7 @@ namespace MagoEE
             decl = childDecl.Detach();
             return S_OK;
         }
-        hr = binder->FindObject( name, decl, IValueBinder::FindObjectGlobal );
+        hr = binder->FindObject( name, decl, IValueBinder::FindObjectGlobal | IValueBinder::FindObjectRegister );
         if ( hr == S_OK )
             return S_OK;
 
