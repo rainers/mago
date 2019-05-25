@@ -20,6 +20,8 @@
 #include "ICoreProcess.h"
 #include <MagoCVConst.h>
 
+#include "../../CVSym/CVSym/Util.h"
+
 #include <algorithm>
 
 using namespace MagoST;
@@ -373,7 +375,7 @@ namespace Mago
             break;
 
         default:
-            if( !cvDecl->GetAddress( addr ) )
+            if( !cvDecl->hasGetAddressOverload() || !cvDecl->GetAddress( addr ) )
                 return E_FAIL;
             break;
         }
@@ -510,12 +512,37 @@ namespace Mago
             if ( !SUCCEEDED( hr ) || sizeRead != uint32_t( mTypeEnv->GetPointerSize() ) )
                 return E_FAIL;
         }
-        BSTR bstrClassname;
+        BSTR bstrClassname = NULL;
         hr = GetDRuntime()->GetClassName( addr, &bstrClassname );
         if ( SUCCEEDED( hr ) )
         {
             className = bstrClassname;
-            SysFreeString( bstrClassname );
+            SysFreeString(bstrClassname);
+            return S_OK;
+        }
+        // guess from vtbl symbol name
+        uint32_t sizeRead;
+        MagoEE::Address vtbl;
+        hr = ReadMemory( addr, mTypeEnv->GetPointerSize(), sizeRead, (uint8_t*)& vtbl );
+        if ( SUCCEEDED( hr ) && sizeRead == uint32_t( mTypeEnv->GetPointerSize() ) )
+        {
+            std::wstring symName;
+            hr = SymbolFromAddr( vtbl, symName, nullptr );
+            if ( SUCCEEDED( hr ) )
+            {
+                if( wcsncmp( symName.data(), L"vtable for ", 11 ) == 0 )
+                {
+                    // demangled D name
+                    className = std::wstring( symName.data() + 11 );
+                }
+                else if ( symName.length() > 11 && wcscmp( &*(symName.cend() - 11), L"::`vftable'" ) == 0 )
+                {
+                    // C++ name already demangled
+                    className = std::wstring( symName.data(), symName.length() - 11 );
+                }
+                else
+                    hr = E_FAIL;
+            }
         }
         return hr;
     }
@@ -726,15 +753,6 @@ namespace Mago
         sizeWritten = lenWritten;
 
         return S_OK;
-    }
-
-    std::wstring SymStringToWString( const SymString& sym )
-    {
-        int len = MultiByteToWideChar( CP_UTF8, 0, sym.GetName(), sym.GetLength(), NULL, 0 );
-        std::wstring wname;
-        wname.resize(len);
-        MultiByteToWideChar( CP_UTF8, 0, sym.GetName(), sym.GetLength(), (wchar_t*)wname.data(), len);
-        return wname;
     }
 
     HRESULT ExprContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )

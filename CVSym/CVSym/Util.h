@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <string>
 
 union CodeViewFieldType;
 union CodeViewSymbol;
@@ -29,3 +30,4 @@ bool     QuickGetLength( CodeViewSymbol* sym, uint32_t& length );
 bool ExactFileNameMatch( const char* pathA, size_t pathALen, const char* pathB, size_t pathBLen );
 bool PartialFileNameMatch( const char* pathA, size_t pathALen, const char* pathB, size_t pathBLen );
 
+std::wstring SymStringToWString( const SymString& sym );

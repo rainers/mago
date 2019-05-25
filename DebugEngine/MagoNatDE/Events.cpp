@@ -364,7 +364,7 @@ namespace Mago
                 DRuntime* druntime = prog->GetDRuntime();
 
                 druntime->GetClassName( exceptRec->ExceptionInformation[0], &mExceptionName );
-                druntime->GetExceptionInfo( exceptRec->ExceptionInformation[0], &mExceptionInfo );
+                druntime->GetExceptionInfo( exceptRec->ExceptionInformation[0], &mExceptionInfo, nullptr );
             }
 
             if ( mExceptionName == NULL )

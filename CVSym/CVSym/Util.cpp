@@ -411,3 +411,12 @@ bool PartialFileNameMatch( const char* pathA, size_t pathALen, const char* pathB
     return true;
 }
 
+std::wstring SymStringToWString( const SymString& sym )
+{
+    int len = MultiByteToWideChar( CP_UTF8, 0, sym.GetName(), sym.GetLength(), NULL, 0 );
+    std::wstring wname;
+    wname.resize(len);
+    MultiByteToWideChar( CP_UTF8, 0, sym.GetName(), sym.GetLength(), (wchar_t*)wname.data(), len);
+    return wname;
+}
+

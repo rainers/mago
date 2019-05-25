@@ -52,7 +52,7 @@ namespace Mago
 
         HRESULT GetClassName( Address64 addr, BSTR* pbstrClassName );
 
-        HRESULT GetExceptionInfo( Address64 addr, BSTR* pbstrInfo );
+        HRESULT GetExceptionInfo( Address64 addr, BSTR* pbstrInfo, BSTR* pbstrLine );
 
     private:
         HRESULT GetStructHash( 

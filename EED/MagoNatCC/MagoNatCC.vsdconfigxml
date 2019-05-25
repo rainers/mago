@@ -37,6 +37,12 @@ For more information about this file, see https://github.com/Microsoft/ConcordEx
           </Filter>
           <Interface Name="IDkmLanguageReturnValueEvaluator"/>
         </InterfaceGroup>
+        <InterfaceGroup>
+          <Filter>
+            <RuntimeId RequiredValue="DkmRuntimeId.Native"/>
+          </Filter>
+          <Interface Name="IDkmExceptionTriggerHitNotification"/>
+        </InterfaceGroup>
       </Implements>
     </Class>
     

@@ -1015,7 +1015,7 @@ namespace Mago
                     checkInterface = false;
                     goto L_retryInterface;
                 }
-                if (it->second.className.empty())
+                if ( it->second.className.empty() )
                     return E_FAIL;
 
                 *pbstrClassName = SysAllocString( it->second.className.data() );
@@ -1043,24 +1043,23 @@ namespace Mago
                         if( ti.pvtbl != mClassInfoVtblAddr )
                             hr = E_FAIL;
                     }
+                    if ( SUCCEEDED( hr ) && ti.name.length >= 4096 )
+                        hr = E_FAIL;
 
-                    if ( SUCCEEDED( hr ) && ti.name.length < 4096 )
+                    if ( SUCCEEDED( hr ) )
                     {
-                        char* buf = new char[(size_t) ti.name.length];
+                        char buf[4096];
                         hr = mDebugger->ReadMemory( mCoreProc, ti.name.ptr,
                                                     (uint32_t) ti.name.length, read, unread, (uint8_t*) buf );
+                        if ( SUCCEEDED( hr ) && unread != 0 )
+                            hr = E_FAIL;
                         if ( SUCCEEDED( hr ) )
                         {
-                            // read at most className.length
-                            hr = Utf8To16( buf, read, *pbstrClassName );
+                            if ( memchr( buf, 0, read ) != 0 )
+                                hr = E_FAIL;
+                            else
+                                hr = Utf8To16( buf, read, *pbstrClassName );
                         }
-                        delete [] buf;
-                    }
-                    else
-                    {
-                        *pbstrClassName = SysAllocString( L"" );
-                        if ( *pbstrClassName == NULL )
-                            hr = E_OUTOFMEMORY;
                     }
                 }
             }
@@ -1124,7 +1123,9 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT DRuntime::GetExceptionInfo( Address64 addr, BSTR* pbstrInfo )
+    // if pbstrLine given, return message in pbstrInfo and file(line) in pbstrLine
+    // otherwise combine both in pbstrInfo
+    HRESULT DRuntime::GetExceptionInfo( Address64 addr, BSTR* pbstrInfo, BSTR* pbstrLine )
     {
         _ASSERT( pbstrInfo != NULL );
 
@@ -1147,7 +1148,7 @@ namespace Mago
             CAutoVectorPtr<char>    buf;
             if ( !buf.Allocate( (size_t) (throwable.msg.length + throwable.file.length + 30) ) )
                 return E_OUTOFMEMORY;
-            char* p = buf;
+            char* p = buf, *q = buf;
             if ( throwable.msg.length > 0 )
             {
                 hr = mDebugger->ReadMemory( mCoreProc, throwable.msg.ptr, (uint32_t) throwable.msg.length, 
@@ -1155,6 +1156,7 @@ namespace Mago
                 if ( SUCCEEDED( hr ) )
                 {
                     p += read;    // read at most throwable.msg.length
+                    q = p;
                     *p++ = ' ';
                 }
             }
@@ -1163,6 +1165,7 @@ namespace Mago
                 *p++ = 'a';
                 *p++ = 't';
                 *p++ = ' ';
+                char* r = p;
                 hr = mDebugger->ReadMemory( mCoreProc, throwable.file.ptr, (uint32_t) throwable.file.length, 
                                             read, unread, (uint8_t*) p );
                 if ( SUCCEEDED( hr ) )
@@ -1171,6 +1174,11 @@ namespace Mago
                     *p++ = '(';
                     p += sprintf_s( p, 12, "%d", (uint32_t) throwable.line );
                     *p++ = ')';
+                }
+                if ( pbstrLine )
+                {
+                    hr = Utf8To16(r, p - r, *pbstrLine);
+                    p = q;
                 }
             }
             hr = Utf8To16( buf, p - buf, *pbstrInfo );

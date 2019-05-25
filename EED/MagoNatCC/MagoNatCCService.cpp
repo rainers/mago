@@ -16,6 +16,7 @@
 #include "../../CVSym/CVSym/CVSymPublic.h"
 #include "../../CVSym/CVSym/Error.h"
 #include "../../CVSym/CVSym/ISymbolInfo.h"
+#include "../../CVSym/CVSym/Util.h"
 
 #include "../../CVSym/CVSTI/CVSTIPublic.h"
 #include "../../CVSym/CVSTI/IDataSource.h"
@@ -52,6 +53,8 @@
 
 Evaluation::IL::DkmILCallingConvention::e toCallingConvention(uint8_t callConv);
 CComPtr<DkmString> toDkmString(const wchar_t* str);
+
+extern "C" char* dlang_demangle(const char* mangled, int options);
 
 // stub to read/write memory from process, all other functions supposed to not be called
 class CCDebuggerProxy : public Mago::IDebuggerProxy
@@ -255,14 +258,14 @@ class DECLSPEC_UUID("598DECC9-CF79-4E90-A408-5E1433B4DBFF") CCModule : public CC
 {
     friend class CCExprContext;
 
-protected:
-    CCModule() : mDRuntime(nullptr), mDebuggerProxy(nullptr) {}
+public:
+    CCModule() : mDebuggerProxy(nullptr) {}
     ~CCModule() 
     {
-        delete mDRuntime;
         delete mDebuggerProxy;
     }
 
+protected:
     RefPtr<MagoST::IDataSource> mDataSource;
     RefPtr<MagoST::ISession> mSession;
     RefPtr<MagoST::ImageAddrMap> mAddrMap;
@@ -272,9 +275,9 @@ protected:
     RefPtr<Mago::Program> mProgram;
 
     CCDebuggerProxy* mDebuggerProxy;
-    Mago::DRuntime* mDRuntime;
     RefPtr<DkmProcess> mProcess;
 
+public:
     HRESULT Init(DkmProcess* process, Symbols::DkmModule* module)
     {
         auto system = process->SystemInformation();
@@ -283,7 +286,7 @@ protected:
 
         CComPtr<IDiaSession> diasession;
         if (module->GetSymbolInterface(guidIDiaSession, (IUnknown**)&diasession) != S_OK) // VS 2015
-            if (HRESULT hr = module->GetSymbolInterface(__uuidof(IDiaSession), (IUnknown**)&diasession) != S_OK) // VS2013
+            if (HRESULT hr = module->GetSymbolInterface(__uuidof(IDiaSession), (IUnknown**)&diasession)) // VS2013
                 return hr;
 
         auto features = toMago(system->ProcessorFeatures());
@@ -327,10 +330,37 @@ protected:
         return S_OK;
     }
 
-    HRESULT FindFunction(uint32_t rva, MagoST::SymHandle& funcSH, std::vector<MagoST::SymHandle>& blockSH)
+    HRESULT InitRuntime(DkmProcess* process)
+    {
+        auto system = process->SystemInformation();
+        auto arch = system->ProcessorArchitecture();
+        int ptrSize = arch == PROCESSOR_ARCHITECTURE_AMD64 ? 8 : 4;
+
+        auto features = toMago(system->ProcessorFeatures());
+        if (arch == PROCESSOR_ARCHITECTURE_AMD64)
+            mArchData = new Mago::ArchDataX64(features);
+        else
+            mArchData = new Mago::ArchDataX86(features);
+
+        mDebuggerProxy = new CCDebuggerProxy(process);
+        mProcess = process;
+
+        tryHR(MakeCComObject(mProgram));
+
+        // any process to pass architecture info
+        RefPtr<Mago::LocalProcess> localprocess = new Mago::LocalProcess(mArchData);
+        mProgram->SetCoreProcess(localprocess);
+        mProgram->SetDebuggerProxy(mDebuggerProxy);
+        UniquePtr<Mago::DRuntime> druntime(new Mago::DRuntime(mDebuggerProxy, localprocess));
+        mProgram->SetDRuntime(druntime);
+
+        return S_OK;
+    }
+
+    HRESULT FindFunction(uint64_t va, MagoST::SymHandle& funcSH, std::vector<MagoST::SymHandle>& blockSH)
     {
         uint32_t    offset = 0;
-        uint16_t    sec = mSession->GetSecOffsetFromRVA( rva, offset );
+        uint16_t    sec = mSession->GetSecOffsetFromVA( va, offset );
         if ( sec == 0 )
             return E_NOT_FOUND;
 
@@ -350,7 +380,55 @@ protected:
         return S_OK;
     }
 
-public:
+    HRESULT GetSymbolName(const MagoST::SymHandle& symHandle, std::wstring& symName)
+    {
+        MagoST::SymInfoData infoData = { 0 };
+        MagoST::ISymbolInfo* symInfo;
+        HRESULT hr = mSession->GetSymbolInfo(symHandle, infoData, symInfo);
+        if (FAILED(hr))
+            return hr;
+
+        SymString pstrName;
+        if (!symInfo->GetName(pstrName))
+            return E_FAIL;
+
+        symName = SymStringToWString(pstrName);
+        return S_OK;
+    }
+
+    HRESULT GetExceptionInfo(MagoEE::Address addr, MagoEE::Address ip, std::wstring& exceptionInfo)
+    {
+        if (auto druntime = mProgram->GetDRuntime())
+        {
+            BSTR bstrClassname = NULL;
+            if (SUCCEEDED(druntime->GetClassName(addr, &bstrClassname)))
+            {
+                wchar_t buf[20] = L"";
+                swprintf_s(buf, L"0x%I64x", ip);
+                exceptionInfo = L"Unhandled " + std::wstring(bstrClassname) + L" at " + buf;
+                SysFreeString(bstrClassname);
+
+                BSTR bstrInfo = NULL, bstrLine;
+                if (SUCCEEDED(druntime->GetExceptionInfo(addr, &bstrInfo, &bstrLine)))
+                {
+                    if (bstrInfo && bstrLine)
+                        exceptionInfo = bstrLine + (L": " + exceptionInfo) + L" - " + bstrInfo;
+                    else if (bstrInfo)
+                        exceptionInfo = exceptionInfo + L" - " + bstrInfo;
+                    else if (bstrLine)
+                        exceptionInfo = bstrLine + (L": " + exceptionInfo);
+
+                    if (bstrInfo)
+                        SysFreeString(bstrInfo);
+                    if (bstrLine)
+                        SysFreeString(bstrLine);
+                }
+                return S_OK;
+            }
+        }
+        return E_FAIL;
+    }
+
     virtual HRESULT ReadMemory(MagoEE::Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer)
     {
         return mProcess->ReadMemory(addr, DkmReadMemoryFlags::None, buffer, sizeToRead, &sizeRead);
@@ -397,16 +475,16 @@ public:
 
         mStackFrame = frame;
 
-        uint32_t rva = nativeInst->RVA();
+        uint64_t va = frame->InstructionAddress()->CPUInstructionPart()->InstructionPointer;
         MagoST::SymHandle funcSH;
         std::vector<MagoST::SymHandle> blockSH;
-        tryHR(mModule->FindFunction(rva, funcSH, blockSH));
+        tryHR(mModule->FindFunction(va, funcSH, blockSH));
 
         // setup a fake environment for Mago
         tryHR(MakeCComObject(mThread));
         mThread->SetProgram(mModule->mProgram, mModule->mDebuggerProxy);
 
-        return ExprContext::Init(mModule->mModule, mThread, funcSH, blockSH, /*image-base+*/rva, mModule->mRegSet);
+        return ExprContext::Init(mModule->mModule, mThread, funcSH, blockSH, va, mModule->mRegSet);
     }
 
     virtual HRESULT GetSession(MagoST::ISession*& session)
@@ -466,6 +544,39 @@ public:
         return mStackFrame->Thread()->TebAddress();
     }
 
+    static bool demangleDSymbol(std::wstring& symName)
+    {
+        size_t len = symName.length();
+        if (len < 1 || symName[0] != '_')
+            return false;
+        size_t pos = 1;
+        while (pos < len && symName[pos] == '_')
+            pos++;
+        if (pos >= len || symName[pos] != 'D')
+            return false;
+
+        CAutoVectorPtr<char> u8Name;
+        size_t               u8NameLen = 0;
+        HRESULT hr = Utf16To8(symName.data() + pos - 1, len - pos + 1, u8Name.m_p, u8NameLen);
+        if (FAILED(hr))
+            return false;
+
+        char* demangled = dlang_demangle(u8Name, 0);
+        if (!demangled)
+            return false;
+
+        CAutoVectorPtr<char> u16Name;
+        size_t               u16NameLen = 0;
+        BSTR u16Str = NULL;
+        hr = Utf8To16(demangled, strlen(demangled), u16Str);
+        if (FAILED(hr))
+            return false;
+
+        symName = u16Str;
+        SysFreeString(u16Str);
+        return true;
+    }
+
     virtual HRESULT SymbolFromAddr(MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType)
     {
         HRESULT hr = ExprContext::SymbolFromAddr(addr, symName, pType);
@@ -480,13 +591,15 @@ public:
                 if (Symbols::DkmModule* module = pInstruction->Module())
                 {
                     RefPtr<DkmString> undec;
-                    if (module->UndecorateName(toDkmString (symName.c_str()), 0x7ff, &undec.Ref()) == S_OK)
+                    if (module->UndecorateName(toDkmString(symName.c_str()), 0x7ff, &undec.Ref()) == S_OK)
                     {
                         symName = undec->Value();
                     }
                 }
             }
         }
+        else
+            demangleDSymbol(symName);
         return S_OK;
     }
 
@@ -629,16 +742,17 @@ public:
         std::wstring funcName;
         DkmInstructionAddress* funcAddr = pNativeRetValue->ReturnFrom();
         auto cpuinfo = funcAddr->CPUInstructionPart();
-        if (!cpuinfo)
+        auto modInst = funcAddr->ModuleInstance();
+        if (!cpuinfo || !modInst)
             return E_INVALIDARG;
 
         MagoST::SymHandle funcSH;
         std::vector<MagoST::SymHandle> blockSH;
-        uint64_t rva = cpuinfo->InstructionPointer;
-        tryHR(mModule->FindFunction(rva, funcSH, blockSH));
+        uint64_t va = cpuinfo->InstructionPointer;
+        tryHR(mModule->FindFunction(va, funcSH, blockSH));
 
         RefPtr<MagoEE::Type> type;
-        tryHR(SymbolFromAddr(rva, funcName, &type.Ref()));
+        tryHR(SymbolFromAddr(va, funcName, &type.Ref()));
         funcName.append(L"()");
 
         MagoEE::ITypeFunction* func = type->AsTypeFunction();
@@ -1117,7 +1231,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetUnderlyingString(
 
     ULONG len, fetched;
     tryHR(prop->GetStringCharLength(&len));
-    std::unique_ptr<WCHAR> str (new WCHAR[len + 1]);
+    std::unique_ptr<WCHAR> str(new WCHAR[len + 1]);
     tryHR(prop->GetStringChars(len + 1, str.get(), &fetched));
     if (fetched <= len)
         str.get()[fetched] = 0;
@@ -1153,4 +1267,115 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateReturnValue(
     result.pResultObject = pResultObject;
     pCompletionRoutine->OnComplete(result);
     return S_OK;
+}
+
+CComPtr<CCModule> GetExceptionModule(Native::DkmWin32ExceptionInformation* ex)
+{
+    UINT64 hr = 0;
+    auto instr = ex->InstructionAddress();
+    if (!instr)
+        return nullptr;
+    auto modInst = instr->ModuleInstance();
+    if (!modInst)
+        return nullptr;
+    auto process = modInst->Process();
+    if (!process)
+        return nullptr;
+
+    CComPtr<Symbols::DkmModule> mod = nullptr;
+    if (modInst->GetModule(&mod) != S_OK || !mod)
+        return nullptr;
+
+    CComPtr<CCModule> ccmod = new CCModule();
+    ccmod->Init(process, mod);
+
+    return ccmod;
+}
+
+UINT64 GetExceptionObjectWin64(Native::DkmWin32ExceptionInformation* ex, CCModule* ccmod)
+{
+    UINT64 hr = 0;
+
+    MagoST::SymHandle funcSH;
+    std::vector<MagoST::SymHandle> blockSH;
+    if (ccmod->FindFunction(ex->Address(), funcSH, blockSH) != S_OK)
+        return hr;
+    std::wstring symName;
+    if (ccmod->GetSymbolName(funcSH, symName) != S_OK)
+        return hr;
+    if (symName != L"_D2rt15deh_win64_posix9terminateFZv")
+        return hr;
+
+    auto thread = ex->Thread();
+    if (!thread)
+        return hr;
+    CComPtr<CallStack::DkmFrameRegisters> regs;
+    DkmArray<CallStack::DkmUnwoundRegister*> specialRegs = { 0, 0 };
+    if (thread->GetCurrentRegisters(specialRegs, &regs) != S_OK || !regs)
+        return hr;
+
+    UINT64 rsp;
+    if (regs->GetStackPointer(&rsp) != S_OK)
+        return hr;
+    // assume hlt instruction with standard stack frame
+    UINT64 prevRBP;
+    UINT32 read;
+    auto process = ex->Process();
+    if (process->ReadMemory(rsp, DkmReadMemoryFlags::None, &prevRBP, sizeof(prevRBP), &read) != S_OK || read != sizeof(prevRBP))
+        return hr;
+
+    // prevRBP now frame pointer of _d_throwc
+    UINT64 excObj;
+    if (process->ReadMemory(prevRBP + 16, DkmReadMemoryFlags::None, &excObj, sizeof(excObj), &read) != S_OK || read != sizeof(prevRBP))
+        return hr;
+
+    return excObj;
+}
+
+// IDkmExceptionTriggerHitNotification
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::OnExceptionTriggerHit(
+    _In_ Exceptions::DkmExceptionTriggerHit* pHit,
+    _In_ DkmEventDescriptorS* pEventDescriptor)
+{
+    HRESULT hr = S_OK;
+    auto ex = Native::DkmWin32ExceptionInformation::TryCast(pHit->Exception());
+    if (!ex)
+        return hr;
+
+    auto code = ex->Code();
+    if (code != 0xC0000096 && code != 0xE0440001) // Privileged instruction or D exception
+        return hr;
+
+    auto process = ex->Process();
+    CComPtr<CCModule> ccmod;
+    UINT64 excObj = 0;
+    if (code == 0xC0000096)
+    {
+        // Win64: only handle unhandled exceptions for now
+        ccmod = GetExceptionModule(ex);
+        if (ccmod)
+            excObj = GetExceptionObjectWin64(ex, ccmod);
+    }
+    else if (ex->ExceptionParameters() && ex->ExceptionParameters()->Count() > 0)
+    {
+        // Win32 only
+        excObj = ex->ExceptionParameters()->Items()[0];
+        ccmod = new CCModule();
+        ccmod->InitRuntime(process);
+    }
+    if (!ccmod || excObj == 0)
+        return hr;
+
+    std::wstring exInfo;
+    if (ccmod->GetExceptionInfo(excObj, ex->Address(), exInfo) != S_OK)
+        return hr;
+
+    exInfo.append(L"\n");
+    CComPtr<DkmString> outputMessage = toDkmString(exInfo.data());
+    CComPtr<DkmUserMessage> message;
+    DkmUserMessage::Create(process->Connection(), process, DkmUserMessageOutputKind::UnfilteredOutputWindowMessage,
+                           outputMessage, 0, S_OK, &message);
+    if (message)
+        message->Post();
+    return S_FALSE;
 }

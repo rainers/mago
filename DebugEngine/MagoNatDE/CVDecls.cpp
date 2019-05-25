@@ -79,6 +79,11 @@ namespace Mago
         return mName;
     }
 
+    bool CVDecl::hasGetAddressOverload()
+    {
+        return false;
+    }
+
     bool CVDecl::GetAddress( MagoEE::Address& addr )
     {
         HRESULT hr = S_OK;
@@ -301,6 +306,11 @@ namespace Mago
     {
     }
 
+    bool FunctionCVDecl::hasGetAddressOverload()
+    {
+        return true;
+    }
+
     bool FunctionCVDecl::GetAddress( MagoEE::Address& addr )
     {
         uint32_t    offset = 0;
@@ -384,6 +394,11 @@ namespace Mago
           mClosureSH( closureSH ),
           mChain( chain )
     {
+    }
+
+    bool ClosureVarCVDecl::hasGetAddressOverload()
+    {
+        return true;
     }
 
     bool ClosureVarCVDecl::GetAddress( MagoEE::Address& addr )
@@ -1204,6 +1219,11 @@ namespace Mago
         if ( FAILED( mTypeEnv->NewReference( classType, type ) ) )
             return false;
 
+        return true;
+    }
+
+    bool ClassRefDecl::hasGetAddressOverload()
+    {
         return true;
     }
 

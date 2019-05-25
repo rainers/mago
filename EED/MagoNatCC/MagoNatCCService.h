@@ -102,6 +102,13 @@ public:
         _In_ Evaluation::DkmRawReturnValue* pRawReturnValue,
         _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluateReturnValueAsyncResult>* pCompletionRoutine
     );
+
+    // IDkmExceptionTriggerHitNotification
+    virtual HRESULT STDMETHODCALLTYPE OnExceptionTriggerHit(
+        _In_ Exceptions::DkmExceptionTriggerHit* pHit,
+        _In_ DkmEventDescriptorS* pEventDescriptor
+    );
+
 };
 
 OBJECT_ENTRY_AUTO(CMagoNatCCService::ClassId, CMagoNatCCService)

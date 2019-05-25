@@ -31,6 +31,9 @@
     <ClCompile Include="MagoNatCCService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\ddemangle\d-demangle.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="MagoNatCC.def">

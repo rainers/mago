@@ -43,6 +43,8 @@ namespace Mago
 
         virtual const wchar_t* GetName();
 
+        virtual bool hasGetAddressOverload(); // workaround against stack-overflow if called by ExprContext::GetAddress
+
         //virtual bool GetType( MagoEE::Type*& type );
         virtual bool GetAddress( MagoEE::Address& addr );
         virtual bool GetOffset( int& offset );
@@ -88,6 +90,7 @@ namespace Mago
     public:
         FunctionCVDecl( ExprContext* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo );
 
+        virtual bool hasGetAddressOverload();
         virtual bool GetAddress( MagoEE::Address& addr );
         virtual bool IsFunction();
         virtual bool IsStaticFunction();
@@ -102,6 +105,7 @@ namespace Mago
         ClosureVarCVDecl( ExprContext* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo,
                           const MagoST::SymHandle& closureSH, const std::vector<MagoST::TypeHandle>& chain );
 
+        virtual bool hasGetAddressOverload();
         virtual bool GetAddress( MagoEE::Address& addr );
         virtual bool IsField();
         virtual bool IsVar();
@@ -235,6 +239,7 @@ namespace Mago
         virtual void Release();
 
         virtual const wchar_t* GetName();
+        virtual bool hasGetAddressOverload();
 
         virtual bool GetType( MagoEE::Type*& type );
         virtual bool GetAddress( MagoEE::Address& addr );
