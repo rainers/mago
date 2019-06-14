@@ -211,7 +211,13 @@ bool readMagoOptions()
     else
         gOptions.expandableStrings = false;
 
+    if ( GetRegValue( hKey, L"maxArrayElements", &val ) == S_OK )
+        gOptions.maxArrayElements = val;
+    else
+        gOptions.maxArrayElements = 1000;
+
     MagoEE::gShowVTable = gOptions.showVTable;
+    MagoEE::gMaxArrayLength = gOptions.maxArrayElements;
 
     RegCloseKey( hKey );
     return true;

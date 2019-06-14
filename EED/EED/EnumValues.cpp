@@ -12,9 +12,6 @@
 
 namespace MagoEE
 {
-    const uint32_t  MaxArrayLength = 1024*1024*1024;
-
-
     EEDEnumValues::EEDEnumValues()
         :   mRefCount( 0 )
     {
@@ -181,7 +178,7 @@ namespace MagoEE
     {
     }
 
-    uint32_t EEDEnumSArray::GetCount()
+    uint64_t EEDEnumSArray::GetUnlimitedCount()
     {
         uint32_t    count = 0;
 
@@ -191,11 +188,17 @@ namespace MagoEE
         }
         else if ( mParentVal._Type->IsDArray() )
         {
-            if ( mParentVal.Value.Array.Length > MaxArrayLength )
-                count = MaxArrayLength;
-            else
-                count = (uint32_t) mParentVal.Value.Array.Length;
+            count = (uint32_t) mParentVal.Value.Array.Length;
         }
+
+        return count;
+    }
+
+    uint32_t EEDEnumSArray::GetCount()
+    {
+        uint64_t count = GetUnlimitedCount();
+        if ( gMaxArrayLength > 0 && count > gMaxArrayLength )
+            count = gMaxArrayLength + 1;
 
         return count;
     }
@@ -257,7 +260,11 @@ namespace MagoEE
 
         wchar_t indexStr[ MaxIndexStrLen + 1 ] = L"";
 
-        swprintf_s( indexStr, L"[%d]", mCountDone );
+        bool atLimit = gMaxArrayLength > 0 && mCountDone == gMaxArrayLength && GetUnlimitedCount() - 1 > gMaxArrayLength;
+        if( atLimit )
+            swprintf_s( indexStr, L"[%d..%I64d]", mCountDone, GetUnlimitedCount() );
+        else
+            swprintf_s( indexStr, L"[%d]", mCountDone );
 
         name.clear();
         name.append( indexStr );
@@ -290,11 +297,19 @@ namespace MagoEE
         if ( addr == 0 )
             return E_MAGOEE_NO_ADDRESS;
 
-        result.ObjVal.Addr = addr + index * result.ObjVal._Type->GetSize();
-
-        HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
-        if ( FAILED( hr ) )
-            return hr;
+        result.ObjVal.Addr = addr + (uint64_t)index * result.ObjVal._Type->GetSize();
+        if (atLimit)
+        {
+            RefPtr<Type> dtype;
+            if ( mTypeEnv->NewSArray( result.ObjVal._Type, GetUnlimitedCount() - mCountDone, dtype.Ref() ) == S_OK )
+                result.ObjVal._Type = dtype;
+        }
+        else
+        {
+            HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+            if ( FAILED( hr ) )
+                return hr;
+        }
 
         FillValueTraits( mBinder, result, nullptr );
         return S_OK;

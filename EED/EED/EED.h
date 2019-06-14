@@ -71,6 +71,7 @@ namespace MagoEE
 
     extern bool gShowVTable;
     extern bool gExpandableStrings;
+    extern uint32_t gMaxArrayLength;
 
     HRESULT MakeTypeEnv( int ptrSize, ITypeEnv*& typeEnv );
     HRESULT MakeNameTable( NameTable*& nameTable );

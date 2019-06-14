@@ -68,6 +68,8 @@ namespace MagoEE
     {
         uint32_t        mCountDone;
 
+        uint64_t GetUnlimitedCount();
+
     public:
         EEDEnumSArray();
 

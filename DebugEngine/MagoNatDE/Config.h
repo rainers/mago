@@ -50,6 +50,7 @@ struct MagoOptions
 	bool showVTable;
 	bool flatClassFields;
 	bool expandableStrings;
+    int  maxArrayElements;
 };
 
 extern MagoOptions gOptions;

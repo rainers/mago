@@ -88,6 +88,7 @@ namespace MagoEE
 
 	bool gShowVTable = false;
 	bool gExpandableStrings = true;
+    uint32_t gMaxArrayLength = 1000;
 
     HRESULT Init()
     {
@@ -338,11 +339,17 @@ namespace MagoEE
             {
                 result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
             }
-            else if (ITypeStruct* ts = type->AsTypeStruct() )
+            else if ( ITypeStruct* ts = type->AsTypeStruct() )
             {
-                if (result.ObjVal.Value.Addr != 0)
+                RefPtr<Declaration> decl = type->GetDeclaration();
+                if ( ts->GetUdtKind() != MagoEE::Udt_Class )
                 {
-                    RefPtr<Declaration> decl = type->GetDeclaration();
+                    RefPtr<IEnumDeclarationMembers> members;
+                    if ( decl->EnumMembers( members.Ref() ) )
+                        result.HasChildren = result.HasRawChildren = members->GetCount() > 0;
+                }
+                else if ( result.ObjVal.Value.Addr != 0 )
+                {
                     bool hasVTable = false;
                     bool hasChildren = false;
                     bool hasDynamicClass = false;
