@@ -412,63 +412,60 @@ namespace MagoEE
         mNextNode = NULL;
     }
 
-    HRESULT EEDEnumAArray::ReadBB()
+    HRESULT EEDEnumAArray::ReadBB( IValueBinder* binder, RefPtr<Type> type, Address address, int& AAVersion, BB64 &BB )
     {
         HRESULT hr = S_OK;
         uint32_t sizeRead;
+        BB64_V1& BB_V1 = *(BB64_V1*) &BB;
 
-        if ( mBB.nodes != UINT64_MAX )
-            return S_OK;
-
-        _ASSERT( mParentVal._Type->IsAArray() );
-        Address address = mParentVal.Value.Addr;
+        _ASSERT( type->IsAArray() );
 
         if( address == NULL )
         {
-            memset( &mBB, 0, sizeof mBB );
+            memset( &BB, 0, sizeof( BB ) );
             return S_OK;
         }
 
-        if ( mParentVal._Type->GetSize() == 4 )
+        if ( type->GetSize() == 4 )
         {
             BB32    bb32;
             BB32_V1 bb32_v1;
-            if ( mAAVersion == 1 )
-                hr = mBinder->ReadMemory( address, sizeof bb32_v1, sizeRead, (uint8_t*)&bb32_v1 );
+            if ( AAVersion == 1 )
+                hr = binder->ReadMemory( address, sizeof bb32_v1, sizeRead, (uint8_t*)&bb32_v1 );
             else
-                hr = mBinder->ReadMemory( address, sizeof bb32, sizeRead, (uint8_t*)&bb32 );
+                hr = binder->ReadMemory( address, sizeof bb32, sizeRead, (uint8_t*)&bb32 );
 
             if ( FAILED( hr ) )
                 return hr;
 
-            if ( mAAVersion == -1 )
+            if ( AAVersion == -1 )
             {
                 if ( ( bb32.b.length <= 4 && bb32.b.ptr != address + sizeof bb32 ) || // init bucket in Impl
                      ( bb32.b.length > 4 && ( bb32.b.length & ( bb32.b.length - 1 ) ) == 0 ) )
                 {
-                    mAAVersion = 1; // power of 2 indicates new AA
-                    hr = mBinder->ReadMemory( address, sizeof bb32_v1, sizeRead, (uint8_t*)&bb32_v1 );
+                    AAVersion = 1; // power of 2 indicates new AA
+                    hr = binder->ReadMemory( address, sizeof bb32_v1, sizeRead, (uint8_t*)&bb32_v1 );
                     if ( FAILED( hr ) )
                         return hr;
                 }
                 else
                 {
-                    mAAVersion = 0;
+                    AAVersion = 0;
                 }
             }
 
-            if ( mAAVersion == 1 )
+            if ( AAVersion == 1 )
             {
-                mBB_V1.buckets.length = bb32_v1.buckets.length;
-                mBB_V1.buckets.ptr = bb32_v1.buckets.ptr;
-                mBB_V1.used = bb32_v1.used;
-                mBB_V1.deleted = bb32_v1.deleted;
-                mBB_V1.entryTI = bb32_v1.entryTI;
-                mBB_V1.firstUsed = bb32_v1.firstUsed;
-                mBB_V1.keysz = bb32_v1.keysz;
-                mBB_V1.valsz = bb32_v1.valsz;
-                mBB_V1.valoff = bb32_v1.valoff;
-                mBB_V1.flags = bb32_v1.flags;
+                BB_V1.buckets.length = bb32_v1.buckets.length;
+                BB_V1.buckets.ptr = bb32_v1.buckets.ptr;
+                BB_V1.used = bb32_v1.used;
+                BB_V1.deleted = bb32_v1.deleted;
+                BB_V1.entryTI = bb32_v1.entryTI;
+                BB_V1.firstUsed = bb32_v1.firstUsed;
+                BB_V1.keysz = bb32_v1.keysz;
+                BB_V1.valsz = bb32_v1.valsz;
+                BB_V1.valoff = bb32_v1.valoff;
+                BB_V1.flags = bb32_v1.flags;
             }
             else
             {
@@ -477,46 +474,54 @@ namespace MagoEE
                     bb32.keyti = bb32.firstUsedBucket; // compatibility fix for dmd before 2.067
                     bb32.firstUsedBucket = 0;
                 }
-                mBB.b.length = bb32.b.length;
-                mBB.b.ptr = bb32.b.ptr;
-                mBB.firstUsedBucket = bb32.firstUsedBucket;
-                mBB.keyti = bb32.keyti;
-                mBB.nodes = bb32.nodes;
+                BB.b.length = bb32.b.length;
+                BB.b.ptr = bb32.b.ptr;
+                BB.firstUsedBucket = bb32.firstUsedBucket;
+                BB.keyti = bb32.keyti;
+                BB.nodes = bb32.nodes;
             }
         }
         else
         {
-            if ( mAAVersion == 1 )
-                hr = mBinder->ReadMemory( address, sizeof mBB_V1, sizeRead, (uint8_t*)&mBB_V1 );
+            if ( AAVersion == 1 )
+                hr = binder->ReadMemory( address, sizeof mBB_V1, sizeRead, (uint8_t*)&BB_V1 );
             else
-                hr = mBinder->ReadMemory( address, sizeof mBB, sizeRead, (uint8_t*)&mBB );
+                hr = binder->ReadMemory( address, sizeof mBB, sizeRead, (uint8_t*)&BB );
             if ( FAILED( hr ) )
                 return hr;
 
-            if ( mAAVersion == -1 )
+            if ( AAVersion == -1 )
             {
-                if ( ( mBB.b.length <= 4 && mBB.b.ptr != address + sizeof mBB ) || // init bucket in Impl
-                     ( mBB.b.length > 4 && ( mBB.b.length & ( mBB.b.length - 1 ) ) == 0 ) )
+                if ( ( BB.b.length <= 4 && BB.b.ptr != address + sizeof BB ) || // init bucket in Impl
+                     ( BB.b.length > 4 && ( BB.b.length & ( BB.b.length - 1 ) ) == 0 ) )
                 {
-                    mAAVersion = 1; // power of 2 indicates new AA
-                    hr = mBinder->ReadMemory( address, sizeof mBB_V1, sizeRead, (uint8_t*)&mBB_V1 );
+                    AAVersion = 1; // power of 2 indicates new AA
+                    hr = binder->ReadMemory( address, sizeof BB_V1, sizeRead, (uint8_t*)&BB_V1 );
                     if ( FAILED( hr ) )
                         return hr;
                 }
                 else
                 {
-                    mAAVersion = 0;
+                    AAVersion = 0;
                 }
             }
 
-            if ( mAAVersion == 0 && mBB.firstUsedBucket > mBB.nodes )
+            if ( AAVersion == 0 && BB.firstUsedBucket > BB.nodes )
             {
-                mBB.keyti = mBB.firstUsedBucket; // compatibility fix for dmd before 2.067
-                mBB.firstUsedBucket = 0;
+                BB.keyti = BB.firstUsedBucket; // compatibility fix for dmd before 2.067
+                BB.firstUsedBucket = 0;
             }
         }
 
         return S_OK;
+    }
+
+    HRESULT EEDEnumAArray::ReadBB()
+    {
+        if (mBB.nodes != UINT64_MAX)
+            return S_OK;
+
+        return ReadBB( mBinder, mParentVal._Type, mParentVal.Value.Addr, mAAVersion, mBB );
     }
 
     HRESULT EEDEnumAArray::ReadAddress( Address baseAddr, uint64_t index, Address& ptrValue )
@@ -555,13 +560,22 @@ namespace MagoEE
             return (size + 16 - 1) & ~(16 - 1);
     }
 
-    uint32_t EEDEnumAArray::GetCount()
+    uint64_t EEDEnumAArray::GetUnlimitedCount()
     {
         uint32_t    count = 0;
 
         HRESULT hr = ReadBB();
         if ( !FAILED( hr ) )
-            count = mAAVersion == 1 ? mBB_V1.used - mBB_V1.deleted : (uint32_t) mBB.nodes;
+            count = mAAVersion == 1 ? mBB_V1.used - mBB_V1.deleted : (uint32_t)mBB.nodes;
+
+        return count;
+    }
+
+    uint32_t EEDEnumAArray::GetCount()
+    {
+        uint32_t    count = GetUnlimitedCount();
+        if ( gMaxArrayLength > 0 && count > gMaxArrayLength )
+            count = gMaxArrayLength + 1;
 
         return count;
     }
@@ -711,41 +725,54 @@ namespace MagoEE
         _ASSERT( mParentVal._Type->IsAArray() );
         ITypeAArray* aa = mParentVal._Type->AsTypeAArray();
 
-        uint32_t ptrSize = mParentVal._Type->GetSize();
+        bool atLimit = gMaxArrayLength > 0 && mCountDone == gMaxArrayLength && GetUnlimitedCount() - 1 > gMaxArrayLength;
+        if (atLimit)
+        {
+            wchar_t indexStr[64];
+            swprintf_s( indexStr, L"%I64d more items not shown...", GetUnlimitedCount() - mCountDone );
+            name = indexStr;
+            fullName.clear();
 
-        DataObject keyobj;
-        keyobj._Type = aa->GetIndex();
-        keyobj.Addr = mNextNode + ( mAAVersion == 1 ? 0 : 2 * ptrSize );
+            result.ObjVal.Addr = 0;
+            result.ObjVal._Type = mTypeEnv->GetType( Tvoid );
+        }
+        else
+        {
+            uint32_t ptrSize = mParentVal._Type->GetSize();
 
-        hr = mBinder->GetValue( keyobj.Addr, keyobj._Type, keyobj.Value );
-        if ( FAILED( hr ) )
-            return hr;
+            DataObject keyobj;
+            keyobj._Type = aa->GetIndex();
+            keyobj.Addr = mNextNode + ( mAAVersion == 1 ? 0 : 2 * ptrSize );
 
-        std::wstring keystr;
-        struct FormatOptions fmt (10);
-        hr = FormatValue( mBinder, keyobj, fmt, keystr, kMaxFormatValueLength );
-        if ( FAILED( hr ) )
-            return hr;
+            hr = mBinder->GetValue( keyobj.Addr, keyobj._Type, keyobj.Value );
+            if ( FAILED( hr ) )
+                return hr;
 
-        name = L"[" + keystr + L"]";
+            std::wstring keystr;
+            struct FormatOptions fmt (10);
+            hr = FormatValue( mBinder, keyobj, fmt, keystr, kMaxFormatValueLength );
+            if ( FAILED( hr ) )
+                return hr;
 
-        bool isIdent = IsIdentifier( mParentExprText.data() );
-        fullName.clear();
-        if ( !isIdent )
-            fullName.append( L"(" );
-        fullName.append( mParentExprText );
-        if ( !isIdent )
-            fullName.append( L")" );
-        fullName.append( name );
+            name = L"[" + keystr + L"]";
 
-        uint32_t alignKeySize = ( mAAVersion == 1 ? mBB_V1.valoff : AlignTSize( aa->GetIndex()->GetSize() ) );
+            bool isIdent = IsIdentifier( mParentExprText.data() );
+            fullName.clear();
+            if ( !isIdent )
+                fullName.append( L"(" );
+            fullName.append( mParentExprText );
+            if ( !isIdent )
+                fullName.append( L")" );
+            fullName.append( name );
 
-        result.ObjVal.Addr = keyobj.Addr + alignKeySize;
-        result.ObjVal._Type = aa->GetElement();
-        hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
-        if ( FAILED( hr ) )
-            return hr;
+            uint32_t alignKeySize = ( mAAVersion == 1 ? mBB_V1.valoff : AlignTSize( aa->GetIndex()->GetSize() ) );
 
+            result.ObjVal.Addr = keyobj.Addr + alignKeySize;
+            result.ObjVal._Type = aa->GetElement();
+            hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+            if ( FAILED( hr ) )
+                return hr;
+        }
         FillValueTraits( mBinder, result, nullptr );
         mCountDone++;
 

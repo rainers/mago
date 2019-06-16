@@ -337,7 +337,14 @@ namespace MagoEE
             }
             else if( type->IsAArray() )
             {
-                result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
+                int aaVersion = -1;
+                union
+                {
+                    BB64            mBB;
+                    BB64_V1         mBB_V1;
+                };
+                if( EEDEnumAArray::ReadBB( binder, type, result.ObjVal.Value.Addr, aaVersion, mBB ) == S_OK )
+                    result.HasChildren = result.HasRawChildren = (aaVersion == 1 ? mBB_V1.used - mBB_V1.deleted : mBB.nodes) > 0;
             }
             else if ( ITypeStruct* ts = type->AsTypeStruct() )
             {

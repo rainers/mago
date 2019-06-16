@@ -126,6 +126,7 @@ namespace MagoEE
         HRESULT FindCurrent();
         HRESULT FindNext();
         uint32_t AlignTSize( uint32_t size );
+        uint64_t GetUnlimitedCount();
 
     public:
         EEDEnumAArray( int aaVersion );
@@ -141,6 +142,8 @@ namespace MagoEE
             EvalResult& result, 
             std::wstring& name, 
             std::wstring& fullName );
+
+        static HRESULT ReadBB( IValueBinder* binder, RefPtr<Type> type, Address address, int& AAVersion, BB64& BB );
     };
 
 
