@@ -167,7 +167,7 @@ namespace MagoST
         return S_OK;
     }
 
-    HRESULT Session::FindChildSymbol( SymHandle parentHandle, const char* nameChars, size_t nameLen, SymHandle& handle )
+    HRESULT Session::FindChildSymbol( SymHandle parentHandle, uint32_t pcrva, const char* nameChars, size_t nameLen, SymHandle& handle )
     {
         HRESULT     hr = S_OK;
         SymbolScope scope = { 0 };
@@ -178,7 +178,7 @@ namespace MagoST
         if ( FAILED( hr ) )
             return hr;
 
-        for ( ; mStore->NextSymbol( scope, childHandle, ~0U ); )
+        for ( ; mStore->NextSymbol( scope, childHandle, pcrva ); )
         {
             ISymbolInfo*    symInfo = NULL;
             SymString       pstrName;

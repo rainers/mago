@@ -282,6 +282,9 @@ namespace Mago
             break;
 
         case LocIsEnregistered:
+#if 1
+            return E_FAIL;
+#else
             {
                 uint32_t    reg = 0;
 
@@ -298,6 +301,7 @@ namespace Mago
                 addr = dataVal.UInt64Value;
             }
             break;
+#endif
 
         case LocIsStatic:
             {
@@ -855,7 +859,7 @@ namespace Mago
 
         HRESULT hr = E_FAIL;
         for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
-            hr = session->FindChildSymbol( *it, name, nameLen, localSH );
+            hr = session->FindChildSymbol( *it, GetPC(), name, nameLen, localSH );
         
         if ( hr != S_OK )
             return E_NOT_FOUND;
@@ -873,9 +877,9 @@ namespace Mago
 
         // if both exist, __capture is always the same as __closptr.__chain
         MagoST::SymHandle closureSH;
-        HRESULT hr = session->FindChildSymbol( *mBlockSH.begin(), "__closptr", 9, closureSH );
+        HRESULT hr = session->FindChildSymbol( *mBlockSH.begin(), GetPC(), "__closptr", 9, closureSH );
         if ( hr != S_OK )
-            hr = session->FindChildSymbol( *mBlockSH.begin(), "__capture", 9, closureSH );
+            hr = session->FindChildSymbol( *mBlockSH.begin(), GetPC(), "__capture", 9, closureSH );
         if (hr != S_OK)
             return E_NOT_FOUND;
 
@@ -1051,9 +1055,9 @@ namespace Mago
         return mBlockSH;
     }
 
-    Address64 ExprContext::GetPC()
+    DWORD ExprContext::GetPC()
     {
-        return mPC;
+        return (DWORD)(mPC - mModule->GetAddress());
     }
 
     // TODO: these declarations can be cached. We can keep a small cache for each module

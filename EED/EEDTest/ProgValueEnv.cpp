@@ -198,7 +198,7 @@ HRESULT ProgramValueEnv::FindObject( const wchar_t* name, MagoEE::Declaration*& 
     hr = E_FAIL;
     for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
         // take away one for the terminator
-        hr = mSymSession->FindChildSymbol( *it, nameChars.Get(), nzChars-1, childSH );
+        hr = mSymSession->FindChildSymbol( *it, ~0U, nameChars.Get(), nzChars-1, childSH );
 
     if ( hr != S_OK )
     {
@@ -507,7 +507,7 @@ RefPtr<MagoEE::Declaration> ProgramValueEnv::GetThis()
 
     hr = E_FAIL;
     for ( auto it = mBlockSH.rbegin(); hr != S_OK && it != mBlockSH.rend(); it++)
-        hr = mSymSession->FindChildSymbol( *it, "this", 4, childSH );
+        hr = mSymSession->FindChildSymbol( *it, ~0U, "this", 4, childSH );
     if ( hr != S_OK )
         return NULL;
 

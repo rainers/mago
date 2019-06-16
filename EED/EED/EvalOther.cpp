@@ -703,10 +703,10 @@ namespace MagoEE
 
             obj.Addr = thisAddr + offset;
         }
-        else if( !Decl->IsRegister() )
+        else if ( !Decl->IsRegister() )
         {
-            if( !Decl->GetAddress( obj.Addr ) )
-                return E_MAGOEE_NO_ADDRESS;
+            if ( !Decl->GetAddress( obj.Addr ) )
+                obj.Addr = 0;
         }
 
         if ( mode == EvalMode_Address )

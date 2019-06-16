@@ -59,7 +59,8 @@ namespace MagoST
         virtual HRESULT FindGlobalSymbolAddress( const char* symbol, uint64_t& symaddr, std::function<bool(TypeIndex)> fnTest = nullptr ) = 0;
 
         virtual HRESULT FindChildSymbol( 
-            SymHandle parentHandle, 
+            SymHandle parentHandle,
+            uint32_t pcrva,
             const char* nameChars, 
             size_t nameLen, 
             SymHandle& handle ) = 0;
