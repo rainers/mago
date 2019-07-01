@@ -676,6 +676,39 @@ namespace MagoEE
         return S_OK;
     }
 
+    HRESULT FormatDelegate( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    {
+        _ASSERT( objVal._Type->IsDelegate() );
+
+        HRESULT hr = S_OK;
+        RefPtr<Type>    funcType = objVal._Type->AsTypeNext()->GetNext();
+
+        outStr.append(L"{ptr=");
+
+        hr = FormatAddress( objVal.Value.Delegate.ContextAddr, funcType, outStr ); // any pointer type
+        if ( FAILED( hr ) )
+            return hr;
+
+        outStr.append( L" funcptr=" );
+
+        hr = FormatAddress( objVal.Value.Delegate.FuncAddr, funcType, outStr );
+        if ( FAILED( hr ) )
+            return hr;
+
+
+        std::wstring symName;
+        hr = binder->SymbolFromAddr( objVal.Value.Delegate.FuncAddr, symName, nullptr );
+        if ( hr == S_OK )
+        {
+            outStr.append( L" {" );
+            outStr.append( symName );
+            outStr.append( L"}" );
+        }
+
+        outStr.append( 1, L'}' );
+        return hr;
+    }
+
     struct HeapDeleter
     {
     public:
@@ -918,6 +951,10 @@ namespace MagoEE
         else if ( type->AsTypeStruct() )
         {
             hr = FormatStruct( binder, objVal.Addr, type, fmtopt, outStr, maxLength );
+        }
+        else if ( type->IsDelegate() )
+        {
+            hr = FormatDelegate( binder, objVal, fmtopt, outStr, maxLength );
         }
         else
             hr = E_FAIL;
