@@ -436,6 +436,282 @@ public:
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// struct Slice { size_t length; void* ptr; }
+// alias func = void[] function();
+// 
+// extern(C++) Slice cppFun(void* vfn)
+// {
+//     auto fn = cast(func) vfn;
+//     void[] s = fn();
+//     return Slice(s.length, s.ptr);
+// }
+
+unsigned char sliceRetTrampoline64[] =
+{
+    /* 000 : */ 0x55,                         // push        rbp
+    /* 001 : */ 0x48, 0x8B, 0xEC,             // mov         rbp, rsp
+    /* 004 : */ 0x48, 0x83, 0xEC, 0x30,       // sub         rsp, 30h
+    /* 008 : */ 0x48, 0x89, 0x4D, 0x10,       // mov         qword ptr[rbp + 10h], rcx
+    /* 00C : */ 0x48, 0x89, 0x55, 0x18,       // mov         qword ptr[rbp + 18h], rdx
+    /* 010 : */ 0x48, 0xFF, 0x55, 0x18,       // call        qword ptr[rbp + 18h]
+    /* 014 : */ 0x48, 0x89, 0x45, 0xF0,       // mov         qword ptr[rbp - 10h], rax
+    /* 018 : */ 0x48, 0x89, 0x55, 0xF8,       // mov         qword ptr[rbp - 8], rdx
+    /* 01C : */ 0x48, 0x8B, 0x45, 0xF0,       // mov         rax, qword ptr[rbp - 10h]
+    /* 020 : */ 0x48, 0x8B, 0x4D, 0x10,       // mov         rcx, qword ptr[rbp + 10h]
+    /* 024 : */ 0x48, 0x89, 0x01,             // mov         qword ptr[rcx], rax
+    /* 027 : */ 0x48, 0x8B, 0x55, 0xF8,       // mov         rdx, qword ptr[rbp - 8]
+    /* 02B : */ 0x48, 0x89, 0x51, 0x08,       // mov         qword ptr[rcx + 8], rdx
+    /* 02F : */ 0x48, 0x89, 0xC8,             // mov         rax, rcx
+    /* 032 : */ 0x48, 0x8B, 0xE5,             // mov         rsp, rbp
+    /* 035 : */ 0x5D,                         // pop         rbp
+    /* 036 : */ 0xC3,                         // ret
+};
+
+unsigned char sliceRetTrampoline32[] =
+{
+    /* 000 : */ 0xC8, 0x10, 0x00, 0x00, //  enter       10h, 0
+    /* 004 : */ 0x8B, 0x45, 0x08,       //  mov         eax, dword ptr[ebp + 8]
+    /* 007 : */ 0xFF, 0xD0,             //  call        eax
+    /* 009 : */ 0x89, 0x45, 0xF0,       //  mov         dword ptr[ebp - 10h], eax
+    /* 00C : */ 0x89, 0x55, 0xF4,       //  mov         dword ptr[ebp - 0Ch], edx
+    /* 00F : */ 0x8B, 0x4D, 0xF0,       //  mov         ecx, dword ptr[ebp - 10h]
+    /* 012 : */ 0x89, 0x4D, 0xF8,       //  mov         dword ptr[ebp - 8], ecx
+    /* 015 : */ 0x8B, 0x55, 0xF4,       //  mov         edx, dword ptr[ebp - 0Ch]
+    /* 018 : */ 0x89, 0x55, 0xFC,       //  mov         dword ptr[ebp - 4], edx
+    /* 01B : */ 0x8B, 0x55, 0xFC,       //  mov         edx, dword ptr[ebp - 4]
+    /* 01E : */ 0x8B, 0x45, 0xF8,       //  mov         eax, dword ptr[ebp - 8]
+    /* 021 : */ 0xC9,                   //  leave
+    /* 022 : */ 0xC3,                   //  ret
+};
+
+// alias sdeleg = void[] delegate();
+// extern(C++) Slice cppSliceDelegate(void* vfn, void* ctx)
+// {
+//     sdeleg dg;
+//     dg.funcptr = cast(sfunc) vfn;
+//     dg.ptr = ctx;
+//     void[] s = dg();
+//     return Slice(s.length, s.ptr);
+// }
+unsigned char sliceRetTrampolineDeleagte64[] =
+{
+    /* 0A0 : */ 0x55,                           // push        rbp
+    /* 0A1 : */ 0x48, 0x8B, 0xEC,               // mov         rbp, rsp
+    /* 0A4 : */ 0x48, 0x83, 0xEC, 0x28,         // sub         rsp, 28h
+    /* 0A8 : */ 0x53,                           // push        rbx
+    /* 0A9 : */ 0x56,                           // push        rsi
+    /* 0AA : */ 0x57,                           // push        rdi
+    /* 0AB : */ 0x48, 0x89, 0x4D, 0x10,         // mov         qword ptr[rbp + 10h], rcx
+    /* 0AF : */ 0x48, 0x89, 0x55, 0x18,         // mov         qword ptr[rbp + 18h], rdx
+    /* 0B3 : */ 0x4C, 0x89, 0x45, 0x20,         // mov         qword ptr[rbp + 20h], r8
+    /* 0B7 : */ 0x48, 0xC7, 0x45, 0xE0,0,0,0,0, // mov         qword ptr[rbp - 20h], 0
+    /* 0BF : */ 0x48, 0xC7, 0x45, 0xE8,0,0,0,0, // mov         qword ptr[rbp - 18h], 0
+    /* 0C7 : */ 0x48, 0x8B, 0x45, 0x18,         // mov         rax, qword ptr[rbp + 18h]
+    /* 0CB : */ 0x48, 0x89, 0x45, 0xE8,         // mov         qword ptr[rbp - 18h], rax
+    /* 0CF : */ 0x48, 0x8B, 0x4D, 0x20,         // mov         rcx, qword ptr[rbp + 20h]
+    /* 0D3 : */ 0x48, 0x89, 0x4D, 0xE0,         // mov         qword ptr[rbp - 20h], rcx
+    /* 0D7 : */ 0x48, 0x83, 0xEC, 0x20,         // sub         rsp, 20h
+    /* 0DB : */ 0x48, 0x8B, 0x55, 0xE8,         // mov         rdx, qword ptr[rbp - 18h]
+    /* 0DF : */ 0x48, 0x8B, 0x45, 0xE0,         // mov         rax, qword ptr[rbp - 20h]
+    /* 0E3 : */ 0x48, 0xFF, 0xD2,               // call        rdx
+    /* 0E6 : */ 0x48, 0x83, 0xC4, 0x20,         // add         rsp, 20h
+    /* 0EA : */ 0x48, 0x89, 0x45, 0xF0,         // mov         qword ptr[rbp - 10h], rax
+    /* 0EE : */ 0x48, 0x89, 0x55, 0xF8,         // mov         qword ptr[rbp - 8], rdx
+    /* 0F2 : */ 0x48, 0x8B, 0x5D, 0xF0,         // mov         rbx, qword ptr[rbp - 10h]
+    /* 0F6 : */ 0x48, 0x8B, 0x75, 0x10,         // mov         rsi, qword ptr[rbp + 10h]
+    /* 0FA : */ 0x48, 0x89, 0x1E,               // mov         qword ptr[rsi], rbx
+    /* 0FD : */ 0x48, 0x8B, 0x7D, 0xF8,         // mov         rdi, qword ptr[rbp - 8]
+    /* 101 : */ 0x48, 0x89, 0x7E, 0x08,         // mov         qword ptr[rsi + 8], rdi
+    /* 105 : */ 0x48, 0x89, 0xF0,               // mov         rax, rsi
+    /* 108 : */ 0x5F,                           // pop         rdi
+    /* 109 : */ 0x5E,                           // pop         rsi
+    /* 10A : */ 0x5B,                           // pop         rbx
+    /* 10B : */ 0x48, 0x8B, 0xE5,               // mov         rsp, rbp
+    /* 10E : */ 0x5D,                           // pop         rbp
+    /* 10F : */ 0xC3,                           // ret
+};
+
+// forward larger return value pointer from stack to EAX
+//
+// alias func = S16 function();
+// extern(C++) S16 cppFun(void* vfn)
+// {
+//     auto fn = cast(func) vfn;
+//     return fn();
+// }
+
+unsigned char structRetTrampoline32[] =
+{
+    /* 000 : */ 0x8B, 0x44, 0x24, 0x04,  //  mov         eax,dword ptr[esp + 4]
+    /* 004 : */ 0xFF, 0x54, 0x24, 0x08,  //  call        dword ptr[esp + 8]
+    /* 008 : */ 0xC3,                    //  ret
+#if 0
+    /* 038 : */ 0xC8, 0x04, 0x00, 0x00,  //  enter       4, 0
+    /* 03C : */ 0x8B, 0x45, 0x0C,        //  mov         eax, dword ptr[ebp + 0Ch]
+    /* 03F : */ 0x89, 0x45, 0xFC,        //  mov         dword ptr[ebp - 4], eax
+    /* 042 : */ 0x8B, 0x45, 0x08,        //  mov         eax, dword ptr[ebp + 8]
+    /* 045 : */ 0xFF, 0x55, 0xFC,        //  call        dword ptr[ebp - 4]
+    /* 048 : */ 0xC9,                    //  leave
+    /* 049 : */ 0xC3,                    //  ret
+#endif
+};
+
+// alias deleg = S16 delegate();
+// extern(C++) S16 cppDelegate(void* vfn, void* ctx)
+// {
+//     deleg dg;
+//     dg.funcptr = cast(func) vfn;
+//     dg.ptr = ctx;
+//     return dg();
+// }
+
+unsigned char structRetTrampolineDelegate32[] =
+{
+    /* 0D0 : */ 0xFF, 0x74, 0x24, 0x04,  //  push        dword ptr[esp + 4]
+    /* 0D4 : */ 0x8B, 0x44, 0x24, 0x10,  //  mov         eax, dword ptr[esp + 10h]
+    /* 0D8 : */ 0xFF, 0x54, 0x24, 0x0C,  //  call        dword ptr[esp + 0Ch]
+    /* 0DC : */ 0xC3,                    //  ret
+};
+
+// alias ifunc = size_t function();
+// alias ideleg = size_t delegate();
+// extern(C++) size_t cppIntDelegate(void* vfn, void* ctx)
+// {
+//     ideleg dg;
+//     dg.funcptr = cast(ifunc) vfn;
+//     dg.ptr = ctx;
+//     return dg();
+// }
+unsigned char intRetTrampolineDelegate32[] =
+{
+    /* 000 : */ 0x8B, 0x44, 0x24, 0x08,  //  mov         eax, dword ptr[esp + 8]
+    /* 004 : */ 0xFF, 0x54, 0x24, 0x04,  //  call        dword ptr[esp + 4]
+    /* 008 : */ 0xC3,                    //  ret
+};
+
+struct ProcessHelper
+{
+    MagoEE::Address baseAddr;
+    MagoEE::Address sliceRetTrampoline;
+    MagoEE::Address sliceRetTrampolineDelegate;
+    MagoEE::Address structRetTrampoline;
+    MagoEE::Address structRetTrampolineDelegate;
+    MagoEE::Address intRetTrampolineDelegate;
+    MagoEE::Address tmpBuf;
+    MagoEE::Address tmpLen;
+    MagoEE::Address tmpPos;
+
+    MagoEE::Address getTmpBuffer(uint32_t size)
+    {
+        size = (size + 15) & ~0xf;
+        if (size > tmpLen)
+            return 0;
+        if (tmpPos + size > tmpLen)
+            tmpPos = 0;
+        MagoEE::Address adr = tmpBuf + tmpPos;
+        tmpPos += size;
+        return adr;
+    }
+};
+
+std::map<DkmProcess*, ProcessHelper*> processHelpers;
+struct cleanUpProcessHelpers
+{
+    ~cleanUpProcessHelpers()
+    {
+        for (auto ph : processHelpers)
+            delete ph.second;
+    }
+} _cleanUpProcessHelpers;
+
+ProcessHelper* getProcessHelper(DkmProcess* process)
+{
+    auto it = processHelpers.find(process);
+    if (it != processHelpers.end())
+        return  it->second;
+
+    MagoEE::Address addr;
+    uint32_t size = 0x10000;
+    HRESULT hr = process->AllocateVirtualMemory(0, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE, &addr);
+    if (FAILED(hr))
+        return nullptr;
+
+    auto helper = new ProcessHelper;
+    helper->baseAddr = addr;
+
+    bool isX64 = process->SystemInformation()->ProcessorArchitecture() == PROCESSOR_ARCHITECTURE_AMD64;
+    DkmArray<BYTE> code;
+    DWORD szCode = 0;
+    uint32_t used = 0;
+    if (isX64)
+    {
+        szCode = sizeof(sliceRetTrampoline64);
+        code = { sliceRetTrampoline64, szCode };
+        hr = process->WriteMemory(addr + used, code);
+        if (FAILED(hr))
+        {
+            delete helper;
+            return nullptr;
+        }
+        helper->sliceRetTrampoline = addr + used;
+        used += (szCode + 15) & ~0xf;
+
+        szCode = sizeof(sliceRetTrampolineDeleagte64);
+        code = { sliceRetTrampolineDeleagte64, szCode };
+        hr = process->WriteMemory(addr + used, code);
+        if (FAILED(hr))
+        {
+            delete helper;
+            return nullptr;
+        }
+        helper->sliceRetTrampolineDelegate = addr + used;
+        used += (szCode + 15) & ~0xf;
+    }
+    else
+    {
+        szCode = sizeof(structRetTrampoline32);
+        code = { structRetTrampoline32, szCode };
+        hr = process->WriteMemory(addr + used, code);
+        if (FAILED(hr))
+        {
+            delete helper;
+            return nullptr;
+        }
+        helper->structRetTrampoline = addr + used;
+        used += (szCode + 15) & ~0xf;
+
+        szCode = sizeof(structRetTrampolineDelegate32);
+        code = { structRetTrampolineDelegate32, szCode };
+        hr = process->WriteMemory(addr + used, code);
+        if (FAILED(hr))
+        {
+            delete helper;
+            return nullptr;
+        }
+        helper->structRetTrampolineDelegate = addr + used;
+        used += (szCode + 15) & ~0xf;
+
+        szCode = sizeof(intRetTrampolineDelegate32);
+        code = { intRetTrampolineDelegate32, szCode };
+        hr = process->WriteMemory(addr + used, code);
+        if (FAILED(hr))
+        {
+            delete helper;
+            return nullptr;
+        }
+        helper->intRetTrampolineDelegate = addr + used;
+        used += (szCode + 15) & ~0xf;
+    }
+    helper->tmpBuf = addr + used;
+    helper->tmpLen = size - used;
+    helper->tmpPos = 0;
+
+    processHelpers[process] = helper;
+    return helper;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 class CCExprContext : public Mago::ExprContext
 {
     RefPtr<CallStack::DkmStackWalkFrame> mStackFrame;
@@ -607,58 +883,126 @@ public:
     {
         using namespace Evaluation::IL;
 
+        uint8_t callConv = func->GetCallConv();
+        bool returnsDXAX = obj._Type->IsDArray() || obj._Type->IsDelegate();
+        UINT32 ReturnValueSize = obj._Type->GetSize();
         int ptrSize = mModule->mArchData->GetPointerSize();
+        bool isX64 = ptrSize == 8;
+        bool passRetbuf = false;
+        int returnInRegisterLimit = 8; // EDX:EAX on x86, RAX on x64
+
+        DkmILCallingConvention::e CallingConvention = toCallingConvention(callConv);
+        if (CallingConvention == DkmILCallingConvention::e(-1))
+            return E_MAGOEE_BADCALLCONV;
+
+        DkmILFunctionEvaluationArgumentFlags::e thisArgflags = DkmILFunctionEvaluationArgumentFlags::ThisPointer;
+        MagoEE::Address tramp = 0;
+        MagoEE::Address retbuf = 0;
+        if (returnsDXAX && isX64)
+        {
+            auto helper = getProcessHelper(mModule->mProcess);
+            if (!helper)
+                return E_MAGOEE_CANNOTALLOCTRAMP;
+            tramp = arg ? helper->sliceRetTrampolineDelegate : helper->sliceRetTrampoline;
+            passRetbuf = true;
+        }
+        if (CallingConvention == DkmILCallingConvention::StdCall && ReturnValueSize > returnInRegisterLimit && !isX64)
+        {
+            auto helper = getProcessHelper(mModule->mProcess);
+            if (!helper)
+                return E_MAGOEE_CANNOTALLOCTRAMP;
+            tramp = arg ? helper->structRetTrampolineDelegate : helper->structRetTrampoline;
+            thisArgflags = DkmILFunctionEvaluationArgumentFlags::Default;
+        }
+        else if (CallingConvention == DkmILCallingConvention::StdCall && arg != 0 && !isX64)
+        {
+            auto helper = getProcessHelper(mModule->mProcess);
+            if (!helper)
+                return E_MAGOEE_CANNOTALLOCTRAMP;
+            tramp = helper->intRetTrampolineDelegate;
+            thisArgflags = DkmILFunctionEvaluationArgumentFlags::Default;
+        }
+        if (tramp && isX64)
+            CallingConvention = DkmILCallingConvention::StdCall;
+
+        if (ReturnValueSize > returnInRegisterLimit || tramp || obj._Type->AsTypeStruct())
+        {
+            auto helper = getProcessHelper(mModule->mProcess);
+            if (!helper)
+                return E_MAGOEE_CANNOTALLOCTRAMP;
+            retbuf = helper->getTmpBuffer(ReturnValueSize);
+            if (retbuf == 0)
+                return E_MAGOEE_CALLFAILED;
+        }
+
+        DkmILFunctionEvaluationFlags::e evalFlags = arg != 0 && tramp == 0 ? DkmILFunctionEvaluationFlags::HasThisPointer
+            : DkmILFunctionEvaluationFlags::Default;
+        if (obj._Type->IsFloatingPoint())
+            evalFlags |= DkmILFunctionEvaluationFlags::FloatingPointReturn;
+
+        if (CallingConvention == DkmILCallingConvention::CDecl && isX64
+            && ReturnValueSize <= returnInRegisterLimit && !tramp && arg != 0 && obj._Type->AsTypeStruct())
+        {
+            // structs never passed through registers?
+            evalFlags |= DkmILFunctionEvaluationFlags::NoEnregisteredReturn;
+            passRetbuf = false;
+        }
+
         DkmILInstruction* instructions[8];
         int cntInstr = 0;
 
         // push function address
+        MagoEE::Address funcaddr = tramp != 0 ? tramp : addr;
         RefPtr<DkmReadOnlyCollection<BYTE>> paddrfn;
-        tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&addr, ptrSize, &paddrfn.Ref()));
+        tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&funcaddr, ptrSize, &paddrfn.Ref()));
         RefPtr<DkmILPushConstant> ppushfn;
         tryHR(DkmILPushConstant::Create(paddrfn, &ppushfn.Ref()));
         instructions[cntInstr++] = ppushfn;
 
-        // push argument (context pointer)
-        RefPtr<DkmReadOnlyCollection<BYTE>> parg;
-        tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&arg, ptrSize, &parg.Ref()));
-        RefPtr<DkmILPushConstant> ppusharg;
-        tryHR(DkmILPushConstant::Create(parg, &ppusharg.Ref()));
-        instructions[cntInstr++] = ppusharg;
+        static const int kMaxArgs = 3;
+        UINT32 ArgumentCount = 0;
+        DkmILFunctionEvaluationArgumentFlags::e argFlag[kMaxArgs];
+        RefPtr<DkmReadOnlyCollection<BYTE>> argValue[kMaxArgs];
+        RefPtr<DkmILPushConstant> argInstr[kMaxArgs];
+
+        auto pushArg = [&](MagoEE::Address argument, DkmILFunctionEvaluationArgumentFlags::e flags)
+        {
+            tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)& argument, ptrSize, &(argValue[ArgumentCount].Ref())));
+            tryHR(DkmILPushConstant::Create(argValue[ArgumentCount], &argInstr[ArgumentCount].Ref()));
+            instructions[cntInstr++] = argInstr[ArgumentCount];
+            argFlag[ArgumentCount++] = flags;
+            return S_OK;
+        };
+
+        if (tramp != 0)
+        {
+            // push argument (function pointer)
+            tryHR(pushArg(addr, DkmILFunctionEvaluationArgumentFlags::Default));
+        }
+
+        if (arg != 0)
+        {
+            // push argument (context pointer)
+            tryHR(pushArg(arg, thisArgflags));
+        }
+
+        if (passRetbuf)
+        {
+            // push argument (return buffer pointer)
+            tryHR(pushArg(retbuf, DkmILFunctionEvaluationArgumentFlags::Default));
+        }
 
         // call function
-        UINT32 ArgumentCount = 1;
-        UINT32 ReturnValueSize = obj._Type->GetSize();
-        bool returnsDXAX = obj._Type->IsDArray() || obj._Type->IsDelegate();
-        if (returnsDXAX)
-            ReturnValueSize = ptrSize;
-        uint8_t callConv = func->GetCallConv();
-        DkmILCallingConvention::e CallingConvention = ptrSize == 4 ? toCallingConvention(callConv) : DkmILCallingConvention::StdCall;
-        if (CallingConvention == DkmILCallingConvention::e(-1))
-            return E_MAGOEE_BADCALLCONV;
-        DkmILFunctionEvaluationFlags::e Flags = DkmILFunctionEvaluationFlags::HasThisPointer;
-        if (obj._Type->IsFloatingPoint())
-            Flags |= DkmILFunctionEvaluationFlags::FloatingPointReturn;
-
-        DkmILFunctionEvaluationArgumentFlags::e argFlag = DkmILFunctionEvaluationArgumentFlags::ThisPointer;
         RefPtr<DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>> argFlags;
-        tryHR(DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>::Create(&argFlag, 1, &argFlags.Ref()));
+        tryHR(DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>::Create(argFlag, ArgumentCount, &argFlags.Ref()));
         UINT32 UniformComplexReturnElementSize = 0;
 
         RefPtr<DkmILExecuteFunction> pcall;
-        tryHR(DkmILExecuteFunction::Create(ArgumentCount, ReturnValueSize, CallingConvention, Flags, argFlags, 0, &pcall.Ref()));
+        tryHR(DkmILExecuteFunction::Create(ArgumentCount, ReturnValueSize, CallingConvention, evalFlags, argFlags, 0, &pcall.Ref()));
         instructions[cntInstr++] = pcall;
 
         RefPtr<DkmILRegisterRead> pregreaddx;
         RefPtr<DkmILReturnTop> pregretax;
-        if (returnsDXAX)
-        {
-            // TODO: does not work yet, EDX/RDX not the function return value
-            tryHR(DkmILReturnTop::Create(&pregretax.Ref()));
-            instructions[cntInstr++] = pregretax;
-
-            tryHR(DkmILRegisterRead::Create(ptrSize == 4 ? CV_REG_EDX : CV_AMD64_RDX, &pregreaddx.Ref()));
-            instructions[cntInstr++] = pregreaddx;
-        }
 
         // return top of stack
         RefPtr<DkmILReturnTop> preturn;
@@ -676,36 +1020,28 @@ public:
         RefPtr<Evaluation::DkmILContext> pcontext;
         tryHR(Evaluation::DkmILContext::Create(mStackFrame, nullptr, &pcontext.Ref()));
 
-        DkmILEvaluationResult* results[1] = { nullptr };
         DkmArray<DkmILEvaluationResult*> arrResults;
         DkmILFailureReason::e failureReason;
         HRESULT hr = pquery->Execute(nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None, &arrResults, &failureReason);
 
         if (!FAILED(hr))
         {
-            if (arrResults.Length > 0 && arrResults.Members[0])
+            if (failureReason != DkmILFailureReason::None)
+                hr = E_MAGOEE_CALLFAILED;
+            else if (arrResults.Length > 0 && arrResults.Members[0])
             {
                 DkmReadOnlyCollection<BYTE>* res = arrResults.Members[0]->ResultBytes();
-                if (returnsDXAX)
+                if (res && res->Count() == ReturnValueSize)
                 {
-                    if (returnsDXAX && res && res->Count() == ptrSize)
+                    if (retbuf)
                     {
-                        uint8_t buf[16]; // enough for two pointers
-                        memcpy(buf, res->Items(), ptrSize);
-                        if (arrResults.Length > 1 && arrResults.Members[1])
+                        if (!passRetbuf)
                         {
-                            res = arrResults.Members[1]->ResultBytes();
-                            if (res && res->Count() == ptrSize)
-                            {
-                                memcpy(buf + ptrSize, res->Items(), ptrSize);
-                                hr = FromRawValue(buf, obj._Type, obj.Value);
-                                hr = S_OK;
-                            }
+                            DkmArray<BYTE> arr = { const_cast<BYTE*>(res->Items()), ReturnValueSize };
+                            tryHR(mModule->mProcess->WriteMemory(retbuf, arr));
                         }
+                        obj.Addr = retbuf;
                     }
-                }
-                else if (res && res->Count() == ReturnValueSize)
-                {
                     if (ReturnValueSize <= sizeof(MagoEE::DataValue))
                     {
                         hr = FromRawValue(res->Items(), obj._Type, obj.Value);

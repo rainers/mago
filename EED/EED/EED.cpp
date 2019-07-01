@@ -411,6 +411,8 @@ namespace MagoEE
         L"Unsupported calling convention",
         L"Function calls not allowed",
         L"Function call may have side effects",
+        L"Cannot allocate trampoline function",
+        L"Function call execution failed",
     };
 
     // returns: S_FALSE on error not found

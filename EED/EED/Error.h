@@ -43,6 +43,8 @@ enum
     E_MAGOEE_BADCALLCONV,
     E_MAGOEE_NOFUNCCALL,
     E_MAGOEE_HASSIDEEFFECT,
+    E_MAGOEE_CANNOTALLOCTRAMP,
+    E_MAGOEE_CALLFAILED,
 
     // TODO: maybe something like RUNTIME_ERROR or DEBUG_INFO_ERROR
     //  for cases like this: Decl->GetType( _Type.Ref() )   (see ThisExpr::Semantic)
