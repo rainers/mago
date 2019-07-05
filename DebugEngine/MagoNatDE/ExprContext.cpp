@@ -1721,7 +1721,8 @@ namespace Mago
             hr = E_INVALIDARG;
             if( ptrdecl != NULL && ptrdecl->GetType( ptrtype ) && ptrtype != NULL )
             {
-                hr = mTypeEnv->NewDelegate( ptrtype, type );
+                MagoEE::Type* functype = ptrtype->IsPointer() ? ptrtype->AsTypeNext()->GetNext() : ptrtype;
+                hr = mTypeEnv->NewDelegate( functype, type );
             }
             if( ptrtype )
                 ptrtype->Release();

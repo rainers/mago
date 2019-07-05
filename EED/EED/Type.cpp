@@ -1218,15 +1218,8 @@ namespace MagoEE
 
     void TypeDelegate::_ToString( std::wstring& str )
     {
-        ITypeNext*  ptrToFunc = Next->AsTypeNext();
-
-        if ( ptrToFunc == NULL )
-        {
-            str.append( L"delegate" );
-            return;
-        }
-
-        ITypeFunction*  funcType = ptrToFunc->GetNext()->AsTypeFunction();
+        ITypeNext* ptrToFunc = Next->AsTypeNext();
+        ITypeFunction* funcType = ptrToFunc ? ptrToFunc->GetNext()->AsTypeFunction() : nullptr;
 
         if ( funcType == NULL )
         {

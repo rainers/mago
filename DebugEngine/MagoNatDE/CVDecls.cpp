@@ -152,6 +152,11 @@ namespace Mago
         return !FAILED( hr );
     }
 
+    bool CVDecl::GetVtblOffset( int& offset )
+    {
+        return mSymInfo->GetVtblOffset( offset );
+    }
+
     bool CVDecl::IsField()
     {
         MagoST::DataKind   kind = MagoST::DataIsUnknown;
@@ -1262,6 +1267,11 @@ namespace Mago
         return false;
     }
 
+    bool ClassRefDecl::GetVtblOffset( int& offset )
+    {
+        return false;
+    }
+
     bool ClassRefDecl::IsField()
     {
         return false;
@@ -2039,6 +2049,7 @@ namespace Mago
         virtual bool GetAttribute( uint16_t& attr ) { return false; }
         virtual bool GetVBaseOffset( uint32_t& offset ) { return false; }
         virtual bool GetVTableDescriptor( uint32_t index, uint8_t& desc ) { return false; }
+        virtual bool GetVtblOffset( int& offset ) { return false; }
         virtual bool GetMod( uint16_t& mod ) { return false; }
 #endif
     };

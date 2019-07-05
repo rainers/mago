@@ -697,8 +697,7 @@ namespace MagoEE
 
 
         std::wstring symName;
-        hr = binder->SymbolFromAddr( objVal.Value.Delegate.FuncAddr, symName, nullptr );
-        if ( hr == S_OK )
+        if( binder->SymbolFromAddr( objVal.Value.Delegate.FuncAddr, symName, nullptr ) == S_OK )
         {
             outStr.append( L" {" );
             outStr.append( symName );

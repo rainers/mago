@@ -66,6 +66,7 @@ namespace MagoST
         virtual bool GetProperties( uint16_t& props );
         virtual bool GetDerivedList( TypeIndex& index );
         virtual bool GetVShape( TypeIndex& index );
+        virtual bool GetVtblOffset( int& offset );
 
         virtual bool GetCallConv( uint8_t& callConv );
         virtual bool GetParamCount( uint16_t& count );

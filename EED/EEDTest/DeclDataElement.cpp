@@ -75,6 +75,11 @@ bool DeclDataElement::GetVTableShape( Declaration*& decl )
     return false;
 }
 
+bool DeclDataElement::GetVtblOffset( int& offset )
+{
+    return false;
+}
+
 bool DeclDataElement::IsField()
 {
     return false;

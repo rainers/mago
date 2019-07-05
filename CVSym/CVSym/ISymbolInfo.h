@@ -73,6 +73,7 @@ namespace MagoST
         virtual bool GetVBaseOffset( uint32_t& offset ) = 0;
 
         virtual bool GetVTableDescriptor( uint32_t index, uint8_t& desc ) = 0;
+        virtual bool GetVtblOffset( int& offset ) = 0;
 
         virtual bool GetMod( uint16_t& mod ) = 0;
 #endif

@@ -441,6 +441,23 @@ namespace MagoST
             return hr == S_OK;
         }
 
+        virtual bool GetVtblOffset( int& offset )
+        {
+            IDiaSymbol* pSymbol = NULL;
+            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+                return false;
+
+            BOOL virt;
+            HRESULT hr = pSymbol->get_virtual( &virt );
+
+            DWORD off = 0;
+            if( hr == S_OK )
+                hr = virt ? pSymbol->get_virtualBaseOffset( &off ) : E_FAIL;
+            offset = off;
+            pSymbol->Release();
+            return hr == S_OK;
+        }
+
         virtual bool GetCallConv( uint8_t& callConv )
         {
             IDiaSymbol* pSymbol = NULL;

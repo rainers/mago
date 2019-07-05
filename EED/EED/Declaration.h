@@ -36,6 +36,7 @@ namespace MagoEE
         virtual bool GetUdtKind( UdtKind& kind ) = 0;
         virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset ) = 0;
         virtual bool GetVTableShape( Declaration*& decl ) = 0;
+        virtual bool GetVtblOffset( int& offset ) = 0;
 
         virtual bool IsField() = 0;
         virtual bool IsStaticField() = 0;

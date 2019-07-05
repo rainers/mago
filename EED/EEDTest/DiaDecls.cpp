@@ -147,6 +147,11 @@ bool DiaDecl::GetVTableShape( Declaration*& decl )
     return false;
 }
 
+bool DiaDecl::GetVtblOffset( int& offset )
+{
+    return false;
+}
+
 
 bool DiaDecl::IsField()
 {

@@ -180,6 +180,12 @@ namespace MagoST
         return false;
     }
 
+    bool SymbolInfo::GetVtblOffset( int& offset )
+    {
+        UNREFERENCED_PARAMETER( offset );
+        return false;
+    }
+
     bool SymbolInfo::GetCallConv( uint8_t& callConv )
     {
         UNREFERENCED_PARAMETER( callConv );

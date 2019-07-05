@@ -44,6 +44,7 @@ public:
     virtual bool GetUdtKind( MagoEE::UdtKind& kind );
     virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
     virtual bool GetVTableShape( Declaration*& decl );
+    virtual bool GetVtblOffset( int& offset );
 
     virtual bool IsField();
     virtual bool IsVar();

@@ -917,7 +917,24 @@ namespace MagoEE
 
             if( _Type->IsDelegate() )
             {
-                if( !Decl->GetAddress( obj.Value.Delegate.FuncAddr ) )
+                int vtblOffset;
+                if( Decl->GetVtblOffset( vtblOffset ) )
+                {
+                    DataValue vtblptr = { 0 };
+                    auto vtblptrType = _Type->AsTypeNext()->GetNext(); // any type of pointer
+                    hr = binder->GetValue( parent.Value.Addr, vtblptrType, vtblptr );
+                    if ( FAILED( hr ) )
+                        return hr;
+                    if( vtblptr.Addr == 0 )
+                        return E_MAGOEE_NO_ADDRESS;
+
+                    hr = binder->GetValue( vtblptr.Addr + vtblOffset, vtblptrType, vtblptr );
+                    if ( FAILED( hr ) )
+                        return hr;
+
+                    obj.Value.Delegate.FuncAddr = vtblptr.Addr;
+                }
+                else if( !Decl->GetAddress( obj.Value.Delegate.FuncAddr ) )
                     return E_MAGOEE_NO_ADDRESS;
 
                 obj.Value.Delegate.ContextAddr = parent.Value.Addr;
@@ -1364,8 +1381,13 @@ namespace MagoEE
 
         auto type = Child->_Type;
         if ( type->IsDelegate() ) // delegate has pointer to function as "next"
+        {
             if( auto ptrtype = type->AsTypeNext()->GetNext()->AsTypeNext() )
                 type = ptrtype->GetNext();
+        }
+        else if( type->IsPointer() && type->AsTypeNext()->GetNext()->IsFunction() )
+            type = type->AsTypeNext()->GetNext();
+
         ITypeFunction* func = type->AsTypeFunction();
         if ( !func )
             return E_MAGOEE_BAD_TYPES_FOR_OP;
@@ -1436,13 +1458,19 @@ namespace MagoEE
 
         auto type = Child->_Type;
         if ( type->IsDelegate() ) // delegate has pointer to function as "next"
+        {
             if( auto ptrtype = type->AsTypeNext()->GetNext()->AsTypeNext() )
             {
                 type = ptrtype->GetNext();
                 addr = callee.Value.Delegate.FuncAddr;
                 ctxt = callee.Value.Delegate.ContextAddr;
             }
-
+        }
+        else if (type->IsPointer() && type->AsTypeNext()->GetNext()->IsFunction())
+        {
+            type = type->AsTypeNext()->GetNext();
+            addr = callee.Value.Addr;
+        }
         ITypeFunction* func = type->AsTypeFunction();
 
         if ( !evalData.Options.AllowAssignment && !func->IsPure() )
