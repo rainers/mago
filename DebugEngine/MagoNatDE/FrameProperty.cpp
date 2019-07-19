@@ -283,6 +283,7 @@ namespace Mago
         if ( session->SetChildTypeScope( fieldListTH, flistScope ) != S_OK )
             return false;
 
+        bool isClass = false;
         uint16_t cntData = 0;
         for ( uint16_t i = 0; /*i < fieldCount*/; i++ )
         {
@@ -300,6 +301,8 @@ namespace Mago
                 continue;
 
             tag = memberInfo->GetSymTag();
+            if ( tag == MagoST::SymTagBaseClass )
+                isClass = true;
             if ( tag != MagoST::SymTagData )
                 continue;
 
@@ -316,7 +319,7 @@ namespace Mago
             if( cntData == 1 )
             {
                 int32_t offset;
-                if( memberInfo->GetOffset( offset ) && offset == 0 )
+                if( isClass || ( memberInfo->GetOffset( offset ) && offset == 0 ) )
                 // a __closptr or __capture that does not start with a __chain variable is
                 //  actually a pointer to an aggregate also available through "this", so skip it
                     break;
