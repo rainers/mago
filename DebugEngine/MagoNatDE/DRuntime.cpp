@@ -1004,62 +1004,62 @@ namespace Mago
         uint32_t read, unread;
     L_retryInterface:
         HRESULT hr = ReadAddress( addr, 0, vtbl );
+        if (FAILED(hr))
+            return hr;
+
+        auto it = mVtbl2ClassNameCache.find( vtbl );
+        if ( it != mVtbl2ClassNameCache.end() )
+        {
+            if( checkInterface && it->second.interfaceOffset > 0 )
+            {
+                addr = addr - it->second.interfaceOffset;
+                checkInterface = false;
+                goto L_retryInterface;
+            }
+            if ( it->second.className.empty() )
+                return E_FAIL;
+
+            *pbstrClassName = SysAllocString( it->second.className.data() );
+            return S_OK;
+        }
+
+        hr = ReadAddress( vtbl, 0, classinfo );
         if ( SUCCEEDED( hr ) )
         {
-            auto it = mVtbl2ClassNameCache.find( vtbl );
-            if ( it != mVtbl2ClassNameCache.end() )
-            {
-                if( checkInterface && it->second.interfaceOffset > 0 )
-                {
-                    addr = addr - it->second.interfaceOffset;
-                    checkInterface = false;
-                    goto L_retryInterface;
-                }
-                if ( it->second.className.empty() )
-                    return E_FAIL;
-
-                *pbstrClassName = SysAllocString( it->second.className.data() );
-                return S_OK;
-            }
-
-            hr = ReadAddress( vtbl, 0, classinfo );
+            TypeInfo_Class64 ti;
+            hr = ReadTypeInfoClass( classinfo, ti );
             if ( SUCCEEDED( hr ) )
             {
-                TypeInfo_Class64 ti;
-                hr = ReadTypeInfoClass( classinfo, ti );
+                if ( checkInterface && ti.init.ptr < 0x10000 )
+                {
+                    // emulate _d_toObject() for interfaces
+                    addr = addr - ti.init.ptr;
+                    checkInterface = false;
+                    mVtbl2ClassNameCache[vtbl] = { (uint32_t)ti.init.ptr };
+                    goto L_retryInterface;
+                }
+                if( mClassInfoVtblAddr )
+                {
+                    // verify class info vtbl pointer
+                    if( ti.pvtbl != mClassInfoVtblAddr )
+                        hr = E_FAIL;
+                }
+                if ( SUCCEEDED( hr ) && ti.name.length >= 4096 )
+                    hr = E_FAIL;
+
                 if ( SUCCEEDED( hr ) )
                 {
-                    if ( checkInterface && ti.init.ptr < 0x10000 )
-                    {
-                        // emulate _d_toObject() for interfaces
-                        addr = addr - ti.init.ptr;
-                        checkInterface = false;
-                        mVtbl2ClassNameCache[vtbl] = { (uint32_t)ti.init.ptr };
-                        goto L_retryInterface;
-                    }
-                    if( mClassInfoVtblAddr )
-                    {
-                        // verify class info vtbl pointer
-                        if( ti.pvtbl != mClassInfoVtblAddr )
-                            hr = E_FAIL;
-                    }
-                    if ( SUCCEEDED( hr ) && ti.name.length >= 4096 )
+                    char buf[4096];
+                    hr = mDebugger->ReadMemory( mCoreProc, ti.name.ptr,
+                                                (uint32_t) ti.name.length, read, unread, (uint8_t*) buf );
+                    if ( SUCCEEDED( hr ) && unread != 0 )
                         hr = E_FAIL;
-
                     if ( SUCCEEDED( hr ) )
                     {
-                        char buf[4096];
-                        hr = mDebugger->ReadMemory( mCoreProc, ti.name.ptr,
-                                                    (uint32_t) ti.name.length, read, unread, (uint8_t*) buf );
-                        if ( SUCCEEDED( hr ) && unread != 0 )
+                        if ( memchr( buf, 0, read ) != 0 )
                             hr = E_FAIL;
-                        if ( SUCCEEDED( hr ) )
-                        {
-                            if ( memchr( buf, 0, read ) != 0 )
-                                hr = E_FAIL;
-                            else
-                                hr = Utf8To16( buf, read, *pbstrClassName );
-                        }
+                        else
+                            hr = Utf8To16( buf, read, *pbstrClassName );
                     }
                 }
             }

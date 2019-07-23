@@ -509,11 +509,13 @@ namespace Mago
     HRESULT ExprContext::GetClassName( MagoEE::Address addr, std::wstring& className, bool derefOnce )
     {
         HRESULT hr;
+        if ( addr == 0 )
+            return E_FAIL;
         if ( derefOnce )
         {
             uint32_t sizeRead;
             hr = ReadMemory( addr, mTypeEnv->GetPointerSize(), sizeRead, (uint8_t*)& addr );
-            if ( !SUCCEEDED( hr ) || sizeRead != uint32_t( mTypeEnv->GetPointerSize() ) )
+            if ( !SUCCEEDED( hr ) || sizeRead != uint32_t( mTypeEnv->GetPointerSize() ) || addr == 0 )
                 return E_FAIL;
         }
         BSTR bstrClassname = NULL;
