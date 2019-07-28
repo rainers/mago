@@ -655,7 +655,7 @@ namespace Mago
 
     ModuleBinding*  PendingBreakpoint::AddOrFindBinding( DWORD modId )
     {
-        BindingMap::_Pairib pib = mBindings.insert( BindingMap::value_type( modId, ModuleBinding() ) );
+        auto pib = mBindings.insert( BindingMap::value_type( modId, ModuleBinding() ) );
 
         // it doesn't matter if it already exists
         return &pib.first->second;

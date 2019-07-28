@@ -46,7 +46,7 @@ struct SessionContext
 
         GuardedArea guard( ProcGuard );
 
-        M::_Pairib pair = ProcMap.insert( CmdProcessMap::value_type( process->GetId(), process ) );
+        auto pair = ProcMap.insert( CmdProcessMap::value_type( process->GetId(), process ) );
         _ASSERT( pair.second );
         if ( pair.second )
             process->AddRef();
