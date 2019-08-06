@@ -621,7 +621,7 @@ bool BreakpointInfo::fromCommand(MICommand & cmd) {
 	// try named params
 	for (size_t i = 0; i < cmd.namedParams.size(); i++) {
 		std::wstring name = cmd.namedParams[i].first;
-		std::wstring value = cmd.namedParams[i].second;
+		std::wstring value = unquoteString(cmd.namedParams[i].second);
 		if (name == L"--source")
 			fileName = value;
 		else if (name == L"--function")
@@ -641,7 +641,7 @@ bool BreakpointInfo::fromCommand(MICommand & cmd) {
 	}
 	// try unnamed params
 	for (size_t i = 0; i < cmd.unnamedValues.size(); i++) {
-		std::wstring value = cmd.unnamedValues[i];
+		std::wstring value = unquoteString(cmd.unnamedValues[i]);
 		uint64_t n = 0;
 		std::wstring tmp = value;
 		if (parseUlong(tmp, n) && tmp.empty()) {
