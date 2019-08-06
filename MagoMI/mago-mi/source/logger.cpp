@@ -179,7 +179,8 @@ public:
 			"DEBUG",
 			"TRACE",
 		};
-		fwrite(utf8sign, 3, 1, f);
+        if (f)
+		    fwrite(utf8sign, 3, 1, f);
 		info("Started logging. Level=%s", log_level_names[getLogLevel()]);
 	}
 

@@ -408,6 +408,8 @@ std::wstring getCurrentDirectory();
 std::wstring getBaseName(std::wstring fname);
 /// get directory name for file, e.g. for "/dir/subdir/file.ext" return "/dir/subdir"
 std::wstring getDirName(std::wstring fname);
+/// get full name of executable of current process
+std::wstring getExeName();
 
 void testEngine();
 

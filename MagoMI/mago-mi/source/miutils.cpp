@@ -373,6 +373,17 @@ std::wstring BreakpointInfo::dumpParams() {
 	return buf.wstr();
 }
 
+std::wstring getExeName()
+{
+    for (int alloclen = 256; ; alloclen *= 2)
+    {
+        std::unique_ptr<wchar_t> name(new wchar_t[alloclen]);
+        DWORD len = GetModuleFileNameW(NULL, name.get(), alloclen);
+        if (len < alloclen)
+            return name.get();
+    }
+}
+
 /// get directory name for file, e.g. for "/dir/subdir/file.ext" return "/dir/subdir"
 std::wstring getDirName(std::wstring fname) {
 	if (fname.empty())
