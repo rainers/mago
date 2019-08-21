@@ -473,7 +473,8 @@ namespace Mago
         if ( !type->IsScalar() 
             && !type->IsDArray() 
             && !type->IsAArray() 
-            && !type->IsDelegate() )
+            && !type->IsDelegate()
+            && !type->AsTypeEnum() ) // enum base type currently only basic types
             return S_OK;
 
         _ASSERT( targetSize <= sizeof targetBuf );
