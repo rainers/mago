@@ -1402,7 +1402,7 @@ namespace Mago
             break;
 
         case btChar32:
-            ty = MagoEE::Twchar;
+            ty = MagoEE::Tdchar;
             break;
 
         case btInt:
