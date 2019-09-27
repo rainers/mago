@@ -32,6 +32,7 @@ namespace MagoEE
         bool        IsStaticField; // for struct enumerations
         bool        IsBaseClass;
         bool        IsMostDerivedClass;
+        bool        IsArrayContinuation; // for arr[1000..length]
     };
 
     class IEEDParsedExpr
@@ -82,7 +83,7 @@ namespace MagoEE
     HRESULT EnumValueChildren( 
         IValueBinder* binder, 
         const wchar_t* parentExprText,
-        const DataObject& parentVal, 
+        const EvalResult& parentVal,
         ITypeEnv* typeEnv,
         NameTable* strTable,
         const FormatOptions& fmtopts,

@@ -155,7 +155,7 @@ namespace Mago
         hr = MagoEE::EnumValueChildren( 
             mExprContext, 
             mFullExprText, 
-            mObjVal.ObjVal, 
+            mObjVal, 
             mExprContext->GetTypeEnv(),
             mExprContext->GetStringTable(),
             mFormatOpts,

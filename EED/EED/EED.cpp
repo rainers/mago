@@ -184,7 +184,7 @@ namespace MagoEE
     HRESULT EnumValueChildren( 
         IValueBinder* binder, 
         const wchar_t* parentExprText, 
-        const DataObject& parentVal, 
+        const EvalResult& parentVal,
         ITypeEnv* typeEnv,
         NameTable* strTable,
         const FormatOptions& fmtopts,
@@ -196,28 +196,28 @@ namespace MagoEE
 
         HRESULT hr = S_OK;
         RefPtr<EEDEnumValues>   en;
-        DataObject pointeeObj = { 0 };
+        EvalResult pointeeObj = { 0 };
         std::wstring pointeeExpr;
-        const DataObject* pparentVal = &parentVal;
+        const EvalResult* pparentVal = &parentVal;
 
     L_retry:
-        if ( pparentVal->_Type->IsReference() )
+        if ( pparentVal->ObjVal._Type->IsReference() )
         {
             en = new EEDEnumStruct( true );
         }
-        else if ( pparentVal->_Type->IsPointer() )
+        else if ( pparentVal->ObjVal._Type->IsPointer() )
         {
             // no children for void pointers
-            auto ntype = pparentVal->_Type->AsTypeNext()->GetNext();
+            auto ntype = pparentVal->ObjVal._Type->AsTypeNext()->GetNext();
             if ( ntype == NULL || ntype->GetBackingTy() == Tvoid )
                  return E_FAIL;
 
             if ( ntype->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() || ntype->AsTypeStruct() )
             {
-                pointeeObj._Type = ntype;
-                pointeeObj.Addr = pparentVal->Value.Addr;
+                pointeeObj.ObjVal._Type = ntype;
+                pointeeObj.ObjVal.Addr = pparentVal->ObjVal.Value.Addr;
 
-                hr = binder->GetValue( pointeeObj.Addr, pointeeObj._Type, pointeeObj.Value );
+                hr = binder->GetValue( pointeeObj.ObjVal.Addr, pointeeObj.ObjVal._Type, pointeeObj.ObjVal.Value );
                 if( hr == S_OK )
                 {
                     pointeeExpr.append( L"*(" ).append( parentExprText ).append( 1, L')' );
@@ -228,22 +228,22 @@ namespace MagoEE
             }
             en = new EEDEnumPointer();
         }
-        else if ( pparentVal->_Type->IsSArray() )
+        else if ( pparentVal->ObjVal._Type->IsSArray() )
         {
             en = new EEDEnumSArray();
         }
-        else if ( pparentVal->_Type->IsDArray() )
+        else if ( pparentVal->ObjVal._Type->IsDArray() )
         {
             if ( fmtopts.specifier == FormatSpecRaw )
                 en = new EEDEnumRawDArray();
             else
                 en = new EEDEnumDArray();
         }
-        else if ( pparentVal->_Type->IsAArray() )
+        else if ( pparentVal->ObjVal._Type->IsAArray() )
         {
             en = new EEDEnumAArray( binder->GetAAVersion() );
         }
-        else if ( pparentVal->_Type->AsTypeStruct() != NULL )
+        else if ( pparentVal->ObjVal._Type->AsTypeStruct() != NULL )
         {
             en = new EEDEnumStruct();
         }

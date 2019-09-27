@@ -40,7 +40,7 @@ namespace MagoEE
         EXPORT HRESULT EnumValueChildren( 
             IValueBinder* binder, 
             const wchar_t* parentExprText,
-            const DataObject& parentVal, 
+            const EvalResult& parentVal,
             ITypeEnv* typeEnv,
             NameTable* strTable,
             const FormatOptions& fmtopts,

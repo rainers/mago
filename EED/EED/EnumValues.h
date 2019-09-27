@@ -17,7 +17,7 @@ namespace MagoEE
 
     protected:
         std::wstring        mParentExprText;
-        DataObject          mParentVal;
+        EvalResult          mParentVal;
         IValueBinder*       mBinder;
         RefPtr<ITypeEnv>    mTypeEnv;
         RefPtr<NameTable>   mStrTable;
@@ -32,7 +32,7 @@ namespace MagoEE
         virtual HRESULT Init( 
             IValueBinder* binder, 
             const wchar_t* parentExprText, 
-            const DataObject& parentVal,
+            const EvalResult& parentVal,
             ITypeEnv* typeEnv,
             NameTable* strTable );
 
@@ -67,11 +67,19 @@ namespace MagoEE
     class EEDEnumSArray : public EEDEnumValues
     {
         uint32_t        mCountDone;
+        uint32_t        mBaseOffset;
 
         uint64_t GetUnlimitedCount();
 
     public:
         EEDEnumSArray();
+
+        virtual HRESULT Init(
+            IValueBinder* binder,
+            const wchar_t* parentExprText,
+            const EvalResult& parentVal,
+            ITypeEnv* typeEnv,
+            NameTable* strTable);
 
         virtual uint32_t GetCount();
         virtual uint32_t GetIndex();
@@ -162,7 +170,7 @@ namespace MagoEE
         virtual HRESULT Init( 
             IValueBinder* binder, 
             const wchar_t* parentExprText, 
-            const DataObject& parentVal,
+            const EvalResult& parentVal,
             ITypeEnv* typeEnv,
             NameTable* strTable );
 

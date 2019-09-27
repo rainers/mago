@@ -39,7 +39,7 @@ namespace MagoEE
     HRESULT EEDEnumValues::Init( 
         IValueBinder* binder, 
         const wchar_t* parentExprText, 
-        const DataObject& parentVal,
+        const EvalResult& parentVal,
         ITypeEnv* typeEnv,
         NameTable* strTable )
     {
@@ -150,15 +150,15 @@ namespace MagoEE
 
         mCountDone++;
 
-        if ( mParentVal.Value.Addr == 0 )
+        if ( mParentVal.ObjVal.Value.Addr == 0 )
             return E_MAGOEE_NO_ADDRESS;
 
-        auto tn = mParentVal._Type->AsTypeNext();
+        auto tn = mParentVal.ObjVal._Type->AsTypeNext();
         if( tn == NULL )
             return E_FAIL;
 
         result.ObjVal._Type = tn->GetNext();
-        result.ObjVal.Addr = mParentVal.Value.Addr;
+        result.ObjVal.Addr = mParentVal.ObjVal.Value.Addr;
 
         HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
         if ( FAILED( hr ) )
@@ -174,21 +174,53 @@ namespace MagoEE
     //------------------------------------------------------------------------
 
     EEDEnumSArray::EEDEnumSArray()
-        :   mCountDone( 0 )
+        : mCountDone( 0 )
+        , mBaseOffset( 0 )
     {
+    }
+
+    HRESULT EEDEnumSArray::Init(
+        IValueBinder* binder,
+        const wchar_t* parentExprText,
+        const EvalResult& parentVal,
+        ITypeEnv* typeEnv,
+        NameTable* strTable)
+    {
+        HRESULT hr = EEDEnumValues::Init( binder, parentExprText, parentVal, typeEnv, strTable );
+        if ( FAILED( hr ) )
+            return hr;
+        if( parentVal.IsArrayContinuation && mParentExprText.length() > 2 )
+        {
+            int base = -1;
+            if( mParentExprText.back() == ']' )
+            {
+                for( size_t p = mParentExprText.length() - 2; p > 0; --p )
+                    if( mParentExprText[p] == '[' )
+                    {
+                        if( swscanf( mParentExprText.data() + p + 1, L"%d..", &base ) != 1 )
+                            base = -1;
+                        else
+                            mParentExprText.erase( p );
+                        break;
+                    }
+            }
+            if ( base >= 0 )
+                mBaseOffset = base;
+        }
+        return S_OK;
     }
 
     uint64_t EEDEnumSArray::GetUnlimitedCount()
     {
         uint32_t    count = 0;
 
-        if ( mParentVal._Type->IsSArray() )
+        if ( mParentVal.ObjVal._Type->IsSArray() )
         {
-            count = mParentVal._Type->AsTypeSArray()->GetLength();
+            count = mParentVal.ObjVal._Type->AsTypeSArray()->GetLength();
         }
-        else if ( mParentVal._Type->IsDArray() )
+        else if ( mParentVal.ObjVal._Type->IsDArray() )
         {
-            count = (uint32_t) mParentVal.Value.Array.Length;
+            count = (uint32_t) mParentVal.ObjVal.Value.Array.Length;
         }
 
         return count;
@@ -239,6 +271,7 @@ namespace MagoEE
             return hr;
 
         en->mCountDone = mCountDone;
+        en->mBaseOffset = mBaseOffset;
 
         copiedEnum = en.Detach();
         return S_OK;
@@ -262,9 +295,9 @@ namespace MagoEE
 
         bool atLimit = gMaxArrayLength > 0 && mCountDone == gMaxArrayLength && GetUnlimitedCount() - 1 > gMaxArrayLength;
         if( atLimit )
-            swprintf_s( indexStr, L"[%d..%I64d]", mCountDone, GetUnlimitedCount() );
+            swprintf_s( indexStr, L"[%d..%I64d]", mCountDone + mBaseOffset, GetUnlimitedCount() + mBaseOffset );
         else
-            swprintf_s( indexStr, L"[%d]", mCountDone );
+            swprintf_s( indexStr, L"[%d]", mCountDone + mBaseOffset );
 
         name.clear();
         name.append( indexStr );
@@ -281,15 +314,15 @@ namespace MagoEE
         uint32_t index = mCountDone++;
 
         Address addr;
-        if ( mParentVal._Type->IsSArray() )
+        if ( mParentVal.ObjVal._Type->IsSArray() )
         {
-            result.ObjVal._Type = mParentVal._Type->AsTypeSArray()->GetElement();
-            addr = mParentVal.Addr;
+            result.ObjVal._Type = mParentVal.ObjVal._Type->AsTypeSArray()->GetElement();
+            addr = mParentVal.ObjVal.Addr;
         }
-        else if ( mParentVal._Type->IsDArray() )
+        else if ( mParentVal.ObjVal._Type->IsDArray() )
         {
-            result.ObjVal._Type = mParentVal._Type->AsTypeDArray()->GetElement();
-            addr = mParentVal.Value.Array.Addr;
+            result.ObjVal._Type = mParentVal.ObjVal._Type->AsTypeDArray()->GetElement();
+            addr = mParentVal.ObjVal.Value.Array.Addr;
         }
         else
             return E_FAIL;
@@ -301,8 +334,9 @@ namespace MagoEE
         if (atLimit)
         {
             RefPtr<Type> dtype;
-            if ( mTypeEnv->NewSArray( result.ObjVal._Type, GetUnlimitedCount() - mCountDone, dtype.Ref() ) == S_OK )
+            if ( mTypeEnv->NewSArray( result.ObjVal._Type, GetUnlimitedCount() - index, dtype.Ref() ) == S_OK )
                 result.ObjVal._Type = dtype;
+            result.IsArrayContinuation = true;
         }
         else
         {
@@ -521,13 +555,13 @@ namespace MagoEE
         if (mBB.nodes != UINT64_MAX)
             return S_OK;
 
-        return ReadBB( mBinder, mParentVal._Type, mParentVal.Value.Addr, mAAVersion, mBB );
+        return ReadBB( mBinder, mParentVal.ObjVal._Type, mParentVal.ObjVal.Value.Addr, mAAVersion, mBB );
     }
 
     HRESULT EEDEnumAArray::ReadAddress( Address baseAddr, uint64_t index, Address& ptrValue )
     {
         HRESULT hr = S_OK;
-        uint32_t ptrSize = mParentVal._Type->GetSize();
+        uint32_t ptrSize = mParentVal.ObjVal._Type->GetSize();
         uint64_t addr = baseAddr + (index * ptrSize);
         uint32_t sizeRead;
 
@@ -553,7 +587,7 @@ namespace MagoEE
 
     uint32_t EEDEnumAArray::AlignTSize( uint32_t size )
     {
-        uint32_t ptrSize = mParentVal._Type->GetSize();
+        uint32_t ptrSize = mParentVal.ObjVal._Type->GetSize();
         if ( ptrSize == 4 )
             return (size + sizeof( uint32_t ) - 1) & ~(sizeof( uint32_t ) - 1);
         else
@@ -596,7 +630,7 @@ namespace MagoEE
     {
         if ( mAAVersion == 1 )
         {
-            uint32_t ptrSize = mParentVal._Type->GetSize();
+            uint32_t ptrSize = mParentVal.ObjVal._Type->GetSize();
             uint64_t hashFilledMark = 1LL << (8 * ptrSize - 1);
 
             while( mNextNode == NULL && mBucketIndex < mBB.b.length )
@@ -722,8 +756,8 @@ namespace MagoEE
         if( !mNextNode )
             return E_FAIL;
 
-        _ASSERT( mParentVal._Type->IsAArray() );
-        ITypeAArray* aa = mParentVal._Type->AsTypeAArray();
+        _ASSERT( mParentVal.ObjVal._Type->IsAArray() );
+        ITypeAArray* aa = mParentVal.ObjVal._Type->AsTypeAArray();
 
         bool atLimit = gMaxArrayLength > 0 && mCountDone == gMaxArrayLength && GetUnlimitedCount() - 1 > gMaxArrayLength;
         if (atLimit)
@@ -738,7 +772,7 @@ namespace MagoEE
         }
         else
         {
-            uint32_t ptrSize = mParentVal._Type->GetSize();
+            uint32_t ptrSize = mParentVal.ObjVal._Type->GetSize();
 
             DataObject keyobj;
             keyobj._Type = aa->GetIndex();
@@ -794,29 +828,29 @@ namespace MagoEE
     HRESULT EEDEnumStruct::Init( 
         IValueBinder* binder, 
         const wchar_t* parentExprText, 
-        const DataObject& parentVal,
+        const EvalResult& parentVal,
         ITypeEnv* typeEnv,
         NameTable* strTable )
     {
         HRESULT             hr = S_OK;
         RefPtr<Declaration> decl;
         RefPtr<IEnumDeclarationMembers> members;
-        DataObject          parentValCopy = parentVal;
+        EvalResult          parentValCopy = parentVal;
 
-        if ( parentValCopy._Type == NULL )
+        if ( parentValCopy.ObjVal._Type == NULL )
             return E_INVALIDARG;
 
-        if ( mSkipHeadRef && parentValCopy._Type->IsReference() )
+        if ( mSkipHeadRef && parentValCopy.ObjVal._Type->IsReference() )
         {
-            parentValCopy._Type = parentValCopy._Type->AsTypeNext()->GetNext();
-            parentValCopy.Addr = parentValCopy.Value.Addr;
+            parentValCopy.ObjVal._Type = parentValCopy.ObjVal._Type->AsTypeNext()->GetNext();
+            parentValCopy.ObjVal.Addr = parentValCopy.ObjVal.Value.Addr;
         }
 
-        ITypeStruct* typeStruct = parentValCopy._Type->AsTypeStruct();
+        ITypeStruct* typeStruct = parentValCopy.ObjVal._Type->AsTypeStruct();
         if ( typeStruct == NULL )
             return E_INVALIDARG;
 
-        decl = parentValCopy._Type->GetDeclaration();
+        decl = parentValCopy.ObjVal._Type->GetDeclaration();
         if ( decl == NULL )
             return E_INVALIDARG;
 
@@ -831,7 +865,7 @@ namespace MagoEE
         if ( decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class &&
              wcsncmp( parentExprText, L"cast(", 5 ) != 0 )  // already inside the base/derived class enumeration?
         {
-            binder->GetClassName( parentVal.Addr, mClassName, true );
+            binder->GetClassName( parentVal.ObjVal.Addr, mClassName, true );
 
             // don't show runtime class if it is the same as the compile time type
             if( !mClassName.empty() && mClassName == decl->GetName() )
@@ -943,12 +977,12 @@ namespace MagoEE
             fullName = L"(" + mParentExprText + L").__vfptr";
             mCountDone++;
 
-            Address addr = mParentVal._Type->IsReference() ? mParentVal.Value.Addr : mParentVal.Addr;
+            Address addr = mParentVal.ObjVal._Type->IsReference() ? mParentVal.ObjVal.Value.Addr : mParentVal.ObjVal.Addr;
             if ( addr == 0 )
                 return E_MAGOEE_NO_ADDRESS;
 
             RefPtr<Declaration> vshape;
-            decl = mParentVal._Type->GetDeclaration();
+            decl = mParentVal.ObjVal._Type->GetDeclaration();
             if( ! decl->GetVTableShape( vshape.Ref() ) )
                 return E_FAIL;
 
@@ -991,7 +1025,7 @@ namespace MagoEE
                 if ( !NameRegularMember( decl, name, fullName ) )
                     return E_FAIL;
 
-                Address addr = mParentVal._Type->IsReference() ? mParentVal.Value.Addr : mParentVal.Addr;
+                Address addr = mParentVal.ObjVal._Type->IsReference() ? mParentVal.ObjVal.Value.Addr : mParentVal.ObjVal.Addr;
 
                 if ( addr == 0 )
                     return E_MAGOEE_NO_ADDRESS;
@@ -1058,8 +1092,8 @@ namespace MagoEE
     {
         name.append( decl->GetName() );
 
-        if( mParentVal._Type )
-            mParentVal._Type->ToString( fullName );
+        if( mParentVal.ObjVal._Type )
+            mParentVal.ObjVal._Type->ToString( fullName );
         fullName.append( L"." );
         fullName.append( name );
 
