@@ -274,8 +274,9 @@ namespace MagoEE
 
         if ( !expr || expr->Kind == DataKind_Value )
         {
+            RefPtr<Type> type;
         L_retry:
-            RefPtr<Type>    type = pparentVal->_Type;
+            type = pparentVal->_Type;
 
             // ReadOnly
             if ( (type->AsTypeStruct() != NULL)
@@ -309,7 +310,7 @@ namespace MagoEE
                 if ( ntype == NULL || ntype->GetBackingTy() == Tvoid )
                     result.HasChildren = result.HasRawChildren = false;
 
-                else if ( ntype->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() )
+                else if ( type->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() )
                 {
                     // auto-follow through pointer
                     pointeeObj._Type = ntype;
@@ -321,7 +322,6 @@ namespace MagoEE
                         pparentVal = &pointeeObj;
                         goto L_retry;
                     }
-
                 }
                 result.HasChildren = result.HasRawChildren = pparentVal->Value.Addr != 0;
             }
@@ -355,7 +355,7 @@ namespace MagoEE
                     if ( decl->EnumMembers( members.Ref() ) )
                         result.HasChildren = result.HasRawChildren = members->GetCount() > 0;
                 }
-                else if ( pparentVal->Value.Addr != 0 )
+                else if ( pparentVal->Addr != 0 )
                 {
                     bool hasVTable = false;
                     bool hasChildren = false;
@@ -376,7 +376,7 @@ namespace MagoEE
                         MagoEE::UdtKind kind;
                         std::wstring className;
                         if ( decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class )
-                            binder->GetClassName( pparentVal->Value.Addr, className, false );
+                            binder->GetClassName( pparentVal->Addr, className, false );
                         hasDynamicClass = !className.empty();
                     }
                     result.HasChildren = result.HasRawChildren = hasVTable || hasChildren || hasDynamicClass;

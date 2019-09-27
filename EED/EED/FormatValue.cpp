@@ -446,6 +446,41 @@ namespace MagoEE
             outStr.append( L"..." );
     }
 
+    HRESULT _formatArray( IValueBinder* binder, Address addr, uint64_t length, MagoEE::Type* elemType,
+                          const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    {
+        uint32_t elementSize = elemType->GetSize();
+
+        outStr.append( L"[" );
+        for ( uint64_t i = 0; i < length; i++ )
+        {
+            if ( outStr.length() >= maxLength )
+            {
+                outStr.append( L", ..." );
+                break;
+            }
+
+            DataObject elementObj;
+            elementObj._Type = elemType;
+            elementObj.Addr = addr + elementSize * i;
+
+            HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
+            if ( FAILED( hr ) )
+                return hr;
+
+            std::wstring elemStr;
+            hr = FormatValue( binder, elementObj, fmtopt, elemStr, kMaxFormatValueLength - maxLength );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( outStr.length() > 1 )
+                outStr.append( L", " );
+            outStr.append( elemStr );
+        }
+        outStr.append( L"]" );
+        return S_OK;
+    }
+
     HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
         _ASSERT( type->IsSArray() );
@@ -458,44 +493,16 @@ namespace MagoEE
         if ( arrayType->GetElement()->IsChar() )
         {
             _formatString( binder, addr, arrayType->GetLength(), arrayType->GetElement(), outStr );
+            return S_OK;
         }
         else
         {
             uint32_t length = arrayType->GetLength();
-            uint32_t elementSize = arrayType->GetElement()->GetSize();
-
-            outStr.append( L"[" );
-            for ( uint32_t i = 0; i < length; i++ )
-            {
-                if ( outStr.length () >= maxLength )
-                {
-                    outStr.append( L", ..." );
-                    break;
-                }
-
-                DataObject elementObj;
-                elementObj._Type = arrayType->GetElement();
-                elementObj.Addr = addr + elementSize * i;
-
-                HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
-                if ( FAILED( hr ) )
-                    return hr;
-
-                std::wstring elemStr;
-                hr = FormatValue( binder, elementObj, fmtopt, elemStr, kMaxFormatValueLength - maxLength );
-                if ( FAILED( hr ) )
-                    return hr;
-
-                if ( outStr.length() > 1 )
-                    outStr.append( L", " );
-                outStr.append( elemStr );
-            }
-            outStr.append( L"]" );
+            return _formatArray( binder, addr, length, arrayType->GetElement(), fmtopt, outStr, maxLength );
         }
-        return S_OK;
     }
 
-    HRESULT FormatDArray( IValueBinder* binder, DArray array, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
+    HRESULT FormatDArray( IValueBinder* binder, DArray array, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
         _ASSERT( type->IsDArray() );
 
@@ -508,6 +515,10 @@ namespace MagoEE
         if ( fmtopt.specifier != FormatSpecRaw && arrayType->GetElement()->IsChar() )
         {
             _formatString( binder, array.Addr, array.Length, arrayType->GetElement(), outStr );
+        }
+        else if ( fmtopt.specifier != FormatSpecRaw )
+        {
+            return _formatArray( binder, array.Addr, array.Length, arrayType->GetElement(), fmtopt, outStr, maxLength );
         }
         else
         {
@@ -618,16 +629,19 @@ namespace MagoEE
         HRESULT hr = S_OK;
         RefPtr<Type>    pointeeType = objVal._Type->AsTypeNext()->GetNext();
 
-        hr = FormatAddress( objVal.Value.Addr, objVal._Type, outStr );
-        if ( FAILED( hr ) )
-            return hr;
+        if (fmtopt.specifier == FormatSpecRaw || !objVal._Type->IsReference() )
+        {
+            hr = FormatAddress( objVal.Value.Addr, objVal._Type, outStr );
+            if ( FAILED( hr ) )
+                return hr;
+            outStr.append(L" ");
+        }
 
         if ( pointeeType->IsChar() )
         {
             bool    foundTerm = false;
             bool    truncated = false;
-
-            outStr.append( L" \"" );
+            outStr.append( L"\"" );
 
             FormatString( binder, objVal.Value.Addr, pointeeType->GetSize(), false, 0, outStr, truncated, foundTerm );
             // don't worry about an error here, we still want to show the address
@@ -643,9 +657,9 @@ namespace MagoEE
             hr = binder->SymbolFromAddr( objVal.Value.Addr, symName, nullptr );
             if ( hr == S_OK )
             {
-                outStr.append( L" {" );
+                outStr.append( L"{" );
                 outStr.append( symName );
-                outStr.append( L"}" );
+                outStr.append( L"} " );
             }
 
             if ( objVal.Value.Addr != NULL && outStr.length() < maxLength )
@@ -661,10 +675,8 @@ namespace MagoEE
                     hr = FormatValue( binder, pointeeObj, fmtopt, memberStr, maxLength - outStr.length() );
                     if ( !FAILED( hr ) && !memberStr.empty() )
                     {
-                        if( memberStr[0] == '{' )
-                            outStr.append( L" " );
-                        else
-                            outStr.append( L" {" );
+                        if( memberStr[0] != '{' )
+                            outStr.append( L"{" );
                         outStr.append( memberStr );
                         if( memberStr[0] != '{' )
                             outStr.append( L"}" );
@@ -941,7 +953,7 @@ namespace MagoEE
         }
         else if ( type->IsDArray() )
         {
-            hr = FormatDArray( binder, objVal.Value.Array, objVal._Type, fmtopt, outStr );
+            hr = FormatDArray( binder, objVal.Value.Array, objVal._Type, fmtopt, outStr, maxLength );
         }
         else if ( type->IsAArray() )
         {
