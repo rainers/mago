@@ -297,7 +297,7 @@ namespace MagoEE
             if ( (type->AsTypeNext() != NULL) && type->AsTypeNext()->GetNext()->IsChar() )
             {
                 if ( type->IsPointer() )
-                    result.HasString = result.ObjVal.Value.Addr != 0;
+                    result.HasString = pparentVal->Value.Addr != 0;
                 else if ( type->IsSArray() || type->IsDArray() )
                     result.HasString = true;
             }
@@ -309,7 +309,7 @@ namespace MagoEE
                 if ( ntype == NULL || ntype->GetBackingTy() == Tvoid )
                     result.HasChildren = result.HasRawChildren = false;
 
-                else if ( ntype->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() || ntype->AsTypeStruct() )
+                else if ( ntype->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() )
                 {
                     // auto-follow through pointer
                     pointeeObj._Type = ntype;
@@ -323,7 +323,7 @@ namespace MagoEE
                     }
 
                 }
-                result.HasChildren = result.HasRawChildren = result.ObjVal.Value.Addr != 0;
+                result.HasChildren = result.HasRawChildren = pparentVal->Value.Addr != 0;
             }
             else if ( ITypeSArray* sa = type->AsTypeSArray() )
             {
@@ -332,7 +332,7 @@ namespace MagoEE
             else if ( type->IsDArray() )
             {
                 if( !result.HasString || gExpandableStrings )
-                    result.HasChildren = result.ObjVal.Value.Array.Length > 0;
+                    result.HasChildren = pparentVal->Value.Array.Length > 0;
                 result.HasRawChildren = true;
             }
             else if( type->IsAArray() )
@@ -343,7 +343,7 @@ namespace MagoEE
                     BB64            mBB;
                     BB64_V1         mBB_V1;
                 };
-                if( EEDEnumAArray::ReadBB( binder, type, result.ObjVal.Value.Addr, aaVersion, mBB ) == S_OK )
+                if( EEDEnumAArray::ReadBB( binder, type, pparentVal->Value.Addr, aaVersion, mBB ) == S_OK )
                     result.HasChildren = result.HasRawChildren = (aaVersion == 1 ? mBB_V1.used - mBB_V1.deleted : mBB.nodes) > 0;
             }
             else if ( ITypeStruct* ts = type->AsTypeStruct() )
@@ -355,7 +355,7 @@ namespace MagoEE
                     if ( decl->EnumMembers( members.Ref() ) )
                         result.HasChildren = result.HasRawChildren = members->GetCount() > 0;
                 }
-                else if ( result.ObjVal.Value.Addr != 0 )
+                else if ( pparentVal->Value.Addr != 0 )
                 {
                     bool hasVTable = false;
                     bool hasChildren = false;
@@ -376,7 +376,7 @@ namespace MagoEE
                         MagoEE::UdtKind kind;
                         std::wstring className;
                         if ( decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class )
-                            binder->GetClassName( result.ObjVal.Value.Addr, className, false );
+                            binder->GetClassName( pparentVal->Value.Addr, className, false );
                         hasDynamicClass = !className.empty();
                     }
                     result.HasChildren = result.HasRawChildren = hasVTable || hasChildren || hasDynamicClass;
