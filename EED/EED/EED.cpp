@@ -87,7 +87,9 @@ namespace MagoEE
     };
 
 	bool gShowVTable = false;
-	bool gExpandableStrings = true;
+    bool gExpandableStrings = true;
+    bool gHideReferencePointers = true;
+    bool gRemoveLeadingHexZeroes = false;
     uint32_t gMaxArrayLength = 1000;
 
     HRESULT Init()

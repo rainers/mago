@@ -49,7 +49,9 @@ struct MagoOptions
 	bool showStaticsInAggr;
 	bool showVTable;
 	bool flatClassFields;
-	bool expandableStrings;
+    bool expandableStrings;
+    bool hideReferencePointers;
+    bool removeLeadingHexZeroes;
     int  maxArrayElements;
 };
 

@@ -87,9 +87,16 @@ namespace MagoEE
 
         if ( fmtopt.radix == 16 )
         {
-            int width = type->GetSize() * 2;
-            number &= (1LL << 4 * width) - 1; // avoid sign extension beyond actual width
-            swprintf_s( buf, L"0x%0*I64x", width, number );
+            if ( gRemoveLeadingHexZeroes )
+            {
+                swprintf_s( buf, L"0x%I64x", number );
+            }
+            else
+            {
+                int width = type->GetSize() * 2;
+                number &= (1LL << 4 * width) - 1; // avoid sign extension beyond actual width
+                swprintf_s( buf, L"0x%0*I64x", width, number );
+            }
         }
         else    // it's 10, or make it 10
         {
@@ -516,10 +523,6 @@ namespace MagoEE
         {
             _formatString( binder, array.Addr, array.Length, arrayType->GetElement(), outStr );
         }
-        else if ( fmtopt.specifier != FormatSpecRaw )
-        {
-            return _formatArray( binder, array.Addr, array.Length, arrayType->GetElement(), fmtopt, outStr, maxLength );
-        }
         else
         {
             outStr.append( L"{length=" );
@@ -528,13 +531,22 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
-            outStr.append( L" ptr=" );
+            if ( fmtopt.specifier == FormatSpecRaw || !gHideReferencePointers )
+            {
+                outStr.append(L" ptr=");
 
-            hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
-            if ( FAILED( hr ) )
-                return hr;
+                hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
+                if ( FAILED( hr ) )
+                    return hr;
+            }
 
             outStr.append( 1, L'}' );
+
+            if ( fmtopt.specifier != FormatSpecRaw )
+            {
+                outStr.append( 1, L' ' );
+                hr = _formatArray( binder, array.Addr, array.Length, arrayType->GetElement(), fmtopt, outStr, maxLength );
+            }
         }
 
         return S_OK;
@@ -629,7 +641,7 @@ namespace MagoEE
         HRESULT hr = S_OK;
         RefPtr<Type>    pointeeType = objVal._Type->AsTypeNext()->GetNext();
 
-        if (fmtopt.specifier == FormatSpecRaw || !objVal._Type->IsReference() )
+        if (fmtopt.specifier == FormatSpecRaw || !gHideReferencePointers || !objVal._Type->IsReference() )
         {
             hr = FormatAddress( objVal.Value.Addr, objVal._Type, outStr );
             if ( FAILED( hr ) )
@@ -662,7 +674,11 @@ namespace MagoEE
                 outStr.append( L"} " );
             }
 
-            if ( objVal.Value.Addr != NULL && outStr.length() < maxLength )
+            if ( objVal.Value.Addr == NULL )
+            {
+                outStr.append(L" null");
+            }
+            else if ( outStr.length() < maxLength )
             {
                 DataObject pointeeObj = { 0 };
                 pointeeObj._Type = pointeeType;

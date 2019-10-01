@@ -211,6 +211,16 @@ bool readMagoOptions()
     else
         gOptions.expandableStrings = false;
 
+    if ( GetRegValue( hKey, L"hideReferencePointers", &val ) == S_OK )
+        gOptions.hideReferencePointers = val != 0;
+    else
+        gOptions.hideReferencePointers = true;
+
+    if ( GetRegValue( hKey, L"removeLeadingHexZeroes", &val ) == S_OK )
+        gOptions.removeLeadingHexZeroes = val != 0;
+    else
+        gOptions.removeLeadingHexZeroes = false;
+
     if ( GetRegValue( hKey, L"maxArrayElements", &val ) == S_OK )
         gOptions.maxArrayElements = val;
     else
@@ -218,6 +228,8 @@ bool readMagoOptions()
 
     MagoEE::gShowVTable = gOptions.showVTable;
     MagoEE::gMaxArrayLength = gOptions.maxArrayElements;
+    MagoEE::gHideReferencePointers = gOptions.hideReferencePointers;
+    MagoEE::gRemoveLeadingHexZeroes = gOptions.removeLeadingHexZeroes;
 
     RegCloseKey( hKey );
     return true;
