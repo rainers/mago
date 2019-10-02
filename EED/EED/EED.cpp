@@ -214,7 +214,7 @@ namespace MagoEE
             if ( ntype == NULL || ntype->GetBackingTy() == Tvoid )
                  return E_FAIL;
 
-            if ( ntype->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() || ntype->AsTypeStruct() )
+            if ( ntype->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() )
             {
                 pointeeObj.ObjVal._Type = ntype;
                 pointeeObj.ObjVal.Addr = pparentVal->ObjVal.Value.Addr;
