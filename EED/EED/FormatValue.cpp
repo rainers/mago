@@ -476,11 +476,11 @@ namespace MagoEE
                 return hr;
 
             std::wstring elemStr;
-            hr = FormatValue( binder, elementObj, fmtopt, elemStr, kMaxFormatValueLength - maxLength );
+            hr = FormatValue( binder, elementObj, fmtopt, elemStr, kMaxFormatValueLength - outStr.length() );
             if ( FAILED( hr ) )
                 return hr;
 
-            if ( outStr.length() > 1 )
+            if ( i > 0 )
                 outStr.append( L", " );
             outStr.append( elemStr );
         }
