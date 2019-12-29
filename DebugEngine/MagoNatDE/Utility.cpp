@@ -328,6 +328,11 @@ static uint32_t Get16bits( const uint8_t* x )
     return *(uint16_t*) x;
 }
 
+static uint32_t Get32bits( const uint8_t* x )
+{
+    return *(uint32_t*) x;
+}
+
 template <class T>
 T HashOf( const void* buffer, T length )
 {
@@ -386,6 +391,56 @@ T HashOf( const void* buffer, T length )
 
     return hash;
 }
+
+uint32_t MurmurHashOf( const void* bytes, uint32_t length, uint32_t seed )
+{
+    auto len = length;
+    auto data = (uint8_t*) bytes;
+    auto nblocks = len / 4;
+
+    uint32_t h1 = seed;
+
+    const uint32_t c1 = 0xcc9e2d51;
+    const uint32_t c2 = 0x1b873593;
+    const uint32_t c3 = 0xe6546b64;
+
+    //----------
+    // body
+    auto end_data = data + nblocks * 4;
+    for ( ; data != end_data; data += 4 )
+    {
+        uint32_t k1 = Get32bits( data );
+        k1 *= c1;
+        k1 = (k1 << 15) | (k1 >> (32 - 15));
+        k1 *= c2;
+
+        h1 ^= k1;
+        h1 = (h1 << 13) | (h1 >> (32 - 13));
+        h1 = h1 * 5 + c3;
+    }
+
+    //----------
+    // tail
+    uint32_t k1 = 0;
+
+    switch (len & 3)
+    {
+    case 3: k1 ^= data[2] << 16; // fall through
+    case 2: k1 ^= data[1] << 8;  // fall through
+    case 1: k1 ^= data[0];
+            k1 *= c1; k1 = (k1 << 15) | (k1 >> (32 - 15)); k1 *= c2; h1 ^= k1;
+    }
+
+    //----------
+    // finalization
+    h1 ^= len;
+    // Force all bits of the hash block to avalanche.
+    h1 = (h1 ^ (h1 >> 16)) * 0x85ebca6b;
+    h1 = (h1 ^ (h1 >> 13)) * 0xc2b2ae35;
+    h1 ^= h1 >> 16;
+    return h1;
+}
+
 
 uint32_t HashOf32( const void* buffer, uint32_t length )
 {

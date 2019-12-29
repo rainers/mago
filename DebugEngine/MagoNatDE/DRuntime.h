@@ -27,7 +27,7 @@ namespace Mago
         IDebuggerProxy*         mDebugger;
         RefPtr<ICoreProcess>    mCoreProc;
         int                     mPtrSize;
-        int                     mAAVersion;
+        int                     mAAVersion; // -1: unknown, 0: until dmd 2.067, 1: until dmd 2.081 (open addressing), 2: new hash function
         Address64               mClassInfoVtblAddr;
 
         struct ClassNameCache

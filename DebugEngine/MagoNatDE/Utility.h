@@ -161,6 +161,7 @@ bool EqualValue( MagoEE::Type* type, const MagoEE::DataValue& left, const MagoEE
 
 uint32_t HashOf32( const void* buffer, uint32_t length );
 uint64_t HashOf64( const void* buffer, uint32_t length );
+uint32_t MurmurHashOf( const void* bytes, uint32_t length, uint32_t seed );
 
 
 struct HeapDeleter

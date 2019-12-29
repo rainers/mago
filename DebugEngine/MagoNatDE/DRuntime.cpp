@@ -131,6 +131,8 @@ namespace Mago
 
     uint64_t DRuntime::DHashOf( const void* buffer, uint32_t length )
     {
+        if ( mAAVersion > 1 )
+            return MurmurHashOf( buffer, length, 0 );
         if ( mPtrSize == 4 )
             return HashOf32( buffer, length );
         else
@@ -337,8 +339,9 @@ namespace Mago
         }
         else
         {
-            if ( elemType->IsBasic() && elemType->IsChar() && (elemType->GetSize() == 1) )
+            if ( mAAVersion <= 1 && elemType->IsBasic() && elemType->IsChar() && (elemType->GetSize() == 1) )
             {
+                // used until dmd 2.081
                 hash = 0;
 
                 for ( uint32_t i = 0; i < key.Value.Array.Length; i++ )
@@ -505,9 +508,9 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        if ( mAAVersion != 1 && ( (bb.b.ptr == 0) || (bb.b.length == 0) ) )
+        if ( mAAVersion < 1 && ( (bb.b.ptr == 0) || (bb.b.length == 0) ) )
             return E_FAIL;
-        if ( mAAVersion == 1 && ( (bb_v1.buckets.ptr == 0) || (bb_v1.buckets.length == 0) ) )
+        if ( mAAVersion >= 1 && ( (bb_v1.buckets.ptr == 0) || (bb_v1.buckets.length == 0) ) )
             return E_FAIL;
 
         if ( key._Type->AsTypeStruct() != NULL )
@@ -530,7 +533,7 @@ namespace Mago
                 return hr;
         }
 
-        if ( mAAVersion == 1 )
+        if ( mAAVersion >= 1 )
             hr = FindValue_V1( bb_v1, hash, key, keyBuf.Ref(), valueAddr );
         else
             hr = FindValue( bb, hash, key, keyBuf.Ref(), valueAddr );
@@ -781,7 +784,7 @@ namespace Mago
             BB32    bb32;
             BB32_V1 bb32_v1;
 
-            if ( mAAVersion == 1 )
+            if ( mAAVersion >= 1 )
                 hr = ReadMemory( address, sizeof bb32_v1, &bb32_v1 );
             else
                 hr = ReadMemory( address, sizeof bb32, &bb32 );
@@ -792,7 +795,7 @@ namespace Mago
             {
                 if ( bb32.b.length > 4 && ( bb32.b.length & ( bb32.b.length - 1 ) ) == 0 )
                 {
-                    mAAVersion = 1; // power of 2 indicates new AA
+                    mAAVersion = 2; // power of 2 indicates new AA, default to new hash function
                     hr = ReadMemory( address, sizeof bb32_v1, &bb32_v1 );
                     if ( FAILED( hr ) )
                         return hr;
@@ -804,7 +807,7 @@ namespace Mago
                 }
             }
 
-            if ( mAAVersion == 1 )
+            if ( mAAVersion >= 1 )
             {
                 bb_v1.buckets.length = bb32_v1.buckets.length;
                 bb_v1.buckets.ptr = bb32_v1.buckets.ptr;
@@ -833,7 +836,7 @@ namespace Mago
         }
         else
         {
-            if ( mAAVersion == 1 )
+            if ( mAAVersion >= 1 )
                 hr = ReadMemory( address, sizeof bb_v1, &bb_v1 );
             else
                 hr = ReadMemory( address, sizeof bb, &bb );
@@ -845,7 +848,7 @@ namespace Mago
             {
                 if ( bb.b.length > 4 && ( bb.b.length & ( bb.b.length - 1 ) ) == 0 )
                 {
-                    mAAVersion = 1; // power of 2 indicates new AA
+                    mAAVersion = 2; // power of 2 indicates new AA, default to new hash function
                     hr = ReadMemory( address, sizeof bb_v1, &bb_v1 );
                     if ( FAILED( hr ) )
                         return hr;

@@ -487,15 +487,35 @@ namespace Mago
         {
             Address64 addr;
             uint32_t read, unreadable, ver;
-            if ( FindGlobalSymbolAddress( mod, "__aaVersion", addr ) )
+
+            auto findSymbol = [&]( const char* sym )
             {
+                // try removing undescores for 32-bit/64-bit versions of the symbols
+                for ( ; ; sym++ )
+                {
+                    if ( FindGlobalSymbolAddress( mod, sym, addr ) )
+                        return true;
+                    if ( sym[0] != '_' )
+                        return false;
+                }
+            };
+            if ( findSymbol( "__aaVersion" ) )
+            {
+                // unfortunately "__aaVersion" doesn't make it into the excutable
                 if ( mDebugger->ReadMemory( mCoreProc, addr, 4, read, unreadable, (uint8_t*) &ver ) == S_OK )
                     mDRuntime->SetAAVersion( ver );
             }
-            else if ( FindGlobalSymbolAddress( mod, "_D2rt3aaA11fakeEntryTIFxC8TypeInfoxC8TypeInfoZC15TypeInfo_Struct", addr ) )
-                mDRuntime->SetAAVersion( 1 );
-
-            if ( FindGlobalSymbolAddress( mod, "_D14TypeInfo_Class6__vtblZ", addr ) )
+            else if ( findSymbol( "__D2rt3aaA11fakeEntryTIFxC8TypeInfoxC8TypeInfoZC15TypeInfo_Struct" )
+                   || findSymbol( "__D2rt3aaA11fakeEntryTIFxC8TypeInfoxQlZC15TypeInfo_Struct" ) ) // compressed mangled symbol introduced with dmd 2.077
+            {
+                if ( findSymbol(  "_D2rt4util4hash6hashOfFNaNbNiNeAxvmZ9get16bitsFNaNbNiPxhZk" )    // 64-bit
+                  || findSymbol( "__D2rt4util4hash6hashOfFNaNbNiNeAxvkZ9get16bitsFNaNbNiPxhZk" ) ) // 32-bit
+                    mDRuntime->SetAAVersion( 1 ); // old hash function based on 16 bit words
+                else
+                    mDRuntime->SetAAVersion( 2 ); // murmur hash function
+            }
+            
+            if ( findSymbol( "__D14TypeInfo_Class6__vtblZ" ) )
                 mDRuntime->SetClassInfoVtblAddr( addr );
         }
     }
