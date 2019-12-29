@@ -254,6 +254,9 @@ static Mago::ProcFeaturesX86 toMago(DefaultPort::DkmProcessorFeatures::e feature
 EXTERN_C const GUID DECLSPEC_SELECTANY guidIDiaSession =
 { 0x2F609EE1, 0xD1C8, 0x4E24, { 0x82, 0x88, 0x33, 0x26, 0xBA, 0xDC, 0xD2, 0x11 } };
 
+EXTERN_C const GUID DECLSPEC_SELECTANY guidIDiaSession2013 =
+{ 0x6FC5D63F, 0x011E, 0x40C2, { 0x8D, 0xD2, 0xE6, 0x48, 0x6E, 0x9D, 0x6B, 0x68 } };
+
 class DECLSPEC_UUID("598DECC9-CF79-4E90-A408-5E1433B4DBFF") CCModule : public CCDataItem<CCModule>
 {
     friend class CCExprContext;
@@ -286,7 +289,7 @@ public:
 
         CComPtr<IDiaSession> diasession;
         if (module->GetSymbolInterface(guidIDiaSession, (IUnknown**)&diasession) != S_OK) // VS 2015
-            if (HRESULT hr = module->GetSymbolInterface(__uuidof(IDiaSession), (IUnknown**)&diasession)) // VS2013
+            if (HRESULT hr = module->GetSymbolInterface(guidIDiaSession2013, (IUnknown**)&diasession)) // VS2013
                 return hr;
 
         auto features = toMago(system->ProcessorFeatures());
