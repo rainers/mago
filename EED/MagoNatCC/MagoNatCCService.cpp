@@ -1434,7 +1434,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetChildren(
     tryHR(Evaluation::DkmEvaluationResultEnumContext::Create(count, successResult->StackFrame(),
                                                              pInspectionContext, pEnum.Get(), &pEnumContext));
 
-    if (InitialRequestSize < count)
+    if (InitialRequestSize > count)
         InitialRequestSize = count;
     Evaluation::DkmGetChildrenAsyncResult result = { 0 };
     result.ErrorCode = S_OK;
