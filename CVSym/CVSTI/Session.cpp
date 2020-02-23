@@ -104,7 +104,7 @@ namespace MagoST
         return mStore->FindNextSymbol( handle );
     }
 
-    HRESULT Session::GetCurrentSymbol(const EnumNamedSymbolsData& searchHandle, SymHandle& handle)
+    HRESULT Session::GetCurrentSymbol( const EnumNamedSymbolsData& searchHandle, SymHandle& handle )
     {
         return mStore->GetCurrentSymbol(searchHandle, handle);
     }
@@ -119,12 +119,12 @@ namespace MagoST
         HRESULT hr = S_OK;
 
         MagoST::EnumNamedSymbolsData enumData = { 0 };
-
-        hr = FindFirstSymbol( MagoST::SymHeap_GlobalSymbols, symbol, strlen( symbol ), enumData );
+        size_t len = strlen( symbol );
+        hr = FindFirstSymbol( MagoST::SymHeap_GlobalSymbols, symbol, len, enumData );
         if (hr != S_OK)
-            hr = FindFirstSymbol( MagoST::SymHeap_StaticSymbols, symbol, strlen( symbol ), enumData );
+            hr = FindFirstSymbol( MagoST::SymHeap_StaticSymbols, symbol, len, enumData );
         if (hr != S_OK)
-            hr = FindFirstSymbol( MagoST::SymHeap_PublicSymbols, symbol, strlen( symbol ), enumData );
+            hr = FindFirstSymbol( MagoST::SymHeap_PublicSymbols, symbol, len, enumData );
         if (hr != S_OK)
             return hr;
 

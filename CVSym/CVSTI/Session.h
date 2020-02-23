@@ -14,6 +14,7 @@ namespace MagoST
 {
     class DataSource;
     class DebugStore;
+    class IDebugStore;
     class IAddressMap;
 
 

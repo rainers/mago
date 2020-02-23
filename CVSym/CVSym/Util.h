@@ -12,6 +12,8 @@
 union CodeViewFieldType;
 union CodeViewSymbol;
 
+struct SymString;
+
 namespace MagoST
 {
     struct Variant;
