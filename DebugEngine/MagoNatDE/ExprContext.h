@@ -68,6 +68,7 @@ namespace Mago
         virtual HRESULT GetThis( MagoEE::Declaration*& decl );
         virtual HRESULT GetSuper( MagoEE::Declaration*& decl );
         virtual HRESULT GetReturnType( MagoEE::Type*& type );
+        virtual HRESULT NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl );
 
         virtual HRESULT GetValue( 
             MagoEE::Declaration* decl, 

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace MagoEE
 {
@@ -123,6 +124,7 @@ namespace MagoEE
         virtual HRESULT GetThis( Declaration*& decl ) = 0;
         virtual HRESULT GetSuper( Declaration*& decl ) = 0;
         virtual HRESULT GetReturnType( Type*& type ) = 0;
+        virtual HRESULT NewTuple( const wchar_t* name, const std::vector<RefPtr<Declaration>>& decls, Declaration*& decl ) = 0;
 
         virtual HRESULT GetValue( Declaration* decl, DataValue& value ) = 0;
         virtual HRESULT GetValue( Address addr, Type* type, DataValue& value ) = 0;

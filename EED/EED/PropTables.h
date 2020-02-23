@@ -21,6 +21,7 @@ namespace MagoEE
     StdProperty* FindFloatProperty( const wchar_t* name );
     StdProperty* FindDArrayProperty( const wchar_t* name );
     StdProperty* FindSArrayProperty( const wchar_t* name );
+    StdProperty* FindTupleProperty( const wchar_t* name );
     StdProperty* FindDelegateProperty( const wchar_t* name );
     StdProperty* FindFieldProperty( const wchar_t* name );
 }

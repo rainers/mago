@@ -52,6 +52,7 @@ struct MagoOptions
     bool expandableStrings;
     bool hideReferencePointers;
     bool removeLeadingHexZeroes;
+    bool recombineTuples;
     int  maxArrayElements;
 };
 

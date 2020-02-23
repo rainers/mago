@@ -1334,6 +1334,153 @@ namespace Mago
     }
 
 //----------------------------------------------------------------------------
+//  TupleDecl
+//----------------------------------------------------------------------------
+
+    TupleDecl::TupleDecl( const wchar_t* name, MagoEE::TypeTuple* tt, MagoEE::ITypeEnv* typeEnv )
+        :   mRefCount( 0 ),
+            mName( name ),
+            mType( tt ),
+            mTypeEnv( typeEnv )
+    {
+    }
+
+    void TupleDecl::AddRef()
+    {
+        InterlockedIncrement( &mRefCount );
+    }
+
+    void TupleDecl::Release()
+    {
+        long    newRef = InterlockedDecrement( &mRefCount );
+        _ASSERT( newRef >= 0 );
+        if ( newRef == 0 )
+        {
+            delete this;
+        }
+    }
+
+    MagoEE::Declaration* TupleDecl::firstField()
+    {
+        return mType->GetElementDecl( 0 );
+    }
+
+    const wchar_t* TupleDecl::GetName()
+    {
+        return mName.data();
+    }
+
+    bool TupleDecl::GetType( MagoEE::Type*& type )
+    {
+        type = mType;
+        type->AddRef();
+
+        return true;
+    }
+
+    bool TupleDecl::GetAddress( MagoEE::Address& addr )
+    {
+        return firstField()->GetAddress( addr );
+    }
+
+    bool TupleDecl::GetOffset( int& offset )
+    {
+        offset = 0; // fields have offsets relativ to the outer struct
+        return true;
+    }
+
+    bool TupleDecl::GetSize( uint32_t& size )
+    {
+        return false;
+    }
+
+    bool TupleDecl::GetBackingTy( MagoEE::ENUMTY& ty )
+    {
+        return false;
+    }
+
+    bool TupleDecl::GetUdtKind( MagoEE::UdtKind& kind )
+    {
+        return false;
+    }
+
+    bool TupleDecl::GetBaseClassOffset( Declaration* baseClass, int& offset )
+    {
+        return false;
+    }
+
+    bool TupleDecl::GetVTableShape( Declaration*& decl )
+    {
+        return false;
+    }
+
+    bool TupleDecl::GetVtblOffset( int& offset )
+    {
+        return false;
+    }
+
+    bool TupleDecl::IsField()
+    {
+        return firstField()->IsField();
+    }
+
+    bool TupleDecl::IsStaticField()
+    {
+        return firstField()->IsStaticField();
+    }
+
+    bool TupleDecl::IsVar() 
+    {
+        return firstField()->IsVar();
+    }
+
+    bool TupleDecl::IsConstant()
+    {
+        return firstField()->IsConstant();
+    }
+
+    bool TupleDecl::IsType()
+    {
+        return firstField()->IsType();
+    }
+
+    bool TupleDecl::IsBaseClass()
+    {
+        return false;
+    }
+
+    bool TupleDecl::IsRegister()
+    {
+        return false;
+    }
+
+    bool TupleDecl::IsFunction()
+    {
+        return false;
+    }
+
+    bool TupleDecl::IsStaticFunction()
+    {
+        return false;
+    }
+
+
+    HRESULT TupleDecl::FindObject( const wchar_t* name, Declaration*& decl )
+    {
+        return E_NOT_FOUND;
+    }
+
+    bool TupleDecl::EnumMembers( MagoEE::IEnumDeclarationMembers*& members )
+    {
+        return false;
+    }
+
+    HRESULT TupleDecl::FindObjectByValue( uint64_t intVal, Declaration*& decl )
+    {
+        return E_NOT_FOUND;
+    }
+
+//----------------------------------------------------------------------------
 //  RegisterCVDecl
 //----------------------------------------------------------------------------
 

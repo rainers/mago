@@ -74,6 +74,8 @@ namespace MagoEE
     extern bool gExpandableStrings;
     extern bool gHideReferencePointers;
     extern bool gRemoveLeadingHexZeroes;
+    extern bool gRecombineTuples;
+
     extern uint32_t gMaxArrayLength;
 
     HRESULT MakeTypeEnv( int ptrSize, ITypeEnv*& typeEnv );
@@ -94,4 +96,9 @@ namespace MagoEE
     void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr );
 
     HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr );
+
+    int GetTupleName( const char* sym, size_t len, std::wstring* tupleName = nullptr );
+    int GetTupleName( const wchar_t* sym, std::wstring* tupleName = nullptr );
+
+    std::wstring to_wstring( const char* str, size_t slen );
 }

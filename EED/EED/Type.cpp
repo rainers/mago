@@ -252,6 +252,11 @@ namespace MagoEE
         return NULL;
     }
 
+    ITypeTuple* Type::AsTypeTuple()
+    {
+        return NULL;
+    }
+
     Type* Type::Unaliased()
     {
         return this;
@@ -963,6 +968,95 @@ namespace MagoEE
         return Next;
     }
 
+    //----------------------------------------------------------------------------
+    //  TypeTuple
+    //----------------------------------------------------------------------------
+
+    TypeTuple::TypeTuple( const std::vector<RefPtr<Declaration>>& fields )
+        : Type( Ttuple ),
+          mFields( fields )
+    {
+    }
+
+    RefPtr<Type> TypeTuple::Copy()
+    {
+        RefPtr<Type> type = new TypeTuple( mFields );
+        return type;
+    }
+
+    uint32_t TypeTuple::GetSize()
+    {
+        uint32_t s = 0;
+        for( auto& f : mFields )
+        {
+            RefPtr<Type> type;
+            if( SUCCEEDED( f->GetType( type.Ref() ) ) )
+                s += type->GetSize();
+        }
+        return s;
+    }
+
+    bool TypeTuple::Equals( Type* other )
+    {
+        if ( other->Ty != Ttuple )
+            return false;
+
+        ITypeTuple* tpl = other->AsTypeTuple();
+        if( tpl->GetLength() != mFields.size() )
+            return false;
+
+        uint32_t i = 0;
+        for ( auto& f : mFields )
+        {
+            RefPtr<Type> type;
+            if( SUCCEEDED( f->GetType( type.Ref() ) ) )
+                if ( !type->Equals( tpl->GetElementType( i ) ) )
+                    return false;
+            i++;
+        }
+        return true;
+    }
+
+    void TypeTuple::_ToString( std::wstring& str )
+    {
+        str.append( L"tuple!(" );
+        auto len = str.length();
+        for ( auto& f : mFields )
+        {
+            RefPtr<Type> type;
+            if ( SUCCEEDED( f->GetType( type.Ref() ) ) )
+            {
+                if( str.length() > len )
+                    str.append(L",");
+                type->ToString( str );
+            }
+        }
+        str.append(L")");
+    }
+
+    ITypeTuple* TypeTuple::AsTypeTuple()
+    {
+        return this;
+    }
+
+    uint32_t    TypeTuple::GetLength()
+    {
+        return mFields.size();
+    }
+
+    Declaration* TypeTuple::GetElementDecl( uint32_t idx )
+    {
+        return mFields[idx];
+    }
+
+    Type* TypeTuple::GetElementType( uint32_t idx )
+    {
+        RefPtr<Type> type;
+        if( FAILED( mFields[idx]->GetType( type.Ref() ) ) )
+            return nullptr;
+        return type;
+    }
+
 
     //----------------------------------------------------------------------------
     //  TypeFunction
@@ -1493,6 +1587,15 @@ namespace MagoEE
     StdProperty* TypeSArray::FindProperty( const wchar_t* name )
     {
         StdProperty*    prop = FindSArrayProperty( name );
+        if ( prop != NULL )
+            return prop;
+
+        return Type::FindProperty( name );
+    }
+
+    StdProperty* TypeTuple::FindProperty( const wchar_t* name )
+    {
+        StdProperty*    prop = FindTupleProperty( name );
         if ( prop != NULL )
             return prop;
 

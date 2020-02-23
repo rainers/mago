@@ -823,6 +823,33 @@ namespace MagoEE
         return true;
     }
 
+    //------------------------------------------------------------------------
+    //  Tuple
+    //------------------------------------------------------------------------
+
+    bool PropertyTupleLength::GetType( ITypeEnv* typeEnv, Type* parentType, Declaration* parentDecl, Type*& type )
+    {
+        UNREFERENCED_PARAMETER(parentDecl);
+
+        if ( (parentType == NULL) || !parentType->AsTypeTuple() )
+            return false;
+
+        type = typeEnv->GetAliasType( Tsize_t );
+        type->AddRef();
+        return true;
+    }
+
+    bool PropertyTupleLength::GetValue( Type* parentType, Declaration* parentDecl, DataValue& result )
+    {
+        UNREFERENCED_PARAMETER(parentDecl);
+
+        if ( (parentType == NULL) || !parentType->AsTypeTuple() )
+            return false;
+
+        result.UInt64Value = parentType->AsTypeTuple()->GetLength();
+        return true;
+    }
+
 
     //------------------------------------------------------------------------
     //  Delegate

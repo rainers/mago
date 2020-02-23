@@ -90,6 +90,8 @@ namespace MagoEE
     bool gExpandableStrings = true;
     bool gHideReferencePointers = true;
     bool gRemoveLeadingHexZeroes = false;
+    bool gRecombineTuples = true;
+
     uint32_t gMaxArrayLength = 1000;
 
     HRESULT Init()
@@ -249,6 +251,10 @@ namespace MagoEE
         {
             en = new EEDEnumStruct();
         }
+        else if ( pparentVal->ObjVal._Type->AsTypeTuple() )
+        {
+            en = new EEDEnumTuple();
+        }
         else
             return E_FAIL;
 
@@ -286,7 +292,7 @@ namespace MagoEE
             {
                 // some types just don't allow assignment
             }
-            else if (pparentVal->Addr != 0 )
+            else if ( pparentVal->Addr != 0 )
             {
                 result.ReadOnly = false;
             }
@@ -384,6 +390,10 @@ namespace MagoEE
                     result.HasChildren = result.HasRawChildren = hasVTable || hasChildren || hasDynamicClass;
                 }
             }
+            else if ( ITypeTuple* tt = type->AsTypeTuple() )
+            {
+                result.HasChildren = result.HasRawChildren = tt->GetLength() > 0;
+            }
         }
     }
 
@@ -439,4 +449,61 @@ namespace MagoEE
         return S_OK;
     }
 
+    ///////////////////////////////////////////////////////////
+    std::wstring to_wstring( const wchar_t* str, size_t len )
+    {
+        return std::wstring( str, len );
+    }
+    
+    std::wstring to_wstring( const char* str, size_t slen )
+    {
+        int len = MultiByteToWideChar( CP_UTF8, 0, str, slen, NULL, 0 );
+        std::wstring wname;
+        wname.resize( len );
+        MultiByteToWideChar( CP_UTF8, 0, str, slen, (wchar_t*)wname.data(), len );
+        return wname;
+    }
+    
+    template<typename CH>
+    static int t_isfield( const CH* str )
+    {
+        for (int i = 0; i < 7; i++)
+            if (str[i] != "_field_"[i])
+                return false;
+        return true;
+    }
+    
+    // return field index
+    template<typename CH>
+    int t_GetTupleName( const CH* str, size_t len, std::wstring* tupleName )
+    {
+        // detect tuple field "__%s_field_%llu"
+        if( len < 10 )
+            return -1;
+    
+        if( str[0] != '_' || str[1] != '_' || !isdigit( str[len - 1] ) )
+            return -1;
+    
+        int index = 0;
+        for( ; len > 0 && isdigit( str[len-1] ); --len )
+            index = index * 10 + str[len - 1] - '0';
+        
+        if ( len < 7 || !t_isfield( str + len - 7 ) )
+            return -1;
+    
+        if( tupleName )
+            *tupleName = to_wstring( str + 2, len - 9 );
+    
+        return index;
+    }
+    
+    int GetTupleName( const char* sym, size_t len, std::wstring* tupleName )
+    {
+        return t_GetTupleName( sym, len, tupleName );
+    }
+    
+    int GetTupleName( const wchar_t* sym, std::wstring* tupleName )
+    {
+        return t_GetTupleName( sym, wcslen( sym ), tupleName );
+    }
 }

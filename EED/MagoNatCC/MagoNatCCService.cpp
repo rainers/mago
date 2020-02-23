@@ -395,7 +395,7 @@ public:
         if (!symInfo->GetName(pstrName))
             return E_FAIL;
 
-        symName = SymStringToWString(pstrName);
+        symName = MagoEE::to_wstring(pstrName.GetName(), pstrName.GetLength());
         return S_OK;
     }
 

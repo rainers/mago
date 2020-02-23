@@ -559,6 +559,56 @@ namespace MagoEE
         return FormatAddress( addr, type, outStr );
     }
 
+    HRESULT FormatTuple( IValueBinder* binder, const DataObject& objVal, ITypeTuple* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    {
+        if ( type == NULL )
+            return E_FAIL;
+
+        auto length = type->GetLength();
+        outStr.append( L"(" );
+        for ( uint64_t i = 0; i < length; i++ )
+        {
+            if ( outStr.length() >= maxLength )
+            {
+                outStr.append( L", ..." );
+                break;
+            }
+
+            Declaration* decl = type->GetElementDecl( i );
+            Address addr;
+            int offset = 0;
+            if ( decl->IsField() )
+            {
+                addr = objVal._Type->IsReference() ? objVal.Value.Addr : objVal.Addr;
+                if (addr == 0)
+                    return E_MAGOEE_NO_ADDRESS;
+                if ( !decl->GetOffset( offset ) )
+                    return E_FAIL;
+            }
+            else if ( !decl->GetAddress( addr ) || addr == 0 )
+                return E_MAGOEE_NO_ADDRESS;
+
+            DataObject elementObj;
+            elementObj._Type = type->GetElementType( i );
+            elementObj.Addr = addr + offset;
+
+            HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
+            if ( FAILED( hr ) )
+                return hr;
+
+            std::wstring elemStr;
+            hr = FormatValue( binder, elementObj, fmtopt, elemStr, kMaxFormatValueLength - outStr.length() );
+            if ( FAILED( hr ) )
+                return hr;
+
+            if ( i > 0 )
+                outStr.append( L", " );
+            outStr.append( elemStr );
+        }
+        outStr.append( L")" );
+        return S_OK;
+    }
+
     HRESULT _FormatStruct( IValueBinder* binder, Address addr, const char* srcBuf, Type* type,
                            const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
@@ -574,13 +624,46 @@ namespace MagoEE
             return E_INVALIDARG;
 
         outStr.append( L"{" );
+        RefPtr<Declaration> next;
         for ( ; ; )
         {
             RefPtr<Declaration> member;
-            if ( !members->Next( member.Ref() ) )
+            if ( next )
+                member.Ref() = next.Detach(); // move
+            else if ( !members->Next( member.Ref() ) )
                 break;
             if ( member->IsBaseClass() || member->IsStaticField() )
                 continue;
+
+            if (gRecombineTuples)
+            {
+                std::wstring tplname;
+                const wchar_t* tname = member->GetName();
+                int tplidx = GetTupleName( tname, &tplname );
+                if ( tplidx > 0 )
+                    continue;
+                if ( tplidx == 0 )
+                {
+                    std::vector<RefPtr<Declaration>> fields;
+                    fields.push_back( member );
+                    member.Detach();
+                    while ( members->Next( member.Ref() ) )
+                    {
+                        tname = member->GetName();
+                        tplidx = GetTupleName( tname );
+                        if ( tplidx > 0 )
+                            fields.push_back( member );
+                        else
+                            next = member;
+                        member.Release();
+                        if ( tplidx <= 0 )
+                            break;
+                    }
+                    hr = binder->NewTuple( tplname.data(), fields, member.Ref() );
+                    if ( FAILED( hr ) )
+                        return hr;
+                }
+            }
 
             if ( outStr.length () > maxLength )
             {
@@ -974,6 +1057,10 @@ namespace MagoEE
         else if ( type->IsAArray() )
         {
             hr = FormatAArray( objVal.Value.Addr, objVal._Type, fmtopt, outStr );
+        }
+        else if ( auto tt = type->AsTypeTuple() )
+        {
+            hr = FormatTuple( binder, objVal, tt, fmtopt, outStr, maxLength );
         }
         else if ( type->AsTypeStruct() )
         {

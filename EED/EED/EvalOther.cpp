@@ -8,6 +8,7 @@
 // Other: ID, member, index, ...
 
 #include "Common.h"
+#include "EED.h"
 #include "Expression.h"
 #include "Declaration.h"
 #include "Type.h"
@@ -315,33 +316,23 @@ namespace MagoEE
 
         Type*   childType = Child->_Type;
         if ( !childType->IsPointer() && !childType->IsSArray() && !childType->IsDArray()
-            && !childType->IsAArray() )
+            && !childType->IsAArray() && !childType->AsTypeTuple() )
             return E_MAGOEE_BAD_INDEX;
 
         if ( childType->IsReference() )
             return E_MAGOEE_BAD_INDEX;
 
-        ITypeNext*  typeNext = Child->_Type->AsTypeNext();
-        _ASSERT( typeNext != NULL );
-        if ( typeNext->GetNext() == NULL )
-            return E_MAGOEE_BAD_INDEX;
-
-        RefPtr<Type>    voidType = typeEnv->GetType( Tvoid );
-        if ( typeNext->GetNext()->Equals( voidType ) )
-            return E_MAGOEE_BAD_TYPES_FOR_OP;
-
         if ( Args->List.size() != 1 )
             return E_MAGOEE_BAD_INDEX;
 
         Expression* index = Args->List.front();
-        {
-            EvalData    indexData = evalData;
+        EvalData    indexData = evalData;
 
-            if ( childType->IsSArray() || childType->IsDArray() )
-                indexData.HasArrayLength = true;
+        if ( childType->IsSArray() || childType->IsDArray() || childType->AsTypeTuple() )
+            indexData.HasArrayLength = true;
 
-            hr = index->Semantic( indexData, typeEnv, binder );
-        }
+        hr = index->Semantic( indexData, typeEnv, binder );
+
         if ( FAILED( hr ) )
             return hr;
         if ( index->Kind != DataKind_Value )
@@ -356,10 +347,36 @@ namespace MagoEE
 
             index->TrySetType( childType->AsTypeAArray()->GetIndex() );
         }
-        else if ( !index->_Type->IsIntegral() )
+        else if ( !index->_Type->IsIntegral() && !childType->AsTypeTuple() )
             return E_MAGOEE_BAD_INDEX;
 
-        _Type = typeNext->GetNext();
+        if( auto tt = childType->AsTypeTuple() )
+        {
+            // index must be compile time constant
+            DataObject indexObj = { 0 };
+            indexData.ArrayLength = tt->GetLength();
+            hr = index->Evaluate( EvalMode_Value, indexData, binder, indexObj );
+            if ( FAILED( hr ) )
+                return hr;
+
+            int64_t idx = indexObj.Value.Int64Value;
+            if( idx < 0 || idx >= tt->GetLength() )
+                return E_MAGOEE_BAD_INDEX;
+            _Type = tt->GetElementType( (uint32_t)idx );
+        }
+        else
+        {
+            ITypeNext* typeNext = Child->_Type->AsTypeNext();
+            _ASSERT( typeNext != NULL );
+            if ( typeNext->GetNext() == NULL )
+                return E_MAGOEE_BAD_INDEX;
+
+            RefPtr<Type> voidType = typeEnv->GetType( Tvoid );
+            if ( typeNext->GetNext()->Equals( voidType ) )
+                return E_MAGOEE_BAD_TYPES_FOR_OP;
+
+            _Type = typeNext->GetNext();
+        }
         Kind = DataKind_Value;
         return S_OK;
     }
@@ -396,6 +413,11 @@ namespace MagoEE
             indexData.ArrayLength = array.Value.Array.Length;
             array.Value.Addr = array.Value.Array.Addr;
         }
+        else if ( auto tt = Child->_Type->AsTypeTuple() )
+        {
+            indexData.HasArrayLength = true;
+            indexData.ArrayLength = tt->GetLength();
+        }
         else if ( Child->_Type->IsPointer() )
         // else if it's a pointer, then value already has address
             ;
@@ -412,13 +434,29 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        if ( Child->_Type->IsAArray() )
+        if ( auto taa = Child->_Type->AsTypeAArray() )
         {
-            hr = FindAAElement( array, index, Child->_Type->AsTypeAArray()->GetIndex(), binder, addr );
+            hr = FindAAElement( array, index, taa->GetIndex(), binder, addr );
             if ( hr == E_NOT_FOUND )
                 return E_MAGOEE_ELEMENT_NOT_FOUND;
             if ( FAILED( hr ) )
                 return hr;
+        }
+        else if ( auto tt = Child->_Type->AsTypeTuple() )
+        {
+            int64_t idx = index.Value.Int64Value;
+            if ( idx < 0 || idx >= tt->GetLength() )
+                return E_MAGOEE_BAD_INDEX;
+            auto elemDecl = tt->GetElementDecl( (uint32_t)idx );
+            if( elemDecl->IsField() )
+            {
+                int offset = 0;
+                if( !elemDecl->GetOffset( offset ) )
+                    return E_MAGOEE_NO_ADDRESS;
+                addr = array.Addr + offset;
+            }
+            else if ( !elemDecl->GetAddress( addr ) )
+                return E_MAGOEE_NO_ADDRESS;
         }
         else
         {
@@ -599,6 +637,34 @@ namespace MagoEE
         return S_OK;
     }
 
+    //----------------------------------------------------------------------------
+    template<typename FINDFN>
+    static HRESULT findTuple( const wchar_t* Id, IValueBinder* binder, Declaration*& decl, FINDFN find )
+    {
+        if( !gRecombineTuples )
+            return E_NOT_FOUND;
+
+        wchar_t field[300];
+        _snwprintf( field, 300, L"__%s_field_0", Id );
+        RefPtr<Declaration> first;
+        HRESULT hr = find( field, first.Ref() );
+        if ( FAILED( hr ) )
+            return hr;
+
+        std::vector<RefPtr<Declaration>> fields;
+        fields.push_back( first );
+
+        for (int i = 1; ; i++)
+        {
+            RefPtr<Declaration> fdecl;
+            _snwprintf( field, 300, L"__%s_field_%d", Id, i );
+            hr = find( field, fdecl.Ref() );
+            if ( FAILED( hr ) )
+                break;
+            fields.push_back( fdecl );
+        }
+        return binder->NewTuple( Id, fields, decl );
+    }
 
     //----------------------------------------------------------------------------
     //  IdExpr
@@ -614,7 +680,15 @@ namespace MagoEE
 
         hr = FindObject( Id->Str, binder, Decl.Ref() );
         if( FAILED( hr ) )
-            return hr;
+        {
+            hr = findTuple( Id->Str, binder, Decl.Ref(),
+                [&]( const wchar_t* id, Declaration*& decl )
+                {
+                    return FindObject( id, binder, decl );
+                });
+            if ( FAILED( hr ) )
+                return hr;
+        }
 
         Decl->GetType( _Type.Ref() );
 
@@ -801,6 +875,21 @@ namespace MagoEE
                 if ( t != NULL )
                 {
                     Decl = t->FindObject( Id->Str );
+                    if( !Decl )
+                    { 
+                        hr = findTuple(Id->Str, binder, Decl.Ref(),
+                            [&](const wchar_t* id, Declaration*& decl)
+                            {
+                                RefPtr<Declaration> iddecl = t->FindObject( id );
+                                if( !iddecl )
+                                    return E_NOT_FOUND;
+                                decl = iddecl.Detach();
+                                return S_OK;
+                            });
+                        if( FAILED( hr ) )
+                            return hr;
+                    }
+
                 }
             }
             else
@@ -810,6 +899,16 @@ namespace MagoEE
                 {
                     _ASSERT( namer->Decl != NULL );
                     namer->Decl->FindObject( Id->Str, Decl.Ref() );
+                    if( Decl == NULL )
+                    {
+                        hr = findTuple( Id->Str, binder, Decl.Ref(),
+                            [&](const wchar_t* id, Declaration*& decl)
+                            {
+                                return namer->Decl->FindObject( id, decl);
+                            });
+                        if (FAILED(hr))
+                            return hr;
+                    }
                 }
             }
         }

@@ -154,10 +154,39 @@ namespace MagoEE
         static HRESULT ReadBB( IValueBinder* binder, RefPtr<Type> type, Address address, int& AAVersion, BB64& BB );
     };
 
+    class EEDEnumTuple : public EEDEnumValues
+    {
+        uint32_t        mCountDone;
+
+    public:
+        EEDEnumTuple();
+
+        virtual HRESULT Init(
+            IValueBinder* binder,
+            const wchar_t* parentExprText,
+            const EvalResult& parentVal,
+            ITypeEnv* typeEnv,
+            NameTable* strTable);
+
+        virtual uint32_t GetCount();
+        virtual uint32_t GetIndex();
+        virtual void Reset();
+        virtual HRESULT Skip( uint32_t count );
+        virtual HRESULT Clone( IEEDEnumValues*& copiedEnum );
+
+        virtual HRESULT EvaluateNext( 
+            const EvalOptions& options, 
+            EvalResult& result, 
+            std::wstring& name, 
+            std::wstring& fullName );
+    };
+
 
     class EEDEnumStruct : public EEDEnumValues
     {
         uint32_t        mCountDone;
+        uint32_t        mMembersPos;
+        uint32_t        mHiddenFields;
         bool            mSkipHeadRef;
         bool            mHasVTable;
 

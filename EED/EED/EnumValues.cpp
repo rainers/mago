@@ -813,6 +813,134 @@ namespace MagoEE
         return FindNext();
     }
 
+    //------------------------------------------------------------------------
+    //  EEDEnumSArray
+    //------------------------------------------------------------------------
+
+    EEDEnumTuple::EEDEnumTuple()
+        : mCountDone( 0 )
+    {
+    }
+
+    HRESULT EEDEnumTuple::Init(
+        IValueBinder* binder,
+        const wchar_t* parentExprText,
+        const EvalResult& parentVal,
+        ITypeEnv* typeEnv,
+        NameTable* strTable)
+    {
+        HRESULT hr = EEDEnumValues::Init( binder, parentExprText, parentVal, typeEnv, strTable );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return S_OK;
+    }
+
+    uint32_t EEDEnumTuple::GetCount()
+    {
+        uint32_t count = mParentVal.ObjVal._Type->AsTypeTuple()->GetLength();
+        return count;
+    }
+
+    uint32_t EEDEnumTuple::GetIndex()
+    {
+        return mCountDone;
+    }
+
+    void EEDEnumTuple::Reset()
+    {
+        mCountDone = 0;
+    }
+
+    HRESULT EEDEnumTuple::Skip( uint32_t count )
+    {
+        if ( count > (GetCount() - mCountDone) )
+        {
+            mCountDone = GetCount();
+            return S_FALSE;
+        }
+
+        mCountDone += count;
+
+        return S_OK;
+    }
+
+    HRESULT EEDEnumTuple::Clone( IEEDEnumValues*& copiedEnum )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<EEDEnumTuple>  en = new EEDEnumTuple();
+
+        if ( en == NULL )
+            return E_OUTOFMEMORY;
+
+        hr = en->Init( mBinder, mParentExprText.c_str(), mParentVal, mTypeEnv, mStrTable );
+        if ( FAILED( hr ) )
+            return hr;
+
+        en->mCountDone = mCountDone;
+
+        copiedEnum = en.Detach();
+        return S_OK;
+    }
+
+    HRESULT EEDEnumTuple::EvaluateNext( 
+        const EvalOptions& options, 
+        EvalResult& result,
+        std::wstring& name,
+        std::wstring& fullName )
+    {
+        if ( mCountDone >= GetCount() )
+            return E_FAIL;
+
+        // 4294967295
+        const int   MaxIntStrLen = 10;
+        // "[indexInt]", and add some padding
+        const int   MaxIndexStrLen = MaxIntStrLen + 2 + 10;
+
+        wchar_t indexStr[ MaxIndexStrLen + 1 ] = L"";
+
+        swprintf_s( indexStr, L"[%d]", mCountDone );
+
+        name.clear();
+        name.append( indexStr );
+
+        bool isIdent = IsIdentifier( mParentExprText.data() );
+        fullName.clear();
+        if ( !isIdent )
+            fullName.append( L"(" );
+        fullName.append( mParentExprText );
+        if ( !isIdent )
+            fullName.append( L")" );
+        fullName.append( name );
+
+        uint32_t index = mCountDone++;
+
+        auto tt = mParentVal.ObjVal._Type->AsTypeTuple();
+        result.ObjVal._Type = tt->GetElementType( index );
+        Declaration* decl = tt->GetElementDecl( index );
+
+        Address addr;
+        if ( decl->IsField() )
+        {
+            int offset = 0;
+            if ( !decl->GetOffset( offset ) )
+                return E_MAGOEE_NO_ADDRESS;
+            addr = mParentVal.ObjVal.Addr + offset;
+        }
+        else if ( !decl->GetAddress( addr) )
+            return E_MAGOEE_NO_ADDRESS;
+        if ( addr == 0 )
+            return E_MAGOEE_NO_ADDRESS;
+
+        result.ObjVal.Addr = addr;
+        HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+        if ( FAILED( hr ) )
+            return hr;
+
+        FillValueTraits( mBinder, result, nullptr );
+        return S_OK;
+    }
+
 
     //------------------------------------------------------------------------
     //  EEDEnumStruct
@@ -820,6 +948,8 @@ namespace MagoEE
 
     EEDEnumStruct::EEDEnumStruct( bool skipHeadRef )
         :   mCountDone( 0 ),
+            mMembersPos( 0 ),
+            mHiddenFields( 0 ),
             mSkipHeadRef( skipHeadRef ),
             mHasVTable( false )
     {
@@ -878,7 +1008,18 @@ namespace MagoEE
                 mHasVTable = decl->GetVTableShape( vshape.Ref() ) && vshape;
             }
         }
-
+        if( gRecombineTuples )
+        {
+            RefPtr<Declaration> decl;
+            while ( members->Next( decl.Ref() ) )
+            {
+                auto name = decl->GetName();
+                if( GetTupleName( name ) > 0 )
+                    mHiddenFields++;
+                decl.Release();
+            }
+            members->Reset();
+        }
         mMembers = members;
 
         return S_OK;
@@ -886,7 +1027,7 @@ namespace MagoEE
 
     uint32_t EEDEnumStruct::GetCount()
     {
-        return mMembers->GetCount() + ( mClassName.empty() ? 0 : 1 ) + ( mHasVTable ? 1 : 0 );
+        return mMembers->GetCount() - mHiddenFields + ( mClassName.empty() ? 0 : 1 ) + ( mHasVTable ? 1 : 0 );
     }
 
     uint32_t EEDEnumStruct::GetIndex()
@@ -897,6 +1038,7 @@ namespace MagoEE
     void EEDEnumStruct::Reset()
     {
         mCountDone = 0;
+        mMembersPos = 0;
         mMembers->Reset();
     }
 
@@ -926,7 +1068,24 @@ namespace MagoEE
             count--;
         }
         mCountDone += count;
-        mMembers->Skip( count );
+        if( gRecombineTuples )
+        {
+            // do not count tuple fields but the first one
+            RefPtr<Declaration> decl;
+            while ( count > 0 && mMembers->Next( decl.Ref() ) )
+            {
+                mMembersPos++;
+                auto name = decl->GetName();
+                if ( GetTupleName(name) <= 0 )
+                    count--;
+                decl.Release();
+            }
+        }
+        else
+        {
+            mMembers->Skip( count );
+            mMembersPos += count;
+        }
 
         return S_OK;
     }
@@ -1006,8 +1165,55 @@ namespace MagoEE
         {
             if ( !mMembers->Next( decl.Ref() ) )
                 return E_FAIL;
-
             mCountDone++;
+            mMembersPos++;
+
+            if( gRecombineTuples )
+            {
+                const wchar_t* tplname = decl->GetName();
+                int tplidx = GetTupleName( tplname );
+                while( tplidx > 0 )
+                {
+                    decl.Release();
+                    if ( !mMembers->Next( decl.Ref() ) )
+                        return E_FAIL;
+                    mMembersPos++;
+                    tplname = decl->GetName();
+                    tplidx = GetTupleName( tplname );
+                }
+
+                if( tplidx == 0 )
+                {
+                    std::wstring tname;
+                    GetTupleName( tplname, &tname );
+                    std::vector<RefPtr<Declaration>> fields;
+                    fields.push_back( decl );
+                    decl.Detach();
+
+                    RefPtr<Declaration> fdecl;
+                    while ( mMembers->Next( fdecl.Ref() ) )
+                    {
+                        mMembersPos++;
+                        tplname = fdecl->GetName();
+                        tplidx = GetTupleName( tplname );
+                        if ( tplidx > 0 )
+                            fields.push_back( fdecl );
+                        fdecl.Release();
+                        if ( tplidx <= 0 )
+                        {
+                            // undo last read
+                            mMembers->Reset();
+                            mMembers->Skip( --mMembersPos );
+                            break;
+                        }
+                    }
+
+                    hr = mBinder->NewTuple( tname.data(), fields, decl.Ref() );
+                    if ( FAILED( hr ) )
+                        return hr;
+                }
+            }
+
             if ( decl->IsBaseClass() )
             {
                 if ( !NameBaseClass( decl, name, fullName ) )

@@ -56,13 +56,18 @@ namespace MagoEE
         { L"ptr",  new PropertyDArrayPtr() },
     };
 
-    PropPair  mSArrayProps[] = 
+    PropPair  mSArrayProps[] =
     {
         { L"length",  new PropertySArrayLength() },
         { L"ptr",  new PropertySArrayPtr() },
     };
 
-    PropPair  mDelegateProps[] = 
+    PropPair  mTupleProps[] =
+    {
+        { L"length",  new PropertyTupleLength() },
+    };
+
+    PropPair  mDelegateProps[] =
     {
         { L"ptr",  new PropertyDelegatePtr() },
         { L"funcptr",  new PropertyDelegateFuncPtr() },
@@ -142,6 +147,11 @@ namespace MagoEE
     StdProperty* FindSArrayProperty( const wchar_t* name )
     {
         return FindPropertyInArray( name, mSArrayProps, _countof( mSArrayProps ) );
+    }
+
+    StdProperty* FindTupleProperty( const wchar_t* name )
+    {
+        return FindPropertyInArray( name, mTupleProps, _countof( mTupleProps ) );
     }
 
     StdProperty* FindDelegateProperty( const wchar_t* name )

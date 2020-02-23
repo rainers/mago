@@ -189,6 +189,13 @@ namespace MagoEE
         virtual bool GetValue( Type* parentType, Declaration* parentDecl, const DataValue& parentVal , DataValue& result );
     };
 
+    class PropertyTupleLength : public PropertyBase
+    {
+    public:
+        virtual bool GetType( ITypeEnv* typeEnv, Type* parentType, Declaration* parentDecl, Type*& type );
+        virtual bool GetValue( Type* parentType, Declaration* parentDecl, DataValue& result );
+    };
+
 
     class PropertySArrayPtr : public PropertyBase
     {

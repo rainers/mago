@@ -320,6 +320,11 @@ HRESULT DataEnvBinder::GetReturnType( MagoEE::Type*& type )
     return E_NOTIMPL;
 }
 
+HRESULT DataEnvBinder::NewTuple( const wchar_t* name, const std::vector<RefPtr<Declaration>>& decls, Declaration*& decl )
+{
+    return E_NOTIMPL;
+}
+
 
 HRESULT DataEnvBinder::GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& value )
 {

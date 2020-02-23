@@ -10,6 +10,7 @@
 #include "Object.h"
 #include "TypeCommon.h"
 
+#include <vector>
 
 namespace MagoEE
 {
@@ -21,6 +22,7 @@ namespace MagoEE
     class ITypeSArray;
     class ITypeDArray;
     class ITypeAArray;
+    class ITypeTuple;
     enum ENUMTY;
     class Declaration;
     class ITypeEnv;
@@ -120,6 +122,7 @@ namespace MagoEE
         virtual ITypeSArray* AsTypeSArray();
         virtual ITypeDArray* AsTypeDArray();
         virtual ITypeAArray* AsTypeAArray();
+        virtual ITypeTuple* AsTypeTuple();
 
         virtual Type* Unaliased();
     };
@@ -307,6 +310,34 @@ namespace MagoEE
         // ITypeSArray
         virtual uint32_t    GetLength();
         virtual Type*       GetElement();
+    };
+
+    class ITypeTuple
+    {
+    public:
+        virtual uint32_t    GetLength() = 0;
+        virtual Declaration*GetElementDecl( uint32_t idx ) = 0;
+        virtual Type*       GetElementType( uint32_t idx ) = 0;
+    };
+
+
+    class TypeTuple : public Type, public ITypeTuple
+    {
+        std::vector<RefPtr<Declaration>> mFields;
+
+    public:
+        TypeTuple( const std::vector<RefPtr<Declaration>>& fields );
+        virtual RefPtr<Type> Copy();
+        virtual uint32_t GetSize();
+        virtual bool Equals( Type* other );
+        virtual void _ToString( std::wstring& str );
+        virtual StdProperty* FindProperty( const wchar_t* name );
+        virtual ITypeTuple* AsTypeTuple();
+
+        // ITypeTuple
+        virtual uint32_t    GetLength();
+        virtual Declaration*GetElementDecl( uint32_t idx );
+        virtual Type*       GetElementType( uint32_t idx );
     };
 
 

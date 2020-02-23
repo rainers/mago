@@ -238,6 +238,13 @@ namespace Mago
         return E_NOTIMPL;
     }
 
+    HRESULT ExprContext::NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl )
+    {
+        decl = new TupleDecl( name, new MagoEE::TypeTuple( decls ), mTypeEnv );
+        decl->AddRef();
+        return S_OK;
+    }
+
     HRESULT ExprContext::GetAddress( MagoEE::Declaration* decl, MagoEE::Address& addr )
     {
         if ( decl == NULL )
@@ -799,7 +806,7 @@ namespace Mago
         if ( !symInfo->GetName( pstrName ) )
             return E_FAIL;
 
-        symName = SymStringToWString( pstrName );
+        symName = MagoEE::to_wstring( pstrName.GetName(), pstrName.GetLength() );
         return S_OK;
     }
 

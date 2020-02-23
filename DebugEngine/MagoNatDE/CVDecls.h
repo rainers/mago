@@ -266,4 +266,47 @@ namespace Mago
         virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
         virtual HRESULT FindObjectByValue( uint64_t intVal, Declaration*& decl );
     };
+
+
+    class TupleDecl : public MagoEE::Declaration
+    {
+        std::wstring                mName;
+        long                        mRefCount;
+        RefPtr<MagoEE::TypeTuple>   mType;
+        RefPtr<MagoEE::ITypeEnv>    mTypeEnv;
+
+        Declaration* firstField();
+
+    public:
+        TupleDecl( const wchar_t* name, MagoEE::TypeTuple* tt, MagoEE::ITypeEnv* typeEnv );
+
+        virtual void AddRef();
+        virtual void Release();
+
+        virtual const wchar_t* GetName();
+
+        virtual bool GetType( MagoEE::Type*& type );
+        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool GetOffset( int& offset );
+        virtual bool GetSize( uint32_t& size );
+        virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
+        virtual bool GetUdtKind( MagoEE::UdtKind& kind );
+        virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
+        virtual bool GetVTableShape( Declaration*& decl );
+        virtual bool GetVtblOffset( int& offset );
+
+        virtual bool IsField();
+        virtual bool IsStaticField();
+        virtual bool IsVar();
+        virtual bool IsConstant();
+        virtual bool IsType();
+        virtual bool IsBaseClass();
+        virtual bool IsRegister();
+        virtual bool IsFunction();
+        virtual bool IsStaticFunction();
+
+        virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl );
+        virtual bool EnumMembers( MagoEE::IEnumDeclarationMembers*& members );
+        virtual HRESULT FindObjectByValue( uint64_t intVal, Declaration*& decl );
+    };
 }
