@@ -91,6 +91,7 @@ namespace MagoEE
     bool gHideReferencePointers = true;
     bool gRemoveLeadingHexZeroes = false;
     bool gRecombineTuples = true;
+    bool gShowDArrayLengthInType = true;
 
     uint32_t gMaxArrayLength = 1000;
 

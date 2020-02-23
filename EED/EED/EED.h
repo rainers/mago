@@ -75,6 +75,7 @@ namespace MagoEE
     extern bool gHideReferencePointers;
     extern bool gRemoveLeadingHexZeroes;
     extern bool gRecombineTuples;
+    extern bool gShowDArrayLengthInType;
 
     extern uint32_t gMaxArrayLength;
 

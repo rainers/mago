@@ -226,16 +226,22 @@ bool readMagoOptions()
     else
         gOptions.recombineTuples = true;
 
-    if ( GetRegValue( hKey, L"maxArrayElements", &val ) == S_OK )
+    if (GetRegValue(hKey, L"maxArrayElements", &val) == S_OK)
         gOptions.maxArrayElements = val;
     else
         gOptions.maxArrayElements = 1000;
+
+    if (GetRegValue(hKey, L"showDArrayLengthInType", &val) == S_OK)
+        gOptions.showDArrayLengthInType = val != 0;
+    else
+        gOptions.showDArrayLengthInType = false;
 
     MagoEE::gShowVTable = gOptions.showVTable;
     MagoEE::gMaxArrayLength = gOptions.maxArrayElements;
     MagoEE::gHideReferencePointers = gOptions.hideReferencePointers;
     MagoEE::gRemoveLeadingHexZeroes = gOptions.removeLeadingHexZeroes;
-    MagoEE::gRecombineTuples = gOptions.removeLeadingHexZeroes;
+    MagoEE::gRecombineTuples = gOptions.recombineTuples;
+    MagoEE::gShowDArrayLengthInType = gOptions.showDArrayLengthInType;
 
     RegCloseKey( hKey );
     return true;

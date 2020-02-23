@@ -385,6 +385,16 @@ namespace Mago
             if ( !className.empty() && className != typeStr )
                 typeStr.append( L" {" ).append( className ).append( L"}" );
         }
+        else if ( auto tda = objVal._Type->AsTypeDArray() )
+        {
+            if ( MagoEE::gShowDArrayLengthInType )
+            {
+                wchar_t buf[20 + 9 + 1] = L"";
+                swprintf_s( buf, L"%I64u", objVal.Value.Array.Length );
+                
+                typeStr.append( L" {length=" ).append( buf ).append( L"}" );
+            }
+        }
 
         return true;
     }

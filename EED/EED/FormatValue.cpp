@@ -525,26 +525,41 @@ namespace MagoEE
         }
         else
         {
-            outStr.append( L"{length=" );
+            bool showLength = fmtopt.specifier == FormatSpecRaw || !gShowDArrayLengthInType;
+            bool showPtr    = fmtopt.specifier == FormatSpecRaw || !gHideReferencePointers;
 
-            hr = FormatInt( array.Length, arrayType->GetLengthType(), fmtopt, outStr );
-            if ( FAILED( hr ) )
-                return hr;
+            if( showLength || showPtr )
+                outStr.append( 1, L'{' );
 
-            if ( fmtopt.specifier == FormatSpecRaw || !gHideReferencePointers )
+            if( showLength )
             {
-                outStr.append(L" ptr=");
+                outStr.append( L"length=" );
+
+                hr = FormatInt( array.Length, arrayType->GetLengthType(), fmtopt, outStr );
+                if ( FAILED( hr ) )
+                    return hr;
+            }
+
+            if ( showLength && showPtr )
+                outStr.append( 1, L' ' );
+
+            if ( showPtr )
+            {
+                outStr.append(L"ptr=");
 
                 hr = FormatAddress( array.Addr, arrayType->GetPointerType(), outStr );
                 if ( FAILED( hr ) )
                     return hr;
             }
 
-            outStr.append( 1, L'}' );
+            if ( showLength || showPtr )
+                outStr.append( 1, L'}' );
 
             if ( fmtopt.specifier != FormatSpecRaw )
             {
-                outStr.append( 1, L' ' );
+                if ( showLength || showPtr )
+                    outStr.append( 1, L' ' );
+
                 hr = _formatArray( binder, array.Addr, array.Length, arrayType->GetElement(), fmtopt, outStr, maxLength );
             }
         }
