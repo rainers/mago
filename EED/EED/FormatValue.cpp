@@ -576,7 +576,7 @@ namespace MagoEE
 
     HRESULT FormatTuple( IValueBinder* binder, const DataObject& objVal, ITypeTuple* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
-        if ( type == NULL )
+        if ( type == NULL || type->IsAmbiguousGlobals() )
             return E_FAIL;
 
         auto length = type->GetLength();

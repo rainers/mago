@@ -892,32 +892,33 @@ namespace MagoEE
         if ( mCountDone >= GetCount() )
             return E_FAIL;
 
-        // 4294967295
-        const int   MaxIntStrLen = 10;
-        // "[indexInt]", and add some padding
-        const int   MaxIndexStrLen = MaxIntStrLen + 2 + 10;
-
-        wchar_t indexStr[ MaxIndexStrLen + 1 ] = L"";
-
-        swprintf_s( indexStr, L"[%d]", mCountDone );
-
-        name.clear();
-        name.append( indexStr );
-
-        bool isIdent = IsIdentifier( mParentExprText.data() );
-        fullName.clear();
-        if ( !isIdent )
-            fullName.append( L"(" );
-        fullName.append( mParentExprText );
-        if ( !isIdent )
-            fullName.append( L")" );
-        fullName.append( name );
-
         uint32_t index = mCountDone++;
 
         auto tt = mParentVal.ObjVal._Type->AsTypeTuple();
-        result.ObjVal._Type = tt->GetElementType( index );
-        Declaration* decl = tt->GetElementDecl( index );
+        result.ObjVal._Type = tt->GetElementType(index);
+        Declaration* decl = tt->GetElementDecl(index);
+
+        name.clear();
+        if( tt->IsAmbiguousGlobals() )
+        {
+            name.append( tt->GetElementDecl( index )->GetName() );
+            fullName = name;
+        }
+        else
+        {
+            wchar_t indexStr[32] = L"";
+            swprintf_s( indexStr, L"[%d]", index );
+            name.append( indexStr );
+    
+            bool isIdent = IsIdentifier( mParentExprText.data() );
+            fullName.clear();
+            if ( !isIdent )
+                fullName.append( L"(" );
+            fullName.append( mParentExprText );
+            if ( !isIdent )
+                fullName.append( L")" );
+            fullName.append( name );
+        }
 
         Address addr;
         if ( decl->IsField() )

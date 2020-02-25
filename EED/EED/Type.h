@@ -318,15 +318,17 @@ namespace MagoEE
         virtual uint32_t    GetLength() = 0;
         virtual Declaration*GetElementDecl( uint32_t idx ) = 0;
         virtual Type*       GetElementType( uint32_t idx ) = 0;
+        virtual bool        IsAmbiguousGlobals() = 0;
     };
 
 
     class TypeTuple : public Type, public ITypeTuple
     {
         std::vector<RefPtr<Declaration>> mFields;
+        bool mAmbiguousGlobals;
 
     public:
-        TypeTuple( const std::vector<RefPtr<Declaration>>& fields );
+        TypeTuple( const std::vector<RefPtr<Declaration>>& fields, bool ambiguousGlobals );
         virtual RefPtr<Type> Copy();
         virtual uint32_t GetSize();
         virtual bool Equals( Type* other );
@@ -338,6 +340,7 @@ namespace MagoEE
         virtual uint32_t    GetLength();
         virtual Declaration*GetElementDecl( uint32_t idx );
         virtual Type*       GetElementType( uint32_t idx );
+        virtual bool        IsAmbiguousGlobals();
     };
 
 

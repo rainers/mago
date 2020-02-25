@@ -114,7 +114,8 @@ namespace MagoST
         return mStore->FindSymbolDone( handle );
     }
 
-    HRESULT Session::FindGlobalSymbolAddress( const char* symbol, uint64_t& symaddr, std::function<bool(TypeIndex)> fnTest )
+    HRESULT Session::_findGlobalSymbol( const char* symbol, std::function<bool(TypeIndex)> fnTest,
+                                        SymHandle& handle, SymInfoData& infoData, ISymbolInfo*& symInfo )
     {
         HRESULT hr = S_OK;
 
@@ -127,10 +128,6 @@ namespace MagoST
             hr = FindFirstSymbol( MagoST::SymHeap_PublicSymbols, symbol, len, enumData );
         if (hr != S_OK)
             return hr;
-
-        MagoST::SymHandle handle;
-        MagoST::SymInfoData infoData = { 0 };
-        MagoST::ISymbolInfo* symInfo = NULL;
 
         while( hr == S_OK )
         {
@@ -150,6 +147,16 @@ namespace MagoST
 
         FindSymbolDone( enumData );
 
+        return hr;
+    }
+
+    HRESULT Session::FindGlobalSymbolAddress( const char* symbol, uint64_t& symaddr, std::function<bool(TypeIndex)> fnTest )
+    {
+        MagoST::SymHandle handle;
+        MagoST::SymInfoData infoData = { 0 };
+        MagoST::ISymbolInfo* symInfo = NULL;
+
+        HRESULT hr = _findGlobalSymbol( symbol, fnTest, handle, infoData, symInfo );
         if ( hr != S_OK )
             return hr;
 
@@ -477,4 +484,85 @@ namespace MagoST
     {
         return mStore->FindNextLineByNum( compIndex, fileIndex, line, lineNumber );
     }
+
+    bool Session::reverse_less::operator() ( const std::string& s1, const std::string& s2 ) const
+    {
+        size_t l1 = s1.length();
+        size_t l2 = s2.length();
+        size_t lmin = l1 < l2 ? l1 : l2;
+        for ( size_t i = 1; i <= lmin; i++ )
+            if ( s1[l1 - i] < s2[l2 - i] )
+                return true;
+            else if ( s1[l1 - i] > s2[l2 - i] )
+                return false;
+
+        return l1 < l2;
+    }
+
+    void Session::cacheGlobals()
+    {
+        EnumNamedSymbolsData searchHandle;
+        if( mStore->FindFirstSymbol( SymHeap_GlobalSymbols, nullptr, 0, searchHandle ) != S_OK )
+            return;
+
+        do
+        {
+            SymHandle symHandle;
+            MagoST::SymInfoData symData = { 0 };
+            MagoST::ISymbolInfo* symInfo = NULL;
+            if( mStore->GetCurrentSymbol( searchHandle, symHandle) != S_OK )
+                break;
+            if( mStore->GetSymbolInfo( symHandle, symData, symInfo ) != S_OK )
+                break;
+
+            DataKind  kind = DataIsUnknown;
+            if( symInfo->GetDataKind( kind ) )
+            {
+                switch( kind )
+                {
+                    case DataIsFileStatic:
+                    case DataIsGlobal:
+                    case DataIsStaticLocal:
+                    {
+                        SymString name;
+                        if( symInfo->GetName( name ) )
+                        {
+                            mGlobals.insert( std::string( name.GetName(), name.GetLength() ) );
+                        }
+                        break;
+                    }
+                }
+            }
+
+        } while ( mStore->FindNextSymbol( searchHandle ) == S_OK );
+
+        mStore->FindSymbolDone( searchHandle );
+    }
+
+    HRESULT Session::FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles )
+    {
+        if( mGlobals.size() == 0 )
+            cacheGlobals();
+        
+        std::string search( nameChars, nameLen );
+        for( auto it = mGlobals.lower_bound( search ); it != mGlobals.end(); ++it )
+        {
+            if ( it->length() < nameLen || search != it->data() + it->length() - nameLen )
+                break;
+            if ( it->length() == nameLen ) // skip name without '.'
+                continue;
+            if ( (*it)[it->length() - nameLen - 1] != '.' )
+                break;
+
+            MagoST::SymInfoData infoData = { 0 };
+            MagoST::ISymbolInfo* symInfo = NULL;
+            SymHandle handle;
+
+            HRESULT hr = _findGlobalSymbol( it->data(), nullptr, handle, infoData, symInfo );
+            if( SUCCEEDED( hr ) )
+                handles.push_back( handle );
+        }
+        return handles.empty() ? E_NOT_FOUND : S_OK;
+    }
+
 }

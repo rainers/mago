@@ -136,7 +136,11 @@ namespace Mago
             MagoST::SymHandle handle, 
             MagoEE::Declaration*& decl );
 
-        HRESULT MakeDeclarationFromSymbol( 
+        HRESULT ExprContext::MakeDeclarationFromSymbolDerefClass(
+            MagoST::SymHandle handle,
+            MagoEE::Declaration*& decl, uint32_t findFlags );
+
+        HRESULT MakeDeclarationFromSymbol(
             MagoST::TypeHandle handle, 
             MagoEE::Declaration*& decl );
 
@@ -168,7 +172,7 @@ namespace Mago
 
     private:
         HRESULT FindLocalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& localSH );
-        HRESULT FindGlobalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& globalSH );
+        HRESULT FindGlobalSymbol( const char* name, size_t nameLen, MagoEE::Declaration*& decl, uint32_t findFlags );
         HRESULT FindClosureSymbol( const char* name, size_t nameLen, MagoEE::Declaration*& decl );
 
         static HRESULT FindLocalSymbol( 

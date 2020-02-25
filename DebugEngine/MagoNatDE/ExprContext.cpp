@@ -134,8 +134,6 @@ namespace Mago
         size_t                      u8NameLen = 0;
         MagoST::SymHandle           symHandle = { 0 };
         RefPtr<MagoST::ISession>    session;
-        RefPtr<MagoEE::Declaration> origDecl;
-        MagoEE::UdtKind             udtKind = MagoEE::Udt_Struct;
 
         if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
@@ -144,21 +142,28 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = E_NOT_FOUND;
         if( findFlags & FindObjectLocal )
+        {
             hr = FindLocalSymbol( u8Name, u8NameLen, symHandle );
+            if ( hr == S_OK )
+                return MakeDeclarationFromSymbolDerefClass( symHandle, decl, findFlags );
+        }
         
-        if ( hr != S_OK && ( findFlags & FindObjectClosure ) != 0 )
+        if ( ( findFlags & FindObjectClosure ) != 0 )
         {
             hr = FindClosureSymbol( u8Name, u8NameLen, decl );
             if ( hr == S_OK )
                 return hr;
         }
         
-        if ( hr != S_OK && ( findFlags & FindObjectGlobal ) != 0 )
-            hr = FindGlobalSymbol( u8Name, u8NameLen, symHandle );
+        if ( ( findFlags & FindObjectGlobal ) != 0 )
+        {
+            hr = FindGlobalSymbol( u8Name, u8NameLen, decl, findFlags );
+            if ( hr == S_OK )
+                return hr;
+        }
 
-        if ( hr != S_OK && ( findFlags & FindObjectRegister ) != 0 )
+        if ( ( findFlags & FindObjectRegister ) != 0 )
         {
             decl = RegisterCVDecl::CreateRegisterSymbol( this, u8Name );
             if( decl )
@@ -166,34 +171,9 @@ namespace Mago
                 decl->AddRef();
                 return S_OK;
             }
-            return E_NOT_FOUND;
         }
 
-        hr = MakeDeclarationFromSymbol( symHandle, origDecl.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
-
-#if USE_REFERENCE_TYPE
-        if ( ( findFlags & FindObjectNoClassDeref ) == 0 && origDecl->IsType()
-            && origDecl->GetUdtKind( udtKind ) && ( udtKind == MagoEE::Udt_Class ) )
-        {
-            decl = new ClassRefDecl( origDecl, mTypeEnv );
-            if ( decl == NULL )
-                return E_OUTOFMEMORY;
-
-            decl->AddRef();
-        }
-        else
-        {
-            decl = origDecl.Detach();
-        }
-#else
-        UNREFERENCED_PARAMETER( udtKind );
-
-        decl = origDecl.Detach();
-#endif
-
-        return S_OK;
+        return E_NOT_FOUND;
     }
 
     HRESULT ExprContext::FindObjectType( 
@@ -240,7 +220,7 @@ namespace Mago
 
     HRESULT ExprContext::NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl )
     {
-        decl = new TupleDecl( name, new MagoEE::TypeTuple( decls ), mTypeEnv );
+        decl = new TupleDecl( name, new MagoEE::TypeTuple( decls, false ), mTypeEnv );
         decl->AddRef();
         return S_OK;
     }
@@ -958,13 +938,14 @@ namespace Mago
         return E_NOT_FOUND;
     }
 
-	HRESULT ExprContext::FindGlobalSymbol( const char* name, size_t nameLen, MagoST::SymHandle& globalSH )
+	HRESULT ExprContext::FindGlobalSymbol( const char* name, size_t nameLen, MagoEE::Declaration*& decl, uint32_t findFlags )
     {
         RefPtr<MagoST::ISession>    session;
 
         if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
+        SymHandle globalSH;
         HRESULT hr = FindGlobalSymbol( session, name, nameLen, globalSH );
         if ( FAILED( hr ) )
         {
@@ -996,14 +977,34 @@ namespace Mago
                 }
             }
         }
+        if ( SUCCEEDED( hr ) )
+            return MakeDeclarationFromSymbolDerefClass( globalSH, decl, findFlags );
+
+        // now try global symbols that end with the name
+        std::vector<SymHandle> handles;
+        hr = session->FindMatchingGlobals( name, nameLen, handles );
+        if ( handles.empty() == 1 )
+            return E_NOT_FOUND;
+        if ( handles.size() == 1 )
+            return MakeDeclarationFromSymbolDerefClass( handles.front(), decl, findFlags );
+
+        std::vector<RefPtr<MagoEE::Declaration>> vars;
+        for ( auto& h : handles )
+        {
+            RefPtr<MagoEE::Declaration> vdecl;
+            hr = MakeDeclarationFromSymbolDerefClass( h, vdecl.Ref(), findFlags );
+            if ( SUCCEEDED( hr ) )
+                vars.push_back( vdecl );
+        }
+        if( !vars.empty() && SUCCEEDED(hr) )
+        {
+            decl = new TupleDecl( L"globals", new MagoEE::TypeTuple( vars, true ), mTypeEnv );
+            decl->AddRef();
+        }
         return hr;
     }
 
-    HRESULT ExprContext::FindGlobalSymbol( 
-        MagoST::ISession* session, 
-        const char* name, 
-        size_t nameLen, 
-        MagoST::SymHandle& globalSH )
+    HRESULT ExprContext::FindGlobalSymbol( MagoST::ISession* session, const char* name, size_t nameLen, MagoST::SymHandle& globalSH )
     {
         HRESULT hr = S_OK;
         MagoST::EnumNamedSymbolsData    enumData = { 0 };
@@ -1068,6 +1069,30 @@ namespace Mago
     DWORD ExprContext::GetPC()
     {
         return (DWORD)(mPC - mModule->GetAddress());
+    }
+
+    HRESULT ExprContext::MakeDeclarationFromSymbolDerefClass( SymHandle handle, MagoEE::Declaration*& decl, uint32_t findFlags )
+    {
+        RefPtr<MagoEE::Declaration> origDecl;
+
+        HRESULT hr = MakeDeclarationFromSymbol( handle, origDecl.Ref() );
+        if (FAILED(hr))
+            return hr;
+
+#if USE_REFERENCE_TYPE
+        MagoEE::UdtKind udtKind = MagoEE::Udt_Struct;
+        if ( ( findFlags & FindObjectNoClassDeref ) == 0 && origDecl->IsType()
+            && origDecl->GetUdtKind( udtKind ) && ( udtKind == MagoEE::Udt_Class ) )
+        {
+            decl = new ClassRefDecl( origDecl, mTypeEnv );
+            decl->AddRef();
+        }
+        else
+        {
+            decl = origDecl.Detach();
+        }
+#endif
+        return S_OK;
     }
 
     // TODO: these declarations can be cached. We can keep a small cache for each module

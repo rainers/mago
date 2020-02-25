@@ -65,6 +65,8 @@ namespace MagoST
             size_t nameLen, 
             SymHandle& handle ) = 0;
 
+        virtual HRESULT FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles ) = 0;
+
         virtual HRESULT FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff ) = 0;
 
         virtual HRESULT FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff) = 0;

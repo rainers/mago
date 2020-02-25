@@ -972,15 +972,16 @@ namespace MagoEE
     //  TypeTuple
     //----------------------------------------------------------------------------
 
-    TypeTuple::TypeTuple( const std::vector<RefPtr<Declaration>>& fields )
+    TypeTuple::TypeTuple( const std::vector<RefPtr<Declaration>>& fields, bool ambiguousGlobals )
         : Type( Ttuple ),
-          mFields( fields )
+          mFields( fields ),
+          mAmbiguousGlobals( ambiguousGlobals )
     {
     }
 
     RefPtr<Type> TypeTuple::Copy()
     {
-        RefPtr<Type> type = new TypeTuple( mFields );
+        RefPtr<Type> type = new TypeTuple( mFields, mAmbiguousGlobals );
         return type;
     }
 
@@ -1019,6 +1020,11 @@ namespace MagoEE
 
     void TypeTuple::_ToString( std::wstring& str )
     {
+        if ( mAmbiguousGlobals )
+        {
+            str.append( L"<ambiguous globals>" );
+            return;
+        }
         str.append( L"tuple!(" );
         auto len = str.length();
         for ( auto& f : mFields )
@@ -1057,6 +1063,10 @@ namespace MagoEE
         return type;
     }
 
+    bool TypeTuple::IsAmbiguousGlobals()
+    {
+        return mAmbiguousGlobals;
+    }
 
     //----------------------------------------------------------------------------
     //  TypeFunction

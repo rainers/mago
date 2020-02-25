@@ -848,14 +848,17 @@ namespace MagoST
         PDBStore::EnumNamedSymbolsDataIn& dataIn = (PDBStore::EnumNamedSymbolsDataIn&) data;
         if ( heapId == SymHeap_GlobalSymbols )
         {
+            std::unique_ptr<wchar_t> wname;
             IDiaEnumSymbols* pEnumSymbols = NULL;
-            int len = MultiByteToWideChar( CP_UTF8, 0, nameChars, nameLen, NULL, 0 );
-            std::unique_ptr<wchar_t> wname (new wchar_t[len+1]);
-            if ( wname.get() == NULL )
-                return E_OUTOFMEMORY;
-            MultiByteToWideChar( CP_UTF8, 0, nameChars, nameLen, wname.get (), len);
-            wname.get()[len] = L'\0';
-
+            if( nameChars )
+            {
+                int len = MultiByteToWideChar( CP_UTF8, 0, nameChars, nameLen, NULL, 0 );
+                wname.reset (new wchar_t[len+1]);
+                if ( wname.get() == NULL )
+                    return E_OUTOFMEMORY;
+                MultiByteToWideChar( CP_UTF8, 0, nameChars, nameLen, wname.get (), len);
+                wname.get()[len] = L'\0';
+            }
             HRESULT hr = mGlobal->findChildren( SymTagNull, wname.get (), nsCaseSensitive, &pEnumSymbols );
             
             if( !FAILED( hr ) && pEnumSymbols )

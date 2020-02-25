@@ -9,6 +9,8 @@
 
 #include "ISession.h"
 
+#include <set>
+#include <string>
 
 namespace MagoST
 {
@@ -26,6 +28,16 @@ namespace MagoST
         RefPtr<DataSource>  mDataSource;
         IDebugStore*        mStore;         // valid while we hold onto data source
         RefPtr<IAddressMap> mAddrMap;
+
+        struct reverse_less
+        {
+            bool operator() (const std::string& s1, const std::string& s2) const;
+        };
+        std::set<std::string, reverse_less> mGlobals;
+
+        void cacheGlobals();
+        HRESULT _findGlobalSymbol(const char* symbol, std::function<bool(TypeIndex)> fnTest,
+                                  SymHandle& handle, SymInfoData& infoData, ISymbolInfo*& symInfo );
 
     public:
         Session( DataSource* dataSource );
@@ -66,6 +78,8 @@ namespace MagoST
             const char* nameChars,
             size_t nameLen, 
             SymHandle& handle );
+
+        virtual HRESULT FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles );
 
         virtual HRESULT FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff );
 
