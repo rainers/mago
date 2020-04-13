@@ -467,7 +467,7 @@ namespace MagoST
         EnumNamedSymbolsDataIn* internalData = (EnumNamedSymbolsDataIn*) &data;
         OMFSymHash*             symHash = GetCVPtr<OMFSymHash>( entry->lfo );
 
-        if ( (symHash == NULL) || (symHash->symhash != 0xA) )
+        if ( (symHash == NULL) || (symHash->symhash != 0xA) || nameChars == NULL )
             return E_FAIL;
 
         BYTE*   heapBase = (BYTE*) (symHash + 1);

@@ -352,6 +352,9 @@ namespace MagoEE
 
         if( auto tt = childType->AsTypeTuple() )
         {
+            if( tt->IsAmbiguousGlobals() )
+                return E_MAGOEE_BAD_INDEX;
+
             // index must be compile time constant
             DataObject indexObj = { 0 };
             indexData.ArrayLength = tt->GetLength();

@@ -516,7 +516,7 @@ namespace Mago
         }
         // guess from vtbl symbol name
         uint32_t sizeRead;
-        MagoEE::Address vtbl;
+        MagoEE::Address vtbl = 0;
         hr = ReadMemory( addr, mTypeEnv->GetPointerSize(), sizeRead, (uint8_t*)& vtbl );
         if ( SUCCEEDED( hr ) && sizeRead == uint32_t( mTypeEnv->GetPointerSize() ) )
         {
