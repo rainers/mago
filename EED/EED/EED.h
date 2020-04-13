@@ -76,6 +76,7 @@ namespace MagoEE
     extern bool gRemoveLeadingHexZeroes;
     extern bool gRecombineTuples;
     extern bool gShowDArrayLengthInType;
+    extern bool gCallDebuggerFunctions;
 
     extern uint32_t gMaxArrayLength;
 
@@ -95,6 +96,8 @@ namespace MagoEE
         IEEDEnumValues*& enumerator );
 
     void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr );
+
+    RefPtr<Type> GetDebuggerCall( ITypeStruct* ts, const wchar_t* call, Address& fnaddr );
 
     HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr );
 

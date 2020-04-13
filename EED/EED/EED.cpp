@@ -92,6 +92,7 @@ namespace MagoEE
     bool gRemoveLeadingHexZeroes = false;
     bool gRecombineTuples = true;
     bool gShowDArrayLengthInType = true;
+    bool gCallDebuggerFunctions = true;
 
     uint32_t gMaxArrayLength = 1000;
 
@@ -248,8 +249,23 @@ namespace MagoEE
         {
             en = new EEDEnumAArray( binder->GetAAVersion() );
         }
-        else if ( pparentVal->ObjVal._Type->AsTypeStruct() != NULL )
+        else if ( auto ts = pparentVal->ObjVal._Type->AsTypeStruct() )
         {
+            if ( fmtopts.specifier != FormatSpecRaw && pparentVal->ObjVal.Addr != 0 )
+            {
+                Address fnaddr;
+                if ( RefPtr<Type> fntype = GetDebuggerCall( ts, L"debuggerExpanded", fnaddr ) )
+                {
+                    auto func = fntype->AsTypeFunction();
+                    pointeeObj.ObjVal._Type = func->GetReturnType();
+                    hr = binder->CallFunction( fnaddr, func, pparentVal->ObjVal.Addr, pointeeObj.ObjVal );
+                    if ( hr == S_OK )
+                    {
+                        pparentVal = &pointeeObj;
+                        goto L_retry;
+                    }
+                }
+            }
             en = new EEDEnumStruct();
         }
         else if ( pparentVal->ObjVal._Type->AsTypeTuple() )
@@ -357,6 +373,28 @@ namespace MagoEE
             }
             else if ( ITypeStruct* ts = type->AsTypeStruct() )
             {
+                if( pparentVal->Addr != 0 )
+                {
+                    Address fnaddr;
+                    if( RefPtr<Type> fntype = GetDebuggerCall( ts, L"debuggerExpanded", fnaddr ) )
+                    {
+                        auto func = fntype->AsTypeFunction();
+                        pointeeObj._Type = func->GetReturnType();
+                        HRESULT hr = E_FAIL;
+                        if ( pointeeObj._Type->AsTypeSArray() )
+                            hr = S_OK; // no need to read value to fill traits
+                        else if ( auto rts = pointeeObj._Type->AsTypeStruct() )
+                            if ( ts->GetUdtKind() != MagoEE::Udt_Class )
+                                hr = S_OK; // no need to read value to fill traits
+                        if ( hr != S_OK )
+                            hr = binder->CallFunction( fnaddr, func, pparentVal->Addr, pointeeObj );
+                        if (hr == S_OK)
+                        {
+                            pparentVal = &pointeeObj;
+                            goto L_retry;
+                        }
+                    }
+                }
                 RefPtr<Declaration> decl = type->GetDeclaration();
                 if ( ts->GetUdtKind() != MagoEE::Udt_Class )
                 {
@@ -396,6 +434,19 @@ namespace MagoEE
                 result.HasChildren = result.HasRawChildren = tt->GetLength() > 0;
             }
         }
+    }
+
+    RefPtr<Type> GetDebuggerCall( ITypeStruct* ts, const wchar_t* call, Address& fnaddr )
+    {
+        RefPtr<Declaration> decl = ts->FindObject( call );
+        RefPtr<Type> dgtype;
+        if ( decl && decl->GetAddress( fnaddr ) && decl->GetType( dgtype.Ref() ) )
+            if ( dgtype->IsDelegate() ) // delegate has pointer to function as "next"
+                if ( auto ptrtype = dgtype->AsTypeNext()->GetNext()->AsTypeNext() )
+                    if ( RefPtr<Type> fntype = ptrtype->GetNext() )
+                        if ( fntype->AsTypeFunction() )
+                            return fntype;
+        return nullptr;
     }
 
     static const wchar_t    gCommonErrStr[] = L": Error: ";

@@ -54,6 +54,7 @@ struct MagoOptions
     bool removeLeadingHexZeroes;
     bool recombineTuples;
     bool showDArrayLengthInType;
+    bool callDebuggerFunctions;
     int  maxArrayElements;
 };
 

@@ -724,6 +724,26 @@ namespace MagoEE
 
 	HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
 	{
+        static bool recurse = false;
+        if ( gCallDebuggerFunctions && !recurse && fmtopt.specifier != FormatSpecRaw )
+        {
+            HRESULT hr = E_FAIL;
+            recurse = true;
+            Address fnaddr;
+            if( RefPtr<Type> fntype = GetDebuggerCall( type->AsTypeStruct(), L"debuggerOverview", fnaddr ) )
+            {
+                DataObject obj;
+                auto func = fntype->AsTypeFunction();
+                obj._Type = func->GetReturnType();
+                hr = binder->CallFunction( fnaddr, func, addr, obj );
+                if( hr == S_OK )
+                    hr = FormatValue( binder, obj, fmtopt, outStr, maxLength );
+            }
+
+            recurse = false;
+            if (hr == S_OK)
+                return S_OK;
+        }
 		return _FormatStruct( binder, addr, nullptr, type, fmtopt, outStr, maxLength );
 	}
 

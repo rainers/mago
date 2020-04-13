@@ -236,12 +236,18 @@ bool readMagoOptions()
     else
         gOptions.showDArrayLengthInType = false;
 
+    if (GetRegValue(hKey, L"callDebuggerFunctions", &val) == S_OK)
+        gOptions.callDebuggerFunctions = val != 0;
+    else
+        gOptions.callDebuggerFunctions = true;
+
     MagoEE::gShowVTable = gOptions.showVTable;
     MagoEE::gMaxArrayLength = gOptions.maxArrayElements;
     MagoEE::gHideReferencePointers = gOptions.hideReferencePointers;
     MagoEE::gRemoveLeadingHexZeroes = gOptions.removeLeadingHexZeroes;
     MagoEE::gRecombineTuples = gOptions.recombineTuples;
     MagoEE::gShowDArrayLengthInType = gOptions.showDArrayLengthInType;
+    MagoEE::gCallDebuggerFunctions = gOptions.callDebuggerFunctions;
 
     RegCloseKey( hKey );
     return true;
