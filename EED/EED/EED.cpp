@@ -320,12 +320,26 @@ namespace MagoEE
             }
 
             // HasString
-            if ( (type->AsTypeNext() != NULL) && type->AsTypeNext()->GetNext()->IsChar() )
+            auto typeHasString = [&](Type* t)
             {
-                if ( type->IsPointer() )
-                    result.HasString = pparentVal->Value.Addr != 0;
-                else if ( type->IsSArray() || type->IsDArray() )
-                    result.HasString = true;
+                if ( auto tn = t->AsTypeNext() )
+                    if ( tn->GetNext()->IsChar() )
+                    {
+                        if ( t->IsPointer() )
+                            return pparentVal->Value.Addr != 0;
+                        if ( t->IsSArray() || t->IsDArray() )
+                            return true;
+                    }
+                return false;
+            };
+            if( typeHasString( type ) )
+                result.HasString = true;
+            else if ( auto ts = type->AsTypeStruct() )
+            {
+                Address fnaddr;
+                if( RefPtr<Type> fntype = GetDebuggerCall( ts, L"debuggerStringView", fnaddr ) )
+                    if( auto tret = fntype->AsTypeFunction()->GetReturnType() )
+                        result.HasString = typeHasString( tret );
             }
 
             // HasChildren/HasRawChildren

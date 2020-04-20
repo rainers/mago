@@ -1059,6 +1059,41 @@ namespace MagoEE
         return FormatRawStringInternal( binder, address, unitSize, knownLen, bufCharLen, bufCharLenWritten, buf );
     }
 
+    HRESULT FormatTextViewerString( IValueBinder* binder, const DataObject& objVal, std::wstring& text )
+    {
+        if ( objVal._Type == NULL )
+            return E_INVALIDARG;
+
+        HRESULT hr;
+        DataObject dbgObj = { 0 };
+        const DataObject* pVal = &objVal;
+        if ( auto ts = objVal._Type->AsTypeStruct() )
+        {
+            Address fnaddr;
+            RefPtr<Type> fntype = GetDebuggerCall( ts, L"debuggerStringView", fnaddr );
+            if ( !fntype )
+                return E_INVALIDARG;
+
+            auto func = fntype->AsTypeFunction();
+            dbgObj._Type = func->GetReturnType();
+            hr = binder->CallFunction( fnaddr, func, objVal.Addr, dbgObj );
+            if ( FAILED( hr ) )
+                return hr;
+            pVal = &dbgObj;
+        }
+        uint32_t len, fetched;
+        hr = MagoEE::GetRawStringLength( binder, *pVal, len );
+        if ( FAILED( hr ) )
+            return hr;
+        text.resize( len + 1 );
+        hr = MagoEE::FormatRawString( binder, *pVal, len + 1, fetched, (wchar_t*)text.data() );
+        if ( FAILED( hr ) )
+            return hr;
+        if ( fetched <= len )
+            text.resize( fetched );
+        return S_OK;
+    }
+
     HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
         HRESULT hr = S_OK;

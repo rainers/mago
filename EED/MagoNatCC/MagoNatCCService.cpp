@@ -1568,13 +1568,9 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetUnderlyingString(
     RefPtr<Mago::Property> prop;
     tryHR(pResult->GetDataItem(&prop.Ref()));
 
-    ULONG len, fetched;
-    tryHR(prop->GetStringCharLength(&len));
-    std::unique_ptr<WCHAR> str(new WCHAR[len + 1]);
-    tryHR(prop->GetStringChars(len + 1, str.get(), &fetched));
-    if (fetched <= len)
-        str.get()[fetched] = 0;
-    *ppStringValue = toDkmString(str.get()).Detach();
+    std::wstring text;
+    tryHR(prop->GetStringViewerText(text));
+    *ppStringValue = toDkmString(text.data()).Detach();
     return S_OK;
 }
 

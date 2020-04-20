@@ -23,5 +23,7 @@ namespace MagoEE
         uint32_t& bufCharLenWritten,
         wchar_t* buf );
 
+    HRESULT FormatTextViewerString( IValueBinder* binder, const DataObject& objVal, std::wstring& text );
+
 	HRESULT FormatRawStructValue( IValueBinder* binder, const void* srcBuf, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength );
 }

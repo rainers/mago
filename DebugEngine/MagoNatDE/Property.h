@@ -128,6 +128,8 @@ namespace Mago
             ExprContext* exprContext,
             const MagoEE::FormatOptions& fmtopt );
 
+        HRESULT GetStringViewerText( std::wstring& text );
+
     private:
         BSTR FormatValue( int radix );
     };

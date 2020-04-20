@@ -287,6 +287,13 @@ namespace Mago
             rgString );
     }
     
+    HRESULT Property::GetStringViewerText( std::wstring& text )
+    {
+        Log::LogMessage("Property::GetStringViewerText\n");
+
+        return MagoEE::FormatTextViewerString( mExprContext, mObjVal.ObjVal, text );
+    }
+
     HRESULT Property::CreateObjectID()
     {
         Log::LogMessage( "Property::CreateObjectID\n" );
