@@ -749,6 +749,46 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT ExprContext::FindGlobalSymbolAddr( const std::wstring& symName, MagoEE::Address& addr )
+    {
+        CAutoVectorPtr<char>        u8Name;
+        size_t                      u8NameLen = 0;
+        MagoST::SymHandle           symHandle = { 0 };
+        RefPtr<MagoST::ISession>    session;
+
+        if ( GetSession( session.Ref() ) != S_OK )
+            return E_NOT_FOUND;
+
+        HRESULT hr = Utf16To8( symName.data(), symName.size(), u8Name.m_p, u8NameLen );
+        if ( FAILED( hr ) )
+            return hr;
+
+        SymHandle globalSH;
+        hr = FindGlobalSymbol( session, u8Name, u8NameLen, symHandle );
+        if ( FAILED(hr) )
+            return hr;
+
+        MagoST::SymInfoData infoData = { 0 };
+        MagoST::ISymbolInfo* symInfo;
+        hr = session->GetSymbolInfo( symHandle, infoData, symInfo );
+        if ( FAILED( hr ) )
+            return hr;
+
+        uint16_t        sec = 0;
+        uint32_t        offset = 0;
+
+        if ( !symInfo->GetAddressOffset( offset ) )
+            return E_FAIL;
+        if ( !symInfo->GetAddressSegment( sec ) )
+            return E_FAIL;
+
+        addr = session->GetVAFromSecOffset( sec, offset );
+        if ( addr == 0 )
+            return E_FAIL;
+
+        return S_OK;
+    }
+
     HRESULT ExprContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )
     {
         RefPtr<MagoST::ISession>    session;
@@ -790,7 +830,8 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& value )
+    HRESULT ExprContext::CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
+                                       MagoEE::DataObject& value, bool saveGC )
     {
         return E_MAGOEE_CALL_NOT_IMPLEMENTED;
     }

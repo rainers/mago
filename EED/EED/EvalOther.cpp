@@ -1579,7 +1579,7 @@ namespace MagoEE
             return E_MAGOEE_HASSIDEEFFECT;
 
         obj._Type = _Type;
-        hr = binder->CallFunction( addr, func, ctxt, obj );
+        hr = binder->CallFunction( addr, func, ctxt, obj, false );
         return hr;
     }
 

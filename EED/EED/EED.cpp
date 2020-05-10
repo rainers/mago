@@ -93,6 +93,7 @@ namespace MagoEE
     bool gRecombineTuples = true;
     bool gShowDArrayLengthInType = true;
     bool gCallDebuggerFunctions = true;
+    bool gCallDebuggerUseMagoGC = true;
 
     uint32_t gMaxArrayLength = 1000;
 
@@ -258,7 +259,7 @@ namespace MagoEE
                 {
                     auto func = fntype->AsTypeFunction();
                     pointeeObj.ObjVal._Type = func->GetReturnType();
-                    hr = binder->CallFunction( fnaddr, func, pparentVal->ObjVal.Addr, pointeeObj.ObjVal );
+                    hr = binder->CallFunction( fnaddr, func, pparentVal->ObjVal.Addr, pointeeObj.ObjVal, true );
                     if ( hr == S_OK )
                     {
                         pparentVal = &pointeeObj;
@@ -401,7 +402,7 @@ namespace MagoEE
                             if ( ts->GetUdtKind() != MagoEE::Udt_Class )
                                 hr = S_OK; // no need to read value to fill traits
                         if ( hr != S_OK )
-                            hr = binder->CallFunction( fnaddr, func, pparentVal->Addr, pointeeObj );
+                            hr = binder->CallFunction( fnaddr, func, pparentVal->Addr, pointeeObj, true );
                         if (hr == S_OK)
                         {
                             pparentVal = &pointeeObj;

@@ -241,6 +241,11 @@ bool readMagoOptions()
     else
         gOptions.callDebuggerFunctions = true;
 
+    if (GetRegValue(hKey, L"callDebuggerUseMagoGC", &val) == S_OK)
+        gOptions.callDebuggerUseMagoGC = val != 0;
+    else
+        gOptions.callDebuggerUseMagoGC = true;
+
     MagoEE::gShowVTable = gOptions.showVTable;
     MagoEE::gMaxArrayLength = gOptions.maxArrayElements;
     MagoEE::gHideReferencePointers = gOptions.hideReferencePointers;
@@ -248,6 +253,7 @@ bool readMagoOptions()
     MagoEE::gRecombineTuples = gOptions.recombineTuples;
     MagoEE::gShowDArrayLengthInType = gOptions.showDArrayLengthInType;
     MagoEE::gCallDebuggerFunctions = gOptions.callDebuggerFunctions;
+    MagoEE::gCallDebuggerUseMagoGC = gOptions.callDebuggerUseMagoGC;
 
     RegCloseKey( hKey );
     return true;

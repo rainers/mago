@@ -77,6 +77,7 @@ namespace MagoEE
     extern bool gRecombineTuples;
     extern bool gShowDArrayLengthInType;
     extern bool gCallDebuggerFunctions;
+    extern bool gCallDebuggerUseMagoGC;
 
     extern uint32_t gMaxArrayLength;
 

@@ -735,7 +735,7 @@ namespace MagoEE
                 DataObject obj;
                 auto func = fntype->AsTypeFunction();
                 obj._Type = func->GetReturnType();
-                hr = binder->CallFunction( fnaddr, func, addr, obj );
+                hr = binder->CallFunction( fnaddr, func, addr, obj, true );
                 if( hr == S_OK )
                     hr = FormatValue( binder, obj, fmtopt, outStr, maxLength );
             }
@@ -1076,7 +1076,7 @@ namespace MagoEE
 
             auto func = fntype->AsTypeFunction();
             dbgObj._Type = func->GetReturnType();
-            hr = binder->CallFunction( fnaddr, func, objVal.Addr, dbgObj );
+            hr = binder->CallFunction( fnaddr, func, objVal.Addr, dbgObj, true );
             if ( FAILED( hr ) )
                 return hr;
             pVal = &dbgObj;

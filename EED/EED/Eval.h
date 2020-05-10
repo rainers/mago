@@ -137,6 +137,6 @@ namespace MagoEE
 
         virtual HRESULT ReadMemory( Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer ) = 0;
         virtual HRESULT SymbolFromAddr( Address addr, std::wstring& symName, MagoEE::Type** pType ) = 0;
-        virtual HRESULT CallFunction( Address addr, ITypeFunction* func, Address arg, DataObject& value ) = 0;
+        virtual HRESULT CallFunction( Address addr, ITypeFunction* func, Address arg, DataObject& value, bool saveGC ) = 0;
     };
 }

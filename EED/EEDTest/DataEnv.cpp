@@ -402,7 +402,7 @@ HRESULT DataEnvBinder::SymbolFromAddr( MagoEE::Address addr, std::wstring& symNa
     return E_NOTIMPL;
 }
 
-HRESULT DataEnvBinder::CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& value )
+HRESULT DataEnvBinder::CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& value, bool saveGC )
 {
     return E_NOTIMPL;
 }

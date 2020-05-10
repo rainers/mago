@@ -25,6 +25,7 @@
 
 #include "../../DebugEngine/Include/MagoDECommon.h"
 #include "../../DebugEngine/Include/WinPlat.h"
+#include "../../DebugEngine/MagoNatDE/Config.h"
 #include "../../DebugEngine/MagoNatDE/Utility.h"
 #include "../../DebugEngine/MagoNatDE/ExprContext.h"
 #include "../../DebugEngine/MagoNatDE/Property.h"
@@ -605,6 +606,12 @@ struct ProcessHelper
     MagoEE::Address tmpLen;
     MagoEE::Address tmpPos;
 
+    MagoEE::Address fnInitGC = 0;
+    MagoEE::Address fnTermGC = 0;
+    MagoEE::Address magoGC = 0;
+    MagoEE::Address adrInstanceGC = 0;
+    MagoEE::Address instanceGC = 0;
+
     MagoEE::Address getTmpBuffer(uint32_t size)
     {
         size = (size + 15) & ~0xf;
@@ -882,8 +889,263 @@ public:
         return S_OK;
     }
 
-    virtual HRESULT CallFunction(MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& obj)
+    HRESULT FindFunctionAddress(const wchar_t* dllname, const wchar_t* funcname, MagoEE::Address& fnaddr)
     {
+        auto nativeRuntime = Native::DkmNativeRuntimeInstance::TryCast(mStackFrame->RuntimeInstance());
+        if (!nativeRuntime)
+            return S_FALSE;
+        DkmArray<DkmModuleInstance*> modules;
+        nativeRuntime->FindModulesByName(toDkmString(dllname), &modules); // GetModuleInstances(&modules); //  
+
+        fnaddr = 0;
+        for (DWORD i = 0; i < modules.Length; i++)
+        {
+            if (auto nativeModule = Native::DkmNativeModuleInstance::TryCast(modules.Members[i]))
+            {
+                RefPtr<Native::DkmNativeInstructionAddress> pAddress = nullptr;
+                if (nativeModule->FindExportName(toDkmString(funcname), true, &pAddress.Ref()) == S_OK)
+                {
+                    fnaddr = nativeModule->BaseAddress() + pAddress->RVA();
+                    break;
+                }
+            }
+        }
+        DkmFreeArray(modules);
+        return fnaddr == 0 ? E_FAIL : S_OK;
+    }
+
+    // if no GC found in symbols, return S_FALSE
+    // else load magogc23/64.dll, and setup addresses and GC
+    HRESULT LoadMagoGCDLL()
+    {
+        auto helper = getProcessHelper(mModule->mProcess);
+        if (!helper)
+            return E_MAGOEE_CANNOTALLOCTRAMP;
+        if (helper->fnInitGC)
+            return S_OK;
+
+        MagoEE::Address instaddr;
+        HRESULT hr = FindGlobalSymbolAddr(L"_D2gc5proxy9_instanceC4coreQz11gcinterface2GC", instaddr);
+        if (FAILED(hr))
+            return S_FALSE;
+
+        auto nativeRuntime = Native::DkmNativeRuntimeInstance::TryCast(mStackFrame->RuntimeInstance());
+        if (!nativeRuntime)
+            return E_FAIL;
+        DkmArray<DkmModuleInstance*> modules;
+        nativeRuntime->FindModulesByName(toDkmString(L"kernel32.dll"), &modules); // GetModuleInstances(&modules); //  
+
+        MagoEE::Address fnaddr;
+        tryHR(FindFunctionAddress(L"kernel32.dll", L"LoadLibraryW", fnaddr));
+
+        int ptrSize = mModule->mArchData->GetPointerSize();
+
+        HKEY    hKey = NULL;
+        LSTATUS ret = OpenRootRegKey(false, false, hKey);
+        if (ret != ERROR_SUCCESS)
+            return HRESULT_FROM_WIN32(ret);
+
+        wchar_t magogcPath[MAX_PATH] = L"";
+        int     magogcPathLen = _countof(magogcPath);
+        auto    regValue = ptrSize == 8 ? L"magogc64.dll" : L"magogc32.dll";
+        ret = GetRegString(hKey, regValue, magogcPath, magogcPathLen);
+        RegCloseKey(hKey);
+        if (ret != ERROR_SUCCESS)
+            return HRESULT_FROM_WIN32(ret);
+
+        magogcPathLen = wcslen(magogcPath);
+        MagoEE::Address argbuf = helper->getTmpBuffer(2 * magogcPathLen + 2);
+        if (argbuf == 0)
+            return E_MAGOEE_CANNOTALLOCTRAMP;
+        DkmArray<BYTE> dllname;
+        dllname.Members = (BYTE*)magogcPath;
+        dllname.Length = 2 * magogcPathLen + 2;
+        tryHR(mModule->mProcess->WriteMemory(argbuf, dllname));
+
+        using namespace Evaluation::IL;
+
+        MagoEE::Address retval;
+        tryHR(ExecFunc(fnaddr, DkmILCallingConvention::StdCall, retval, ptrSize, argbuf, ptrSize));
+
+        MagoEE::Address initGC;
+        tryHR(FindFunctionAddress(regValue, L"initGC", initGC));
+
+        MagoEE::Address termGC;
+        tryHR(FindFunctionAddress(regValue, L"termGC", termGC));
+
+        MagoEE::Address gcaddr;
+        tryHR(ExecFunc(initGC, DkmILCallingConvention::StdCall, gcaddr, ptrSize));
+
+        if (gcaddr == 0)
+            return E_MAGOEE_CALLFAILED;
+
+        helper->fnInitGC = initGC;
+        helper->fnTermGC = termGC;
+        helper->magoGC = gcaddr;
+        helper->adrInstanceGC = instaddr;
+        return S_OK;
+    }
+
+    HRESULT SwitchToMagoGC()
+    {
+        auto helper = getProcessHelper(mModule->mProcess);
+        if (!helper)
+            return E_MAGOEE_CANNOTALLOCTRAMP;
+
+        if (!helper->adrInstanceGC)
+            if (auto hr = LoadMagoGCDLL())
+                return hr;
+
+        UINT32 ptrSize = mModule->mArchData->GetPointerSize();
+        MagoEE::Address gcinst;
+        UINT32 read;
+        tryHR(mModule->mProcess->ReadMemory(helper->adrInstanceGC, DkmReadMemoryFlags::None,
+                                            &gcinst, ptrSize, &read));
+        if (read != ptrSize)
+            return E_FAIL;
+
+        DkmArray<BYTE> arr = { (BYTE*)&(helper->magoGC), ptrSize };
+        tryHR(mModule->mProcess->WriteMemory(helper->adrInstanceGC, arr));
+        helper->instanceGC = gcinst;
+        return S_OK;
+    }
+
+    HRESULT ResetMagoGC()
+    {
+        auto helper = getProcessHelper(mModule->mProcess);
+        if (!helper)
+            return E_MAGOEE_CANNOTALLOCTRAMP;
+        if (!helper->magoGC || !helper->fnInitGC || !helper->fnTermGC)
+            return S_FALSE;
+
+        int ptrSize = mModule->mArchData->GetPointerSize();
+        MagoEE::Address retval;
+        tryHR(ExecFunc(helper->fnTermGC, Evaluation::IL::DkmILCallingConvention::StdCall, retval, 1));
+        helper->magoGC = 0;
+
+        MagoEE::Address gcaddr;
+        tryHR(ExecFunc(helper->fnInitGC, Evaluation::IL::DkmILCallingConvention::StdCall, gcaddr, ptrSize));
+
+        helper->magoGC = gcaddr;
+        return S_OK;
+    }
+
+    HRESULT RestoreInstanceGC()
+    {
+        auto helper = getProcessHelper(mModule->mProcess);
+        if (!helper)
+            return E_MAGOEE_CANNOTALLOCTRAMP;
+        if (!helper->instanceGC)
+            return S_FALSE;
+
+        UINT32 ptrSize = mModule->mArchData->GetPointerSize();
+        DkmArray<BYTE> arr = { (BYTE*)&(helper->instanceGC), ptrSize };
+        tryHR(mModule->mProcess->WriteMemory(helper->adrInstanceGC, arr));
+        helper->instanceGC = 0;
+        return S_OK;
+    }
+
+    HRESULT ExecFunc(MagoEE::Address fnaddr, Evaluation::IL::DkmILCallingConvention::e CallingConvention, 
+                     MagoEE::Address& retval, int ReturnValueSize,
+                     MagoEE::Address arg1 = 0, int arg1size = 0,
+                     MagoEE::Address arg2 = 0, int arg2size = 0)
+    {
+        using namespace Evaluation::IL;
+        auto evalFlags = DkmILFunctionEvaluationFlags::Default;
+        int ptrSize = mModule->mArchData->GetPointerSize();
+
+        DkmILInstruction* instructions[8];
+        int cntInstr = 0;
+
+        // push function address
+        RefPtr<DkmReadOnlyCollection<BYTE>> paddrfn;
+        tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&fnaddr, ptrSize, &paddrfn.Ref()));
+        RefPtr<DkmILPushConstant> ppushfn;
+        tryHR(DkmILPushConstant::Create(paddrfn, &ppushfn.Ref()));
+        instructions[cntInstr++] = ppushfn;
+
+        static const int kMaxArgs = 2;
+        UINT32 ArgumentCount = 0;
+        DkmILFunctionEvaluationArgumentFlags::e argFlag[kMaxArgs];
+        RefPtr<DkmReadOnlyCollection<BYTE>> argValue[kMaxArgs];
+        RefPtr<DkmILPushConstant> argInstr[kMaxArgs];
+
+        auto pushArg = [&](MagoEE::Address argument, int argsize, DkmILFunctionEvaluationArgumentFlags::e flags)
+        {
+            tryHR(DkmReadOnlyCollection<BYTE>::Create((BYTE*)&argument, argsize, &(argValue[ArgumentCount].Ref())));
+            tryHR(DkmILPushConstant::Create(argValue[ArgumentCount], &argInstr[ArgumentCount].Ref()));
+            instructions[cntInstr++] = argInstr[ArgumentCount];
+            argFlag[ArgumentCount++] = flags;
+            return S_OK;
+        };
+
+        if (arg1size > 0)
+            tryHR(pushArg(arg1, arg1size, DkmILFunctionEvaluationArgumentFlags::Default));
+        if (arg2size > 0)
+            tryHR(pushArg(arg2, arg2size, DkmILFunctionEvaluationArgumentFlags::Default));
+
+        // call function
+        RefPtr<DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>> argFlags;
+        tryHR(DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>::Create(argFlag, ArgumentCount, &argFlags.Ref()));
+        UINT32 UniformComplexReturnElementSize = 0;
+
+        RefPtr<DkmILExecuteFunction> pcall;
+        tryHR(DkmILExecuteFunction::Create(ArgumentCount, ReturnValueSize, CallingConvention, evalFlags, argFlags, 0, &pcall.Ref()));
+        instructions[cntInstr++] = pcall;
+
+        RefPtr<DkmILRegisterRead> pregreaddx;
+        RefPtr<DkmILReturnTop> pregretax;
+
+        // return top of stack
+        RefPtr<DkmILReturnTop> preturn;
+        tryHR(DkmILReturnTop::Create(&preturn.Ref()));
+        instructions[cntInstr++] = preturn;
+
+        // build instruction list
+        RefPtr<DkmReadOnlyCollection<DkmILInstruction*>> pinstr;
+        tryHR(DkmReadOnlyCollection<DkmILInstruction*>::Create(instructions, cntInstr, &pinstr.Ref()));
+
+        // run instructions
+        RefPtr<DkmCompiledILInspectionQuery> pquery;
+        tryHR(DkmCompiledILInspectionQuery::Create(mStackFrame->RuntimeInstance(), pinstr, &pquery.Ref()));
+
+        RefPtr<Evaluation::DkmILContext> pcontext;
+        tryHR(Evaluation::DkmILContext::Create(mStackFrame, nullptr, &pcontext.Ref()));
+
+        DkmArray<DkmILEvaluationResult*> arrResults;
+        DkmILFailureReason::e failureReason;
+        HRESULT hr = pquery->Execute(nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None, &arrResults, &failureReason);
+
+        retval = 0;
+        if (!FAILED(hr))
+        {
+            if (failureReason != DkmILFailureReason::None)
+                hr = E_MAGOEE_CALLFAILED;
+            else if (arrResults.Length > 0 && arrResults.Members[0])
+            {
+                DkmReadOnlyCollection<BYTE>* res = arrResults.Members[0]->ResultBytes();
+                if (res && res->Count() == ReturnValueSize)
+                {
+                    memcpy(&retval, res->Items(), ReturnValueSize);
+                    hr = S_OK;
+                }
+            }
+            else if (ReturnValueSize > 0)
+                hr = E_MAGOEE_CALLFAILED;
+        }
+        DkmFreeArray(arrResults);
+        return hr;
+    }
+
+    virtual HRESULT CallFunction(MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
+                                 MagoEE::DataObject& obj, bool saveGC)
+    {
+        HRESULT hr_gc = S_FALSE;
+        if (saveGC && MagoEE::gCallDebuggerUseMagoGC)
+            hr_gc = SwitchToMagoGC();
+        struct Exit { ~Exit() { fn(); } std::function<void()> fn; }
+            ex{ [&]() { if (hr_gc == S_OK) RestoreInstanceGC(); } };
+
         using namespace Evaluation::IL;
 
         uint8_t callConv = func->GetCallConv();
