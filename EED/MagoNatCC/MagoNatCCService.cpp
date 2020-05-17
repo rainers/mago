@@ -722,7 +722,7 @@ ProcessHelper* getProcessHelper(DkmProcess* process)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-class CCExprContext : public Mago::ExprContext
+class DECLSPEC_UUID("98F84FA4-E9E5-458C-81B7-F04352727B97") CCExprContext : public Mago::ExprContext
 {
     RefPtr<CallStack::DkmStackWalkFrame> mStackFrame;
     RefPtr<CCModule> mModule;
@@ -769,6 +769,19 @@ public:
         // setup a fake environment for Mago
         tryHR(MakeCComObject(mThread));
         mThread->SetProgram(mModule->mProgram, mModule->mDebuggerProxy);
+
+        return ExprContext::Init(mModule->mModule, mThread, funcSH, blockSH, va, mModule->mRegSet);
+    }
+
+    HRESULT SetStackFrame(CallStack::DkmStackWalkFrame* frame)
+    {
+        if (mStackFrame == frame)
+            return S_OK;
+
+        uint64_t va = frame->InstructionAddress()->CPUInstructionPart()->InstructionPointer;
+        MagoST::SymHandle funcSH;
+        std::vector<MagoST::SymHandle> blockSH;
+        tryHR(mModule->FindFunction(va, funcSH, blockSH));
 
         return ExprContext::Init(mModule->mModule, mThread, funcSH, blockSH, va, mModule->mRegSet);
     }
@@ -1451,6 +1464,27 @@ CComPtr<DkmString> toDkmString(const wchar_t* str)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+HRESULT InitExprContext(Evaluation::DkmInspectionContext* pInspectionContext,
+                        CallStack::DkmStackWalkFrame* pStackFrame,
+                        RefPtr<CCExprContext>& exprContext)
+{
+#if 1
+    auto session = pInspectionContext->InspectionSession();
+    if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
+        return exprContext->SetStackFrame(pStackFrame);
+#endif
+    auto process = pInspectionContext->RuntimeInstance()->Process();
+
+    tryHR(MakeCComObject(exprContext));
+    tryHR(exprContext->Init(process, pStackFrame));
+
+#if 1
+    tryHR(session->SetDataItem(DkmDataCreationDisposition::CreateAlways, exprContext.Get()));
+#endif
+    return S_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 Evaluation::DkmEvaluationResultFlags::e toResultFlags(DBG_ATTRIB_FLAGS attrib)
 {
     Evaluation::DkmEvaluationResultFlags::e resultFlags = Evaluation::DkmEvaluationResultFlags::None;
@@ -1625,8 +1659,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     auto process = pInspectionContext->RuntimeInstance()->Process();
 
     RefPtr<CCExprContext> exprContext;
-    tryHR(MakeCComObject(exprContext));
-    tryHR(exprContext->Init(process, pStackFrame));
+    tryHR(InitExprContext(pInspectionContext, pStackFrame, exprContext));
 
     std::wstring exprText = pExpression->Text()->Value();
     MagoEE::FormatOptions fmtopt;
@@ -1715,10 +1748,10 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameLocals(
     _In_ CallStack::DkmStackWalkFrame* pStackFrame,
     _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameLocalsAsyncResult>* pCompletionRoutine)
 {
+    auto session = pInspectionContext->InspectionSession();
+
     RefPtr<CCExprContext> exprContext;
-    tryHR(MakeCComObject(exprContext));
-    auto process = pInspectionContext->RuntimeInstance()->Process();
-    tryHR(exprContext->Init(process, pStackFrame));
+    tryHR(InitExprContext(pInspectionContext, pStackFrame, exprContext));
 
     RefPtr<Mago::FrameProperty> frameProp;
     tryHR(MakeCComObject(frameProp));
@@ -1849,9 +1882,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateReturnValue(
         return E_NOTIMPL;
 
     RefPtr<CCExprContext> exprContext;
-    tryHR(MakeCComObject(exprContext));
-    auto process = pInspectionContext->RuntimeInstance()->Process();
-    tryHR(exprContext->Init(process, pStackFrame));
+    tryHR(InitExprContext(pInspectionContext, pStackFrame, exprContext));
 
     ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
     tryHR(exprContext->EvalReturnValue(pInspectionContext, pNativeRetValue, info));
