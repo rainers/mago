@@ -862,14 +862,18 @@ namespace Mago
         HRESULT hr = S_OK;
         ArchData*   archData = mThread->GetCoreProcess()->GetArchData();
 
-        hr = MagoEE::EED::MakeTypeEnv( archData->GetPointerSize(), mTypeEnv.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
-
-        hr = MagoEE::EED::MakeNameTable( mStrTable.Ref() );
-        if ( FAILED( hr ) )
-            return hr;
-
+        if ( mTypeEnv == NULL )
+        {
+            hr = MagoEE::EED::MakeTypeEnv( archData->GetPointerSize(), mTypeEnv.Ref() );
+            if ( FAILED( hr ) )
+                return hr;
+        }
+        if( mStrTable == NULL )
+        {
+            hr = MagoEE::EED::MakeNameTable( mStrTable.Ref() );
+            if ( FAILED( hr ) )
+                return hr;
+        }
         return S_OK;
     }
 

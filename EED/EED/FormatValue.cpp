@@ -730,7 +730,7 @@ namespace MagoEE
             HRESULT hr = E_FAIL;
             recurse = true;
             Address fnaddr;
-            if( RefPtr<Type> fntype = GetDebuggerCall( type->AsTypeStruct(), L"debuggerOverview", fnaddr ) )
+            if( RefPtr<Type> fntype = GetDebuggerCall( type->AsTypeStruct(), L"__debugOverview", fnaddr ) )
             {
                 DataObject obj;
                 auto func = fntype->AsTypeFunction();
@@ -1069,8 +1069,10 @@ namespace MagoEE
         const DataObject* pVal = &objVal;
         if ( auto ts = objVal._Type->AsTypeStruct() )
         {
+            if ( !gCallDebuggerFunctions )
+                return E_INVALIDARG;
             Address fnaddr;
-            RefPtr<Type> fntype = GetDebuggerCall( ts, L"debuggerStringView", fnaddr );
+            RefPtr<Type> fntype = GetDebuggerCall( ts, L"__debugStringView", fnaddr );
             if ( !fntype )
                 return E_INVALIDARG;
 

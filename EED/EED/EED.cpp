@@ -252,10 +252,10 @@ namespace MagoEE
         }
         else if ( auto ts = pparentVal->ObjVal._Type->AsTypeStruct() )
         {
-            if ( fmtopts.specifier != FormatSpecRaw && pparentVal->ObjVal.Addr != 0 )
+            if ( gCallDebuggerFunctions && fmtopts.specifier != FormatSpecRaw && pparentVal->ObjVal.Addr != 0 )
             {
                 Address fnaddr;
-                if ( RefPtr<Type> fntype = GetDebuggerCall( ts, L"debuggerExpanded", fnaddr ) )
+                if ( RefPtr<Type> fntype = GetDebuggerCall( ts, L"__debugExpanded", fnaddr ) )
                 {
                     auto func = fntype->AsTypeFunction();
                     pointeeObj.ObjVal._Type = func->GetReturnType();
@@ -338,9 +338,10 @@ namespace MagoEE
             else if ( auto ts = type->AsTypeStruct() )
             {
                 Address fnaddr;
-                if( RefPtr<Type> fntype = GetDebuggerCall( ts, L"debuggerStringView", fnaddr ) )
-                    if( auto tret = fntype->AsTypeFunction()->GetReturnType() )
-                        result.HasString = typeHasString( tret );
+                if ( gCallDebuggerFunctions )
+                    if( RefPtr<Type> fntype = GetDebuggerCall( ts, L"__debugStringView", fnaddr ) )
+                        if( auto tret = fntype->AsTypeFunction()->GetReturnType() )
+                            result.HasString = typeHasString( tret );
             }
 
             // HasChildren/HasRawChildren
@@ -388,10 +389,10 @@ namespace MagoEE
             }
             else if ( ITypeStruct* ts = type->AsTypeStruct() )
             {
-                if( pparentVal->Addr != 0 )
+                if ( gCallDebuggerFunctions && pparentVal->Addr != 0 )
                 {
                     Address fnaddr;
-                    if( RefPtr<Type> fntype = GetDebuggerCall( ts, L"debuggerExpanded", fnaddr ) )
+                    if ( RefPtr<Type> fntype = GetDebuggerCall( ts, L"__debugExpanded", fnaddr ) )
                     {
                         auto func = fntype->AsTypeFunction();
                         pointeeObj._Type = func->GetReturnType();
@@ -403,7 +404,7 @@ namespace MagoEE
                                 hr = S_OK; // no need to read value to fill traits
                         if ( hr != S_OK )
                             hr = binder->CallFunction( fnaddr, func, pparentVal->Addr, pointeeObj, true );
-                        if (hr == S_OK)
+                        if ( hr == S_OK )
                         {
                             pparentVal = &pointeeObj;
                             goto L_retry;
