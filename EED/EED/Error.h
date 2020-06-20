@@ -44,8 +44,27 @@ enum
     E_MAGOEE_NOFUNCCALL,
     E_MAGOEE_HASSIDEEFFECT,
     E_MAGOEE_CANNOTALLOCTRAMP,
+    E_MAGOEE_INVALID_MAGOGC,
     E_MAGOEE_CALLFAILED,
+    E_MAGOEE_DivideByZero, // integrates DkmILFailureReason as (E_MAGOEE_CALLFAILED + reason)
+    E_MAGOEE_MemoryReadError,
+    E_MAGOEE_MemoryWriteError,
+    E_MAGOEE_RegisterReadError,
+    E_MAGOEE_RegisterWriteError,
+    E_MAGOEE_Aborted,
+    E_MAGOEE_StringTooLong,
+    E_MAGOEE_Timeout,
+    E_MAGOEE_TooManyFuncEval,
+    E_MAGOEE_AbortFailed,
+    E_MAGOEE_MinidumpNotSupported,
+    E_MAGOEE_AbortUnhandledException,
+    E_MAGOEE_UserModeScheduledNotSupported,
+    E_MAGOEE_ByteExtractionOutOfBounds,
+    E_MAGOEE_InvalidPseudoAddressOperation,
+    E_MAGOEE_UnknownFuncEvalError,
+    E_MAGOEE_AttemptedToCrossEnclaveBoundaries,
 
+    E_MAGOEE_NUMERRORS
     // TODO: maybe something like RUNTIME_ERROR or DEBUG_INFO_ERROR
     //  for cases like this: Decl->GetType( _Type.Ref() )   (see ThisExpr::Semantic)
 };

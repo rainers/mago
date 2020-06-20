@@ -936,9 +936,14 @@ public:
             return E_MAGOEE_CANNOTALLOCTRAMP;
         if (helper->fnInitGC)
             return S_OK;
+        int ptrSize = mModule->mArchData->GetPointerSize();
+        bool x64 = ptrSize == 8;
 
+        const wchar_t* sym = L"__D2gc5proxy9_instanceC4coreQz11gcinterface2GC";
+        if (x64)
+            sym++;
         MagoEE::Address instaddr;
-        HRESULT hr = FindGlobalSymbolAddr(L"_D2gc5proxy9_instanceC4coreQz11gcinterface2GC", instaddr);
+        HRESULT hr = FindGlobalSymbolAddr(sym, instaddr);
         if (FAILED(hr))
             return S_FALSE;
 
@@ -951,8 +956,6 @@ public:
         MagoEE::Address fnaddr;
         tryHR(FindFunctionAddress(L"kernel32.dll", L"LoadLibraryW", fnaddr));
 
-        int ptrSize = mModule->mArchData->GetPointerSize();
-
         HKEY    hKey = NULL;
         LSTATUS ret = OpenRootRegKey(false, false, hKey);
         if (ret != ERROR_SUCCESS)
@@ -960,7 +963,7 @@ public:
 
         wchar_t magogcPath[MAX_PATH] = L"";
         int     magogcPathLen = _countof(magogcPath);
-        auto    regValue = ptrSize == 8 ? L"magogc64.dll" : L"magogc32.dll";
+        auto    regValue = x64 ? L"magogc64.dll" : L"magogc32.dll";
         ret = GetRegString(hKey, regValue, magogcPath, magogcPathLen);
         RegCloseKey(hKey);
         if (ret != ERROR_SUCCESS)
@@ -981,10 +984,10 @@ public:
         tryHR(ExecFunc(fnaddr, DkmILCallingConvention::StdCall, retval, ptrSize, argbuf, ptrSize));
 
         MagoEE::Address initGC;
-        tryHR(FindFunctionAddress(regValue, L"initGC", initGC));
+        tryHR(FindFunctionAddress(regValue, x64 ? L"initGC" : L"_initGC@0", initGC));
 
         MagoEE::Address termGC;
-        tryHR(FindFunctionAddress(regValue, L"termGC", termGC));
+        tryHR(FindFunctionAddress(regValue, x64 ? L"termGC" : L"_termGC@0", termGC));
 
         MagoEE::Address gcaddr;
         tryHR(ExecFunc(initGC, DkmILCallingConvention::StdCall, gcaddr, ptrSize));
@@ -1007,7 +1010,7 @@ public:
 
         if (!helper->adrInstanceGC)
             if (auto hr = LoadMagoGCDLL())
-                return hr;
+                return E_MAGOEE_INVALID_MAGOGC;
 
         UINT32 ptrSize = mModule->mArchData->GetPointerSize();
         MagoEE::Address gcinst;
@@ -1133,7 +1136,7 @@ public:
         if (!FAILED(hr))
         {
             if (failureReason != DkmILFailureReason::None)
-                hr = E_MAGOEE_CALLFAILED;
+                hr = E_MAGOEE_CALLFAILED + failureReason;
             else if (arrResults.Length > 0 && arrResults.Members[0])
             {
                 DkmReadOnlyCollection<BYTE>* res = arrResults.Members[0]->ResultBytes();
@@ -1156,8 +1159,8 @@ public:
         HRESULT hr_gc = S_FALSE;
         if (saveGC && MagoEE::gCallDebuggerUseMagoGC)
             hr_gc = SwitchToMagoGC();
-        struct Exit { ~Exit() { fn(); } std::function<void()> fn; }
-            ex{ [&]() { if (hr_gc == S_OK) RestoreInstanceGC(); } };
+        struct Exit { ~Exit() { fn(); } std::function<void()> fn; };
+        Exit ex{ [&]() { if (hr_gc == S_OK) RestoreInstanceGC(); } };
 
         using namespace Evaluation::IL;
 
@@ -1172,6 +1175,25 @@ public:
         DkmILCallingConvention::e CallingConvention = toCallingConvention(callConv);
         if (CallingConvention == DkmILCallingConvention::e(-1))
             return E_MAGOEE_BADCALLCONV;
+
+        Mago::Address64 teb = GetTebBase();
+        Mago::Address64 seh = 0;
+        if (!isX64 && teb != 0)
+        {
+            UINT32 read;
+            tryHR(mModule->mProcess->ReadMemory(teb, DkmReadMemoryFlags::None, &seh, ptrSize, &read));
+            if (read != ptrSize)
+                return E_MAGOEE_CALLFAILED;
+            Mago::Address64 zero = 0;
+            DkmArray<BYTE> arr = { (BYTE*)&zero, ptrSize };
+            tryHR(mModule->mProcess->WriteMemory(teb, arr));
+        }
+        Exit ex2{ [&]() { if (seh != 0)
+            {
+                DkmArray<BYTE> arr = { (BYTE*)&seh, ptrSize };
+                mModule->mProcess->WriteMemory(teb, arr);
+            }
+        } };
 
         DkmILFunctionEvaluationArgumentFlags::e thisArgflags = DkmILFunctionEvaluationArgumentFlags::ThisPointer;
         MagoEE::Address tramp = 0;
@@ -1305,7 +1327,7 @@ public:
         if (!FAILED(hr))
         {
             if (failureReason != DkmILFailureReason::None)
-                hr = E_MAGOEE_CALLFAILED;
+                hr = E_MAGOEE_CALLFAILED + failureReason;
             else if (arrResults.Length > 0 && arrResults.Members[0])
             {
                 DkmReadOnlyCollection<BYTE>* res = arrResults.Members[0]->ResultBytes();
@@ -1466,13 +1488,13 @@ CComPtr<DkmString> toDkmString(const wchar_t* str)
 ///////////////////////////////////////////////////////////////////////////////
 HRESULT InitExprContext(Evaluation::DkmInspectionContext* pInspectionContext,
                         CallStack::DkmStackWalkFrame* pStackFrame,
+                        bool forceReinit,
                         RefPtr<CCExprContext>& exprContext)
 {
-#if 1
     auto session = pInspectionContext->InspectionSession();
-    if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
-        return exprContext->SetStackFrame(pStackFrame);
-#endif
+    if (!forceReinit)
+        if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
+            return exprContext->SetStackFrame(pStackFrame);
     auto process = pInspectionContext->RuntimeInstance()->Process();
 
     tryHR(MakeCComObject(exprContext));
@@ -1659,7 +1681,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     auto process = pInspectionContext->RuntimeInstance()->Process();
 
     RefPtr<CCExprContext> exprContext;
-    tryHR(InitExprContext(pInspectionContext, pStackFrame, exprContext));
+    tryHR(InitExprContext(pInspectionContext, pStackFrame, false, exprContext));
 
     std::wstring exprText = pExpression->Text()->Value();
     MagoEE::FormatOptions fmtopt;
@@ -1751,7 +1773,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameLocals(
     auto session = pInspectionContext->InspectionSession();
 
     RefPtr<CCExprContext> exprContext;
-    tryHR(InitExprContext(pInspectionContext, pStackFrame, exprContext));
+    tryHR(InitExprContext(pInspectionContext, pStackFrame, true, exprContext));
 
     RefPtr<Mago::FrameProperty> frameProp;
     tryHR(MakeCComObject(frameProp));
@@ -1882,7 +1904,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateReturnValue(
         return E_NOTIMPL;
 
     RefPtr<CCExprContext> exprContext;
-    tryHR(InitExprContext(pInspectionContext, pStackFrame, exprContext));
+    tryHR(InitExprContext(pInspectionContext, pStackFrame, false, exprContext));
 
     ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
     tryHR(exprContext->EvalReturnValue(pInspectionContext, pNativeRetValue, info));

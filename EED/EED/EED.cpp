@@ -492,8 +492,28 @@ namespace MagoEE
         L"Function calls not allowed",
         L"Function call may have side effects",
         L"Cannot allocate trampoline function",
+        L"Invalid or missing magogc*.dll",
         L"Function call execution failed",
+        L"division by zero", // DkmILFailureReason::DivideByZero
+        L"memory read error",
+        L"memory write error",
+        L"register read error",
+        L"register write error",
+        L"aborted",
+        L"string too long",
+        L"evaluation timeout",
+        L"multiple function evaluations",
+        L"fail to abort",
+        L"not supported for minidump",
+        L"unhandled exception",
+        L"not supported on a user-mode scheduled thread",
+        L"bounds error",
+        L"unsupported operation",
+        L"function evaluation error",
+        L"failed to evaluate across enclave boundaries", // DkmILFailureReason::AttemptedToCrossEnclaveBoundaries
     };
+
+    static_assert(sizeof(gErrStrs) / sizeof(gErrStrs[0]) == E_MAGOEE_NUMERRORS - E_MAGOEE_BASE, "error mismatch");
 
     // returns: S_FALSE on error not found
 
