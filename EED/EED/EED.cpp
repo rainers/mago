@@ -93,6 +93,7 @@ namespace MagoEE
     bool gRecombineTuples = true;
     bool gShowDArrayLengthInType = true;
     bool gCallDebuggerFunctions = true;
+    bool gCallDebuggerRanges = true;
     bool gCallDebuggerUseMagoGC = true;
 
     uint32_t gMaxArrayLength = 1000;
@@ -255,19 +256,22 @@ namespace MagoEE
             if ( gCallDebuggerFunctions && fmtopts.specifier != FormatSpecRaw && pparentVal->ObjVal.Addr != 0 )
             {
                 Address fnaddr;
-                if ( RefPtr<Type> fntype = GetDebuggerCall( ts, L"__debugExpanded", fnaddr ) )
+                if ( RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugExpanded", fnaddr ) )
                 {
-                    auto func = fntype->AsTypeFunction();
-                    pointeeObj.ObjVal._Type = func->GetReturnType();
-                    hr = binder->CallFunction( fnaddr, func, pparentVal->ObjVal.Addr, pointeeObj.ObjVal, true );
+                    hr = EvalDebuggerProp( binder, fntype, fnaddr, pparentVal->ObjVal.Addr, pointeeObj.ObjVal );
                     if ( hr == S_OK )
                     {
                         pparentVal = &pointeeObj;
                         goto L_retry;
                     }
                 }
+                if( gCallDebuggerRanges && IsForwardRange( pparentVal->ObjVal._Type ) )
+                {
+                    en = new EEDEnumRange();
+                }
             }
-            en = new EEDEnumStruct();
+            if( !en )
+                en = new EEDEnumStruct();
         }
         else if ( pparentVal->ObjVal._Type->AsTypeTuple() )
         {
@@ -339,8 +343,8 @@ namespace MagoEE
             {
                 Address fnaddr;
                 if ( gCallDebuggerFunctions )
-                    if( RefPtr<Type> fntype = GetDebuggerCall( ts, L"__debugStringView", fnaddr ) )
-                        if( auto tret = fntype->AsTypeFunction()->GetReturnType() )
+                    if( RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugStringView", fnaddr ) )
+                        if( auto tret = GetDebuggerPropType( fntype ) )
                             result.HasString = typeHasString( tret );
             }
 
@@ -392,10 +396,9 @@ namespace MagoEE
                 if ( gCallDebuggerFunctions && pparentVal->Addr != 0 )
                 {
                     Address fnaddr;
-                    if ( RefPtr<Type> fntype = GetDebuggerCall( ts, L"__debugExpanded", fnaddr ) )
+                    if ( RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugExpanded", fnaddr ) )
                     {
-                        auto func = fntype->AsTypeFunction();
-                        pointeeObj._Type = func->GetReturnType();
+                        pointeeObj._Type = GetDebuggerPropType( fntype );
                         HRESULT hr = E_FAIL;
                         if ( pointeeObj._Type->AsTypeSArray() )
                             hr = S_OK; // no need to read value to fill traits
@@ -403,12 +406,17 @@ namespace MagoEE
                             if ( ts->GetUdtKind() != MagoEE::Udt_Class )
                                 hr = S_OK; // no need to read value to fill traits
                         if ( hr != S_OK )
-                            hr = binder->CallFunction( fnaddr, func, pparentVal->Addr, pointeeObj, true );
+                            hr = EvalDebuggerProp( binder, fntype, fnaddr, pparentVal->Addr, pointeeObj );
                         if ( hr == S_OK )
                         {
                             pparentVal = &pointeeObj;
                             goto L_retry;
                         }
+                    }
+                    else if( gCallDebuggerRanges && IsForwardRange( type ) )
+                    {
+                        result.HasChildren = result.HasRawChildren = true;
+                        return;
                     }
                 }
                 RefPtr<Declaration> decl = type->GetDeclaration();
@@ -452,17 +460,66 @@ namespace MagoEE
         }
     }
 
-    RefPtr<Type> GetDebuggerCall( ITypeStruct* ts, const wchar_t* call, Address& fnaddr )
+    RefPtr<Type> GetDebuggerProp( ITypeStruct* ts, const wchar_t* call, Address& fnaddr )
     {
         RefPtr<Declaration> decl = ts->FindObject( call );
         RefPtr<Type> dgtype;
-        if ( decl && decl->GetAddress( fnaddr ) && decl->GetType( dgtype.Ref() ) )
+        if ( decl && decl->GetType( dgtype.Ref() ) )
+        {
+            int off;
             if ( dgtype->IsDelegate() ) // delegate has pointer to function as "next"
-                if ( auto ptrtype = dgtype->AsTypeNext()->GetNext()->AsTypeNext() )
-                    if ( RefPtr<Type> fntype = ptrtype->GetNext() )
-                        if ( fntype->AsTypeFunction() )
-                            return fntype;
+            {
+                if ( decl->GetAddress( fnaddr ) )
+                    if ( auto ptrtype = dgtype->AsTypeNext()->GetNext()->AsTypeNext() )
+                        if ( RefPtr<Type> fntype = ptrtype->GetNext() )
+                            if ( fntype->AsTypeFunction() )
+                                return fntype;
+            }
+            else if ( decl->GetOffset( off ) )
+            {
+                fnaddr = off;
+                return dgtype; // type to field
+            }
+        }
         return nullptr;
+    }
+
+    RefPtr<Type> GetDebuggerPropType( Type* fntype )
+    {
+        if (auto func = fntype->AsTypeFunction())
+            return func->GetReturnType();
+        return fntype;
+    }
+
+    HRESULT EvalDebuggerProp( IValueBinder* binder, RefPtr<Type> fntype, Address fnaddr,
+                              Address objAddr, DataObject& propValue )
+    {
+        HRESULT hr;
+        if( auto func = fntype->AsTypeFunction() )
+        {
+            propValue._Type = func->GetReturnType();
+            hr = binder->CallFunction( fnaddr, func, objAddr, propValue, true );
+        }
+        else
+        {
+            propValue._Type = fntype;
+            propValue.Addr = objAddr + fnaddr;
+            hr = binder->GetValue( propValue.Addr, fntype, propValue.Value );
+        }
+        return hr;
+    }
+
+    bool IsForwardRange( Type* type )
+    {
+        auto ts = type->AsTypeStruct();
+        if (!ts)
+            return false;
+        Address addrSave = 0, addrEmpty = 0, addrFront = 0, addrPop = 0;
+        RefPtr<Type> typeSave  = GetDebuggerProp( ts, L"save", addrSave );
+        RefPtr<Type> typeEmpty = typeSave  ? GetDebuggerProp( ts, L"empty", addrEmpty ) : nullptr;
+        RefPtr<Type> typeFront = typeEmpty ? GetDebuggerProp( ts, L"front", addrFront ) : nullptr;
+        RefPtr<Type> typePop   = typeFront ? GetDebuggerProp( ts, L"popFront", addrPop ) : nullptr;
+        return typePop != nullptr;
     }
 
     static const wchar_t    gCommonErrStr[] = L": Error: ";

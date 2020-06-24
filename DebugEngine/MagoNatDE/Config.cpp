@@ -241,6 +241,11 @@ bool readMagoOptions()
     else
         gOptions.callDebuggerFunctions = true;
 
+    if (GetRegValue(hKey, L"callDebuggerRanges", &val) == S_OK)
+        gOptions.callDebuggerRanges = val != 0;
+    else
+        gOptions.callDebuggerRanges = true;
+
     if (GetRegValue(hKey, L"callDebuggerUseMagoGC", &val) == S_OK)
         gOptions.callDebuggerUseMagoGC = val != 0;
     else
@@ -253,6 +258,7 @@ bool readMagoOptions()
     MagoEE::gRecombineTuples = gOptions.recombineTuples;
     MagoEE::gShowDArrayLengthInType = gOptions.showDArrayLengthInType;
     MagoEE::gCallDebuggerFunctions = gOptions.callDebuggerFunctions;
+    MagoEE::gCallDebuggerRanges = gOptions.callDebuggerRanges;
     MagoEE::gCallDebuggerUseMagoGC = gOptions.callDebuggerUseMagoGC;
 
     RegCloseKey( hKey );

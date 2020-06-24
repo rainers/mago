@@ -55,6 +55,7 @@ struct MagoOptions
     bool recombineTuples;
     bool showDArrayLengthInType;
     bool callDebuggerFunctions;
+    bool callDebuggerRanges;
     bool callDebuggerUseMagoGC;
     int  maxArrayElements;
 };

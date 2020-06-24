@@ -1325,4 +1325,232 @@ namespace MagoEE
 
         return true;
     }
+
+    //------------------------------------------------------------------------
+    //  EEDEnumRange
+    //------------------------------------------------------------------------
+
+    EEDEnumRange::EEDEnumRange()
+        : mCountDone( 0 )
+        , mBaseOffset( 0 )
+        , mLength( ~0 )
+    {
+    }
+
+    HRESULT EEDEnumRange::Init(
+        IValueBinder* binder,
+        const wchar_t* parentExprText,
+        const EvalResult& parentVal,
+        ITypeEnv* typeEnv,
+        NameTable* strTable)
+    {
+        _ASSERT( parentVal.ObjVal._Type && parentVal.ObjVal._Type->AsTypeStruct() );
+
+        HRESULT hr = EEDEnumValues::Init( binder, parentExprText, parentVal, typeEnv, strTable );
+        if ( FAILED( hr ) )
+            return hr;
+        if ( FAILED( hr = Save( mParentVal.ObjVal ) ) )
+            return hr;
+        if( FAILED( CacheLength() ) )
+            mLength = ~0;
+
+        if( parentVal.IsArrayContinuation && mParentExprText.length() > 2 )
+        {
+            int base = -1;
+            if( mParentExprText.back() == ']' )
+            {
+                for( size_t p = mParentExprText.length() - 2; p > 0; --p )
+                    if( mParentExprText[p] == '[' )
+                    {
+                        if( swscanf( mParentExprText.data() + p + 1, L"%d..", &base ) != 1 )
+                            base = -1;
+                        else
+                            mParentExprText.erase( p );
+                        break;
+                    }
+            }
+            if ( base >= 0 )
+                mBaseOffset = base;
+        }
+
+        return S_OK;
+    }
+
+    HRESULT EEDEnumRange::Save( DataObject& obj )
+    {
+        Address addrSave = 0;
+        auto type = obj._Type;
+        RefPtr<Type> typeSave = GetDebuggerProp( type->AsTypeStruct(), L"save", addrSave );
+
+        mRange._Type = GetDebuggerPropType( typeSave );
+        if ( !mRange._Type->Equals( type ) )
+            return E_MAGOEE_NOFUNCCALL;
+
+        HRESULT hr = EvalDebuggerProp( mBinder, typeSave, addrSave, obj.Addr, mRange );
+        if ( hr != S_OK )
+            return hr;
+        if ( mRange.Addr == 0 )
+            return E_MAGOEE_NO_ADDRESS;
+        return S_OK;
+    }
+
+    HRESULT EEDEnumRange::CacheLength()
+    {
+        Address addrLength = 0;
+        auto type = mRange._Type;
+        RefPtr<Type> typeLength = GetDebuggerProp( type->AsTypeStruct(), L"length", addrLength );
+        if ( !typeLength )
+            return E_MAGOEE_NOFUNCCALL;
+
+        DataObject length = { 0 };
+        HRESULT hr = EvalDebuggerProp( mBinder, typeLength, addrLength, mRange.Addr, length );
+        if( hr != S_OK )
+            return hr;
+
+        mLength = length.Value.UInt64Value;
+        return S_OK;
+    }
+
+    uint32_t EEDEnumRange::GetCount()
+    {
+        uint64_t count = mLength;
+        if ( gMaxArrayLength > 0 && count > gMaxArrayLength )
+            count = gMaxArrayLength + 1;
+
+        return count;
+    }
+
+    uint32_t EEDEnumRange::GetIndex()
+    {
+        return mCountDone;
+    }
+
+    void EEDEnumRange::Reset()
+    {
+        mCountDone = 0;
+        Save( mParentVal.ObjVal );
+    }
+
+    HRESULT EEDEnumRange::Skip( uint32_t count )
+    {
+        if ( count > ( GetCount() - mCountDone ) )
+        {
+            mCountDone = GetCount();
+            return S_FALSE;
+        }
+
+        auto ts = mRange._Type->AsTypeStruct();
+        Address addrEmpty = 0, addrPop = 0;
+        RefPtr<Type> typeEmpty = GetDebuggerProp( ts, L"empty", addrEmpty );
+        RefPtr<Type> typePop = typeEmpty ? GetDebuggerProp( ts, L"popFront", addrPop ) : nullptr;
+        if ( !typePop )
+            return E_MAGOEE_NOFUNCCALL;
+
+        while( count > 0 )
+        {
+            DataObject empty = { 0 };
+            HRESULT hr = EvalDebuggerProp( mBinder, typeEmpty, addrEmpty, mRange.Addr, empty );
+            if ( hr != S_OK )
+                return hr;
+            if ( empty.Value.Int64Value != 0 ) // check type?
+                break;
+
+            DataObject dummy = { 0 };
+            hr = EvalDebuggerProp( mBinder, typePop, addrPop, mRange.Addr, dummy );
+            if ( hr != S_OK )
+                return hr;
+
+            mCountDone++;
+            count--;
+        }
+
+        return S_OK;
+    }
+
+    HRESULT EEDEnumRange::Clone( IEEDEnumValues*& copiedEnum )
+    {
+        HRESULT hr = S_OK;
+        RefPtr<EEDEnumRange> en = new EEDEnumRange();
+
+        if ( en == NULL )
+            return E_OUTOFMEMORY;
+
+        hr = en->Init( mBinder, mParentExprText.c_str(), mParentVal, mTypeEnv, mStrTable );
+        if ( FAILED( hr ) )
+            return hr;
+
+        hr = en->Save( mRange );
+        if ( FAILED( hr ) )
+            return hr;
+
+        en->mLength = mLength;
+        en->mCountDone = mCountDone;
+        en->mBaseOffset = mBaseOffset;
+
+        copiedEnum = en.Detach();
+        return S_OK;
+    }
+
+    HRESULT EEDEnumRange::EvaluateNext( 
+        const EvalOptions& options, 
+        EvalResult& result,
+        std::wstring& name,
+        std::wstring& fullName )
+    {
+        if ( mCountDone >= GetCount() )
+            return E_FAIL;
+
+        // 4294967295
+        const int   MaxIntStrLen = 10;
+        // "[indexInt]", and add some padding
+        const int   MaxIndexStrLen = MaxIntStrLen + 2 + 10;
+
+        wchar_t indexStr[ MaxIndexStrLen + 1 ] = L"";
+
+        bool atLimit = gMaxArrayLength > 0 && mCountDone == gMaxArrayLength && mLength - 1 > gMaxArrayLength;
+        if( atLimit )
+            swprintf_s( indexStr, L"[%d..%I64d]", mCountDone + mBaseOffset, mLength + mBaseOffset );
+        else
+            swprintf_s( indexStr, L"[%d]", mCountDone + mBaseOffset );
+
+        name.clear();
+        name.append( indexStr );
+
+        bool isIdent = IsIdentifier( mParentExprText.data() );
+        fullName.clear();
+        if ( !isIdent )
+            fullName.append( L"(" );
+        fullName.append( mParentExprText );
+        if ( !isIdent )
+            fullName.append( L")" );
+        fullName.append( name );
+
+        uint32_t index = mCountDone;
+
+        if ( atLimit )
+        {
+            result.ObjVal = mRange;
+            result.IsArrayContinuation = true;
+        }
+        else
+        {
+            auto ts = mRange._Type->AsTypeStruct();
+            Address addrFront = 0;
+            RefPtr<Type> typeFront = GetDebuggerProp( ts, L"front", addrFront );
+            if( !typeFront )
+                return E_MAGOEE_NOFUNCCALL;
+
+            result.ObjVal._Type = GetDebuggerPropType( typeFront );
+            HRESULT hr = EvalDebuggerProp( mBinder, typeFront, addrFront, mRange.Addr, result.ObjVal );
+            if ( hr != S_OK )
+                return hr;
+            hr = Skip( 1 );
+            if( FAILED( hr ) )
+                return hr;
+        }
+
+        FillValueTraits( mBinder, result, nullptr );
+        return S_OK;
+    }
+
 }

@@ -3,6 +3,7 @@
 #include "MIEngine.h"
 #include "../../DebugEngine/MagoNatDE/PendingBreakpoint.h"
 //#include "micommand.h"
+#include <memory>
 
 //const char * toUtf8z(const std::wstring s) { 
 //	return toUtf8(s).c_str(); 
@@ -377,7 +378,7 @@ std::wstring getExeName()
 {
     for (int alloclen = 256; ; alloclen *= 2)
     {
-        std::auto_ptr<wchar_t> name(new wchar_t[alloclen]);
+        std::unique_ptr<wchar_t> name(new wchar_t[alloclen]);
         DWORD len = GetModuleFileNameW(NULL, name.get(), alloclen);
         if (len < alloclen)
             return name.get();

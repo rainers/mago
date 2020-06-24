@@ -1295,10 +1295,11 @@ public:
         // call function
         RefPtr<DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>> argFlags;
         tryHR(DkmReadOnlyCollection<DkmILFunctionEvaluationArgumentFlags::e>::Create(argFlag, ArgumentCount, &argFlags.Ref()));
-        UINT32 UniformComplexReturnElementSize = 0;
-
+        UINT32 retSize = ReturnValueSize;
+        if (retSize < 4 && !(evalFlags & DkmILFunctionEvaluationFlags::NoEnregisteredReturn))
+            retSize = 4; // bool and short not properly returned
         RefPtr<DkmILExecuteFunction> pcall;
-        tryHR(DkmILExecuteFunction::Create(ArgumentCount, ReturnValueSize, CallingConvention, evalFlags, argFlags, 0, &pcall.Ref()));
+        tryHR(DkmILExecuteFunction::Create(ArgumentCount, retSize, CallingConvention, evalFlags, argFlags, 0, &pcall.Ref()));
         instructions[cntInstr++] = pcall;
 
         RefPtr<DkmILRegisterRead> pregreaddx;
@@ -1331,18 +1332,18 @@ public:
             else if (arrResults.Length > 0 && arrResults.Members[0])
             {
                 DkmReadOnlyCollection<BYTE>* res = arrResults.Members[0]->ResultBytes();
-                if (res && res->Count() == ReturnValueSize)
+                if (res && res->Count() == retSize)
                 {
                     if (retbuf)
                     {
                         if (!passRetbuf)
                         {
-                            DkmArray<BYTE> arr = { const_cast<BYTE*>(res->Items()), ReturnValueSize };
+                            DkmArray<BYTE> arr = { const_cast<BYTE*>(res->Items()), retSize };
                             tryHR(mModule->mProcess->WriteMemory(retbuf, arr));
                         }
                         obj.Addr = retbuf;
                     }
-                    if (ReturnValueSize <= sizeof(MagoEE::DataValue))
+                    if (retSize <= sizeof(MagoEE::DataValue))
                     {
                         hr = FromRawValue(res->Items(), obj._Type, obj.Value);
                         hr = S_OK;
@@ -1350,7 +1351,7 @@ public:
                 }
             }
             else
-                hr = ReturnValueSize == 0 ? S_OK : E_FAIL;
+                hr = retSize == 0 ? S_OK : E_FAIL;
         }
         DkmFreeArray(arrResults);
         return hr;

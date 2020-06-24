@@ -581,7 +581,7 @@ namespace MagoEE
 
         auto length = type->GetLength();
         outStr.append( L"(" );
-        for ( uint64_t i = 0; i < length; i++ )
+        for ( uint32_t i = 0; i < length; i++ )
         {
             if ( outStr.length() >= maxLength )
             {
@@ -639,6 +639,7 @@ namespace MagoEE
             return E_INVALIDARG;
 
         outStr.append( L"{" );
+        size_t initialLength = outStr.length();
         RefPtr<Declaration> next;
         for ( ; ; )
         {
@@ -711,7 +712,7 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
-            if ( outStr.length() > 1 )
+            if ( outStr.length() > initialLength )
                 outStr.append( L", " );
             outStr.append( member->GetName() );
             outStr.append( L"=" );
@@ -722,26 +723,106 @@ namespace MagoEE
         return hr;
     }
 
+    HRESULT FormatRange( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    {
+        auto ts = type->AsTypeStruct();
+        Address addrSave = 0, addrEmpty = 0, addrFront = 0, addrPop = 0;
+        RefPtr<Type> typeSave  = GetDebuggerProp( ts, L"save", addrSave );
+        RefPtr<Type> typeEmpty = typeSave  ? GetDebuggerProp( ts, L"empty", addrEmpty ) : nullptr;
+        RefPtr<Type> typeFront = typeEmpty ? GetDebuggerProp( ts, L"front", addrFront ) : nullptr;
+        RefPtr<Type> typePop   = typeFront ? GetDebuggerProp( ts, L"popFront", addrPop ) : nullptr;
+        if ( !typePop )
+            return E_MAGOEE_NOFUNCCALL;
+
+        DataObject obj = { 0 };
+        obj._Type = GetDebuggerPropType( typeSave );
+        if ( !obj._Type->Equals( type ) )
+            return E_MAGOEE_NOFUNCCALL;
+
+        HRESULT hr = EvalDebuggerProp( binder, typeSave, addrSave, addr, obj );
+        if ( hr != S_OK )
+            return hr;
+        if ( obj.Addr == 0 )
+            return E_MAGOEE_NO_ADDRESS;
+
+        Address addrLength = 0;
+        RefPtr<Type> typeLength = GetDebuggerProp( ts, L"length", addrLength );
+        if( typeLength )
+        {
+            DataObject length = { 0 };
+            hr = EvalDebuggerProp( binder, typeLength, addrLength, obj.Addr, length );
+            if( hr != S_OK )
+                return hr;
+
+            outStr.append(L"length=");
+
+            hr = FormatValue( binder, length, fmtopt, outStr, maxLength );
+            if ( hr != S_OK )
+                return hr;
+
+            outStr.append(L" ");
+        }
+
+        outStr.append( L"{" );
+        auto initLength = outStr.length();
+
+        for ( uint32_t i = 0; ; i++ )
+        {
+            DataObject empty = { 0 };
+            hr = EvalDebuggerProp( binder, typeEmpty, addrEmpty, obj.Addr, empty );
+            if ( hr != S_OK )
+                return hr;
+            if ( empty.Value.Int64Value != 0 ) // check type?
+                break;
+
+            if ( outStr.length() > initLength )
+                outStr.append( L", ");
+
+            if ( outStr.length () > maxLength )
+            {
+                outStr.append( L"..." );
+                break;
+            }
+
+            DataObject elem = { 0 };
+            hr = EvalDebuggerProp( binder, typeFront, addrFront, obj.Addr, elem );
+            if ( hr != S_OK )
+                return hr;
+
+            hr = FormatValue( binder, elem, fmtopt, outStr, maxLength );
+            if ( hr != S_OK )
+                return hr;
+
+            DataObject dummy = { 0 };
+            hr = EvalDebuggerProp( binder, typePop, addrPop, obj.Addr, dummy );
+            if ( hr != S_OK )
+                return hr;
+        }
+
+        outStr.append( L"}" );
+        return S_OK;
+    }
+
 	HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
 	{
         static bool recurse = false;
         if ( gCallDebuggerFunctions && !recurse && fmtopt.specifier != FormatSpecRaw )
         {
-            HRESULT hr = E_FAIL;
             recurse = true;
+            HRESULT hr = E_FAIL;
             Address fnaddr;
-            if( RefPtr<Type> fntype = GetDebuggerCall( type->AsTypeStruct(), L"__debugOverview", fnaddr ) )
+            if( RefPtr<Type> fntype = GetDebuggerProp( type->AsTypeStruct(), L"__debugOverview", fnaddr ) )
             {
-                DataObject obj;
-                auto func = fntype->AsTypeFunction();
-                obj._Type = func->GetReturnType();
-                hr = binder->CallFunction( fnaddr, func, addr, obj, true );
+                DataObject obj = { 0 };
+                hr = EvalDebuggerProp( binder, fntype, fnaddr, addr, obj );
                 if( hr == S_OK )
                     hr = FormatValue( binder, obj, fmtopt, outStr, maxLength );
             }
+            else if ( gCallDebuggerRanges )
+                hr = FormatRange(binder, addr, type, fmtopt, outStr, maxLength);
 
             recurse = false;
-            if (hr == S_OK)
+            if ( hr == S_OK )
                 return S_OK;
         }
 		return _FormatStruct( binder, addr, nullptr, type, fmtopt, outStr, maxLength );
@@ -1072,13 +1153,11 @@ namespace MagoEE
             if ( !gCallDebuggerFunctions )
                 return E_INVALIDARG;
             Address fnaddr;
-            RefPtr<Type> fntype = GetDebuggerCall( ts, L"__debugStringView", fnaddr );
+            RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugStringView", fnaddr );
             if ( !fntype )
                 return E_INVALIDARG;
 
-            auto func = fntype->AsTypeFunction();
-            dbgObj._Type = func->GetReturnType();
-            hr = binder->CallFunction( fnaddr, func, objVal.Addr, dbgObj, true );
+            hr = EvalDebuggerProp( binder, fntype, fnaddr, objVal.Addr, dbgObj );
             if ( FAILED( hr ) )
                 return hr;
             pVal = &dbgObj;

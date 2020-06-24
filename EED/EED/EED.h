@@ -77,6 +77,7 @@ namespace MagoEE
     extern bool gRecombineTuples;
     extern bool gShowDArrayLengthInType;
     extern bool gCallDebuggerFunctions;
+    extern bool gCallDebuggerRanges;
     extern bool gCallDebuggerUseMagoGC;
 
     extern uint32_t gMaxArrayLength;
@@ -98,7 +99,11 @@ namespace MagoEE
 
     void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr );
 
-    RefPtr<Type> GetDebuggerCall( ITypeStruct* ts, const wchar_t* call, Address& fnaddr );
+    RefPtr<Type> GetDebuggerProp( ITypeStruct* ts, const wchar_t* call, Address& fnaddr );
+    RefPtr<Type> GetDebuggerPropType( Type* fntype );
+    HRESULT EvalDebuggerProp( IValueBinder* binder, RefPtr<Type> fntype, Address fnaddr,
+                              Address objAddr, DataObject& propValue );
+    bool IsForwardRange( Type* type );
 
     HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr );
 
