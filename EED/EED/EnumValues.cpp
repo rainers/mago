@@ -1352,7 +1352,12 @@ namespace MagoEE
         if ( FAILED( hr = Save( mParentVal.ObjVal ) ) )
             return hr;
         if( FAILED( CacheLength() ) )
+        {
             mLength = ~0;
+            hr = Skip( gMaxArrayLength + 1 );
+            mLength = mCountDone;
+            Reset();
+        }
 
         if( parentVal.IsArrayContinuation && mParentExprText.length() > 2 )
         {
