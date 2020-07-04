@@ -244,7 +244,7 @@ bool readMagoOptions()
     if (GetRegValue(hKey, L"callDebuggerRanges", &val) == S_OK)
         gOptions.callDebuggerRanges = val != 0;
     else
-        gOptions.callDebuggerRanges = true;
+        gOptions.callDebuggerRanges = false;
 
     if (GetRegValue(hKey, L"callDebuggerUseMagoGC", &val) == S_OK)
         gOptions.callDebuggerUseMagoGC = val != 0;
