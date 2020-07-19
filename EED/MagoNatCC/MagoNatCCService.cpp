@@ -1492,6 +1492,12 @@ HRESULT InitExprContext(Evaluation::DkmInspectionContext* pInspectionContext,
                         bool forceReinit,
                         RefPtr<CCExprContext>& exprContext)
 {
+    static UINT64 lastFrameBase = 0;
+    if (pStackFrame->FrameBase() != lastFrameBase)
+    {
+        lastFrameBase = pStackFrame->FrameBase();
+        forceReinit = true; 
+    }
     auto session = pInspectionContext->InspectionSession();
     if (!forceReinit)
         if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
@@ -1501,7 +1507,7 @@ HRESULT InitExprContext(Evaluation::DkmInspectionContext* pInspectionContext,
     tryHR(MakeCComObject(exprContext));
     tryHR(exprContext->Init(process, pStackFrame));
 
-#if 1
+#if 1 // disable if caching causes too much trouble
     tryHR(session->SetDataItem(DkmDataCreationDisposition::CreateAlways, exprContext.Get()));
 #endif
     return S_OK;
