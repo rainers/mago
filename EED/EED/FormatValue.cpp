@@ -476,7 +476,7 @@ namespace MagoEE
                 return hr;
 
             std::wstring elemStr;
-            hr = FormatValue( binder, elementObj, fmtopt, elemStr, kMaxFormatValueLength - outStr.length() );
+            hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length() );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -612,7 +612,7 @@ namespace MagoEE
                 return hr;
 
             std::wstring elemStr;
-            hr = FormatValue( binder, elementObj, fmtopt, elemStr, kMaxFormatValueLength - outStr.length() );
+            hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length() );
             if ( FAILED( hr ) )
                 return hr;
 

@@ -208,6 +208,11 @@ class MagoGC : GC
 	{
 		return false;
 	}
+
+	ulong allocatedInCurrentThread() nothrow
+	{
+		return 0;
+	}
 }
 
 // we don't need type info, replace with null pointers
