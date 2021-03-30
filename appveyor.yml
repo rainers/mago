@@ -46,6 +46,7 @@ build_script:
   - devenv /Build "Release|x64" /Project "MagoRemote" magodbg_2010.sln
   - devenv /Build "Release StaticDE|Win32" /Project "MagoNatCC" magodbg_2010.sln
   - devenv /Build "Release StaticDE|Win32" /Project "mago-mi" magodbg_2010.sln
+  - devenv /Build "Release StaticDE|x64" /Project "mago-mi" magodbg_2010.sln
 
 after_build:
   # publish as artifact
@@ -57,6 +58,8 @@ after_build:
         Push-AppveyorArtifact bin\Win32\Release\mago-mi.exe
         Push-AppveyorArtifact bin\Win32\Release\mago-mi.pdb
         Push-AppveyorArtifact bin\x64\Release\MagoRemote.exe
+        Push-AppveyorArtifact bin\x64\Release\mago-mi.exe -FileName mago-mi64.exe
+        Push-AppveyorArtifact bin\x64\Release\mago-mi.pdb -FileName mago-mi64.pdb
 
 on_failure:
   - cd c:\projects
