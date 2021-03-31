@@ -20,13 +20,75 @@
 
 
 #define AGENT_X64_VALUE         L"Remote_x64"
+#define AGENT_LOCAL_FILENAME    L"MagoRemote.exe"
 
 
 namespace Mago
 {
+    HRESULT FindAgentExecutableRegistry( wchar_t* agentPathBuf, int agentPathLen )
+    {
+        int  ret = 0;
+        HKEY hKey = NULL;
+
+        ret = OpenRootRegKey( false, false, hKey );
+        if ( ret != ERROR_SUCCESS )
+            return HRESULT_FROM_WIN32( ret );
+
+        ret = GetRegString( hKey, AGENT_X64_VALUE, agentPathBuf, agentPathLen );
+        RegCloseKey( hKey );
+        if ( ret != ERROR_SUCCESS )
+            return HRESULT_FROM_WIN32( ret );
+
+        return S_OK;
+    }
+
+    HRESULT FindAgentExecutableLocal( wchar_t* agentPathBuf, int agentPathLen )
+    {
+        int   ret = 0;
+        int   length = 0;
+        DWORD dwAttrib;
+
+        length = GetModuleFileNameW( NULL, agentPathBuf, agentPathLen );
+        if ( length == 0 )
+            return GetLastHr();
+
+        // simple in-place dirname implementation (remove filename)
+        while ( length > 0 && agentPathBuf[length] != '\\' )
+            length--;
+        if ( length == 0 )
+            return E_FAIL;
+        agentPathBuf[++length] = '\0';
+
+        ret = wcscat_s( agentPathBuf, agentPathLen, AGENT_LOCAL_FILENAME );
+        if ( ret != 0 )
+            return E_BOUNDS;
+
+        dwAttrib = GetFileAttributesW( agentPathBuf );
+        if ( dwAttrib == INVALID_FILE_ATTRIBUTES || (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) )
+            return E_FAIL;
+
+        return S_OK;
+    }
+
+    HRESULT FindAgentExecutable( wchar_t* agentPathBuf, int agentPathLen )
+    {
+        HRESULT hRes = 0;
+
+        hRes = FindAgentExecutableRegistry( agentPathBuf, agentPathLen );
+        if ( hRes == S_OK )
+            return hRes;
+
+        hRes = FindAgentExecutableLocal( agentPathBuf, agentPathLen );
+        if ( hRes == S_OK )
+            return hRes;
+
+        return hRes;
+    }
+
     HRESULT StartAgent( const wchar_t* sessionGuidStr )
     {
         int                 ret = 0;
+        HRESULT             hRes = 0;
         BOOL                bRet = FALSE;
         STARTUPINFO         startupInfo = { 0 };
         PROCESS_INFORMATION processInfo = { 0 };
@@ -35,18 +97,12 @@ namespace Mago
         wchar_t             eventName[AgentStartupEventNameLength + 1] = AGENT_STARTUP_EVENT_PREFIX;
         wchar_t             agentPath[MAX_PATH] = L"";
         int                 agentPathLen = _countof( agentPath );
-        HKEY                hKey = NULL;
 
         startupInfo.cb = sizeof startupInfo;
 
-        ret = OpenRootRegKey( false, false, hKey );
-        if ( ret != ERROR_SUCCESS )
-            return HRESULT_FROM_WIN32( ret );
-
-        ret = GetRegString( hKey, AGENT_X64_VALUE, agentPath, agentPathLen );
-        RegCloseKey( hKey );
-        if ( ret != ERROR_SUCCESS )
-            return HRESULT_FROM_WIN32( ret );
+        hRes = FindAgentExecutable( agentPath, agentPathLen );
+        if ( hRes != S_OK )
+            return hRes;
 
         wcscat_s( eventName, sessionGuidStr );
 
