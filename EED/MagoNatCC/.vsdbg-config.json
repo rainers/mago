@@ -1,0 +1,11 @@
+{
+  "$schema": "https://aka.ms/vs/vsdbg-config-schema",
+  "languages": [
+    {
+      "languageId": "{002a2de9-8bb6-484d-9800-7e4ad4084715}",
+      "vendorId": "{994b45c4-e6e9-11d2-903f-00c04fa302a1}",
+      "name": "D",
+      "codeViewCompilerIds": [ { "code": 68 } ]
+    }
+  ]
+}
