@@ -54,6 +54,7 @@ after_build:
         echo 'Creating artifacts...'
         Push-AppveyorArtifact bin\Win32\Release\MagoNatDE.dll
         Push-AppveyorArtifact bin\Win32\Release\MagoNatCC.dll
+        Push-AppveyorArtifact bin\Win32\Release\MagoNatCC.vsdconfig
         Push-AppveyorArtifact bin\Win32\Release\mago-mi.exe
         Push-AppveyorArtifact bin\Win32\Release\mago-mi.pdb
         Push-AppveyorArtifact bin\x64\Release\MagoRemote.exe
