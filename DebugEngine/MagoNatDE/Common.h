@@ -22,6 +22,8 @@
 
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS  // some CString constructors will be explicit
 
+#define RPC_USE_NATIVE_WCHAR 1
+
 // ATL
 #ifdef _DEBUG
 //#define _ATL_DEBUG_INTERFACES

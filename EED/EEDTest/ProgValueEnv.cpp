@@ -17,6 +17,7 @@
 #include "winternl2.h"
 #include <MagoCVSTI.h>
 #include <MagoCVConst.h>
+#include <WinPlat.h>
 
 using namespace std;
 using MagoEE::Type;
@@ -1227,7 +1228,7 @@ HRESULT ProgramValueEnv::GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, Ma
 {
     // TODO: this should come from Exec or somewhere else
 
-    CONTEXT         context = { 0 };
+    CONTEXT_X86     context = { 0 };
     RefPtr<Thread>  thread;
     HANDLE          hThread = NULL;
 
@@ -1238,8 +1239,12 @@ HRESULT ProgramValueEnv::GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, Ma
 
     context.ContextFlags = CONTEXT_ALL;
 
+#if _WIN64
+    return E_FAIL;
+#else
     if ( !GetThreadContext( hThread, &context ) )
         return HRESULT_FROM_WIN32( GetLastError() );
+#endif
 
     switch ( reg )
     {

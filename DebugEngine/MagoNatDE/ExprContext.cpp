@@ -328,7 +328,7 @@ namespace Mago
                 uint32_t    lenRead = 0;
 
 #if !defined( _M_IX86 )
-#error Mago doesn't implement a debugger engine for the current architecture.
+//#error Mago doesn't implement a debugger engine for the current architecture.
 #endif
                 // read the pointer straight into a long address, even if the pointer is short
                 hr = ReadMemory( 

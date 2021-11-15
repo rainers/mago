@@ -19,6 +19,7 @@ BOOL _dllEntry(HINSTANCE hInstance, ULONG ulReason, LPVOID pvReserved)
 }
 
 import core.gc.gcinterface;
+static import core.memory;
 
 __gshared HANDLE heap;
 __gshared MagoGC mgc = new MagoGC;
@@ -103,7 +104,7 @@ class MagoGC : GC
 		return p;
 	}
 
-	BlkInfo qalloc(size_t size, uint bits, const TypeInfo ti) nothrow
+	BlkInfo qalloc(size_t size, uint bits, scope const TypeInfo ti) nothrow
 	{
 		BlkInfo retval;
 		retval.base = HeapAlloc(heap, 0, size);

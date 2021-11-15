@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include "..\Real\Real.h"
-#include "..\Real\Complex.h"
-#include "..\EED\EED.h"
+#include "../Real/Real.h"
+#include "../Real/Complex.h"
+#include "../EED/EED.h"
 #include <oleauto.h>
 
 #if 1 // building into static library now

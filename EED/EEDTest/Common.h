@@ -40,6 +40,6 @@
 // Magus
 #include <SmartPtr.h>
 
-#include "..\Real\Real.h"
-#include "..\Real\Complex.h"
-#include "..\EED\EED.h"
+#include "../Real/Real.h"
+#include "../Real/Complex.h"
+#include "../EED/EED.h"

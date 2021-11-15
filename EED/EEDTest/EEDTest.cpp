@@ -22,6 +22,7 @@
 using namespace std;
 using MagoEE::ITypeEnv;
 
+bool TestReal10();
 
 AppSettings gAppSettings = { 0 };
 
@@ -184,6 +185,8 @@ int _tmain(int argc, _TCHAR* argv[])
 
     MagoEE::Init();
     atexit( &MagoEE::Uninit );
+
+    TestReal10();
 
     if ( !Options::ParseOptions( argc, argv, options ) )
         return 1;

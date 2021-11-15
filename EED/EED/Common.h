@@ -38,8 +38,8 @@
 #include <SmartPtr.h>
 
 // This project
-#include "..\Real\Real.h"
-#include "..\Real\Complex.h"
+#include "../Real/Real.h"
+#include "../Real/Complex.h"
 
 
 #undef min

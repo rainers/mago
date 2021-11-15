@@ -97,19 +97,15 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\PropSheets\MagoDbg_properties.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\PropSheets\MagoDbg_properties.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\PropSheets\MagoDbg_properties.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\PropSheets\MagoDbg_properties.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -123,6 +119,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <Import Project="..\..\PropSheets\MagoDbg_properties.props" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
@@ -323,7 +320,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">
     <Midl>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
       <GenerateStublessProxies>true</GenerateStublessProxies>
@@ -336,11 +333,11 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\udis86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\Include;$(ProjectDir)..\Include;$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\udis86;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
@@ -364,7 +361,6 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">
     <Midl>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
       <GenerateStublessProxies>true</GenerateStublessProxies>
@@ -374,14 +370,15 @@
       </DllDataFileName>
       <InterfaceIdentifierFileName>MagoNatDE_i.c</InterfaceIdentifierFileName>
       <ProxyFileName>MagoNatDE_p.c</ProxyFileName>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\udis86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\Include;$(ProjectDir)..\Include;$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\udis86;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
@@ -461,7 +458,7 @@
       <Optimization>MaxSpeed</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\udis86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
@@ -636,6 +633,26 @@
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">$(IntDir)</OutputDirectory>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MagoRemoteCmd_i.h</HeaderFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">MagoRemoteCmd_i.h</HeaderFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MagoRemoteCmd_i.h</HeaderFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">MagoRemoteCmd_i.h</HeaderFileName>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Stub</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">None</GenerateServerFiles>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">Stub</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">None</GenerateServerFiles>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Stub</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">None</GenerateServerFiles>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">Stub</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">None</GenerateServerFiles>
     </Midl>
     <Midl Include="..\Include\MagoRemoteCommon.idl">
       <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MagoRemoteCommon.h</HeaderFileName>
@@ -658,6 +675,26 @@
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">$(IntDir)</OutputDirectory>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MagoRemoteCommon.h</HeaderFileName>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">None</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">None</GenerateServerFiles>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">MagoRemoteCommon.h</HeaderFileName>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">None</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">None</GenerateServerFiles>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MagoRemoteCommon.h</HeaderFileName>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">None</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">None</GenerateServerFiles>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">MagoRemoteCommon.h</HeaderFileName>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">None</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">None</GenerateServerFiles>
     </Midl>
     <Midl Include="..\Include\MagoRemoteEvent.idl">
       <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MagoRemoteEvent_i.h</HeaderFileName>
@@ -680,12 +717,37 @@
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">$(IntDir)</OutputDirectory>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MagoRemoteEvent_i.h</HeaderFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">MagoRemoteEvent_i.h</HeaderFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MagoRemoteEvent_i.h</HeaderFileName>
+      <HeaderFileName Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">MagoRemoteEvent_i.h</HeaderFileName>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">None</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Stub</GenerateServerFiles>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">None</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">Stub</GenerateServerFiles>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">None</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Stub</GenerateServerFiles>
+      <GenerateTypeLibrary Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">false</GenerateTypeLibrary>
+      <GenerateClientFiles Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">None</GenerateClientFiles>
+      <GenerateServerFiles Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">Stub</GenerateServerFiles>
     </Midl>
     <Midl Include="MagoNatDE.idl">
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|Win32'">$(IntDir)</OutputDirectory>
       <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)</OutputDirectory>
+      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release StaticDE|x64'">$(IntDir)</OutputDirectory>
+      <ValidateAllParameters Condition="'$(Configuration)|$(Platform)'=='Debug StaticDE|x64'">true</ValidateAllParameters>
     </Midl>
   </ItemGroup>
   <ItemGroup>

@@ -24,6 +24,7 @@ int     Real10::GetSign() const
     return ((Words[4] & 0x8000) == 0) ? 1 : -1;
 }
 
+#ifndef _WIN64
 /*  FTST
 Condition               C3  C2  C0
 ST(0) > 0.0             0   0   0
@@ -98,6 +99,7 @@ uint16_t    Real10::Compare( const Real10& left, const Real10& right )
 
     return status;
 }
+#endif // _WIN64
 
 bool         Real10::IsLess( uint16_t status )
 {
@@ -122,6 +124,8 @@ bool         Real10::IsUnordered( uint16_t status )
     const uint16_t  Mask = 0x4500;
     return (status & Mask) == 0x4500;
 }
+
+#ifndef _WIN64
 
 /*  FXAM
 Class                   C3  C2  C0
@@ -399,6 +403,8 @@ void    Real10::FromUInt64( uint64_t i )
     }
 }
 
+#endif // _WIN64
+
 void    Real10::LoadInfinity()
 {
     strtopx( "infinity", NULL, Words );
@@ -465,6 +471,8 @@ int     Real10::MinExponentBase2()
 {
     return -16381;
 }
+
+#ifndef _WIN64
 
 void    Real10::Add( const Real10& left, const Real10& right )
 {
@@ -615,6 +623,8 @@ void    Real10::Abs( const Real10& orig )
         fstp tbyte ptr [edx]
     }
 }
+
+#endif // _WIN64
 
 errno_t Real10::Parse( const wchar_t* str, Real10& val )
 {

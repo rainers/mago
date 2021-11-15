@@ -12,21 +12,11 @@
 #include "EnumX86Reg.h"
 #include <MagoDECommon.h>
 #include <MagoCVConst.h>
+#include <WinPlat.h>
 
 
 namespace Mago
 {
-#if defined( _M_IX86 )
-    // For now, because VS is only built for x86, a typedef is enough.
-    // But, if ever it works for other architectures, then CONTEXT_X86 will need 
-    // to be made an exact copy of the CONTEXT structure for x86, so that it can 
-    // be used to refer to x86 debuggees.
-    typedef CONTEXT CONTEXT_X86;
-#else
-#error Define a CONTEXT_X86 structure that looks and works exactly like CONTEXT for x86
-#endif
-
-
 namespace
 {
     const int RegCount = 155;
@@ -218,7 +208,7 @@ namespace
 
     void ArchDataX86::GetThreadContextSpec( ArchThreadContextSpec& spec )
     {
-        spec.FeatureMask = CONTEXT_FULL | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
+        spec.FeatureMask = CONTEXT_FULL | CONTEXT_FLOATING_POINT | WOW64_CONTEXT_EXTENDED_REGISTERS;
         spec.ExtFeatureMask = 0;
         spec.Size = sizeof( CONTEXT_X86 );
     }

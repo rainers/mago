@@ -433,7 +433,7 @@ namespace Mago
         HRESULT hr = S_OK;
         bool    useInProcDebugger = true;
 
-#if defined( _M_IX86 )
+#if defined( _M_IX86 ) || defined( _M_X64 )
         IMAGE_FILE_HEADER   fileHeader;
 
         if ( !ReadFileHeader( pszExe, fileHeader ) )
