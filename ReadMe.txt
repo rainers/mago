@@ -30,7 +30,7 @@ see https://rainers.github.io/visuald/visuald/StartPage.html
 
 Manual Installation of the concord extension in VS:
 
-- Copy MagoNatCC.dll and MagoNatCC.vcdconfig into
+- Copy MagoNatCC.dll and MagoNatCC.vsdconfig into
   <VS-Installation-Path>\Common7\Packages\Debugger
 
 
@@ -50,7 +50,7 @@ Manual Installation of the debug engine:
 Manual Installation of the Concord extension in VS Code (cpptools-1.4.0 or
 later needed):
 
-- Copy MagoNatCC.dll, MagoNatCC.vcdconfig and .vsdbg-config.json into
+- Copy MagoNatCC.dll, MagoNatCC.vsdconfig and .vsdbg-config.json into
   a common directory
 
 - add a file %USERPROFILE%\.cppvsdbg\extensions\mago.link just containing
