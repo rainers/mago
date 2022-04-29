@@ -7,7 +7,7 @@
         sub rsp, 8
         movsd qword ptr [rsp],xmm1
         fld qword ptr [rsp]
-        fstp tbyte ptr [ecx]
+        fstp tbyte ptr [rcx]
         add rsp, 8
         ret
 ?FromDouble@Real10@@QEAAXN@Z endp
@@ -17,7 +17,7 @@
         sub rsp, 8
         movss dword ptr [rsp],xmm1
         fld dword ptr [rsp]
-        fstp tbyte ptr [ecx]
+        fstp tbyte ptr [rcx]
         add rsp, 8
         ret
 ?FromFloat@Real10@@QEAAXM@Z endp
@@ -32,7 +32,7 @@
 
         mov qword ptr [rsp],rdx
         fild qword ptr [rsp]
-        fstp tbyte ptr [ecx]
+        fstp tbyte ptr [rcx]
 
         fldcw word ptr [rsp+8]         ; restore cw
         add rsp, 8+16
@@ -44,7 +44,7 @@
         sub rsp, 8
         mov dword ptr [rsp],edx
         fild dword ptr [rsp]
-        fstp tbyte ptr [ecx]
+        fstp tbyte ptr [rcx]
         add rsp, 8
         ret
 ?FromInt32@Real10@@QEAAXH@Z endp
@@ -64,7 +64,7 @@
         mov qword ptr [rsp], rax
         fild qword ptr [rsp]           ; -(1 << 63)
         fsubp ST(1),ST(0)
-        fstp tbyte ptr [ecx]
+        fstp tbyte ptr [rcx]
 
         fldcw word ptr [rsp+8]         ; restore cw
         add rsp, 8+16
@@ -152,7 +152,7 @@
 ;; public: bool __cdecl Real10::FitsInDouble(void)const
 ?FitsInDouble@Real10@@QEBA_NXZ proc
         sub rsp, 8
-        fld tbyte ptr [ecx]
+        fld tbyte ptr [rcx]
         fxam
         fnstsw ax
         mov dx, ax
@@ -171,7 +171,7 @@
 ;; public: bool __cdecl Real10::FitsInFloat(void)const
 ?FitsInFloat@Real10@@QEBA_NXZ proc
         sub rsp, 8
-        fld tbyte ptr [ecx]
+        fld tbyte ptr [rcx]
         fxam
         fnstsw ax
         mov dx, ax
@@ -190,7 +190,7 @@
 ;; public: bool __cdecl Real10::IsZero(void)const
 ?IsZero@Real10@@QEBA_NXZ proc
         sub rsp, 8
-        fld tbyte ptr [ecx]
+        fld tbyte ptr [rcx]
         ftst
         fnstsw word ptr [rsp]
         fstp ST(0)
@@ -205,7 +205,7 @@
 ;; public: bool __cdecl Real10::IsNan(void)const
 ?IsNan@Real10@@QEBA_NXZ proc
         sub rsp, 8
-        fld tbyte ptr [ecx]
+        fld tbyte ptr [rcx]
         fxam
         fnstsw word ptr [rsp]
         fstp ST(0)
@@ -220,7 +220,7 @@
 ;; public: static unsigned short __cdecl Real10::Compare(struct Real10 const &,struct Real10 const &)
 ?Compare@Real10@@SAGAEBU1@0@Z proc
         fld tbyte ptr [rdx]
-        fld tbyte ptr [ecx]
+        fld tbyte ptr [rcx]
         fcompp                  ; compare ST(0) with ST(1) then pop twice
         fnstsw ax
         ret
