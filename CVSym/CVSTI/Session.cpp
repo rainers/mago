@@ -515,22 +515,21 @@ namespace MagoST
             if( mStore->GetSymbolInfo( symHandle, symData, symInfo ) != S_OK )
                 break;
 
-            DataKind  kind = DataIsUnknown;
-            if( symInfo->GetDataKind( kind ) )
+            DataKind kind = DataIsUnknown;
+            if( !symInfo->GetDataKind( kind ) )
+                break;
+            switch( kind )
             {
-                switch( kind )
+                case DataIsFileStatic:
+                case DataIsGlobal:
+                case DataIsStaticLocal:
                 {
-                    case DataIsFileStatic:
-                    case DataIsGlobal:
-                    case DataIsStaticLocal:
+                    SymString name;
+                    if( symInfo->GetName( name ) )
                     {
-                        SymString name;
-                        if( symInfo->GetName( name ) )
-                        {
-                            mGlobals.insert( std::string( name.GetName(), name.GetLength() ) );
-                        }
-                        break;
+                        mGlobals.insert( std::string( name.GetName(), name.GetLength() ) );
                     }
+                    break;
                 }
             }
 

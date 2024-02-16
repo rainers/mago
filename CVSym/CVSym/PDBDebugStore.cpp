@@ -167,7 +167,7 @@ namespace MagoST
         virtual void dump(DWORD id) const
         {
             IDiaSymbol* pSymbol = NULL;
-            if( !FAILED( mStore->getSession()->symbolById( id, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( id, &pSymbol ) == S_OK )
             {
                 char str[1280];
                 DWORD tag = SymTagNull;
@@ -190,7 +190,7 @@ namespace MagoST
         {
             DWORD tag = SymTagNull;
             IDiaSymbol* pSymbol = NULL;
-            if( !FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) == S_OK )
             {
                 pSymbol->get_symTag( &tag );
                 pSymbol->Release();
@@ -202,7 +202,7 @@ namespace MagoST
         {
             DWORD type = ~0U;
             IDiaSymbol* pSymbol = NULL;
-            if( !FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) == S_OK)
             {
                 pSymbol->get_typeId( &type );
                 if( type == ~0 )
@@ -234,20 +234,19 @@ namespace MagoST
         virtual bool GetName( SymString& name )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( !FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
-            {
-                BSTR bstrName = NULL;
-                pSymbol->get_name( &bstrName );
-                detachBSTR( bstrName, name );
-                pSymbol->Release();
-            }
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+                return false;
+            BSTR bstrName = NULL;
+            pSymbol->get_name( &bstrName );
+            detachBSTR( bstrName, name );
+            pSymbol->Release();
             return name.GetName() != 0;
         }
 
         virtual bool GetAddressOffset( uint32_t& offset )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr;
@@ -262,7 +261,7 @@ namespace MagoST
         virtual bool GetAddressSegment( uint16_t& segment ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             DWORD section = 0;
@@ -278,7 +277,7 @@ namespace MagoST
         virtual bool GetDataKind( DataKind& dataKind ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK)
                 return false;
 
             HRESULT hr = pSymbol->get_dataKind( (DWORD*) &dataKind );
@@ -289,7 +288,7 @@ namespace MagoST
         virtual bool GetLength( uint32_t& length )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             ULONGLONG llength = 0;
@@ -302,7 +301,7 @@ namespace MagoST
         virtual bool GetLocation( LocationType& locType ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_locationType( (DWORD*) &locType );
@@ -313,7 +312,7 @@ namespace MagoST
         virtual bool GetOffset( int32_t& offset )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_offset( (LONG*) &offset );
@@ -324,7 +323,7 @@ namespace MagoST
         virtual bool GetRegister( uint32_t& reg )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_registerId( (DWORD*) &reg );
@@ -339,7 +338,7 @@ namespace MagoST
         virtual bool GetUdtKind( UdtKind& udtKind )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_udtKind( (DWORD*) &udtKind );
@@ -350,7 +349,7 @@ namespace MagoST
         virtual bool GetValue( Variant& value ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             VARIANT var;
@@ -384,7 +383,7 @@ namespace MagoST
         virtual bool GetBasicType( DWORD& basicType )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_baseType( &basicType );
@@ -397,7 +396,7 @@ namespace MagoST
         virtual bool GetCount( uint32_t& count ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_count( (DWORD*) &count );
@@ -408,13 +407,13 @@ namespace MagoST
         virtual bool GetFieldCount( uint16_t& count )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             LONG cnt = 0;
             IDiaEnumSymbols* pEnumSymbols = NULL;
             HRESULT hr = pSymbol->findChildrenEx( SymTagNull, NULL, nsNone, &pEnumSymbols );
-            if ( !FAILED( hr ) )
+            if ( hr == S_OK )
                 hr = pEnumSymbols->get_Count( &cnt );
             if ( pEnumSymbols )
                 pEnumSymbols->Release();
@@ -433,7 +432,7 @@ namespace MagoST
         virtual bool GetVShape( TypeIndex& index )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_virtualTableShapeId( &index );
@@ -444,7 +443,7 @@ namespace MagoST
         virtual bool GetVtblOffset( int& offset )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             BOOL virt;
@@ -461,12 +460,12 @@ namespace MagoST
         virtual bool GetCallConv( uint8_t& callConv )
         {
             IDiaSymbol* pSymbol = NULL;
-            if (FAILED(mStore->getSession()->symbolById(mId, &pSymbol)))
+            if ( mStore->getSession()->symbolById(mId, &pSymbol) != S_OK )
                 return false;
 
             DWORD cc;
             HRESULT hr = pSymbol->get_callingConvention( &cc );
-            if (!FAILED(hr))
+            if ( hr == S_OK )
                 callConv = (uint8_t)cc;
             pSymbol->Release();
             return hr == S_OK;
@@ -481,7 +480,7 @@ namespace MagoST
         virtual bool GetClass( TypeIndex& index )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             IDiaSymbol* classSymbol = NULL;
@@ -509,12 +508,12 @@ namespace MagoST
         {
 	    // supposed to work for OEM types and argument lists
             IDiaSymbol* pSymbol = NULL;
-            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             DWORD count;
             HRESULT hr = pSymbol->get_count( (DWORD*) &count );
-            if( !FAILED( hr ) )
+            if( hr == S_OK )
             {
                 indexes.resize( count );
                 if( count > 0 )
@@ -573,7 +572,7 @@ namespace MagoST
         virtual bool GetMod( uint16_t& mod )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( FAILED( mStore->getSession()->symbolById( mId, &pSymbol ) ) )
+            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr;
@@ -821,17 +820,17 @@ namespace MagoST
         IDiaSymbol* pSymbol = NULL;
         HRESULT hr = mSession->symbolById( scopeIn.id, &pSymbol );
         IDiaEnumSymbols* pEnumSymbols = NULL;
-        if ( !FAILED( hr ) && pSymbol )
+        if ( hr == S_OK && pSymbol )
             if ( addr == ~0 )
                 hr = pSymbol->findChildrenEx( SymTagNull, NULL, nsNone, &pEnumSymbols );
             else
                 hr = pSymbol->findChildrenExByRVA( SymTagNull, NULL, nsNone, addr, &pEnumSymbols );
         IDiaSymbol* pChild = NULL;
-        if ( !FAILED( hr ) && pEnumSymbols )
+        if ( hr == S_OK && pEnumSymbols )
             hr = pEnumSymbols->Item( scopeIn.current, &pChild );
-        if ( !FAILED( hr ) && pChild )
+        if ( hr == S_OK && pChild )
             scopeIn.current++;
-        if ( !FAILED( hr ) && pChild )
+        if ( hr == S_OK && pChild )
             hr = pChild->get_symIndexId( &symIn.id );
 
         if ( pChild )
@@ -840,7 +839,7 @@ namespace MagoST
             pEnumSymbols->Release();
         if ( pSymbol )
             pSymbol->Release();
-        return !FAILED( hr ) && pChild;
+        return hr == S_OK && pChild;
     }
 
     HRESULT PDBDebugStore::FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data )
@@ -861,7 +860,7 @@ namespace MagoST
             }
             HRESULT hr = mGlobal->findChildren( SymTagNull, wname.get (), nsCaseSensitive, &pEnumSymbols );
             
-            if( !FAILED( hr ) && pEnumSymbols )
+            if( hr == S_OK && pEnumSymbols )
             {
                 IDiaSymbol* pSymbol = NULL;
                 DWORD fetched = 0;
@@ -899,7 +898,7 @@ namespace MagoST
 
         hr = pSymbol->get_symIndexId( &dataIn.id );
         pSymbol->Release();
-        return hr;
+        return hr > S_OK ? E_FAIL : hr;
     }
 
     HRESULT PDBDebugStore::GetCurrentSymbol( const EnumNamedSymbolsData& searchData, SymHandle& handle )
@@ -947,7 +946,7 @@ namespace MagoST
         if( pSymbol )
             hr = pSymbol->get_symIndexId( &handleIn.id );
         
-        if ( !FAILED(hr) )
+        if ( hr == S_OK )
             symOff = bestoff - offset;
 
         if( pSymbol1 )
@@ -956,7 +955,7 @@ namespace MagoST
             pSymbol2->Release();
         if( pSymbol3 )
             pSymbol3->Release();
-        return !FAILED( hr ) ? S_OK : E_FAIL;
+        return hr > S_OK ? E_FAIL : hr;
     }
 
 
@@ -1002,14 +1001,14 @@ namespace MagoST
         IDiaSymbol* pSymbol = NULL;
         HRESULT hr = mSession->symbolById( scopeIn.id, &pSymbol );
         IDiaEnumSymbols* pEnumSymbols = NULL;
-        if ( !FAILED( hr ) )
+        if ( hr == S_OK )
             hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &pEnumSymbols );
         IDiaSymbol* pChild = NULL;
-        if ( !FAILED( hr ) )
+        if ( hr == S_OK )
             hr = pEnumSymbols->Item( scopeIn.current, &pChild );
-        if ( !FAILED( hr ) )
+        if ( hr == S_OK )
             scopeIn.current++;
-        if ( !FAILED( hr ) )
+        if ( hr == S_OK )
             hr = pChild->get_symIndexId( &typeIn.id );
 
         if ( pChild )
@@ -1018,7 +1017,7 @@ namespace MagoST
             pEnumSymbols->Release();
         if ( pSymbol )
             pSymbol->Release();
-        return !FAILED( hr );
+        return hr == S_OK;
     }
 
 
@@ -1036,11 +1035,11 @@ namespace MagoST
         {
             IDiaEnumSymbols *pEnumSymbols;
 
-            if ( FAILED( mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols ) ) )
+            if ( mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols ) != S_OK )
                 mCompilandCount = 0;
             else
             {
-                if( FAILED( pEnumSymbols->get_Count( &mCompilandCount ) ) )
+                if( pEnumSymbols->get_Count( &mCompilandCount ) != S_OK )
                     mCompilandCount = 0;
                 pEnumSymbols->Release();
             }
@@ -1063,25 +1062,25 @@ namespace MagoST
         HRESULT hr = mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols );
 
         IDiaSymbol *pCompiland = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pEnumSymbols->Item( index - 1, &pCompiland );
 
         BSTR bstrName = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pCompiland->get_name( &bstrName );
 
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
         {
             detachBSTR( bstrName, info.Name );
             hr = (info.Name.GetName() == NULL) ? E_OUTOFMEMORY : S_OK;
         }
 
         IDiaEnumSourceFiles *pFiles = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mSession->findFile( pCompiland, NULL, nsNone, &pFiles );
 
         LONG fileCount = 0;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pFiles->get_Count( &fileCount );
 
         info.FileCount = (WORD) fileCount;
@@ -1094,7 +1093,7 @@ namespace MagoST
         if( pEnumSymbols )
             pEnumSymbols->Release();
 
-        return hr;
+        return hr > S_OK ? E_FAIL : hr;
     }
 
     HRESULT PDBDebugStore::GetCompilandSegmentInfo( uint16_t index, uint16_t count, SegmentInfo* infos )
@@ -1116,29 +1115,29 @@ namespace MagoST
         HRESULT hr = mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols );
 
         IDiaSymbol *pCompiland = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pEnumSymbols->Item( compilandIndex - 1, &pCompiland );
 
         IDiaEnumSourceFiles *pFiles = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mSession->findFile( pCompiland, NULL, nsNone, &pFiles );
 
         LONG fileCount = 0;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pFiles->get_Count( &fileCount );
 
-        if( !FAILED( hr ) && fileIndex >= fileCount )
+        if( hr == S_OK && fileIndex >= fileCount )
             hr = E_INVALIDARG;
 
         IDiaSourceFile *pSourceFile = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pFiles->Item( fileIndex, &pSourceFile );
 
         BSTR bstrName = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pSourceFile->get_fileName( &bstrName );
 
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
         {
             detachBSTR( bstrName, info.Name );
             hr = (info.Name.GetName() == NULL) ? E_OUTOFMEMORY : S_OK;
@@ -1155,7 +1154,7 @@ namespace MagoST
         if( pEnumSymbols )
             pEnumSymbols->Release();
 
-        return hr;
+        return hr > S_OK ? E_FAIL : hr;
     }
 
     HRESULT PDBDebugStore::GetFileSegmentInfo( uint16_t compilandIndex, uint16_t fileIndex, uint16_t count, SegmentInfo* infos )
@@ -1192,29 +1191,29 @@ namespace MagoST
         HRESULT hr = mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols );
 
         IDiaSymbol *pCompiland = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pEnumSymbols->Item( compIndex - 1, &pCompiland );
 
         IDiaEnumSourceFiles *pFiles = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mSession->findFile( pCompiland, NULL, nsNone, &pFiles );
 
         LONG fileCount = 0;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pFiles->get_Count( &fileCount );
 
-        if( !FAILED( hr ) && fileIndex >= fileCount )
+        if( hr == S_OK && fileIndex >= fileCount )
             hr = E_INVALIDARG;
 
         IDiaSourceFile *pSourceFile = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pFiles->Item( fileIndex, &pSourceFile );
 
         IDiaEnumLineNumbers *pEnumLineNumbers = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mSession->findLines( pCompiland, pSourceFile, &pEnumLineNumbers );
 
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = fillFileSegmentInfo( pEnumLineNumbers, segInfo );
 
         if( pEnumLineNumbers )
@@ -1228,7 +1227,7 @@ namespace MagoST
         if( pEnumSymbols )
             pEnumSymbols->Release();
 
-        return !FAILED( hr );
+        return hr == S_OK;
     }
 
     HRESULT PDBDebugStore::fillFileSegmentInfo( IDiaEnumLineNumbers *pEnumLineNumbers, FileSegmentInfo& segInfo )
@@ -1239,10 +1238,10 @@ namespace MagoST
         //       call to Next. But sometimes, Next doesn't return all the elements here unless 
         //       you call Reset first. Why is that?
         hr = pEnumLineNumbers->Reset();
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pEnumLineNumbers->get_Count( &lineNumbers );
 
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
         {
             mLastSegInfoLineNumbers.reset( new WORD[lineNumbers] );
             mLastSegInfoOffsets.reset( new DWORD[lineNumbers] );
@@ -1252,7 +1251,7 @@ namespace MagoST
         LONG lineIndex = 0;
         DWORD section = 0;
         segInfo.SegmentInstance = 0;
-        while( !FAILED( hr ) && lineIndex < lineNumbers )
+        while( hr == S_OK && lineIndex < lineNumbers )
         {
             IDiaLineNumber* pLineNumber = NULL;
             ULONG fetched = 0;
@@ -1261,17 +1260,17 @@ namespace MagoST
                 break;
 
             DWORD off = 0, line = 0;
-            if( !FAILED( hr ) )
+            if( hr == S_OK )
                 hr = pLineNumber->get_addressOffset( &off );
-            if( !FAILED( hr ) )
+            if( hr == S_OK )
                 hr = pLineNumber->get_lineNumber( &line );
-            if( !FAILED( hr ) && lineIndex == 0 )
+            if( hr == S_OK && lineIndex == 0 )
             {
                 //segInfo.SegmentInstance = (WORD) line;
                 segInfo.Start = off;
                 hr = pLineNumber->get_addressSection( &section );
             }
-            if( !FAILED( hr ) && lineIndex == lineNumbers - 1 )
+            if( hr == S_OK && lineIndex == lineNumbers - 1 )
             {
                 DWORD length = 1;
                 hr = pLineNumber->get_length( &length );
@@ -1290,7 +1289,8 @@ namespace MagoST
         segInfo.LineCount = (WORD) lineIndex;
         segInfo.Offsets = mLastSegInfoOffsets.get ();
         segInfo.LineNumbers = mLastSegInfoLineNumbers.get ();
-        return hr;
+
+        return hr > S_OK ? E_FAIL : hr;
     }
 
     HRESULT PDBDebugStore::findCompilandAndFile( IDiaSymbol *pCompiland, IDiaSourceFile *pSourceFile, uint16_t& compIndex, uint16_t& fileIndex )
@@ -1347,7 +1347,7 @@ namespace MagoST
         }
         if( pEnumFiles )
             pEnumFiles->Release();
-        return hr;
+        return hr > S_OK ? E_FAIL : hr;
     }
 
     HRESULT PDBDebugStore::setLineNumber( IDiaLineNumber* pLineNumber, uint16_t lineIndex, LineNumber& lineNumber )
@@ -1356,13 +1356,13 @@ namespace MagoST
 
         IDiaSymbol *pCompiland = NULL;
         IDiaSourceFile *pSourceFile = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pLineNumber->get_compiland( &pCompiland );
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pLineNumber->get_sourceFile( &pSourceFile );
 
         uint16_t compIndex = 0, fileIndex = 0;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = findCompilandAndFile( pCompiland, pSourceFile, compIndex, fileIndex );
 
         if ( pCompiland )
@@ -1371,18 +1371,18 @@ namespace MagoST
             pSourceFile->Release();
 
         DWORD line = 0, lineEnd = 0, offset = 0, section = 0, length = 0;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pLineNumber->get_lineNumber( &line );
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pLineNumber->get_lineNumberEnd( &lineEnd );
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pLineNumber->get_addressOffset( &offset );
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pLineNumber->get_addressSection( &section );
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pLineNumber->get_length( &length );
 
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
         {
             lineNumber.CompilandIndex = compIndex;
             lineNumber.FileIndex = fileIndex;
@@ -1394,27 +1394,27 @@ namespace MagoST
             lineNumber.Section = (uint16_t) section;
             lineNumber.Length = (uint32_t) length;
         }
-        return hr;
+        return hr > S_OK ? E_FAIL : hr;
     }
 
     bool PDBDebugStore::FindLine( WORD seg, uint32_t offset, LineNumber& lineNumber )
     {
         HRESULT hr = S_OK;
         IDiaEnumLineNumbers *pEnumLineNumbers = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mSession->findLinesByAddr( seg, offset, 1, &pEnumLineNumbers );
 
         LONG lineNumbers = 0;
         IDiaLineNumber* pLineNumber = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pEnumLineNumbers->get_Count( &lineNumbers );
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             if( lineNumbers < 1 )
                 hr = E_INVALIDARG;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pEnumLineNumbers->Item( 0, &pLineNumber );
 
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             setLineNumber( pLineNumber, 0, lineNumber );
 
         if( pLineNumber )
@@ -1422,7 +1422,7 @@ namespace MagoST
         if( pEnumLineNumbers )
             pEnumLineNumbers->Release();
 
-        return !FAILED( hr );
+        return hr == S_OK;
     }
 
     bool PDBDebugStore::FindLineByNum( uint16_t compIndex, uint16_t fileIndex, uint16_t line, LineNumber& lineNumber )
@@ -1436,28 +1436,28 @@ namespace MagoST
         HRESULT hr = mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols );
 
         IDiaSymbol *pCompiland = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pEnumSymbols->Item( compIndex - 1, &pCompiland );
 
         IDiaEnumSourceFiles *pFiles = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mSession->findFile( pCompiland, NULL, nsNone, &pFiles );
 
         LONG fileCount = 0;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pFiles->get_Count( &fileCount );
 
-        if( !FAILED( hr ) && fileIndex >= fileCount )
+        if( hr == S_OK && fileIndex >= fileCount )
             hr = E_INVALIDARG;
 
         IDiaSourceFile *pSourceFile = NULL;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = pFiles->Item( fileIndex, &pSourceFile );
 
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mSession->findLinesByLinenum( pCompiland, pSourceFile, line, 0, &mFindLineEnumLineNumbers );
 
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mFindLineEnumLineNumbers->Reset();
 
         if( pSourceFile )
@@ -1469,7 +1469,7 @@ namespace MagoST
         if( pEnumSymbols )
             pEnumSymbols->Release();
 
-        if( FAILED( hr ) )
+        if( hr != S_OK )
             return false;
 
         return FindNextLineByNum( compIndex, fileIndex, line, lineNumber );
@@ -1488,7 +1488,7 @@ namespace MagoST
         HRESULT hr = S_OK;
         IDiaLineNumber* pLineNumber = NULL;
         ULONG fetched = 0;
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             hr = mFindLineEnumLineNumbers->Next( 1, &pLineNumber, &fetched );
         if( hr == S_OK )
             hr = setLineNumber( pLineNumber, 0, lineNumber );
@@ -1506,33 +1506,33 @@ namespace MagoST
     {
         IDiaEnumSymbols *pEnumSymbols = NULL;
         HRESULT hr = mGlobal->findChildren( SymTagCompiland, NULL, nsNone, &pEnumSymbols );
-        if( !FAILED( hr ) )
+        if( hr == S_OK )
             pEnumSymbols->Reset();
 
         ULONG fetched;
         IDiaSymbol *pCompiland = NULL;
-        while( !FAILED( hr ) && pEnumSymbols->Next( 1, &pCompiland, &fetched ) == S_OK )
+        while( hr == S_OK && pEnumSymbols->Next( 1, &pCompiland, &fetched ) == S_OK )
         {
             IDiaEnumSourceFiles *pFiles = NULL;
-            if( !FAILED( hr ) )
+            if( hr == S_OK )
                 hr = mSession->findFile( pCompiland, NULL, nsNone, &pFiles );
 
             IDiaSourceFile *pSourceFile = NULL;
-            while( !FAILED( hr ) && pFiles->Next( 1, &pSourceFile, &fetched ) == S_OK )
+            while( hr == S_OK && pFiles->Next( 1, &pSourceFile, &fetched ) == S_OK )
             {
                 BSTR bstrName = NULL;
-                if( !FAILED( hr ) )
+                if( hr == S_OK )
                     hr = pSourceFile->get_fileName( &bstrName );
                 
                 SymString srcFileName;
-                if( !FAILED( hr ) )
+                if( hr == S_OK )
                 {
                     detachBSTR( bstrName, srcFileName );
                     hr = (srcFileName.GetName() == NULL) ? E_OUTOFMEMORY : S_OK;
                 }
 
                 bool matches = false;
-                if( !FAILED( hr ) )
+                if( hr == S_OK )
                 {
                     if ( exactMatch )
                         matches = ExactFileNameMatch( fileName, fileNameLen, srcFileName.GetName(), srcFileName.GetLength() );
@@ -1542,11 +1542,11 @@ namespace MagoST
                 if( matches )
                 {
                     IDiaEnumLineNumbers *pEnumLineNumbers = 0;
-                    if( !FAILED( hr ) )
+                    if( hr == S_OK )
                         hr = mSession->findLinesByLinenum( pCompiland, pSourceFile, reqLineStart, 0, &pEnumLineNumbers );
                     
                     IDiaLineNumber* pLineNumber = NULL;
-                    while( !FAILED( hr ) && pEnumLineNumbers->Next( 1, &pLineNumber, &fetched ) == S_OK )
+                    while( hr == S_OK && pEnumLineNumbers->Next( 1, &pLineNumber, &fetched ) == S_OK )
                     {
                         LineNumber line;
                         setLineNumber( pLineNumber, (uint16_t) lines.size(), line );
