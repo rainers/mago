@@ -94,7 +94,8 @@ namespace MagoEE
             else
             {
                 int width = type->GetSize() * 2;
-                number &= (1LL << 4 * width) - 1; // avoid sign extension beyond actual width
+                if (width < 16)
+                    number &= (1LL << 4 * width) - 1; // avoid sign extension beyond actual width
                 swprintf_s( buf, L"0x%0*I64x", width, number );
             }
         }
