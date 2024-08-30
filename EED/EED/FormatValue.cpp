@@ -80,7 +80,7 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT FormatInt( uint64_t number, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
+    HRESULT FormatInt( uint64_t number, int width, bool sgnd, const FormatOptions& fmtopt, std::wstring& outStr )
     {
         // 18446744073709551616
         wchar_t buf[20 + 9 + 1] = L"";
@@ -93,7 +93,6 @@ namespace MagoEE
             }
             else
             {
-                int width = type->GetSize() * 2;
                 if (width < 16)
                     number &= (1LL << 4 * width) - 1; // avoid sign extension beyond actual width
                 swprintf_s( buf, L"0x%0*I64x", width, number );
@@ -101,7 +100,7 @@ namespace MagoEE
         }
         else    // it's 10, or make it 10
         {
-            if ( type->IsSigned() )
+            if ( sgnd )
             {
                 swprintf_s( buf, L"%I64d", number );
             }
@@ -118,13 +117,14 @@ namespace MagoEE
 
     HRESULT FormatInt( const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
     {
-        return FormatInt( objVal.Value.UInt64Value, objVal._Type, fmtopt, outStr );
+        auto type = objVal._Type;
+        return FormatInt( objVal.Value.UInt64Value, type->GetSize() * 2, type->IsSigned(), fmtopt, outStr);
     }
 
     HRESULT FormatAddress( Address addr, Type* type, std::wstring& outStr )
     {
         FormatOptions fmtopt (16);
-        return FormatInt( addr, type, fmtopt, outStr );
+        return FormatInt( addr, type->GetSize() * 2, type->IsSigned(), fmtopt, outStr );
     }
 
     HRESULT FormatChar( const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr )
@@ -184,7 +184,7 @@ namespace MagoEE
         Type*   type = NULL;
         int     digits;
 
-        if ( (objVal._Type == NULL) || !objVal._Type->IsScalar() )
+        if ( objVal._Type == NULL )
             return E_FAIL;
 
         type = objVal._Type;
@@ -213,6 +213,10 @@ namespace MagoEE
         {
             hr = FormatSimpleReal( objVal.Value.Float80Value, digits, outStr );
             outStr.append( 1, L'i' );
+        }
+        else if( type->Ty == Tvoid )
+        {
+            FormatInt( objVal.Value.UInt64Value, 2, false, fmtopt, outStr );
         }
         else
             return E_FAIL;
@@ -457,6 +461,12 @@ namespace MagoEE
     HRESULT _formatArray( IValueBinder* binder, Address addr, uint64_t length, MagoEE::Type* elemType,
                           const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
     {
+        TypeBasic* ubyteType = nullptr;
+        if ( elemType->Ty == Tvoid )
+        {
+            elemType = ubyteType = new TypeBasic( Tuns8 );
+            ubyteType->AddRef();
+        }
         uint32_t elementSize = elemType->GetSize();
 
         outStr.append( L"[" );
@@ -486,6 +496,9 @@ namespace MagoEE
             outStr.append( elemStr );
         }
         outStr.append( L"]" );
+
+        if ( ubyteType )
+            ubyteType->Release();
         return S_OK;
     }
 
@@ -535,8 +548,8 @@ namespace MagoEE
             if( showLength )
             {
                 outStr.append( L"length=" );
-
-                hr = FormatInt( array.Length, arrayType->GetLengthType(), fmtopt, outStr );
+                auto type = arrayType->GetLengthType();
+                hr = FormatInt( array.Length, type->GetSize() * 2, type->IsSigned(), fmtopt, outStr );
                 if ( FAILED( hr ) )
                     return hr;
             }

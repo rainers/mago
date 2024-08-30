@@ -209,19 +209,20 @@ namespace Mago
         Address64 addr = 0;
 
         // TODO: let the EE figure this out
-        if ( mObjVal.ObjVal._Type->IsPointer() )
+        auto type = mObjVal.ObjVal._Type;
+        if ( type->IsPointer() )
         {
             addr = (Address64) mObjVal.ObjVal.Value.Addr;
         }
-        else if ( mObjVal.ObjVal._Type->IsIntegral() )
+        else if ( type->IsIntegral() || type->Ty == MagoEE::Tvoid )
         {
             addr = (Address64) mObjVal.ObjVal.Value.UInt64Value;
         }
-        else if ( mObjVal.ObjVal._Type->IsSArray() )
+        else if ( type->IsSArray() )
         {
             addr = (Address64) mObjVal.ObjVal.Addr;
         }
-        else if ( mObjVal.ObjVal._Type->IsDArray() )
+        else if ( type->IsDArray() )
         {
             addr = (Address64) mObjVal.ObjVal.Value.Array.Addr;
         }

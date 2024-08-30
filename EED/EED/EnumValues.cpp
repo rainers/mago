@@ -313,15 +313,16 @@ namespace MagoEE
 
         uint32_t index = mCountDone++;
 
+        RefPtr<Type> elemType;
         Address addr;
         if ( mParentVal.ObjVal._Type->IsSArray() )
         {
-            result.ObjVal._Type = mParentVal.ObjVal._Type->AsTypeSArray()->GetElement();
+            elemType = mParentVal.ObjVal._Type->AsTypeSArray()->GetElement();
             addr = mParentVal.ObjVal.Addr;
         }
         else if ( mParentVal.ObjVal._Type->IsDArray() )
         {
-            result.ObjVal._Type = mParentVal.ObjVal._Type->AsTypeDArray()->GetElement();
+            elemType = mParentVal.ObjVal._Type->AsTypeDArray()->GetElement();
             addr = mParentVal.ObjVal.Value.Array.Addr;
         }
         else
@@ -330,6 +331,10 @@ namespace MagoEE
         if ( addr == 0 )
             return E_MAGOEE_NO_ADDRESS;
 
+        if ( elemType->Ty == Tvoid )
+            elemType = new TypeBasic(Tuns8);
+
+        result.ObjVal._Type = elemType;
         result.ObjVal.Addr = addr + (uint64_t)index * result.ObjVal._Type->GetSize();
         if (atLimit)
         {
