@@ -50,16 +50,16 @@ build_script:
   - devenv /Build "Release StaticDE|Win32" /Project "mago-mi" magodbg_2010.sln
 
 artifacts:
-  - path: mago\bin\Win32\Release\MagoNatDE.dll
-  - path: mago\bin\Win32\Release\MagoNatCC.dll
-  - path: mago\bin\Win32\Release\MagoNatCC.pdb
-  - path: mago\bin\Win32\Release\MagoNatCC.vsdconfig
-  - path: mago\bin\Win32\Release\mago-mi.exe
-  - path: mago\bin\Win32\Release\mago-mi.pdb
-  - path: mago\bin\x64\Release\MagoRemote.exe
-  - path: mago\bin\x64\Release\MagoNatCC.dll
-  - path: mago\bin\x64\Release\MagoNatCC.pdb
-  - path: mago\bin\x64\Release\MagoNatCC.vsdconfig
+  - path: bin\Win32\Release\MagoNatDE.dll
+  - path: bin\Win32\Release\MagoNatCC.dll
+  - path: bin\Win32\Release\MagoNatCC.pdb
+  - path: bin\Win32\Release\MagoNatCC.vsdconfig
+  - path: bin\Win32\Release\mago-mi.exe
+  - path: bin\Win32\Release\mago-mi.pdb
+  - path: bin\x64\Release\MagoRemote.exe
+  - path: bin\x64\Release\MagoNatCC.dll
+  - path: bin\x64\Release\MagoNatCC.pdb
+  - path: bin\x64\Release\MagoNatCC.vsdconfig
 
 on_failure:
   - cd c:\projects
