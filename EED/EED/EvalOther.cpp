@@ -861,6 +861,16 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
+            if ( Child->_Type->IsPointer() )
+            {
+                // rewrite ptr.field to (*ptr).field
+                auto tn = Child->_Type->AsTypeNext()->GetNext();
+                Child = new PointerExpr( Child );
+                hr = Child->Semantic( evalData, typeEnv, binder );
+                if ( FAILED( hr ) )
+                    return hr;
+            }
+
             // if child is value or type
             if ( Child->Kind != DataKind_Declaration )
             {
