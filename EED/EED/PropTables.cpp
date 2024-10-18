@@ -92,7 +92,8 @@ namespace MagoEE
         { mDArrayProps, _countof( mDArrayProps ) },
         { mSArrayProps, _countof( mSArrayProps ) },
         { mDelegateProps, _countof( mDelegateProps ) },
-        { mFieldProps, _countof( mFieldProps ) },
+        { mFieldProps, _countof(mFieldProps) },
+        { mTupleProps, _countof( mTupleProps ) },
     };
 
 
