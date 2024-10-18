@@ -15,9 +15,9 @@ skip_tags: true
 
 environment:
   matrix:
-    - os: Visual Studio 2015
-      VS: 14
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - os: Visual Studio 2019
+      VS: 16
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
 # scripts that are called at very beginning, before repo cloning
 init:
@@ -27,8 +27,9 @@ init:
 install:
   # show environment
   - cd c:\projects
-  - if not "%VS%" == "15" call "c:\Program Files (x86)\Microsoft Visual Studio %VS%.0\VC\vcvarsall.bat" x86
-  - if     "%VS%" == "15" call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+  - if "%VS%" == "14" call "c:\Program Files (x86)\Microsoft Visual Studio %VS%.0\VC\vcvarsall.bat" x86
+  - if "%VS%" == "15" call "c:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars32.bat"
+  - if "%VS%" == "16" call "c:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars32.bat"
   # Print environment info
   - set
   - cl
@@ -45,19 +46,20 @@ build_script:
   - devenv /Build "Release|Win32" /Project "MagoNatDE" magodbg_2010.sln
   - devenv /Build "Release|x64" /Project "MagoRemote" magodbg_2010.sln
   - devenv /Build "Release StaticDE|Win32" /Project "MagoNatCC" magodbg_2010.sln
+  - devenv /Build "Release StaticDE|x64" /Project "MagoNatCC" magodbg_2010.sln
   - devenv /Build "Release StaticDE|Win32" /Project "mago-mi" magodbg_2010.sln
 
-after_build:
-  # publish as artifact
-  - cd c:\projects\mago
-  - ps: |
-        echo 'Creating artifacts...'
-        Push-AppveyorArtifact bin\Win32\Release\MagoNatDE.dll
-        Push-AppveyorArtifact bin\Win32\Release\MagoNatCC.dll
-        Push-AppveyorArtifact bin\Win32\Release\MagoNatCC.vsdconfig
-        Push-AppveyorArtifact bin\Win32\Release\mago-mi.exe
-        Push-AppveyorArtifact bin\Win32\Release\mago-mi.pdb
-        Push-AppveyorArtifact bin\x64\Release\MagoRemote.exe
+artifacts:
+  - path: mago\bin\Win32\Release\MagoNatDE.dll
+  - path: mago\bin\Win32\Release\MagoNatCC.dll
+  - path: mago\bin\Win32\Release\MagoNatCC.pdb
+  - path: mago\bin\Win32\Release\MagoNatCC.vsdconfig
+  - path: mago\bin\Win32\Release\mago-mi.exe
+  - path: mago\bin\Win32\Release\mago-mi.pdb
+  - path: mago\bin\x64\Release\MagoRemote.exe
+  - path: mago\bin\x64\Release\MagoNatCC.dll
+  - path: mago\bin\x64\Release\MagoNatCC.pdb
+  - path: mago\bin\x64\Release\MagoNatCC.vsdconfig
 
 on_failure:
   - cd c:\projects
