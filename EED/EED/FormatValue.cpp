@@ -459,7 +459,8 @@ namespace MagoEE
     }
 
     HRESULT _formatArray( IValueBinder* binder, Address addr, uint64_t length, MagoEE::Type* elemType,
-                          const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+                          const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength,
+                          std::function<HRESULT(HRESULT, std::wstring)> complete )
     {
         TypeBasic* ubyteType = nullptr;
         if ( elemType->Ty == Tvoid )
@@ -469,40 +470,101 @@ namespace MagoEE
         }
         uint32_t elementSize = elemType->GetSize();
 
-        outStr.append( L"[" );
-        for ( uint64_t i = 0; i < length; i++ )
+        if( complete && length > 0 )
         {
-            if ( outStr.length() >= maxLength )
+            struct Closure
             {
-                outStr.append( L", ..." );
-                break;
+                bool dotdotdot = false;
+                size_t completed = 0;
+                std::function<HRESULT(HRESULT, std::wstring)> complete;
+                RefPtr<Type> ubyteType;
+                std::vector<std::wstring> elemStr;
+                HRESULT doneOne(HRESULT hr)
+                {
+                    completed++;
+                    if (completed < elemStr.size())
+                        return hr;
+
+                    std::wstring outStr = L"[" + elemStr[0];
+                    for( size_t i = 1; i < elemStr.size(); i++ )
+                        outStr.append( L", " ).append( elemStr[i] );
+                    if( dotdotdot )
+                        outStr.append(L", ...");
+                    outStr.append(L"]");
+                    return complete(hr, outStr);
+                }
+            };
+            auto closure = std::make_shared<Closure>();
+
+            if (length > 8)
+            {
+                closure->dotdotdot = true;
+                length = 8;
             }
 
-            DataObject elementObj;
-            elementObj._Type = elemType;
-            elementObj.Addr = addr + elementSize * i;
+            closure->complete = complete;
+            closure->ubyteType = ubyteType;
+            closure->elemStr.resize(length);
 
-            HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
-            if ( FAILED( hr ) )
-                return hr;
+            for (uint64_t i = 0; i < length; i++)
+            {
+                DataObject elementObj;
+                elementObj._Type = elemType;
+                elementObj.Addr = addr + elementSize * i;
 
-            std::wstring elemStr;
-            hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length() );
-            if ( FAILED( hr ) )
-                return hr;
+                HRESULT hr = binder->GetValue(elementObj.Addr, elementObj._Type, elementObj.Value);
+                if (FAILED(hr))
+                    return hr;
 
-            if ( i > 0 )
-                outStr.append( L", " );
-            outStr.append( elemStr );
+                auto completeElem = [i, closure](HRESULT hr, std::wstring elemStr)
+                {
+                    closure->elemStr[i] = elemStr;
+                    return closure->doneOne(hr);
+                };
+
+                std::wstring elemStr;
+                hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), completeElem );
+                if ( FAILED( hr ) )
+                    return hr;
+            };
         }
-        outStr.append( L"]" );
+        else
+        {
+            outStr.append( L"[" );
+            for ( uint64_t i = 0; i < length; i++ )
+            {
+                if ( outStr.length() >= maxLength )
+                {
+                    outStr.append( L", ..." );
+                    break;
+                }
 
+                DataObject elementObj;
+                elementObj._Type = elemType;
+                elementObj.Addr = addr + elementSize * i;
+
+                HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                std::wstring elemStr;
+                hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), complete );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                if ( i > 0 )
+                    outStr.append( L", " );
+                outStr.append( elemStr );
+            }
+            outStr.append( L"]" );
+        }
         if ( ubyteType )
             ubyteType->Release();
         return S_OK;
     }
 
-    HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt,
+                          std::wstring& outStr, uint32_t maxLength, std::function<HRESULT(HRESULT, std::wstring)> complete )
     {
         _ASSERT( type->IsSArray() );
 
@@ -519,11 +581,12 @@ namespace MagoEE
         else
         {
             uint32_t length = arrayType->GetLength();
-            return _formatArray( binder, addr, length, arrayType->GetElement(), fmtopt, outStr, maxLength );
+            return _formatArray( binder, addr, length, arrayType->GetElement(), fmtopt, outStr, maxLength, complete );
         }
     }
 
-    HRESULT FormatDArray( IValueBinder* binder, DArray array, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    HRESULT FormatDArray( IValueBinder* binder, DArray array, Type* type, const FormatOptions& fmtopt,
+                          std::wstring& outStr, uint32_t maxLength, std::function<HRESULT(HRESULT, std::wstring)> complete )
     {
         _ASSERT( type->IsDArray() );
 
@@ -536,6 +599,8 @@ namespace MagoEE
         if ( fmtopt.specifier != FormatSpecRaw && arrayType->GetElement()->IsChar() )
         {
             _formatString( binder, array.Addr, array.Length, arrayType->GetElement(), outStr );
+            if ( complete )
+                hr = complete( hr, outStr );
         }
         else
         {
@@ -574,7 +639,12 @@ namespace MagoEE
                 if ( showLength || showPtr )
                     outStr.append( 1, L' ' );
 
-                hr = _formatArray( binder, array.Addr, array.Length, arrayType->GetElement(), fmtopt, outStr, maxLength );
+                hr = _formatArray( binder, array.Addr, array.Length, arrayType->GetElement(), fmtopt, outStr, maxLength, complete );
+            }
+            else
+            {
+                if ( complete )
+                    hr = complete( hr, outStr );
             }
         }
 
@@ -588,7 +658,8 @@ namespace MagoEE
         return FormatAddress( addr, type, outStr );
     }
 
-    HRESULT FormatTuple( IValueBinder* binder, const DataObject& objVal, ITypeTuple* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    HRESULT FormatTuple( IValueBinder* binder, const DataObject& objVal, ITypeTuple* type, const FormatOptions& fmtopt,
+                         std::wstring& outStr, uint32_t maxLength, std::function<HRESULT(HRESULT, std::wstring)> complete )
     {
         if ( type == NULL || type->IsAmbiguousGlobals() )
             return E_FAIL;
@@ -626,7 +697,7 @@ namespace MagoEE
                 return hr;
 
             std::wstring elemStr;
-            hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length() );
+            hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), complete );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -639,7 +710,8 @@ namespace MagoEE
     }
 
     HRESULT _FormatStruct( IValueBinder* binder, Address addr, const char* srcBuf, Type* type,
-                           const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+                           const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength,
+                           std::function<HRESULT(HRESULT, std::wstring)> complete )
     {
         HRESULT         hr = S_OK;
 
@@ -711,7 +783,7 @@ namespace MagoEE
             std::wstring memberStr;
             if ( srcBuf && memberObj._Type->AsTypeStruct() )
             {
-                hr = _FormatStruct( binder, 0, srcBuf + memberObj.Addr, memberObj._Type, fmtopt, memberStr, maxLength - outStr.length() );
+                hr = _FormatStruct( binder, 0, srcBuf + memberObj.Addr, memberObj._Type, fmtopt, memberStr, maxLength - outStr.length(), complete );
             }
             else
             {
@@ -721,7 +793,7 @@ namespace MagoEE
                     hr = binder->GetValue( memberObj.Addr, memberObj._Type, memberObj.Value );
 
                 if ( !FAILED( hr ) )
-                    hr = FormatValue( binder, memberObj, fmtopt, memberStr, maxLength - outStr.length() );
+                    hr = FormatValue( binder, memberObj, fmtopt, memberStr, maxLength - outStr.length(), complete );
             }
             if ( FAILED( hr ) )
                 return hr;
@@ -737,7 +809,8 @@ namespace MagoEE
         return hr;
     }
 
-    HRESULT FormatRange( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    HRESULT FormatRange( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt,
+                         std::wstring& outStr, uint32_t maxLength, std::function<HRESULT(HRESULT, std::wstring)> complete )
     {
         auto ts = type->AsTypeStruct();
         Address addrSave = 0, addrEmpty = 0, addrFront = 0, addrPop = 0;
@@ -753,7 +826,7 @@ namespace MagoEE
         if ( !obj._Type->Equals( type ) )
             return E_MAGOEE_NOFUNCCALL;
 
-        HRESULT hr = EvalDebuggerProp( binder, typeSave, addrSave, addr, obj );
+        HRESULT hr = EvalDebuggerProp( binder, typeSave, addrSave, addr, obj, {} );
         if ( hr != S_OK )
             return hr;
         if ( obj.Addr == 0 )
@@ -764,13 +837,13 @@ namespace MagoEE
         if( typeLength )
         {
             DataObject length = { 0 };
-            hr = EvalDebuggerProp( binder, typeLength, addrLength, obj.Addr, length );
+            hr = EvalDebuggerProp( binder, typeLength, addrLength, obj.Addr, length, {} );
             if( hr != S_OK )
                 return hr;
 
             outStr.append(L"length=");
 
-            hr = FormatValue( binder, length, fmtopt, outStr, maxLength );
+            hr = FormatValue( binder, length, fmtopt, outStr, maxLength, complete );
             if ( hr != S_OK )
                 return hr;
 
@@ -783,7 +856,7 @@ namespace MagoEE
         for ( uint32_t i = 0; ; i++ )
         {
             DataObject empty = { 0 };
-            hr = EvalDebuggerProp( binder, typeEmpty, addrEmpty, obj.Addr, empty );
+            hr = EvalDebuggerProp( binder, typeEmpty, addrEmpty, obj.Addr, empty, {} );
             if ( hr != S_OK )
                 return hr;
             if ( empty.Value.Int64Value != 0 ) // check type?
@@ -799,16 +872,16 @@ namespace MagoEE
             }
 
             DataObject elem = { 0 };
-            hr = EvalDebuggerProp( binder, typeFront, addrFront, obj.Addr, elem );
+            hr = EvalDebuggerProp( binder, typeFront, addrFront, obj.Addr, elem, {} );
             if ( hr != S_OK )
                 return hr;
 
-            hr = FormatValue( binder, elem, fmtopt, outStr, maxLength );
+            hr = FormatValue( binder, elem, fmtopt, outStr, maxLength, complete );
             if ( hr != S_OK )
                 return hr;
 
             DataObject dummy = { 0 };
-            hr = EvalDebuggerProp( binder, typePop, addrPop, obj.Addr, dummy );
+            hr = EvalDebuggerProp( binder, typePop, addrPop, obj.Addr, dummy, {} );
             if ( hr != S_OK )
                 return hr;
         }
@@ -817,7 +890,8 @@ namespace MagoEE
         return S_OK;
     }
 
-	HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+	HRESULT FormatStruct( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt,
+                          std::wstring& outStr, uint32_t maxLength, std::function<HRESULT(HRESULT, std::wstring)> complete )
 	{
         static bool recurse = false;
         if ( gCallDebuggerFunctions && !recurse && fmtopt.specifier != FormatSpecRaw )
@@ -827,27 +901,43 @@ namespace MagoEE
             Address fnaddr;
             if( RefPtr<Type> fntype = GetDebuggerProp( type->AsTypeStruct(), L"__debugOverview", fnaddr ) )
             {
+                auto completeProp =
+                    [binder, fmtopt, maxLength, complete](HRESULT hr, DataObject obj)
+                    {
+                        std::wstring outStr;
+                        if (hr == S_OK)
+                            hr = FormatValue(binder, obj, fmtopt, outStr, maxLength, complete);
+                        else
+                            hr = complete(hr, outStr);
+                        return hr;
+                    };
                 DataObject obj = { 0 };
-                hr = EvalDebuggerProp( binder, fntype, fnaddr, addr, obj );
-                if( hr == S_OK )
-                    hr = FormatValue( binder, obj, fmtopt, outStr, maxLength );
+                if (complete)
+                    hr = EvalDebuggerProp( binder, fntype, fnaddr, addr, obj, completeProp );
+                else
+                {
+                    hr = EvalDebuggerProp( binder, fntype, fnaddr, addr, obj, {} );
+                    if( hr == S_OK )
+                        hr = FormatValue( binder, obj, fmtopt, outStr, maxLength, complete );
+                }
             }
             else if ( gCallDebuggerRanges )
-                hr = FormatRange(binder, addr, type, fmtopt, outStr, maxLength);
+                hr = FormatRange( binder, addr, type, fmtopt, outStr, maxLength, complete );
 
             recurse = false;
             if ( hr == S_OK )
                 return S_OK;
         }
-		return _FormatStruct( binder, addr, nullptr, type, fmtopt, outStr, maxLength );
+		return _FormatStruct( binder, addr, nullptr, type, fmtopt, outStr, maxLength, complete );
 	}
 
 	HRESULT FormatRawStructValue( IValueBinder* binder, const void* srcBuf, Type* type, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
 	{
-		return _FormatStruct( binder, 0, (const char*)srcBuf, type, fmtopt, outStr, maxLength );
+        return _FormatStruct(binder, 0, (const char*)srcBuf, type, fmtopt, outStr, maxLength, {});
 	}
 
-    HRESULT FormatPointer( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    HRESULT FormatPointer( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt,
+                           std::wstring& outStr, uint32_t maxLength, std::function<HRESULT(HRESULT, std::wstring)> complete )
     {
         _ASSERT( objVal._Type->IsPointer() );
 
@@ -901,7 +991,7 @@ namespace MagoEE
                 if ( !FAILED( hr ) )
                 {
                     std::wstring memberStr;
-                    hr = FormatValue( binder, pointeeObj, fmtopt, memberStr, maxLength - outStr.length() );
+                    hr = FormatValue( binder, pointeeObj, fmtopt, memberStr, maxLength - outStr.length(), complete );
                     if ( !FAILED( hr ) && !memberStr.empty() )
                     {
                         if( memberStr[0] != '{' )
@@ -1171,7 +1261,7 @@ namespace MagoEE
             if ( !fntype )
                 return E_INVALIDARG;
 
-            hr = EvalDebuggerProp( binder, fntype, fnaddr, objVal.Addr, dbgObj );
+            hr = EvalDebuggerProp( binder, fntype, fnaddr, objVal.Addr, dbgObj, {} );
             if ( FAILED( hr ) )
                 return hr;
             pVal = &dbgObj;
@@ -1189,7 +1279,8 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
+    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt,
+        std::wstring& outStr, uint32_t maxLength, std::function<HRESULT(HRESULT, std::wstring)> complete )
     {
         HRESULT hr = S_OK;
         Type*   type = NULL;
@@ -1201,39 +1292,47 @@ namespace MagoEE
 
         if ( type->IsPointer() )
         {
-            hr = FormatPointer( binder, objVal, fmtopt, outStr, maxLength );
+            hr = FormatPointer( binder, objVal, fmtopt, outStr, maxLength, complete );
         }
         else if ( type->IsBasic() )
         {
             hr = FormatBasicValue( objVal, fmtopt, outStr );
+            if ( complete )
+                hr = complete( hr, outStr );
         }
         else if ( type->AsTypeEnum() != NULL )
         {
             hr = FormatEnum( objVal, fmtopt, outStr );
+            if ( complete )
+                hr = complete( hr, outStr );
         }
         else if ( type->IsSArray() )
         {
-            hr = FormatSArray( binder, objVal.Addr, objVal._Type, fmtopt, outStr, maxLength );
+            hr = FormatSArray( binder, objVal.Addr, objVal._Type, fmtopt, outStr, maxLength, complete );
         }
         else if ( type->IsDArray() )
         {
-            hr = FormatDArray( binder, objVal.Value.Array, objVal._Type, fmtopt, outStr, maxLength );
+            hr = FormatDArray( binder, objVal.Value.Array, objVal._Type, fmtopt, outStr, maxLength, complete );
         }
         else if ( type->IsAArray() )
         {
             hr = FormatAArray( objVal.Value.Addr, objVal._Type, fmtopt, outStr );
+            if ( complete )
+                hr = complete( hr, outStr );
         }
         else if ( auto tt = type->AsTypeTuple() )
         {
-            hr = FormatTuple( binder, objVal, tt, fmtopt, outStr, maxLength );
+            hr = FormatTuple( binder, objVal, tt, fmtopt, outStr, maxLength, complete );
         }
         else if ( type->AsTypeStruct() )
         {
-            hr = FormatStruct( binder, objVal.Addr, type, fmtopt, outStr, maxLength );
+            hr = FormatStruct( binder, objVal.Addr, type, fmtopt, outStr, maxLength, complete );
         }
         else if ( type->IsDelegate() )
         {
             hr = FormatDelegate( binder, objVal, fmtopt, outStr, maxLength );
+            if ( complete )
+                hr = complete( hr, outStr );
         }
         else
             hr = E_FAIL;

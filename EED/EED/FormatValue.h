@@ -7,13 +7,15 @@
 
 #pragma once
 
+#include <functional>
 
 namespace MagoEE
 {
     static const uint32_t kMaxFormatValueLength = 100; // soft limit to eventually abort recursions
 
     HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr );
-    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength );
+    HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt,
+        std::wstring& outStr, uint32_t maxLength, std::function<HRESULT(HRESULT, std::wstring)> complete );
 
     HRESULT GetRawStringLength( IValueBinder* binder, const DataObject& objVal, uint32_t& length );
     HRESULT FormatRawString(

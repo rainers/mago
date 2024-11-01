@@ -789,7 +789,7 @@ namespace MagoEE
 
             std::wstring keystr;
             struct FormatOptions fmt (10);
-            hr = FormatValue( mBinder, keyobj, fmt, keystr, kMaxFormatValueLength );
+            hr = FormatValue( mBinder, keyobj, fmt, keystr, kMaxFormatValueLength, {} );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -1396,7 +1396,7 @@ namespace MagoEE
         if ( !mRange._Type->Equals( type ) )
             return E_MAGOEE_NOFUNCCALL;
 
-        HRESULT hr = EvalDebuggerProp( mBinder, typeSave, addrSave, obj.Addr, mRange );
+        HRESULT hr = EvalDebuggerProp( mBinder, typeSave, addrSave, obj.Addr, mRange, {} );
         if ( hr != S_OK )
             return hr;
         if ( mRange.Addr == 0 )
@@ -1413,7 +1413,7 @@ namespace MagoEE
             return E_MAGOEE_NOFUNCCALL;
 
         DataObject length = { 0 };
-        HRESULT hr = EvalDebuggerProp( mBinder, typeLength, addrLength, mRange.Addr, length );
+        HRESULT hr = EvalDebuggerProp( mBinder, typeLength, addrLength, mRange.Addr, length, {} );
         if( hr != S_OK )
             return hr;
 
@@ -1459,14 +1459,14 @@ namespace MagoEE
         while( count > 0 )
         {
             DataObject empty = { 0 };
-            HRESULT hr = EvalDebuggerProp( mBinder, typeEmpty, addrEmpty, mRange.Addr, empty );
+            HRESULT hr = EvalDebuggerProp( mBinder, typeEmpty, addrEmpty, mRange.Addr, empty, {} );
             if ( hr != S_OK )
                 return hr;
             if ( empty.Value.Int64Value != 0 ) // check type?
                 break;
 
             DataObject dummy = { 0 };
-            hr = EvalDebuggerProp( mBinder, typePop, addrPop, mRange.Addr, dummy );
+            hr = EvalDebuggerProp( mBinder, typePop, addrPop, mRange.Addr, dummy, {} );
             if ( hr != S_OK )
                 return hr;
 
@@ -1551,7 +1551,7 @@ namespace MagoEE
                 return E_MAGOEE_NOFUNCCALL;
 
             result.ObjVal._Type = GetDebuggerPropType( typeFront );
-            HRESULT hr = EvalDebuggerProp( mBinder, typeFront, addrFront, mRange.Addr, result.ObjVal );
+            HRESULT hr = EvalDebuggerProp(mBinder, typeFront, addrFront, mRange.Addr, result.ObjVal, {} );
             if ( hr != S_OK )
                 return hr;
             hr = Skip( 1 );

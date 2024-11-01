@@ -368,7 +368,7 @@ namespace Mago
         MagoEE::FormatOptions fmtopts (mFormatOpts);
         if (fmtopts.radix == 0)
             fmtopts.radix = radix;
-        hr = MagoEE::EED::FormatValue( mExprContext, mObjVal.ObjVal, fmtopts, str.m_str );
+        hr = MagoEE::EED::FormatValue( mExprContext, mObjVal.ObjVal, fmtopts, str.m_str, {} );
         if ( FAILED( hr ) )
             return NULL;
 

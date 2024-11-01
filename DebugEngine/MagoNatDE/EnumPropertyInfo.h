@@ -17,6 +17,16 @@ namespace MagoEE
     struct EvalResult;
 }
 
+using NextAsyncResult = std::vector<DEBUG_PROPERTY_INFO>;
+
+using AsyncCompletion = std::function<HRESULT(HRESULT hr, NextAsyncResult)>;
+
+MIDL_INTERFACE("6c7072c3-1234-408f-a680-fc5a2f96903e")
+IEnumDebugPropertyInfoAsync : public IEnumDebugPropertyInfo2
+{
+public:
+    virtual HRESULT STDMETHODCALLTYPE NextAsync( ULONG celt, AsyncCompletion complete ) = 0;
+};
 
 namespace Mago
 {
@@ -43,10 +53,9 @@ namespace Mago
 
     class ExprContext;
 
-
     class EnumDebugPropertyInfo2 : 
         public CComObjectRootEx<CComMultiThreadModel>,
-        public IEnumDebugPropertyInfo2
+        public IEnumDebugPropertyInfoAsync
     {
         RefPtr<MagoEE::IEEDEnumValues>  mEEEnum;
         RefPtr<ExprContext>             mExprContext;
@@ -61,6 +70,7 @@ namespace Mago
 
     BEGIN_COM_MAP(EnumDebugPropertyInfo2)
         COM_INTERFACE_ENTRY(IEnumDebugPropertyInfo2)
+        COM_INTERFACE_ENTRY(IEnumDebugPropertyInfoAsync)
     END_COM_MAP()
 
         STDMETHOD(Next)( ULONG celt, DEBUG_PROPERTY_INFO* rgelt, ULONG* pceltFetched );
@@ -68,6 +78,7 @@ namespace Mago
         STDMETHOD(Reset)();
         STDMETHOD(Clone)( IEnumDebugPropertyInfo2** ppEnum );
         STDMETHOD(GetCount)( ULONG* count );
+        STDMETHOD(NextAsync)( ULONG celt, AsyncCompletion res );
 
         HRESULT Init( 
             MagoEE::IEEDEnumValues* eeEnum, 
@@ -80,7 +91,8 @@ namespace Mago
             const MagoEE::EvalResult& result, 
             const wchar_t* name,
             const wchar_t* fullName,
-            DEBUG_PROPERTY_INFO& info );
+            DEBUG_PROPERTY_INFO& info,
+            std::function<HRESULT(HRESULT, DEBUG_PROPERTY_INFO)> complete );
 
         HRESULT GetErrorPropertyInfo( 
             HRESULT hrErr,

@@ -831,7 +831,8 @@ namespace Mago
     }
 
     HRESULT ExprContext::CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
-                                       MagoEE::DataObject& value, bool saveGC )
+                                       MagoEE::DataObject& value, bool saveGC,
+                                       std::function < HRESULT(HRESULT, MagoEE::DataObject)> complete )
     {
         return E_MAGOEE_CALL_NOT_IMPLEMENTED;
     }

@@ -628,7 +628,7 @@ namespace Mago
                 {
                     std::wstring valueStr;
                     MagoEE::FormatOptions fmtopts (radix);
-                    hr = MagoEE::FormatValue( mExprContext, resultObj, fmtopts, valueStr, MagoEE::kMaxFormatValueLength );
+                    hr = MagoEE::FormatValue( mExprContext, resultObj, fmtopts, valueStr, MagoEE::kMaxFormatValueLength, {} );
                     if ( hr == S_OK )
                     {
                         outputStr.AppendFormat( L" = %.*s", valueStr.size(), valueStr.c_str() );

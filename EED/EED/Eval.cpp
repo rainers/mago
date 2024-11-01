@@ -38,6 +38,14 @@ namespace MagoEE
         return E_NOTIMPL;
     }
 
+    HRESULT Expression::EvaluateAsync(EvalMode mode, const EvalData& evalData, IValueBinder* binder,
+        std::function<HRESULT(HRESULT, DataObject)> complete )
+    {
+        DataObject obj;
+        HRESULT hr = Evaluate( mode, evalData, binder, obj );
+        return complete( hr, obj );
+    }
+
     //----------------------------------------------------------------------------
     //  Conversions
     //----------------------------------------------------------------------------

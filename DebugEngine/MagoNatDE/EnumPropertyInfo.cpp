@@ -12,6 +12,8 @@
 #include "ErrorProperty.h"
 #include <MagoEED.h>
 
+#include <memory>
+
 using namespace std;
 
 
@@ -104,7 +106,7 @@ namespace Mago
                 continue;
             }
 
-            hr = GetPropertyInfo( result, name.c_str(), fullName.c_str(), rgelt[i] );
+            hr = GetPropertyInfo( result, name.c_str(), fullName.c_str(), rgelt[i], {} );
             if ( FAILED( hr ) )
             {
                 hr = GetErrorPropertyInfo( hr, name.c_str(), fullName.c_str(), rgelt[i] );
@@ -117,6 +119,63 @@ namespace Mago
         *pceltFetched = i;
 
         return S_OK;
+    }
+
+    HRESULT EnumDebugPropertyInfo2::NextAsync(ULONG celt, AsyncCompletion complete)
+    {
+        HRESULT     hr = S_OK;
+        uint32_t    countLeft = mEEEnum->GetCount() - mEEEnum->GetIndex();
+        uint32_t    i = 0;
+        MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
+        wstring     name;
+        wstring     fullName;
+
+        if (celt > countLeft)
+            celt = countLeft;
+
+        struct Closure
+        {
+            AsyncCompletion complete;
+            size_t completed = 0;
+            NextAsyncResult infos;
+            HRESULT doneOne(HRESULT hr)
+            {
+                completed++;
+                if (completed >= infos.size())
+                    return complete(hr, infos);
+                return hr;
+            }
+        };
+        auto closure = std::make_shared<Closure>();
+        closure->complete = complete;
+        closure->infos.resize( celt );
+        HRESULT all_hr = S_OK;
+        for (i = 0; i < celt; i++)
+        {
+            // keep enumerating even if we fail to get an item
+            auto completeItem =
+                [this, i, closure](HRESULT hr, MagoEE::IEEDEnumValues::EvaluateNextResult res)
+                {
+                    if( SUCCEEDED( hr ) )
+                        hr = GetPropertyInfo(res.result, res.name.c_str(), res.fullName.c_str(), closure->infos[i],
+                            [i, closure](HRESULT hr, DEBUG_PROPERTY_INFO info)
+                            {
+                                closure->infos[i] = info;
+                                hr = closure->doneOne(hr);
+                                return hr;
+                            });
+                    else
+                    {
+                        hr = GetErrorPropertyInfo(hr, res.name.c_str(), res.fullName.c_str(), closure->infos[i]);
+                        hr = closure->doneOne(hr);
+                    }
+                    return hr;
+                };
+            hr = mEEEnum->EvaluateNextAsync(options, completeItem);
+            if (all_hr == S_OK)
+                all_hr = hr;
+        }
+        return all_hr;
     }
 
     HRESULT EnumDebugPropertyInfo2::GetErrorPropertyInfo( 
@@ -173,11 +232,12 @@ namespace Mago
         return hrErr;
     }
 
-    HRESULT EnumDebugPropertyInfo2::GetPropertyInfo( 
+    HRESULT EnumDebugPropertyInfo2::GetPropertyInfo(
         const MagoEE::EvalResult& result, 
         const wchar_t* name,
         const wchar_t* fullName,
-        DEBUG_PROPERTY_INFO& info )
+        DEBUG_PROPERTY_INFO& info,
+        std::function<HRESULT(HRESULT, DEBUG_PROPERTY_INFO)> complete )
     {
         HRESULT hr = S_OK;
 
@@ -193,12 +253,6 @@ namespace Mago
         {
             info.bstrFullName = SysAllocString( fullName );
             info.dwFields |= DEBUGPROP_INFO_FULLNAME;
-        }
-
-        if ( (mFields & DEBUGPROP_INFO_VALUE) != 0 )
-        {
-            MagoEE::EED::FormatValue( mExprContext, result.ObjVal, mFormatOpt, info.bstrValue );
-            info.dwFields |= DEBUGPROP_INFO_VALUE;
         }
 
         if ( (mFields & DEBUGPROP_INFO_TYPE) != 0 )
@@ -232,6 +286,20 @@ namespace Mago
             info.dwAttrib = GetPropertyAttr( mExprContext, result, mFormatOpt );
             info.dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
+
+        if ( (mFields & DEBUGPROP_INFO_VALUE) != 0 )
+        {
+            info.dwFields |= DEBUGPROP_INFO_VALUE;
+            auto completeEE = [info, complete](HRESULT hr, BSTR outStr) mutable
+            {
+                info.bstrValue = outStr;
+                return complete(hr, info);
+            };
+            MagoEE::EED::FormatValue( mExprContext, result.ObjVal, mFormatOpt, info.bstrValue,
+                complete ? completeEE : std::function<HRESULT(HRESULT, BSTR)>{});
+        }
+        else if( complete )
+            return complete( S_OK, info );
 
         return S_OK;
     }

@@ -47,6 +47,10 @@
 #include "../../DebugEngine/MagoNatDE/Program.h"
 #include "../../DebugEngine/MagoNatDE/LocalProcess.h"
 
+#include "../../DebugEngine/MagoNatDE/EnumPropertyInfo.h"
+
+#include <chrono>
+
 ///////////////////////////////////////////////////////////////////////////////
 #define NOT_IMPL(x) virtual HRESULT x override { return E_NOTIMPL; }
 
@@ -724,6 +728,7 @@ ProcessHelper* getProcessHelper(DkmProcess* process)
 ///////////////////////////////////////////////////////////////////////////////
 class DECLSPEC_UUID("98F84FA4-E9E5-458C-81B7-F04352727B97") CCExprContext : public Mago::ExprContext
 {
+    RefPtr<DkmWorkList> mWorkList;
     RefPtr<CallStack::DkmStackWalkFrame> mStackFrame;
     RefPtr<CCModule> mModule;
     RefPtr<Mago::Thread> mThread;
@@ -734,7 +739,7 @@ public:
     {
     }
     
-    HRESULT Init(DkmProcess* process, CallStack::DkmStackWalkFrame* frame)
+    HRESULT Init(DkmProcess* process, DkmWorkList* workList, CallStack::DkmStackWalkFrame* frame)
     {
         HRESULT hr;
         CComPtr<Symbols::DkmInstructionSymbol> pInstruction;
@@ -759,6 +764,7 @@ public:
             tryHR(module->SetDataItem(DkmDataCreationDisposition::CreateAlways, mModule.Get()));
         }
 
+        mWorkList = workList;
         mStackFrame = frame;
 
         uint64_t va = frame->InstructionAddress()->CPUInstructionPart()->InstructionPointer;
@@ -771,6 +777,12 @@ public:
         mThread->SetProgram(mModule->mProgram, mModule->mDebuggerProxy);
 
         return ExprContext::Init(mModule->mModule, mThread, funcSH, blockSH, va, mModule->mRegSet);
+    }
+
+    HRESULT SetWorkList(DkmWorkList* pWorkList)
+    {
+        mWorkList = pWorkList;
+        return S_OK;
     }
 
     HRESULT SetStackFrame(CallStack::DkmStackWalkFrame* frame)
@@ -969,7 +981,7 @@ public:
         if (ret != ERROR_SUCCESS)
             return HRESULT_FROM_WIN32(ret);
 
-        magogcPathLen = wcslen(magogcPath);
+        magogcPathLen = (int)wcslen(magogcPath);
         MagoEE::Address argbuf = helper->getTmpBuffer(2 * magogcPathLen + 2);
         if (argbuf == 0)
             return E_MAGOEE_CANNOTALLOCTRAMP;
@@ -1153,9 +1165,57 @@ public:
         return hr;
     }
 
-    virtual HRESULT CallFunction(MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
-                                 MagoEE::DataObject& obj, bool saveGC)
+    struct CallFunctionComplete : IDkmCompletionRoutine<Evaluation::DkmExecuteQueryAsyncResult>
     {
+        long mRefCount = 0;
+        CCExprContext* exprContext;
+        std::function<HRESULT(HRESULT, MagoEE::DataObject)> complete;
+        MagoEE::Address retbuf;
+        UINT32 retSize;
+        bool passRetbuf;
+        MagoEE::DataObject obj;
+        std::chrono::steady_clock::time_point now, now2, now3, now4;
+
+        virtual void STDMETHODCALLTYPE OnComplete(const Evaluation::DkmExecuteQueryAsyncResult& res)
+        {
+            HRESULT hr = res.ErrorCode;
+            exprContext->processCallFunctionResult(hr, res.FailureReason, res.Results, retbuf, retSize, passRetbuf,
+                obj, now, now2, now3, now4);
+            complete(hr, obj);
+        }
+
+        // COM like ref counting
+        virtual ULONG STDMETHODCALLTYPE AddRef()
+        {
+            long newRef = InterlockedIncrement(&mRefCount);
+            return newRef;
+        }
+        virtual ULONG STDMETHODCALLTYPE Release()
+        {
+            long newRef = InterlockedDecrement(&mRefCount);
+            _ASSERT(newRef >= 0);
+            if (newRef == 0)
+                delete this;
+            return newRef;
+        }
+        virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppv)
+        {
+            if (riid == __uuidof(IUnknown))
+            {
+                *ppv = static_cast<IUnknown*>(this);
+                AddRef();
+                return S_OK;
+            }
+            *ppv = NULL;
+            return E_NOINTERFACE;
+        }
+    };
+
+    virtual HRESULT CallFunction(MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
+                                 MagoEE::DataObject& obj, bool saveGC, std::function<HRESULT(HRESULT, MagoEE::DataObject)> complete)
+    {
+        auto now = std::chrono::steady_clock::now();
+
         HRESULT hr_gc = S_FALSE;
         if (saveGC && MagoEE::gCallDebuggerUseMagoGC)
             hr_gc = SwitchToMagoGC();
@@ -1167,10 +1227,10 @@ public:
         uint8_t callConv = func->GetCallConv();
         bool returnsDXAX = obj._Type->IsDArray() || obj._Type->IsDelegate();
         UINT32 ReturnValueSize = obj._Type->GetSize();
-        int ptrSize = mModule->mArchData->GetPointerSize();
+        UINT32 ptrSize = mModule->mArchData->GetPointerSize();
         bool isX64 = ptrSize == 8;
         bool passRetbuf = false;
-        int returnInRegisterLimit = 8; // EDX:EAX on x86, RAX on x64
+        UINT32 returnInRegisterLimit = 8; // EDX:EAX on x86, RAX on x64
 
         DkmILCallingConvention::e CallingConvention = toCallingConvention(callConv);
         if (CallingConvention == DkmILCallingConvention::e(-1))
@@ -1310,9 +1370,13 @@ public:
         tryHR(DkmILReturnTop::Create(&preturn.Ref()));
         instructions[cntInstr++] = preturn;
 
+        auto now2 = std::chrono::steady_clock::now();
+
         // build instruction list
         RefPtr<DkmReadOnlyCollection<DkmILInstruction*>> pinstr;
         tryHR(DkmReadOnlyCollection<DkmILInstruction*>::Create(instructions, cntInstr, &pinstr.Ref()));
+
+        auto now3 = std::chrono::steady_clock::now();
 
         // run instructions
         RefPtr<DkmCompiledILInspectionQuery> pquery;
@@ -1321,9 +1385,49 @@ public:
         RefPtr<Evaluation::DkmILContext> pcontext;
         tryHR(Evaluation::DkmILContext::Create(mStackFrame, nullptr, &pcontext.Ref()));
 
+        auto now4 = std::chrono::steady_clock::now();
+        HRESULT hr;
+
+        auto worklist = complete ? mWorkList : nullptr;
         DkmArray<DkmILEvaluationResult*> arrResults;
         DkmILFailureReason::e failureReason;
-        HRESULT hr = pquery->Execute(nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None, &arrResults, &failureReason);
+        if (worklist)
+        {
+            auto pCompletionRoutine = new CallFunctionComplete;
+            pCompletionRoutine->exprContext = this;
+            AddRef();
+            pCompletionRoutine->complete = complete;
+            pCompletionRoutine->retbuf = retbuf;
+            pCompletionRoutine->retSize = retSize;
+            pCompletionRoutine->passRetbuf = passRetbuf;
+            pCompletionRoutine->obj = obj;
+            pCompletionRoutine->now = now;
+            pCompletionRoutine->now2 = now2;
+            pCompletionRoutine->now3 = now3;
+            pCompletionRoutine->now4 = now4;
+            pCompletionRoutine->AddRef();
+            hr = pquery->Execute(worklist, nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None,
+                pCompletionRoutine);
+            //pCompletionRoutine->Release();
+        }
+        else
+        {
+            hr = pquery->Execute(nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None, &arrResults, &failureReason);
+            hr = processCallFunctionResult(hr, failureReason, arrResults, retbuf, retSize, passRetbuf,
+                obj, now, now2, now3, now4);
+            DkmFreeArray(arrResults);
+        }
+        return hr;
+    }
+
+    HRESULT processCallFunctionResult(HRESULT hr, Evaluation::IL::DkmILFailureReason::e failureReason,
+        const DkmArray<Evaluation::IL::DkmILEvaluationResult*>& arrResults,
+        MagoEE::Address retbuf, UINT32 retSize, bool passRetbuf, MagoEE::DataObject& obj,
+        std::chrono::steady_clock::time_point now, std::chrono::steady_clock::time_point now2,
+        std::chrono::steady_clock::time_point now3, std::chrono::steady_clock::time_point now4)
+    {
+        using namespace Evaluation::IL;
+        auto now5 = std::chrono::steady_clock::now();
 
         if (!FAILED(hr))
         {
@@ -1353,7 +1457,16 @@ public:
             else
                 hr = retSize == 0 ? S_OK : E_FAIL;
         }
-        DkmFreeArray(arrResults);
+
+        auto now6 = std::chrono::steady_clock::now();
+
+        auto ms = [](std::chrono::steady_clock::duration dur) {
+            return std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
+        };
+        char msg[256];
+        snprintf(msg, 256, "CallFunction %lld %lld %lld %lld %lld\n",
+            ms(now2 - now), ms(now3 - now), ms(now4 - now), ms(now5 - now), ms(now6 - now));
+        OutputDebugStringA(msg);
         return hr;
     }
 
@@ -1362,7 +1475,7 @@ public:
         if (type->IsSArray())
             return false;
 
-        int ptrSize = mModule->mArchData->GetPointerSize();
+        uint32_t ptrSize = mModule->mArchData->GetPointerSize();
         if (type->GetSize() > ptrSize)
             return false;
 
@@ -1458,7 +1571,7 @@ public:
         else
         {
             tryHR(FromRawValue(pbuf, retType, value.ObjVal.Value));
-            tryHR(FormatValue(this, value.ObjVal, fmtopt, valStr, maxLength));
+            tryHR(FormatValue(this, value.ObjVal, fmtopt, valStr, maxLength, {}));
         }
 
         MagoEE::FillValueTraits(this, value, nullptr);
@@ -1488,6 +1601,7 @@ CComPtr<DkmString> toDkmString(const wchar_t* str)
 
 ///////////////////////////////////////////////////////////////////////////////
 HRESULT InitExprContext(Evaluation::DkmInspectionContext* pInspectionContext,
+                        DkmWorkList* pWorkList,
                         CallStack::DkmStackWalkFrame* pStackFrame,
                         bool forceReinit,
                         RefPtr<CCExprContext>& exprContext)
@@ -1505,7 +1619,7 @@ HRESULT InitExprContext(Evaluation::DkmInspectionContext* pInspectionContext,
     auto process = pInspectionContext->RuntimeInstance()->Process();
 
     tryHR(MakeCComObject(exprContext));
-    tryHR(exprContext->Init(process, pStackFrame));
+    tryHR(exprContext->Init(process, pWorkList, pStackFrame));
 
 #if 1 // disable if caching causes too much trouble
     tryHR(session->SetDataItem(DkmDataCreationDisposition::CreateAlways, exprContext.Get()));
@@ -1688,7 +1802,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     auto process = pInspectionContext->RuntimeInstance()->Process();
 
     RefPtr<CCExprContext> exprContext;
-    tryHR(InitExprContext(pInspectionContext, pStackFrame, false, exprContext));
+    tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, false, exprContext));
 
     std::wstring exprText = pExpression->Text()->Value();
     MagoEE::FormatOptions fmtopt;
@@ -1748,6 +1862,11 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetChildren(
     RefPtr<Mago::Property> pProperty;
     tryHR(pResult->GetDataItem(&pProperty.Ref()));
 
+    RefPtr<CCExprContext> exprContext;
+    if (auto session = pInspectionContext->InspectionSession())
+        if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
+            exprContext->SetWorkList(pWorkList);
+
     int radix = pInspectionContext->Radix();
     int timeout = pInspectionContext->Timeout();
     RefPtr<IEnumDebugPropertyInfo2> pEnum;
@@ -1763,11 +1882,21 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetChildren(
 
     if (InitialRequestSize > count)
         InitialRequestSize = count;
-    Evaluation::DkmGetChildrenAsyncResult result = { 0 };
-    result.ErrorCode = S_OK;
-    tryHR(_GetItems(pEnumContext, pEnum, 0, InitialRequestSize, result.InitialChildren));
-    result.pEnumContext = pEnumContext;
-    pCompletionRoutine->OnComplete(result);
+
+    RefPtr<IEnumDebugPropertyInfoAsync> pEnumAsync;
+    pEnum->QueryInterface(__uuidof(IEnumDebugPropertyInfoAsync), (void**)&pEnumAsync.Ref());
+    if (pEnumAsync)
+    {
+        tryHR(_GetItemsAsync(pEnumContext, pEnumAsync, 0, InitialRequestSize, pCompletionRoutine, nullptr));
+    }
+    else
+    {
+        Evaluation::DkmGetChildrenAsyncResult result = { 0 };
+        result.ErrorCode = S_OK;
+        tryHR(_GetItems(pEnumContext, pEnum, 0, InitialRequestSize, result.InitialChildren));
+        result.pEnumContext = pEnumContext;
+        pCompletionRoutine->OnComplete(result);
+    }
     return S_OK;
 }
 
@@ -1780,7 +1909,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameLocals(
     auto session = pInspectionContext->InspectionSession();
 
     RefPtr<CCExprContext> exprContext;
-    tryHR(InitExprContext(pInspectionContext, pStackFrame, true, exprContext));
+    tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, true, exprContext));
 
     RefPtr<Mago::FrameProperty> frameProp;
     tryHR(MakeCComObject(frameProp));
@@ -1811,9 +1940,12 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameArguments(
     _In_ CallStack::DkmStackWalkFrame* pFrame,
     _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameArgumentsAsyncResult>* pCompletionRoutine)
 {
-//    return E_NOTIMPL;
+#if 1
+    return E_NOTIMPL;
+#else
     HRESULT hr = pInspectionContext->GetFrameArguments(pWorkList, pFrame, pCompletionRoutine);
     return hr;
+#endif
 }
 
 
@@ -1824,6 +1956,11 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetItems(
     _In_ UINT32 Count,
     _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluationEnumAsyncResult>* pCompletionRoutine)
 {
+    RefPtr<CCExprContext> exprContext;
+    if (auto session = pEnumContext->InspectionSession())
+        if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
+            exprContext->SetWorkList(pWorkList);
+
     RefPtr<IEnumDebugPropertyInfo2> pEnum;
     tryHR(pEnumContext->GetDataItem(&pEnum.Ref()));
 
@@ -1839,10 +1976,19 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetItems(
         tryHR(pEnum->Reset());
         tryHR(pEnum->Skip(StartIndex));
     }
-    Evaluation::DkmEvaluationEnumAsyncResult result = { 0 };
-    result.ErrorCode = S_OK;
-    tryHR(_GetItems(pEnumContext, pEnum, StartIndex, Count, result.Items));
-    pCompletionRoutine->OnComplete(result);
+    RefPtr<IEnumDebugPropertyInfoAsync> pEnumAsync;
+    pEnum->QueryInterface( __uuidof(IEnumDebugPropertyInfoAsync), (void**) &pEnumAsync.Ref() );
+    if (pEnumAsync)
+    {
+        tryHR(_GetItemsAsync(pEnumContext, pEnumAsync, StartIndex, Count, nullptr, pCompletionRoutine));
+    }
+    else
+    {
+        Evaluation::DkmEvaluationEnumAsyncResult result = { 0 };
+        result.ErrorCode = S_OK;
+        tryHR(_GetItems(pEnumContext, pEnum, StartIndex, Count, result.Items));
+        pCompletionRoutine->OnComplete(result);
+    }
     return S_OK;
 }
 
@@ -1851,7 +1997,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItems(
     _In_ IEnumDebugPropertyInfo2* pEnum,
     _In_ UINT32 StartIndex,
     _In_ UINT32 Count,
-    DkmArray<Evaluation::DkmEvaluationResult*>& Items)
+    _Out_ DkmArray<Evaluation::DkmEvaluationResult*>& Items)
 {
     tryHR(DkmAllocArray(Count, &Items));
     for (ULONG i = 0; i < Count; i++)
@@ -1868,6 +2014,58 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItems(
                 Items.Members[i] = pResultObject;
         }
     }
+    return S_OK;
+}
+
+struct GetItemsAsyncResult
+{
+    RefPtr<Evaluation::DkmEvaluationResultEnumContext> enumContext;
+    RefPtr<IDkmCompletionRoutine<Evaluation::DkmGetChildrenAsyncResult>> completionGetChildren;
+    RefPtr<IDkmCompletionRoutine<Evaluation::DkmEvaluationEnumAsyncResult>> completionGetItems;
+};
+
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
+    _In_ Evaluation::DkmEvaluationResultEnumContext* pEnumContext,
+    _In_ IEnumDebugPropertyInfoAsync* pEnum,
+    _In_ UINT32 StartIndex,
+    _In_ UINT32 Count,
+    _In_ IDkmCompletionRoutine<Evaluation::DkmGetChildrenAsyncResult>* pCompletionGetChildren,
+    _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluationEnumAsyncResult>* pCompletionGetItems)
+{
+    auto closure = std::make_shared<GetItemsAsyncResult>();
+    closure->completionGetChildren = pCompletionGetChildren;
+    closure->completionGetItems = pCompletionGetItems;
+    closure->enumContext = pEnumContext;
+
+    HRESULT hr = pEnum->NextAsync(Count,
+        [closure, pEnumContext](HRESULT status, NextAsyncResult infos)
+        {
+            Evaluation::DkmEvaluationEnumAsyncResult res;
+            tryHR(DkmAllocArray(infos.size(), &res.Items));
+            res.ErrorCode = status;
+            for (ULONG i = 0; i < infos.size(); i++)
+            {
+                if (infos[i].pProperty)
+                {
+                    Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
+                    HRESULT hr = createEvaluationResult(closure->enumContext->InspectionContext(),
+                        closure->enumContext->StackFrame(), infos[i], &pResultObject);
+                    if (SUCCEEDED(hr))
+                        res.Items.Members[i] = pResultObject;
+                }
+            }
+            if (closure->completionGetItems)
+                closure->completionGetItems->OnComplete(res);
+            else
+            {
+                Evaluation::DkmGetChildrenAsyncResult res2;
+                res2.ErrorCode = res.ErrorCode;
+                res2.InitialChildren = std::move(res.Items);
+                res2.pEnumContext = pEnumContext;
+                closure->completionGetChildren->OnComplete(res2);
+            }
+            return status;
+        });
     return S_OK;
 }
 
@@ -1911,7 +2109,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateReturnValue(
         return E_NOTIMPL;
 
     RefPtr<CCExprContext> exprContext;
-    tryHR(InitExprContext(pInspectionContext, pStackFrame, false, exprContext));
+    tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, false, exprContext));
 
     ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
     tryHR(exprContext->EvalReturnValue(pInspectionContext, pNativeRetValue, info));

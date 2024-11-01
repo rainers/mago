@@ -12,6 +12,7 @@
 #include "Eval.h"
 #include "Strings.h"
 
+#include <functional>
 
 namespace MagoEE
 {
@@ -66,7 +67,9 @@ namespace MagoEE
         virtual ObjectKind GetObjectKind();
         // TODO: abstract
         virtual HRESULT Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder );
-        virtual HRESULT Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj );
+        virtual HRESULT Evaluate(EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj);
+        virtual HRESULT EvaluateAsync( EvalMode mode, const EvalData& evalData, IValueBinder* binder,
+            std::function<HRESULT(HRESULT, DataObject)> complete );
         virtual bool TrySetType( Type* type );
         virtual NamingExpression* AsNamingExpression();
 

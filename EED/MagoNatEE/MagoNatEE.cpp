@@ -68,20 +68,29 @@ namespace MagoEE
             return S_OK;
         }
 
-        HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr )
+        HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt,
+                             BSTR& outStr, std::function<HRESULT(HRESULT, BSTR)> complete )
         {
             HRESULT         hr = S_OK;
             std::wstring    stdStr;
 
-            hr = MagoEE::FormatValue( binder, objVal, fmtopt, stdStr, kMaxFormatValueLength );
-            if ( FAILED( hr ) )
+            auto completeEE = [complete, &outStr](HRESULT hr, std::wstring stdStr)
+            {
+                BSTR bStr = NULL;
+                if( hr == S_OK )
+                {
+                    bStr = SysAllocStringLen(stdStr.c_str(), stdStr.size());
+                    if( bStr == NULL )
+                        hr = E_OUTOFMEMORY;
+                }
+                if (complete)
+                    return complete(hr, bStr);
+                outStr = bStr;
                 return hr;
-
-            outStr = SysAllocStringLen( stdStr.c_str(), stdStr.size() );
-            if ( outStr == NULL )
-                return E_OUTOFMEMORY;
-
-            return S_OK;
+            };
+            hr = MagoEE::FormatValue( binder, objVal, fmtopt, stdStr, kMaxFormatValueLength,
+                complete ? completeEE : std::function<HRESULT(HRESULT, std::wstring)>{});
+            return complete ? hr : completeEE(hr, stdStr);
         }
 
         HRESULT GetRawStringLength( IValueBinder* binder, const DataObject& objVal, uint32_t& length )

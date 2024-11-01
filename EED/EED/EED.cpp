@@ -84,6 +84,28 @@ namespace MagoEE
             return S_OK;
         }
 
+        virtual HRESULT EvaluateAsync( const EvalOptions& options, IValueBinder* binder, 
+            std::function<HRESULT(HRESULT, EvalResult)> complete )
+        {
+            HRESULT     hr = S_OK;
+            EvalData    evalData = { 0 };
+
+            evalData.Options = options;
+            evalData.TypeEnv = mTypeEnv;
+
+            hr = mExpr->EvaluateAsync( EvalMode_Value, evalData, binder,
+                [this, binder, complete](HRESULT hr, DataObject obj)
+                {
+                    EvalResult res;
+                    if( SUCCEEDED( hr ) )
+                    {
+                        res.ObjVal = obj;
+                        FillValueTraits( binder, res, mExpr );
+                    }
+                    return complete(hr, res);
+                });
+            return hr;
+        }
     };
 
 	bool gShowVTable = false;
@@ -258,7 +280,7 @@ namespace MagoEE
                 Address fnaddr;
                 if ( RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugExpanded", fnaddr ) )
                 {
-                    hr = EvalDebuggerProp( binder, fntype, fnaddr, pparentVal->ObjVal.Addr, pointeeObj.ObjVal );
+                    hr = EvalDebuggerProp( binder, fntype, fnaddr, pparentVal->ObjVal.Addr, pointeeObj.ObjVal, {} );
                     if ( hr == S_OK )
                     {
                         pparentVal = &pointeeObj;
@@ -292,7 +314,8 @@ namespace MagoEE
         return S_OK;
     }
 
-    void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr )
+    void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr,
+        std::function<HRESULT(HRESULT, EvalResult)> complete )
     {
         result.ReadOnly = true;
         result.HasString = false;
@@ -406,7 +429,7 @@ namespace MagoEE
                             if ( ts->GetUdtKind() != MagoEE::Udt_Class )
                                 hr = S_OK; // no need to read value to fill traits
                         if ( hr != S_OK )
-                            hr = EvalDebuggerProp( binder, fntype, fnaddr, pparentVal->Addr, pointeeObj );
+                            hr = EvalDebuggerProp( binder, fntype, fnaddr, pparentVal->Addr, pointeeObj, {} );
                         if ( hr == S_OK )
                         {
                             pparentVal = &pointeeObj;
@@ -416,7 +439,7 @@ namespace MagoEE
                     else if( gCallDebuggerRanges && IsForwardRange( type ) )
                     {
                         result.HasChildren = result.HasRawChildren = true;
-                        return;
+                        goto L_done;
                     }
                 }
                 RefPtr<Declaration> decl = type->GetDeclaration();
@@ -458,6 +481,9 @@ namespace MagoEE
                 result.HasChildren = result.HasRawChildren = tt->GetLength() > 0;
             }
         }
+    L_done:
+        if( complete )
+            complete( S_OK, result );
     }
 
     RefPtr<Type> GetDebuggerProp( ITypeStruct* ts, const wchar_t* call, Address& fnaddr )
@@ -492,13 +518,14 @@ namespace MagoEE
     }
 
     HRESULT EvalDebuggerProp( IValueBinder* binder, RefPtr<Type> fntype, Address fnaddr,
-                              Address objAddr, DataObject& propValue )
+                              Address objAddr, DataObject& propValue,
+                              std::function<HRESULT(HRESULT, DataObject)> complete )
     {
         HRESULT hr;
         if( auto func = fntype->AsTypeFunction() )
         {
             propValue._Type = func->GetReturnType();
-            hr = binder->CallFunction( fnaddr, func, objAddr, propValue, true );
+            hr = binder->CallFunction( fnaddr, func, objAddr, propValue, true, complete );
         }
         else
         {

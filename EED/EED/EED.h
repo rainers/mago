@@ -17,6 +17,7 @@
 #include "FromRawValue.h"
 #include "Array.h"
 
+#include <functional>
 
 namespace MagoEE
 {
@@ -44,7 +45,12 @@ namespace MagoEE
         virtual void Release() = 0;
 
         virtual HRESULT Bind( const EvalOptions& options, IValueBinder* binder ) = 0;
-        virtual HRESULT Evaluate( const EvalOptions& options, IValueBinder* binder, EvalResult& result ) = 0;
+        virtual HRESULT Evaluate(const EvalOptions& options, IValueBinder* binder, EvalResult& result) = 0;
+        virtual HRESULT EvaluateAsync( const EvalOptions& options, IValueBinder* binder,
+            std::function<HRESULT(HRESULT, EvalResult)> complete )
+        {
+            return { E_FAIL };
+        }
     };
 
     class IEEDEnumValues
@@ -65,6 +71,25 @@ namespace MagoEE
             EvalResult& result,
             std::wstring& name,
             std::wstring& fullName ) = 0;
+
+        struct EvaluateNextResult
+        {
+            EvalResult result;
+            std::wstring name;
+            std::wstring fullName;
+        };
+        virtual HRESULT EvaluateNextAsync(
+            const EvalOptions& options,
+            std::function<HRESULT( HRESULT hr, EvaluateNextResult )> complete )
+#if 1
+            = 0;
+#else
+        {
+            EvaluateNextResult res;
+            HRESULT hr = EvaluateNext( options, res.result, res.name, res.fullName );
+            return complete( hr, res );
+        }
+#endif
     };
 
     HRESULT Init();
@@ -97,12 +122,14 @@ namespace MagoEE
         const FormatOptions& fmtopts,
         IEEDEnumValues*& enumerator );
 
-    void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr );
+    void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr,
+        std::function<HRESULT(HRESULT, EvalResult)> complete = {});
 
     RefPtr<Type> GetDebuggerProp( ITypeStruct* ts, const wchar_t* call, Address& fnaddr );
     RefPtr<Type> GetDebuggerPropType( Type* fntype );
     HRESULT EvalDebuggerProp( IValueBinder* binder, RefPtr<Type> fntype, Address fnaddr,
-                              Address objAddr, DataObject& propValue );
+                              Address objAddr, DataObject& propValue,
+                              std::function<HRESULT(HRESULT, DataObject)> complete );
     bool IsForwardRange( Type* type );
 
     HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr );

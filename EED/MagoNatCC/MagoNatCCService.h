@@ -9,6 +9,7 @@
 #include "MagoNatCC.Contract.h"
 
 struct IEnumDebugPropertyInfo2;
+struct IEnumDebugPropertyInfoAsync;
 
 class ATL_NO_VTABLE CMagoNatCCService :
     // Inherit from CMagoNatCCServiceContract to provide the list of interfaces that
@@ -36,7 +37,14 @@ protected:
         _In_ IEnumDebugPropertyInfo2* pEnum,
         _In_ UINT32 StartIndex,
         _In_ UINT32 Count,
-        DkmArray<Evaluation::DkmEvaluationResult*>& Items);
+        _Out_ DkmArray<Evaluation::DkmEvaluationResult*>& Items);
+    HRESULT STDMETHODCALLTYPE _GetItemsAsync(
+        _In_ Evaluation::DkmEvaluationResultEnumContext* pEnumContext,
+        _In_ IEnumDebugPropertyInfoAsync* pEnum,
+        _In_ UINT32 StartIndex,
+        _In_ UINT32 Count,
+        _In_ IDkmCompletionRoutine<Evaluation::DkmGetChildrenAsyncResult>* pCompletionGetChildren,
+        _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluationEnumAsyncResult>* pCompletionRoutine);
 
 public:
     DECLARE_NO_REGISTRY();

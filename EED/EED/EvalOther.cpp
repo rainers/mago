@@ -861,6 +861,7 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
+#if 1
             if ( Child->_Type->IsPointer() )
             {
                 // rewrite ptr.field to (*ptr).field
@@ -870,6 +871,7 @@ namespace MagoEE
                 if ( FAILED( hr ) )
                     return hr;
             }
+#endif
 
             // if child is value or type
             if ( Child->Kind != DataKind_Declaration )
@@ -1589,7 +1591,7 @@ namespace MagoEE
             return E_MAGOEE_HASSIDEEFFECT;
 
         obj._Type = _Type;
-        hr = binder->CallFunction( addr, func, ctxt, obj, false );
+        hr = binder->CallFunction( addr, func, ctxt, obj, false, {} );
         return hr;
     }
 
