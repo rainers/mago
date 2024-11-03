@@ -90,6 +90,8 @@ namespace MagoEE
             };
             hr = MagoEE::FormatValue( binder, objVal, fmtopt, stdStr, kMaxFormatValueLength,
                 complete ? completeEE : std::function<HRESULT(HRESULT, std::wstring)>{});
+            if( FAILED( hr ) )
+                return hr;
             return complete ? hr : completeEE(hr, stdStr);
         }
 

@@ -97,7 +97,7 @@ namespace Mago
             MagoEE::EvalResult  result = { 0 };
 
             // keep enumerating even if we fail to get an item
-            hr = mEEEnum->EvaluateNext( options, result, name, fullName );
+            hr = mEEEnum->EvaluateNext( options, result, name, fullName, {} );
             if ( FAILED( hr ) )
             {
                 hr = GetErrorPropertyInfo( hr, name.c_str(), fullName.c_str(), rgelt[i] );
@@ -123,12 +123,11 @@ namespace Mago
 
     HRESULT EnumDebugPropertyInfo2::NextAsync(ULONG celt, AsyncCompletion complete)
     {
+        _ASSERT( complete );
         HRESULT     hr = S_OK;
         uint32_t    countLeft = mEEEnum->GetCount() - mEEEnum->GetIndex();
         uint32_t    i = 0;
         MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
-        wstring     name;
-        wstring     fullName;
 
         if (celt > countLeft)
             celt = countLeft;
@@ -136,20 +135,27 @@ namespace Mago
         struct Closure
         {
             AsyncCompletion complete;
-            size_t completed = 0;
+            size_t toComplete = 0;
+            HRESULT hrCombined = S_OK;
             NextAsyncResult infos;
             HRESULT doneOne(HRESULT hr)
             {
-                completed++;
-                if (completed >= infos.size())
-                    return complete(hr, infos);
+                hrCombine(hr);
+                toComplete--;
+                if (toComplete == 0)
+                    return complete(hrCombined, infos);
                 return hr;
+            }
+            HRESULT hrCombine(HRESULT hr)
+            {
+                if (SUCCEEDED(hrCombined) && FAILED(hr))
+                    hrCombined = hr;
+                return hrCombined;
             }
         };
         auto closure = std::make_shared<Closure>();
         closure->complete = complete;
         closure->infos.resize( celt );
-        HRESULT all_hr = S_OK;
         for (i = 0; i < celt; i++)
         {
             // keep enumerating even if we fail to get an item
@@ -171,11 +177,18 @@ namespace Mago
                     }
                     return hr;
                 };
-            hr = mEEEnum->EvaluateNextAsync(options, completeItem);
-            if (all_hr == S_OK)
-                all_hr = hr;
+
+            MagoEE::EvalResult result;
+            std::wstring name;
+            std::wstring fullName;
+            hr = mEEEnum->EvaluateNext( options, result, name, fullName, completeItem );
+            if ( hr == S_QUEUED )
+                closure->toComplete++;
+            closure->hrCombine( hr );
+            if( FAILED( hr ) )
+                break;
         }
-        return all_hr;
+        return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
     }
 
     HRESULT EnumDebugPropertyInfo2::GetErrorPropertyInfo( 
@@ -295,13 +308,13 @@ namespace Mago
                 info.bstrValue = outStr;
                 return complete(hr, info);
             };
-            MagoEE::EED::FormatValue( mExprContext, result.ObjVal, mFormatOpt, info.bstrValue,
-                complete ? completeEE : std::function<HRESULT(HRESULT, BSTR)>{});
+            hr = MagoEE::EED::FormatValue( mExprContext, result.ObjVal, mFormatOpt, info.bstrValue,
+                    complete ? completeEE : std::function<HRESULT(HRESULT, BSTR)>{});
         }
         else if( complete )
             return complete( S_OK, info );
 
-        return S_OK;
+        return hr;
     }
 
     HRESULT EnumDebugPropertyInfo2::Skip( ULONG celt )

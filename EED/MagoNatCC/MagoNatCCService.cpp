@@ -749,11 +749,11 @@ public:
 
         auto nativeInst = Native::DkmNativeInstructionSymbol::TryCast(pInstruction);
         if (!nativeInst)
-          return S_FALSE;
+          return E_FAIL;
 
         Symbols::DkmModule* module = pInstruction->Module();
         if (!module)
-          return S_FALSE;
+          return E_FAIL;
 
         // Restore/Create CCModule in DkmModule
         hr = module->GetDataItem(&mModule.Ref());
@@ -918,7 +918,7 @@ public:
     {
         auto nativeRuntime = Native::DkmNativeRuntimeInstance::TryCast(mStackFrame->RuntimeInstance());
         if (!nativeRuntime)
-            return S_FALSE;
+            return E_FAIL;
         DkmArray<DkmModuleInstance*> modules;
         nativeRuntime->FindModulesByName(toDkmString(dllname), &modules); // GetModuleInstances(&modules); //  
 
@@ -1179,8 +1179,11 @@ public:
         virtual void STDMETHODCALLTYPE OnComplete(const Evaluation::DkmExecuteQueryAsyncResult& res)
         {
             HRESULT hr = res.ErrorCode;
-            exprContext->processCallFunctionResult(hr, res.FailureReason, res.Results, retbuf, retSize, passRetbuf,
-                obj, now, now2, now3, now4);
+            if (FAILED(hr))
+                OutputDebugStringA("OnComplete failed\n");
+            else
+                exprContext->processCallFunctionResult(hr, res.FailureReason, res.Results, retbuf, retSize, passRetbuf,
+                    obj, now, now2, now3, now4);
             complete(hr, obj);
         }
 
@@ -1409,6 +1412,10 @@ public:
             hr = pquery->Execute(worklist, nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None,
                 pCompletionRoutine);
             //pCompletionRoutine->Release();
+            if (FAILED(hr))
+                OutputDebugString(L"Execute failed\n");
+            else
+                return S_QUEUED;
         }
         else
         {
@@ -1574,7 +1581,7 @@ public:
             tryHR(FormatValue(this, value.ObjVal, fmtopt, valStr, maxLength, {}));
         }
 
-        MagoEE::FillValueTraits(this, value, nullptr);
+        tryHR(MagoEE::FillValueTraits(this, value, nullptr, {}));
 
         RefPtr<Mago::Property> pProperty;
         tryHR(MakeCComObject(pProperty));
@@ -1827,7 +1834,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
         return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalResult value = { 0 };
-    hr = pExpr->Evaluate(options, exprContext, value);
+    hr = pExpr->Evaluate(options, exprContext, value, {});
     if (FAILED(hr))
         return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
@@ -1884,10 +1891,11 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetChildren(
         InitialRequestSize = count;
 
     RefPtr<IEnumDebugPropertyInfoAsync> pEnumAsync;
-    pEnum->QueryInterface(__uuidof(IEnumDebugPropertyInfoAsync), (void**)&pEnumAsync.Ref());
+    if (InitialRequestSize > 0)
+        pEnum->QueryInterface(__uuidof(IEnumDebugPropertyInfoAsync), (void**)&pEnumAsync.Ref());
     if (pEnumAsync)
     {
-        tryHR(_GetItemsAsync(pEnumContext, pEnumAsync, 0, InitialRequestSize, pCompletionRoutine, nullptr));
+        tryHR(_GetItemsAsync(pEnumContext, pEnumAsync, InitialRequestSize, pCompletionRoutine, nullptr));
     }
     else
     {
@@ -1977,10 +1985,11 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetItems(
         tryHR(pEnum->Skip(StartIndex));
     }
     RefPtr<IEnumDebugPropertyInfoAsync> pEnumAsync;
-    pEnum->QueryInterface( __uuidof(IEnumDebugPropertyInfoAsync), (void**) &pEnumAsync.Ref() );
+    if (Count > 0)
+        pEnum->QueryInterface(__uuidof(IEnumDebugPropertyInfoAsync), (void**) &pEnumAsync.Ref());
     if (pEnumAsync)
     {
-        tryHR(_GetItemsAsync(pEnumContext, pEnumAsync, StartIndex, Count, nullptr, pCompletionRoutine));
+        tryHR(_GetItemsAsync(pEnumContext, pEnumAsync, Count, nullptr, pCompletionRoutine));
     }
     else
     {
@@ -2024,10 +2033,13 @@ struct GetItemsAsyncResult
     RefPtr<IDkmCompletionRoutine<Evaluation::DkmEvaluationEnumAsyncResult>> completionGetItems;
 };
 
+int gNumRequestScheduled = 0;
+int gNumRequestCompleted = 0;
+int gNumRequestFailed = 0;
+
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
     _In_ Evaluation::DkmEvaluationResultEnumContext* pEnumContext,
     _In_ IEnumDebugPropertyInfoAsync* pEnum,
-    _In_ UINT32 StartIndex,
     _In_ UINT32 Count,
     _In_ IDkmCompletionRoutine<Evaluation::DkmGetChildrenAsyncResult>* pCompletionGetChildren,
     _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluationEnumAsyncResult>* pCompletionGetItems)
@@ -2054,6 +2066,10 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
                         res.Items.Members[i] = pResultObject;
                 }
             }
+            gNumRequestCompleted++;
+            if (status != S_OK)
+                gNumRequestFailed++;
+
             if (closure->completionGetItems)
                 closure->completionGetItems->OnComplete(res);
             else
@@ -2066,7 +2082,11 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
             }
             return status;
         });
-    return S_OK;
+    if (hr == S_QUEUED)
+        gNumRequestScheduled++;
+    else if ( FAILED( hr ) )
+        OutputDebugString(L"pEnum->NextAsync failed\n");
+    return hr;
 }
 
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::SetValueAsString(

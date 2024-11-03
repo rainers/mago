@@ -69,11 +69,27 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        hr = parsedExpr->Evaluate( options, mBinder, result );
+        hr = parsedExpr->Evaluate( options, mBinder, result, {} );
         if ( FAILED( hr ) )
             return hr;
 
         return S_OK;
+    }
+
+    HRESULT EEDEnumValues::FillTraits(
+        EvalResult& result,
+        std::wstring& name,
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
+    {
+        auto completeTraits = !complete ? std::function<HRESULT(HRESULT, EvalResult)>{} :
+        [complete, res = EvaluateNextResult{ std::move(name), std::move(fullName) }]
+        (HRESULT hr, EvalResult evres) mutable
+        {
+            res.result = evres;
+            return complete(hr, res);
+        };
+        return FillValueTraits( mBinder, result, nullptr, completeTraits );
     }
 
     //------------------------------------------------------------------------
@@ -135,7 +151,8 @@ namespace MagoEE
         const EvalOptions& options, 
         EvalResult& result,
         std::wstring& name,
-        std::wstring& fullName )
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
     {
         if ( mCountDone >= GetCount() )
             return E_FAIL;
@@ -164,8 +181,7 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        FillValueTraits( mBinder, result, nullptr );
-        return S_OK;
+        return FillTraits( result, name, fullName, complete );
     }
 
 
@@ -281,7 +297,8 @@ namespace MagoEE
         const EvalOptions& options, 
         EvalResult& result,
         std::wstring& name,
-        std::wstring& fullName )
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
     {
         if ( mCountDone >= GetCount() )
             return E_FAIL;
@@ -350,8 +367,7 @@ namespace MagoEE
                 return hr;
         }
 
-        FillValueTraits( mBinder, result, nullptr );
-        return S_OK;
+        return FillTraits(result, name, fullName, complete);
     }
 
     //------------------------------------------------------------------------
@@ -413,7 +429,8 @@ namespace MagoEE
         const EvalOptions& options, 
         EvalResult& result,
         std::wstring& name,
-        std::wstring& fullName )
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
     {
         if ( mCountDone >= GetCount() )
             return E_FAIL;
@@ -749,7 +766,8 @@ namespace MagoEE
         const EvalOptions& options, 
         EvalResult& result,
         std::wstring& name,
-        std::wstring& fullName )
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
     {
         if ( mCountDone >= GetCount() )
             return E_FAIL;
@@ -812,7 +830,7 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
         }
-        FillValueTraits( mBinder, result, nullptr );
+        FillTraits( result, name, fullName, complete );
         mCountDone++;
 
         return FindNext();
@@ -892,7 +910,8 @@ namespace MagoEE
         const EvalOptions& options, 
         EvalResult& result,
         std::wstring& name,
-        std::wstring& fullName )
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
     {
         if ( mCountDone >= GetCount() )
             return E_FAIL;
@@ -943,8 +962,7 @@ namespace MagoEE
         if ( FAILED( hr ) )
             return hr;
 
-        FillValueTraits( mBinder, result, nullptr );
-        return S_OK;
+        return FillTraits( result, name, fullName, complete );
     }
 
 
@@ -1118,7 +1136,8 @@ namespace MagoEE
         const EvalOptions& options, 
         EvalResult& result,
         std::wstring& name,
-        std::wstring& fullName )
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
     {
         if ( mCountDone >= GetCount() )
             return E_FAIL;
@@ -1164,8 +1183,7 @@ namespace MagoEE
             if( FAILED( hr ) )
                 return hr;
 
-            FillValueTraits( mBinder, result, nullptr );
-            return S_OK;
+            return FillTraits( result, name, fullName, complete );
         }
         else
         {
@@ -1255,8 +1273,7 @@ namespace MagoEE
                 if ( FAILED( hr ) )
                     return hr;
 
-                FillValueTraits( mBinder, result, nullptr );
-                return S_OK;
+                return FillTraits( result, name, fullName, complete );
             }
         }
 
@@ -1505,7 +1522,8 @@ namespace MagoEE
         const EvalOptions& options, 
         EvalResult& result,
         std::wstring& name,
-        std::wstring& fullName )
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
     {
         if ( mCountDone >= GetCount() )
             return E_FAIL;
@@ -1559,8 +1577,7 @@ namespace MagoEE
                 return hr;
         }
 
-        FillValueTraits( mBinder, result, nullptr );
-        return S_OK;
+        return FillTraits( result, name, fullName, complete );
     }
 
 }

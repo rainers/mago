@@ -29,6 +29,7 @@ namespace MagoEE
     }
 
     HRESULT Expression::Evaluate( EvalMode mode, const EvalData& evalData, IValueBinder* binder, DataObject& obj )
+        // std::function<HRESULT(HRESULT, DataObject)> complete )
     {
         UNREFERENCED_PARAMETER( evalData );
         UNREFERENCED_PARAMETER( mode );
@@ -36,14 +37,6 @@ namespace MagoEE
         UNREFERENCED_PARAMETER( obj );
         _ASSERT( false );
         return E_NOTIMPL;
-    }
-
-    HRESULT Expression::EvaluateAsync(EvalMode mode, const EvalData& evalData, IValueBinder* binder,
-        std::function<HRESULT(HRESULT, DataObject)> complete )
-    {
-        DataObject obj;
-        HRESULT hr = Evaluate( mode, evalData, binder, obj );
-        return complete( hr, obj );
     }
 
     //----------------------------------------------------------------------------

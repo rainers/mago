@@ -67,7 +67,8 @@ namespace MagoEE
             return S_OK;
         }
 
-        virtual HRESULT Evaluate( const EvalOptions& options, IValueBinder* binder, EvalResult& result )
+        virtual HRESULT Evaluate( const EvalOptions& options, IValueBinder* binder, EvalResult& result,
+            std::function<HRESULT(HRESULT, EvalResult)> complete )
         {
             HRESULT     hr = S_OK;
             EvalData    evalData = { 0 };
@@ -78,34 +79,9 @@ namespace MagoEE
             hr = mExpr->Evaluate( EvalMode_Value, evalData, binder, result.ObjVal );
             if ( FAILED( hr ) )
                 return hr;
-
-            FillValueTraits( binder, result, mExpr );
-
-            return S_OK;
+            return FillValueTraits( binder, result, mExpr, complete );
         }
 
-        virtual HRESULT EvaluateAsync( const EvalOptions& options, IValueBinder* binder, 
-            std::function<HRESULT(HRESULT, EvalResult)> complete )
-        {
-            HRESULT     hr = S_OK;
-            EvalData    evalData = { 0 };
-
-            evalData.Options = options;
-            evalData.TypeEnv = mTypeEnv;
-
-            hr = mExpr->EvaluateAsync( EvalMode_Value, evalData, binder,
-                [this, binder, complete](HRESULT hr, DataObject obj)
-                {
-                    EvalResult res;
-                    if( SUCCEEDED( hr ) )
-                    {
-                        res.ObjVal = obj;
-                        FillValueTraits( binder, res, mExpr );
-                    }
-                    return complete(hr, res);
-                });
-            return hr;
-        }
     };
 
 	bool gShowVTable = false;
@@ -314,7 +290,7 @@ namespace MagoEE
         return S_OK;
     }
 
-    void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr,
+    HRESULT FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr,
         std::function<HRESULT(HRESULT, EvalResult)> complete )
     {
         result.ReadOnly = true;
@@ -482,8 +458,10 @@ namespace MagoEE
             }
         }
     L_done:
+        HRESULT hr = S_OK;
         if( complete )
-            complete( S_OK, result );
+            hr = complete( hr, result );
+        return hr;
     }
 
     RefPtr<Type> GetDebuggerProp( ITypeStruct* ts, const wchar_t* call, Address& fnaddr )

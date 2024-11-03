@@ -40,6 +40,12 @@ namespace MagoEE
             const EvalOptions& options, 
             EvalResult& result, 
             std::wstring& expr );
+
+        HRESULT FillTraits(
+            EvalResult& result,
+            std::wstring& name,
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
     };
 
 
@@ -60,7 +66,8 @@ namespace MagoEE
             const EvalOptions& options, 
             EvalResult& result, 
             std::wstring& name, 
-            std::wstring& fullName );
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
     };
 
 
@@ -91,7 +98,8 @@ namespace MagoEE
             const EvalOptions& options, 
             EvalResult& result, 
             std::wstring& name, 
-            std::wstring& fullName );
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
     };
 
     typedef EEDEnumSArray EEDEnumDArray;
@@ -113,7 +121,8 @@ namespace MagoEE
             const EvalOptions& options, 
             EvalResult& result, 
             std::wstring& name, 
-            std::wstring& fullName );
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
     };
 
 
@@ -149,7 +158,8 @@ namespace MagoEE
             const EvalOptions& options, 
             EvalResult& result, 
             std::wstring& name, 
-            std::wstring& fullName );
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
 
         static HRESULT ReadBB( IValueBinder* binder, RefPtr<Type> type, Address address, int& AAVersion, BB64& BB );
     };
@@ -178,7 +188,8 @@ namespace MagoEE
             const EvalOptions& options, 
             EvalResult& result, 
             std::wstring& name, 
-            std::wstring& fullName );
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
     };
 
     class EEDEnumStruct : public EEDEnumValues
@@ -212,7 +223,8 @@ namespace MagoEE
             const EvalOptions& options, 
             EvalResult& result, 
             std::wstring& name, 
-            std::wstring& fullName );
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
 
     private:
         bool NameBaseClass( 
@@ -264,7 +276,8 @@ namespace MagoEE
             const EvalOptions& options,
             EvalResult& result,
             std::wstring& name,
-            std::wstring& fullName);
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
     };
 
 }

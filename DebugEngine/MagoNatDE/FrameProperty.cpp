@@ -48,10 +48,8 @@ namespace Mago
             const MagoEE::EvalOptions& options, 
             MagoEE::EvalResult& result,
             std::wstring& name,
-            std::wstring& fullName );
-        virtual HRESULT EvaluateNextAsync(
-            const MagoEE::EvalOptions& options,
-            std::function<HRESULT( HRESULT hr, EvaluateNextResult )> complete );
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete );
 
         HRESULT Init( ExprContext* exprContext );
 
@@ -138,7 +136,8 @@ namespace Mago
         const MagoEE::EvalOptions& options, 
         MagoEE::EvalResult& result,
         std::wstring& name,
-        std::wstring& fullName )
+        std::wstring& fullName,
+        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
     {
         if ( mIndex >= GetCount() )
             return E_FAIL;
@@ -167,51 +166,14 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = parsedExpr->Evaluate( options, mExprContext, result );
-        if ( FAILED( hr ) )
-            return hr;
-
-        return S_OK;
-    }
-
-    HRESULT EnumLocalValues::EvaluateNextAsync(
-        const MagoEE::EvalOptions& options,
-        std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete )
-    {
-        if (mIndex >= GetCount())
-            return E_FAIL;
-
-        HRESULT hr = S_OK;
-        RefPtr<MagoEE::IEEDParsedExpr>  parsedExpr;
-        uint32_t    curIndex = mIndex;
-
-        mIndex++;
-
-        EvaluateNextResult res;
-        res.name.clear();
-        res.name.append(mNames[curIndex]);
-
-        res.fullName.clear();
-        res.fullName.append(res.name);
-
-        hr = MagoEE::ParseText(
-            res.fullName.c_str(),
-            mExprContext->GetTypeEnv(),
-            mExprContext->GetStringTable(),
-            parsedExpr.Ref());
-        if (FAILED(hr))
-            return hr;
-
-        hr = parsedExpr->Bind(options, mExprContext);
-        if (FAILED(hr))
-            return hr;
-
-        hr = parsedExpr->EvaluateAsync(options, mExprContext,
-            [complete, res](HRESULT hr, MagoEE::EvalResult evalres) mutable
-            {
-                res.result = evalres;
-                return complete(hr, res);
-            });
+        auto completeExpr = !complete ? std::function<HRESULT(HRESULT hr, MagoEE::EvalResult)>{} :
+        [complete, res = EvaluateNextResult{ std::move(name), std::move(fullName) }]
+        (HRESULT hr, MagoEE::EvalResult evalres) mutable
+        {
+            res.result = evalres;
+            return complete(hr, res);
+        };
+        hr = parsedExpr->Evaluate( options, mExprContext, result, completeExpr );
         return hr;
     }
 

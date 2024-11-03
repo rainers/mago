@@ -19,6 +19,9 @@
 
 #include <functional>
 
+// to be used as return code for async requests, S_OK means evaluated synchronously
+#define S_QUEUED ((HRESULT)2L)
+
 namespace MagoEE
 {
     class Expression;
@@ -45,12 +48,8 @@ namespace MagoEE
         virtual void Release() = 0;
 
         virtual HRESULT Bind( const EvalOptions& options, IValueBinder* binder ) = 0;
-        virtual HRESULT Evaluate(const EvalOptions& options, IValueBinder* binder, EvalResult& result) = 0;
-        virtual HRESULT EvaluateAsync( const EvalOptions& options, IValueBinder* binder,
-            std::function<HRESULT(HRESULT, EvalResult)> complete )
-        {
-            return { E_FAIL };
-        }
+        virtual HRESULT Evaluate(const EvalOptions& options, IValueBinder* binder, EvalResult& result,
+            std::function<HRESULT(HRESULT, EvalResult)> complete ) = 0;
     };
 
     class IEEDEnumValues
@@ -65,31 +64,20 @@ namespace MagoEE
         virtual HRESULT Skip( uint32_t count ) = 0;
         virtual HRESULT Clone( IEEDEnumValues*& copiedEnum ) = 0;
 
+        struct EvaluateNextResult
+        {
+            std::wstring name;
+            std::wstring fullName;
+            EvalResult result;
+        };
+
         // TODO: can we use something else, like CString, instead of using wstring here?
         virtual HRESULT EvaluateNext( 
             const EvalOptions& options, 
             EvalResult& result,
             std::wstring& name,
-            std::wstring& fullName ) = 0;
-
-        struct EvaluateNextResult
-        {
-            EvalResult result;
-            std::wstring name;
-            std::wstring fullName;
-        };
-        virtual HRESULT EvaluateNextAsync(
-            const EvalOptions& options,
-            std::function<HRESULT( HRESULT hr, EvaluateNextResult )> complete )
-#if 1
-            = 0;
-#else
-        {
-            EvaluateNextResult res;
-            HRESULT hr = EvaluateNext( options, res.result, res.name, res.fullName );
-            return complete( hr, res );
-        }
-#endif
+            std::wstring& fullName,
+            std::function<HRESULT(HRESULT hr, EvaluateNextResult)> complete ) = 0;
     };
 
     HRESULT Init();
@@ -122,8 +110,8 @@ namespace MagoEE
         const FormatOptions& fmtopts,
         IEEDEnumValues*& enumerator );
 
-    void FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr,
-        std::function<HRESULT(HRESULT, EvalResult)> complete = {});
+    HRESULT FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr,
+        std::function<HRESULT(HRESULT, EvalResult)> complete );
 
     RefPtr<Type> GetDebuggerProp( ITypeStruct* ts, const wchar_t* call, Address& fnaddr );
     RefPtr<Type> GetDebuggerPropType( Type* fntype );

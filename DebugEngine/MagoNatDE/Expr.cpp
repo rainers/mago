@@ -60,7 +60,7 @@ namespace Mago
             options.AllowFuncExec = true;
         options.Timeout = dwTimeout;
 
-        hr = mParsedExpr->Evaluate( options, mContext, result );
+        hr = mParsedExpr->Evaluate( options, mContext, result, {} );
         if ( FAILED( hr ) )
         {
             return MakeErrorPropertyOrReturnOriginalError( hr, ppResult );

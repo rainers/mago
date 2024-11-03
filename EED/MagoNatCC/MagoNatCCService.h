@@ -41,7 +41,6 @@ protected:
     HRESULT STDMETHODCALLTYPE _GetItemsAsync(
         _In_ Evaluation::DkmEvaluationResultEnumContext* pEnumContext,
         _In_ IEnumDebugPropertyInfoAsync* pEnum,
-        _In_ UINT32 StartIndex,
         _In_ UINT32 Count,
         _In_ IDkmCompletionRoutine<Evaluation::DkmGetChildrenAsyncResult>* pCompletionGetChildren,
         _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluationEnumAsyncResult>* pCompletionRoutine);

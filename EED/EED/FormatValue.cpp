@@ -13,6 +13,7 @@
 #include "UniAlpha.h"
 
 #include <algorithm>
+#include <CorError.h>
 
 namespace MagoEE
 {
@@ -475,14 +476,16 @@ namespace MagoEE
             struct Closure
             {
                 bool dotdotdot = false;
-                size_t completed = 0;
+                size_t toComplete = 0;
+                HRESULT hrCombined = S_OK;
                 std::function<HRESULT(HRESULT, std::wstring)> complete;
                 RefPtr<Type> ubyteType;
                 std::vector<std::wstring> elemStr;
                 HRESULT doneOne(HRESULT hr)
                 {
-                    completed++;
-                    if (completed < elemStr.size())
+                    hrCombine(hr);
+                    toComplete--;
+                    if (toComplete != 0)
                         return hr;
 
                     std::wstring outStr = L"[" + elemStr[0];
@@ -491,7 +494,13 @@ namespace MagoEE
                     if( dotdotdot )
                         outStr.append(L", ...");
                     outStr.append(L"]");
-                    return complete(hr, outStr);
+                    return complete(hrCombined, outStr);
+                }
+                HRESULT hrCombine(HRESULT hr)
+                {
+                    if (SUCCEEDED(hrCombined) && FAILED(hr))
+                        hrCombined = hr;
+                    return hrCombined;
                 }
             };
             auto closure = std::make_shared<Closure>();
@@ -524,9 +533,15 @@ namespace MagoEE
 
                 std::wstring elemStr;
                 hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), completeElem );
-                if ( FAILED( hr ) )
-                    return hr;
-            };
+                if (hr == S_QUEUED)
+                    closure->toComplete++;
+                closure->hrCombine(hr);
+                if (FAILED(hr))
+                    break;
+            }
+            if (ubyteType)
+                ubyteType->Release();
+            return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
         }
         else
         {
@@ -548,7 +563,7 @@ namespace MagoEE
                     return hr;
 
                 std::wstring elemStr;
-                hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), complete );
+                hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), {} );
                 if ( FAILED( hr ) )
                     return hr;
 
@@ -648,7 +663,7 @@ namespace MagoEE
             }
         }
 
-        return S_OK;
+        return hr;
     }
 
     HRESULT FormatAArray( Address addr, Type* type, const FormatOptions& fmtopt, std::wstring& outStr )
@@ -925,8 +940,8 @@ namespace MagoEE
                 hr = FormatRange( binder, addr, type, fmtopt, outStr, maxLength, complete );
 
             recurse = false;
-            if ( hr == S_OK )
-                return S_OK;
+            if ( SUCCEEDED( hr ) || hr == COR_E_OPERATIONCANCELED )
+                return hr;
         }
 		return _FormatStruct( binder, addr, nullptr, type, fmtopt, outStr, maxLength, complete );
 	}
@@ -1337,9 +1352,6 @@ namespace MagoEE
         else
             hr = E_FAIL;
 
-        if ( FAILED( hr ) )
-            return hr;
-
-        return S_OK;
+        return hr;
     }
 }
