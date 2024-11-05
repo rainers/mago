@@ -19,7 +19,16 @@
 
 #include <functional>
 
-// to be used as return code for async requests, S_OK means evaluated synchronously
+////////////////////////////////
+// async completion:
+// - enabled by passing non-empty complete function
+// - if result delayed, return S_QUEUED
+// - if result evaluated eagerly, return S_OK
+// - if error occurs before queing complete, don't call complete
+// - if error occurs during execution of complete, forward it to next complete, but
+//   keep success status S_OK or S_QUEUED
+// 
+// to be used as return code for async requests, S_OK means evaluated eagerly
 #define S_QUEUED ((HRESULT)2L)
 
 namespace MagoEE

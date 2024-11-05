@@ -13,6 +13,7 @@
 #include <MagoEED.h>
 
 #include <memory>
+#include <CorError.h>
 
 using namespace std;
 
@@ -138,10 +139,10 @@ namespace Mago
             size_t toComplete = 0;
             HRESULT hrCombined = S_OK;
             NextAsyncResult infos;
-            HRESULT doneOne(HRESULT hr)
+            HRESULT done(HRESULT hr, size_t cnt)
             {
                 hrCombine(hr);
-                toComplete--;
+                toComplete -= cnt;
                 if (toComplete == 0)
                     return complete(hrCombined, infos);
                 return hr;
@@ -155,6 +156,7 @@ namespace Mago
         };
         auto closure = std::make_shared<Closure>();
         closure->complete = complete;
+        closure->toComplete = celt;
         closure->infos.resize( celt );
         for (i = 0; i < celt; i++)
         {
@@ -163,17 +165,19 @@ namespace Mago
                 [this, i, closure](HRESULT hr, MagoEE::IEEDEnumValues::EvaluateNextResult res)
                 {
                     if( SUCCEEDED( hr ) )
+                    {
                         hr = GetPropertyInfo(res.result, res.name.c_str(), res.fullName.c_str(), closure->infos[i],
                             [i, closure](HRESULT hr, DEBUG_PROPERTY_INFO info)
                             {
                                 closure->infos[i] = info;
-                                hr = closure->doneOne(hr);
+                                hr = closure->done(hr, 1);
                                 return hr;
                             });
+                    }
                     else
                     {
                         hr = GetErrorPropertyInfo(hr, res.name.c_str(), res.fullName.c_str(), closure->infos[i]);
-                        hr = closure->doneOne(hr);
+                        hr = closure->done(hr, 1);
                     }
                     return hr;
                 };
@@ -182,11 +186,12 @@ namespace Mago
             std::wstring name;
             std::wstring fullName;
             hr = mEEEnum->EvaluateNext( options, result, name, fullName, completeItem );
-            if ( hr == S_QUEUED )
-                closure->toComplete++;
             closure->hrCombine( hr );
-            if( FAILED( hr ) )
+            if (hr == COR_E_OPERATIONCANCELED)
+            {
+                closure->done( hr, celt - i );
                 break;
+            }
         }
         return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
     }

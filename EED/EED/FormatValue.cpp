@@ -470,6 +470,7 @@ namespace MagoEE
             ubyteType->AddRef();
         }
         uint32_t elementSize = elemType->GetSize();
+        HRESULT hres = S_OK;
 
         if( complete && length > 0 )
         {
@@ -481,10 +482,10 @@ namespace MagoEE
                 std::function<HRESULT(HRESULT, std::wstring)> complete;
                 RefPtr<Type> ubyteType;
                 std::vector<std::wstring> elemStr;
-                HRESULT doneOne(HRESULT hr)
+                HRESULT done(HRESULT hr, size_t cnt)
                 {
                     hrCombine(hr);
-                    toComplete--;
+                    toComplete -= cnt;
                     if (toComplete != 0)
                         return hr;
 
@@ -512,6 +513,7 @@ namespace MagoEE
             }
 
             closure->complete = complete;
+            closure->toComplete = length;
             closure->ubyteType = ubyteType;
             closure->elemStr.resize(length);
 
@@ -528,20 +530,19 @@ namespace MagoEE
                 auto completeElem = [i, closure](HRESULT hr, std::wstring elemStr)
                 {
                     closure->elemStr[i] = elemStr;
-                    return closure->doneOne(hr);
+                    return closure->done(hr, 1);
                 };
 
                 std::wstring elemStr;
                 hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), completeElem );
-                if (hr == S_QUEUED)
-                    closure->toComplete++;
                 closure->hrCombine(hr);
-                if (FAILED(hr))
+                if (hr == COR_E_OPERATIONCANCELED)
+                {
+                    closure->done(hr, length - i);
                     break;
+                }
             }
-            if (ubyteType)
-                ubyteType->Release();
-            return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
+            hres = closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
         }
         else
         {
@@ -572,6 +573,8 @@ namespace MagoEE
                 outStr.append( elemStr );
             }
             outStr.append( L"]" );
+            if (complete)
+                hres = complete(hres, outStr);
         }
         if ( ubyteType )
             ubyteType->Release();
@@ -991,6 +994,8 @@ namespace MagoEE
                 outStr.append( symName );
                 outStr.append( L"} " );
             }
+            else
+                hr = S_OK;
 
             if ( objVal.Value.Addr == NULL )
             {
@@ -1005,21 +1010,30 @@ namespace MagoEE
                 hr = binder->GetValue( pointeeObj.Addr, pointeeObj._Type, pointeeObj.Value );
                 if ( !FAILED( hr ) )
                 {
+                    auto completeFmt = [complete, outStr, out = &outStr](HRESULT hr, std::wstring memberStr) mutable
+                    {
+                        if ( SUCCEEDED( hr ) && !memberStr.empty() )
+                        {
+                            if( memberStr[0] != '{' )
+                                outStr.append( L"{" );
+                            outStr.append( memberStr );
+                            if( memberStr[0] != '{' )
+                                outStr.append( L"}" );
+                        }
+                        if ( complete )
+                            return complete( hr, outStr );
+                        *out = outStr;
+                        return hr;
+                    };
                     std::wstring memberStr;
                     hr = FormatValue( binder, pointeeObj, fmtopt, memberStr, maxLength - outStr.length(), complete );
-                    if ( !FAILED( hr ) && !memberStr.empty() )
-                    {
-                        if( memberStr[0] != '{' )
-                            outStr.append( L"{" );
-                        outStr.append( memberStr );
-                        if( memberStr[0] != '{' )
-                            outStr.append( L"}" );
-                    }
+                    complete = {};
                 }
             }
         }
-
-        return S_OK;
+        if( hr == S_OK && complete )
+            hr = complete( hr, outStr );
+        return hr;
     }
 
     HRESULT FormatDelegate( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt, std::wstring& outStr, uint32_t maxLength )
@@ -1312,13 +1326,13 @@ namespace MagoEE
         else if ( type->IsBasic() )
         {
             hr = FormatBasicValue( objVal, fmtopt, outStr );
-            if ( complete )
+            if ( hr == S_OK && complete )
                 hr = complete( hr, outStr );
         }
         else if ( type->AsTypeEnum() != NULL )
         {
             hr = FormatEnum( objVal, fmtopt, outStr );
-            if ( complete )
+            if ( hr == S_OK && complete )
                 hr = complete( hr, outStr );
         }
         else if ( type->IsSArray() )
@@ -1332,7 +1346,7 @@ namespace MagoEE
         else if ( type->IsAArray() )
         {
             hr = FormatAArray( objVal.Value.Addr, objVal._Type, fmtopt, outStr );
-            if ( complete )
+            if( hr == S_OK && complete )
                 hr = complete( hr, outStr );
         }
         else if ( auto tt = type->AsTypeTuple() )
@@ -1346,7 +1360,7 @@ namespace MagoEE
         else if ( type->IsDelegate() )
         {
             hr = FormatDelegate( binder, objVal, fmtopt, outStr, maxLength );
-            if ( complete )
+            if( hr == S_OK && complete )
                 hr = complete( hr, outStr );
         }
         else

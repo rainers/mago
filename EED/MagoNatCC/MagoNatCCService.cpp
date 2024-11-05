@@ -728,12 +728,12 @@ ProcessHelper* getProcessHelper(DkmProcess* process)
 ///////////////////////////////////////////////////////////////////////////////
 class DECLSPEC_UUID("98F84FA4-E9E5-458C-81B7-F04352727B97") CCExprContext : public Mago::ExprContext
 {
+public:
     RefPtr<DkmWorkList> mWorkList;
     RefPtr<CallStack::DkmStackWalkFrame> mStackFrame;
     RefPtr<CCModule> mModule;
     RefPtr<Mago::Thread> mThread;
 
-public:
     CCExprContext() {}
     ~CCExprContext() 
     {
@@ -1834,24 +1834,31 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
         return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
     MagoEE::EvalResult value = { 0 };
-    hr = pExpr->Evaluate(options, exprContext, value, {});
+    hr = pExpr->Evaluate(options, exprContext, value,
+        [exprContext, exprText, fmtopt, options,
+        inspectionContext = RefPtr<Evaluation::DkmInspectionContext>(pInspectionContext),
+        completionRoutine = RefPtr<IDkmCompletionRoutine<Evaluation::DkmEvaluateExpressionAsyncResult>>(pCompletionRoutine)]
+        (HRESULT hr, MagoEE::EvalResult value)
+        {
+            RefPtr<Mago::Property> pProperty;
+            tryHR(MakeCComObject(pProperty));
+            tryHR(pProperty->Init(exprText.c_str(), exprText.c_str(), value, exprContext, fmtopt));
+
+            ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
+            tryHR(pProperty->GetPropertyInfo(DEBUGPROP_INFO_ALL, options.Radix, options.Timeout, nullptr, 0, &info));
+
+            Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
+            tryHR(createEvaluationResult(inspectionContext, exprContext->mStackFrame, info, &pResultObject));
+
+            Evaluation::DkmEvaluateExpressionAsyncResult result;
+            result.ErrorCode = S_OK;
+            result.pResultObject = pResultObject;
+            completionRoutine->OnComplete(result);
+            return hr;
+        });
     if (FAILED(hr))
         return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
 
-    RefPtr<Mago::Property> pProperty;
-    tryHR(MakeCComObject(pProperty));
-    tryHR(pProperty->Init(exprText.c_str(), exprText.c_str(), value, exprContext, fmtopt));
-
-    ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
-    tryHR(pProperty->GetPropertyInfo(DEBUGPROP_INFO_ALL, options.Radix, options.Timeout, nullptr, 0, &info));
-
-    Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
-    tryHR(createEvaluationResult(pInspectionContext, pStackFrame, info, &pResultObject));
-
-    Evaluation::DkmEvaluateExpressionAsyncResult result;
-    result.ErrorCode = S_OK;
-    result.pResultObject = pResultObject;
-    pCompletionRoutine->OnComplete(result);
     return S_OK;
 }
 
