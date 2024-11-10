@@ -77,7 +77,7 @@ namespace MagoEE
         {
             std::wstring name;
             std::wstring fullName;
-            EvalResult result;
+            EvalResult result = { 0 };
         };
 
         // TODO: can we use something else, like CString, instead of using wstring here?

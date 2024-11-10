@@ -1276,8 +1276,10 @@ namespace MagoEE
                 return FillTraits( result, name, fullName, complete );
             }
         }
-
-        return EvaluateExpr( options, result, fullName );
+        hr = EvaluateExpr( options, result, fullName );
+        if (complete)
+            hr = complete(hr, EvaluateNextResult{ std::move(name), std::move(fullName), result });
+        return hr;
     }
 
     bool EEDEnumStruct::NameBaseClass( 
@@ -1295,7 +1297,7 @@ namespace MagoEE
         if ( baseDecl == NULL )
             return false;
 
-        name.append( baseDecl->GetName() );
+        name.append( L"[" ).append( baseDecl->GetName() ).append( L"]" );
 
         if ( !mSkipHeadRef )
             fullName.append( L"*" );

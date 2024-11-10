@@ -502,7 +502,7 @@ unsigned char sliceRetTrampoline32[] =
 //     void[] s = dg();
 //     return Slice(s.length, s.ptr);
 // }
-unsigned char sliceRetTrampolineDeleagte64[] =
+unsigned char sliceRetTrampolineDelegate64[] =
 {
     /* 0A0 : */ 0x55,                           // push        rbp
     /* 0A1 : */ 0x48, 0x8B, 0xEC,               // mov         rbp, rsp
@@ -671,8 +671,8 @@ ProcessHelper* getProcessHelper(DkmProcess* process)
         helper->sliceRetTrampoline = addr + used;
         used += (szCode + 15) & ~0xf;
 
-        szCode = sizeof(sliceRetTrampolineDeleagte64);
-        code = { sliceRetTrampolineDeleagte64, szCode };
+        szCode = sizeof(sliceRetTrampolineDelegate64);
+        code = { sliceRetTrampolineDelegate64, szCode };
         hr = process->WriteMemory(addr + used, code);
         if (FAILED(hr))
         {
@@ -940,7 +940,7 @@ public:
     }
 
     // if no GC found in symbols, return S_FALSE
-    // else load magogc23/64.dll, and setup addresses and GC
+    // else load magogc32/64.dll, and setup addresses and GC
     HRESULT LoadMagoGCDLL()
     {
         auto helper = getProcessHelper(mModule->mProcess);

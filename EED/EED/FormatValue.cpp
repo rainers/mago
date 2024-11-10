@@ -742,10 +742,50 @@ namespace MagoEE
         if ( !decl->EnumMembers( members.Ref() ) )
             return E_INVALIDARG;
 
-        outStr.append( L"{" );
-        size_t initialLength = outStr.length();
+        uint32_t maxLen = maxLength - std::min<uint32_t>( outStr.length(), maxLength );
+        struct Closure
+        {
+            bool dotdotdot = false;
+            size_t toComplete = 0;
+            HRESULT hrCombined = S_OK;
+            std::function<HRESULT(HRESULT, std::wstring)> complete;
+            std::vector<std::wstring> names;
+            std::vector<std::wstring> elemStr;
+            std::wstring outStr;
+
+            HRESULT done(HRESULT hr, size_t cnt)
+            {
+                hrCombine(hr);
+                toComplete -= cnt;
+                if (toComplete != 0)
+                    return hr;
+
+                outStr = L"{" + (elemStr.empty() ? std::wstring{} : elemStr[0]);
+                for (size_t i = 1; i < elemStr.size(); i++)
+                    outStr.append(L", ").append(names[i]).append(L" = ").append(elemStr[i]);
+                if (dotdotdot)
+                    outStr.append(L", ...");
+                outStr.append(L"}");
+                if (complete)
+                    return complete(hrCombined, outStr);
+                return hr;
+            }
+            HRESULT hrCombine(HRESULT hr)
+            {
+                if (SUCCEEDED(hrCombined) && FAILED(hr))
+                    hrCombined = hr;
+                return hrCombined;
+            }
+        };
+        auto closure = std::make_shared<Closure>();
+
+        closure->complete = complete;
+        closure->toComplete = 2; // keep value higher so we can add iteratively
+        std::wstring str;
+
+        str.append( L"{" );
         RefPtr<Declaration> next;
-        for ( ; ; )
+        for ( int i = 0; ; ++i )
         {
             RefPtr<Declaration> member;
             if ( next )
@@ -754,6 +794,14 @@ namespace MagoEE
                 break;
             if ( member->IsBaseClass() || member->IsStaticField() )
                 continue;
+
+            if ( closure->names.size() >= 8 )
+            {
+                closure->dotdotdot = true;
+                break;
+            }
+            closure->names.push_back(member->GetName());
+            closure->elemStr.push_back({});
 
             if (gRecombineTuples)
             {
@@ -781,14 +829,11 @@ namespace MagoEE
                     }
                     hr = binder->NewTuple( tplname.data(), fields, member.Ref() );
                     if ( FAILED( hr ) )
-                        return hr;
+                    {
+                        closure->hrCombine(hr);
+                        break;
+                    }
                 }
-            }
-
-            if ( outStr.length () > maxLength )
-            {
-                outStr.append( L", ..." );
-                break;
             }
 
             DataObject memberObj;
@@ -798,10 +843,19 @@ namespace MagoEE
             if ( member->GetOffset( offset ) )
                 memberObj.Addr += offset;
 
+            auto idx = closure->elemStr.size() - 1;
+            auto completeElem = [idx, closure](HRESULT hr, std::wstring elemStr)
+            {
+                closure->elemStr[idx] = elemStr;
+                return closure->done(hr, 1);
+            };
+
+            closure->toComplete++;
             std::wstring memberStr;
             if ( srcBuf && memberObj._Type->AsTypeStruct() )
             {
-                hr = _FormatStruct( binder, 0, srcBuf + memberObj.Addr, memberObj._Type, fmtopt, memberStr, maxLength - outStr.length(), complete );
+                hr = _FormatStruct( binder, 0, srcBuf + memberObj.Addr, memberObj._Type, fmtopt, closure->elemStr[idx], maxLen,
+                                    complete ? completeElem : std::function<HRESULT(HRESULT, std::wstring)>{});
             }
             else
             {
@@ -811,19 +865,17 @@ namespace MagoEE
                     hr = binder->GetValue( memberObj.Addr, memberObj._Type, memberObj.Value );
 
                 if ( !FAILED( hr ) )
-                    hr = FormatValue( binder, memberObj, fmtopt, memberStr, maxLength - outStr.length(), complete );
+                    hr = FormatValue( binder, memberObj, fmtopt, closure->elemStr[idx], maxLen,
+                                      complete ? completeElem : std::function<HRESULT(HRESULT, std::wstring)>{});
             }
-            if ( FAILED( hr ) )
-                return hr;
-
-            if ( outStr.length() > initialLength )
-                outStr.append( L", " );
-            outStr.append( member->GetName() );
-            outStr.append( L"=" );
-            outStr.append( memberStr );
+            if (!complete || FAILED(hr))
+                closure->done(hr, 1);
+            if (hr == COR_E_OPERATIONCANCELED)
+                break;
         }
-        outStr.append( L"}" );
-
+        closure->done(S_OK, 2); // call complete if none queued
+        hr = closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
+        outStr = closure->outStr;
         return hr;
     }
 
@@ -1026,8 +1078,12 @@ namespace MagoEE
                         return hr;
                     };
                     std::wstring memberStr;
-                    hr = FormatValue( binder, pointeeObj, fmtopt, memberStr, maxLength - outStr.length(), complete );
-                    complete = {};
+                    hr = FormatValue( binder, pointeeObj, fmtopt, memberStr, maxLength - outStr.length(),
+                        complete ? completeFmt : std::function<HRESULT(HRESULT hr, std::wstring memberStr)>{});
+                    if ( !complete )
+                        hr = completeFmt(hr, memberStr);
+                    else
+                        complete = {};
                 }
             }
         }
@@ -1281,7 +1337,15 @@ namespace MagoEE
         HRESULT hr;
         DataObject dbgObj = { 0 };
         const DataObject* pVal = &objVal;
-        if ( auto ts = objVal._Type->AsTypeStruct() )
+        if ( pVal->_Type->IsReference() )
+        {
+            dbgObj._Type = pVal->_Type->AsTypeNext()->GetNext();
+            dbgObj.Addr = pVal->Value.Addr;
+            if( dbgObj.Addr != 0 )
+            hr = binder->GetValue(dbgObj.Addr, dbgObj._Type, dbgObj.Value);
+            pVal = &dbgObj;
+        }
+        if ( auto ts = pVal->_Type->AsTypeStruct() )
         {
             if ( !gCallDebuggerFunctions )
                 return E_INVALIDARG;
@@ -1290,7 +1354,7 @@ namespace MagoEE
             if ( !fntype )
                 return E_INVALIDARG;
 
-            hr = EvalDebuggerProp( binder, fntype, fnaddr, objVal.Addr, dbgObj, {} );
+            hr = EvalDebuggerProp( binder, fntype, fnaddr, pVal->Addr, dbgObj, {} );
             if ( FAILED( hr ) )
                 return hr;
             pVal = &dbgObj;

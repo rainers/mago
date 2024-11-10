@@ -166,13 +166,16 @@ namespace Mago
                 {
                     if( SUCCEEDED( hr ) )
                     {
+                        auto completeInfo = [i, closure](HRESULT hr, DEBUG_PROPERTY_INFO info)
+                        {
+                            closure->infos[i] = info;
+                            hr = closure->done(hr, 1);
+                            return hr;
+                        };
                         hr = GetPropertyInfo(res.result, res.name.c_str(), res.fullName.c_str(), closure->infos[i],
-                            [i, closure](HRESULT hr, DEBUG_PROPERTY_INFO info)
-                            {
-                                closure->infos[i] = info;
-                                hr = closure->done(hr, 1);
-                                return hr;
-                            });
+                            closure->complete ? completeInfo : std::function<HRESULT(HRESULT, DEBUG_PROPERTY_INFO)>{});
+                        if (!closure->complete)
+                            hr = closure->done(hr, 1);
                     }
                     else
                     {
@@ -182,7 +185,7 @@ namespace Mago
                     return hr;
                 };
 
-            MagoEE::EvalResult result;
+            MagoEE::EvalResult result = { 0 };
             std::wstring name;
             std::wstring fullName;
             hr = mEEEnum->EvaluateNext( options, result, name, fullName, completeItem );
