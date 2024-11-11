@@ -49,6 +49,7 @@
 
 #include "../../DebugEngine/MagoNatDE/EnumPropertyInfo.h"
 
+#include <atomic>
 #include <chrono>
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -614,7 +615,6 @@ struct ProcessHelper
     MagoEE::Address fnTermGC = 0;
     MagoEE::Address magoGC = 0;
     MagoEE::Address adrInstanceGC = 0;
-    MagoEE::Address instanceGC = 0;
 
     MagoEE::Address getTmpBuffer(uint32_t size)
     {
@@ -733,6 +733,9 @@ public:
     RefPtr<CallStack::DkmStackWalkFrame> mStackFrame;
     RefPtr<CCModule> mModule;
     RefPtr<Mago::Thread> mThread;
+    std::atomic<uint32_t> mQueuedCalls;
+    Mago::Address64 mSEH = 0;
+    Mago::Address64 mInstanceGC = 0;
 
     CCExprContext() {}
     ~CCExprContext() 
@@ -951,13 +954,24 @@ public:
         int ptrSize = mModule->mArchData->GetPointerSize();
         bool x64 = ptrSize == 8;
 
-        const wchar_t* sym = L"__D2gc5proxy9_instanceC4coreQz11gcinterface2GC";
-        if (x64)
-            sym++;
         MagoEE::Address instaddr;
-        HRESULT hr = FindGlobalSymbolAddr(sym, instaddr);
-        if (FAILED(hr))
-            return S_FALSE;
+        auto tryFindSymbol = [&](const wchar_t* sym, MagoEE::Address& addr)
+        {
+            return FindGlobalSymbolAddr(x64 ? sym + 1 : sym, addr);
+        };
+        int druntime_version = 2'097;
+        if (FAILED(tryFindSymbol(L"__D4core8internal2gc5proxy9_instanceCQBiQx11gcinterface2GC", instaddr)))
+        {
+            // gc.proxy not yet moved to internal?
+            tryHR(tryFindSymbol(L"__D2gc5proxy9_instanceC4coreQz11gcinterface2GC", instaddr));
+            druntime_version = 2'096;
+        }
+        else
+        {
+            MagoEE::Address cnsaddr; // collectNoStack removed?
+            if (FAILED(tryFindSymbol(L"__D4core8internal2gc4impl5protoQo7ProtoGC14collectNoStackMFNbZv", cnsaddr)))
+                druntime_version = 2'109;
+        }
 
         auto nativeRuntime = Native::DkmNativeRuntimeInstance::TryCast(mStackFrame->RuntimeInstance());
         if (!nativeRuntime)
@@ -995,8 +1009,11 @@ public:
         MagoEE::Address retval;
         tryHR(ExecFunc(fnaddr, DkmILCallingConvention::StdCall, retval, ptrSize, argbuf, ptrSize));
 
+        std::wstring initFn = druntime_version < 2'109 ? L"initGC_2_108" : L"initGC_2_109";
+        if (!x64)
+            initFn = L"_" + initFn + L"@0";
         MagoEE::Address initGC;
-        tryHR(FindFunctionAddress(regValue, x64 ? L"initGC" : L"_initGC@0", initGC));
+        tryHR(FindFunctionAddress(regValue, initFn.c_str(), initGC));
 
         MagoEE::Address termGC;
         tryHR(FindFunctionAddress(regValue, x64 ? L"termGC" : L"_termGC@0", termGC));
@@ -1016,6 +1033,9 @@ public:
 
     HRESULT SwitchToMagoGC()
     {
+        if (mInstanceGC)
+            return S_FALSE;
+
         auto helper = getProcessHelper(mModule->mProcess);
         if (!helper)
             return E_MAGOEE_CANNOTALLOCTRAMP;
@@ -1034,7 +1054,7 @@ public:
 
         DkmArray<BYTE> arr = { (BYTE*)&(helper->magoGC), ptrSize };
         tryHR(mModule->mProcess->WriteMemory(helper->adrInstanceGC, arr));
-        helper->instanceGC = gcinst;
+        mInstanceGC = gcinst;
         return S_OK;
     }
 
@@ -1060,20 +1080,51 @@ public:
 
     HRESULT RestoreInstanceGC()
     {
+        if (mQueuedCalls > 0 || mInstanceGC == 0)
+            return S_FALSE;
         auto helper = getProcessHelper(mModule->mProcess);
         if (!helper)
             return E_MAGOEE_CANNOTALLOCTRAMP;
-        if (!helper->instanceGC)
-            return S_FALSE;
 
         UINT32 ptrSize = mModule->mArchData->GetPointerSize();
-        DkmArray<BYTE> arr = { (BYTE*)&(helper->instanceGC), ptrSize };
+        DkmArray<BYTE> arr = { (BYTE*)&(mInstanceGC), ptrSize };
         tryHR(mModule->mProcess->WriteMemory(helper->adrInstanceGC, arr));
-        helper->instanceGC = 0;
+        mInstanceGC = 0;
         return S_OK;
     }
 
-    HRESULT ExecFunc(MagoEE::Address fnaddr, Evaluation::IL::DkmILCallingConvention::e CallingConvention, 
+    HRESULT DisableSEH()
+    {
+        if (mSEH != 0)
+            return S_FALSE;
+
+        Mago::Address64 teb = GetTebBase();
+        UINT32 ptrSize = mModule->mArchData->GetPointerSize();
+        UINT32 read;
+        tryHR(mModule->mProcess->ReadMemory(teb, DkmReadMemoryFlags::None, &mSEH, ptrSize, &read));
+        if (read != ptrSize)
+            return E_MAGOEE_CALLFAILED;
+        if (mSEH == 0)
+            return S_FALSE; // nothing todo
+        Mago::Address64 zero = 0;
+        DkmArray<BYTE> arr = { (BYTE*)&zero, ptrSize };
+        tryHR(mModule->mProcess->WriteMemory(teb, arr));
+        return S_OK;
+    }
+
+    HRESULT RestoreSEH()
+    {
+        if (mSEH == 0 || mQueuedCalls > 0)
+            return S_FALSE;
+        Mago::Address64 teb = GetTebBase();
+        UINT32 ptrSize = mModule->mArchData->GetPointerSize();
+        DkmArray<BYTE> arr = { (BYTE*)&mSEH, ptrSize };
+        tryHR(mModule->mProcess->WriteMemory(teb, arr));
+        mSEH = 0;
+        return S_OK;
+    }
+
+    HRESULT ExecFunc(MagoEE::Address fnaddr, Evaluation::IL::DkmILCallingConvention::e CallingConvention,
                      MagoEE::Address& retval, int ReturnValueSize,
                      MagoEE::Address arg1 = 0, int arg1size = 0,
                      MagoEE::Address arg2 = 0, int arg2size = 0)
@@ -1168,23 +1219,22 @@ public:
     struct CallFunctionComplete : IDkmCompletionRoutine<Evaluation::DkmExecuteQueryAsyncResult>
     {
         long mRefCount = 0;
-        CCExprContext* exprContext;
+        RefPtr<CCExprContext> exprContext;
         std::function<HRESULT(HRESULT, MagoEE::DataObject)> complete;
         MagoEE::Address retbuf;
         UINT32 retSize;
         bool passRetbuf;
         MagoEE::DataObject obj;
-        std::chrono::steady_clock::time_point now, now2, now3, now4;
 
         virtual void STDMETHODCALLTYPE OnComplete(const Evaluation::DkmExecuteQueryAsyncResult& res)
         {
             HRESULT hr = res.ErrorCode;
-            if (FAILED(hr))
-                OutputDebugStringA("OnComplete failed\n");
-            else
-                exprContext->processCallFunctionResult(hr, res.FailureReason, res.Results, retbuf, retSize, passRetbuf,
-                    obj, now, now2, now3, now4);
+            hr = exprContext->processCallFunctionResult(hr, res.FailureReason, res.Results, retbuf, retSize, passRetbuf, obj);
             complete(hr, obj);
+            exprContext->mQueuedCalls--;
+            exprContext->RestoreSEH();
+            exprContext->RestoreInstanceGC();
+            Release();
         }
 
         // COM like ref counting
@@ -1217,13 +1267,11 @@ public:
     virtual HRESULT CallFunction(MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
                                  MagoEE::DataObject& obj, bool saveGC, std::function<HRESULT(HRESULT, MagoEE::DataObject)> complete)
     {
-        auto now = std::chrono::steady_clock::now();
-
         HRESULT hr_gc = S_FALSE;
         if (saveGC && MagoEE::gCallDebuggerUseMagoGC)
             hr_gc = SwitchToMagoGC();
         struct Exit { ~Exit() { fn(); } std::function<void()> fn; };
-        Exit ex{ [&]() { if (hr_gc == S_OK) RestoreInstanceGC(); } };
+        Exit ex{ [&]() { RestoreInstanceGC(); } };
 
         using namespace Evaluation::IL;
 
@@ -1239,24 +1287,9 @@ public:
         if (CallingConvention == DkmILCallingConvention::e(-1))
             return E_MAGOEE_BADCALLCONV;
 
-        Mago::Address64 teb = GetTebBase();
-        Mago::Address64 seh = 0;
-        if (!isX64 && teb != 0)
-        {
-            UINT32 read;
-            tryHR(mModule->mProcess->ReadMemory(teb, DkmReadMemoryFlags::None, &seh, ptrSize, &read));
-            if (read != ptrSize)
-                return E_MAGOEE_CALLFAILED;
-            Mago::Address64 zero = 0;
-            DkmArray<BYTE> arr = { (BYTE*)&zero, ptrSize };
-            tryHR(mModule->mProcess->WriteMemory(teb, arr));
-        }
-        Exit ex2{ [&]() { if (seh != 0)
-            {
-                DkmArray<BYTE> arr = { (BYTE*)&seh, ptrSize };
-                mModule->mProcess->WriteMemory(teb, arr);
-            }
-        } };
+        if (!isX64)
+            tryHR( DisableSEH() );
+        Exit ex2{ [&]() { RestoreSEH(); } };
 
         DkmILFunctionEvaluationArgumentFlags::e thisArgflags = DkmILFunctionEvaluationArgumentFlags::ThisPointer;
         MagoEE::Address tramp = 0;
@@ -1373,13 +1406,9 @@ public:
         tryHR(DkmILReturnTop::Create(&preturn.Ref()));
         instructions[cntInstr++] = preturn;
 
-        auto now2 = std::chrono::steady_clock::now();
-
         // build instruction list
         RefPtr<DkmReadOnlyCollection<DkmILInstruction*>> pinstr;
         tryHR(DkmReadOnlyCollection<DkmILInstruction*>::Create(instructions, cntInstr, &pinstr.Ref()));
-
-        auto now3 = std::chrono::steady_clock::now();
 
         // run instructions
         RefPtr<DkmCompiledILInspectionQuery> pquery;
@@ -1388,40 +1417,35 @@ public:
         RefPtr<Evaluation::DkmILContext> pcontext;
         tryHR(Evaluation::DkmILContext::Create(mStackFrame, nullptr, &pcontext.Ref()));
 
-        auto now4 = std::chrono::steady_clock::now();
         HRESULT hr;
 
         auto worklist = complete ? mWorkList : nullptr;
-        DkmArray<DkmILEvaluationResult*> arrResults;
-        DkmILFailureReason::e failureReason;
         if (worklist)
         {
             auto pCompletionRoutine = new CallFunctionComplete;
             pCompletionRoutine->exprContext = this;
-            AddRef();
             pCompletionRoutine->complete = complete;
             pCompletionRoutine->retbuf = retbuf;
             pCompletionRoutine->retSize = retSize;
             pCompletionRoutine->passRetbuf = passRetbuf;
             pCompletionRoutine->obj = obj;
-            pCompletionRoutine->now = now;
-            pCompletionRoutine->now2 = now2;
-            pCompletionRoutine->now3 = now3;
-            pCompletionRoutine->now4 = now4;
             pCompletionRoutine->AddRef();
             hr = pquery->Execute(worklist, nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None,
                 pCompletionRoutine);
-            //pCompletionRoutine->Release();
-            if (FAILED(hr))
-                OutputDebugString(L"Execute failed\n");
-            else
+            if (SUCCEEDED(hr))
+            {
+                mQueuedCalls++;
                 return S_QUEUED;
+            }
+            // OutputDebugString(L"Execute failed\n");
+            pCompletionRoutine->Release();
         }
         else
         {
+            DkmArray<DkmILEvaluationResult*> arrResults;
+            DkmILFailureReason::e failureReason;
             hr = pquery->Execute(nullptr, pcontext, 1000, Evaluation::DkmFuncEvalFlags::None, &arrResults, &failureReason);
-            hr = processCallFunctionResult(hr, failureReason, arrResults, retbuf, retSize, passRetbuf,
-                obj, now, now2, now3, now4);
+            hr = processCallFunctionResult(hr, failureReason, arrResults, retbuf, retSize, passRetbuf, obj);
             DkmFreeArray(arrResults);
         }
         return hr;
@@ -1429,12 +1453,9 @@ public:
 
     HRESULT processCallFunctionResult(HRESULT hr, Evaluation::IL::DkmILFailureReason::e failureReason,
         const DkmArray<Evaluation::IL::DkmILEvaluationResult*>& arrResults,
-        MagoEE::Address retbuf, UINT32 retSize, bool passRetbuf, MagoEE::DataObject& obj,
-        std::chrono::steady_clock::time_point now, std::chrono::steady_clock::time_point now2,
-        std::chrono::steady_clock::time_point now3, std::chrono::steady_clock::time_point now4)
+        MagoEE::Address retbuf, UINT32 retSize, bool passRetbuf, MagoEE::DataObject& obj)
     {
         using namespace Evaluation::IL;
-        auto now5 = std::chrono::steady_clock::now();
 
         if (!FAILED(hr))
         {
@@ -1464,16 +1485,6 @@ public:
             else
                 hr = retSize == 0 ? S_OK : E_FAIL;
         }
-
-        auto now6 = std::chrono::steady_clock::now();
-
-        auto ms = [](std::chrono::steady_clock::duration dur) {
-            return std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
-        };
-        char msg[256];
-        snprintf(msg, 256, "CallFunction %lld %lld %lld %lld %lld\n",
-            ms(now2 - now), ms(now3 - now), ms(now4 - now), ms(now5 - now), ms(now6 - now));
-        OutputDebugStringA(msg);
         return hr;
     }
 
@@ -2091,8 +2102,6 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
         });
     if (hr == S_QUEUED)
         gNumRequestScheduled++;
-    else if ( FAILED( hr ) )
-        OutputDebugString(L"pEnum->NextAsync failed\n");
     return hr;
 }
 

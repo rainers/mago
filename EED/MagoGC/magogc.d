@@ -22,16 +22,27 @@ import core.gc.gcinterface;
 static import core.memory;
 
 __gshared HANDLE heap;
-__gshared MagoGC mgc = new MagoGC;
+__gshared MagoGCInterface!2_108 mgc2_108 = new MagoGC!2_108;
+__gshared MagoGCInterface!2_109 mgc2_109 = new MagoGC!2_109;
 
 extern(Windows)
-export GC initGC()
+export MagoGCInterface!2_108 initGC_2_108()
 {
 	heap = HeapCreate(HEAP_GENERATE_EXCEPTIONS, 0x10000, 0);
 	if (!heap)
 		return null;
 
-	return mgc;
+	return mgc2_108;
+}
+
+extern(Windows)
+export MagoGCInterface!2_109 initGC_2_109()
+{
+	heap = HeapCreate(HEAP_GENERATE_EXCEPTIONS, 0x10000, 0);
+	if (!heap)
+		return null;
+
+	return mgc2_109;
 }
 
 extern(Windows)
@@ -45,7 +56,51 @@ export bool termGC()
 	return true;
 }
 
-class MagoGC : GC
+interface MagoGCInterface(int ver)
+{
+	void enable();
+	void disable();
+	void collect() nothrow;
+	// method removed in dmd 2.109
+	static if(ver < 2_109) void collectNoStack() nothrow;
+
+	void minimize() nothrow;
+	uint getAttr(void* p) nothrow;
+	uint setAttr(void* p, uint mask) nothrow;
+	uint clrAttr(void* p, uint mask) nothrow;
+	void* malloc(size_t size, uint bits, const TypeInfo ti) nothrow;
+	BlkInfo qalloc(size_t size, uint bits, scope const TypeInfo ti) nothrow;
+	void* calloc(size_t size, uint bits, const TypeInfo ti) nothrow;
+	void* realloc(void* p, size_t size, uint bits, const TypeInfo ti) nothrow;
+	size_t extend(void* p, size_t minsize, size_t maxsize, const TypeInfo ti) nothrow;
+	size_t reserve(size_t size) nothrow;
+	void free(void* p) nothrow @nogc;
+	void* addrOf(void* p) nothrow @nogc;
+	size_t sizeOf(void* p) nothrow @nogc;
+	BlkInfo query(void* p) nothrow;
+	core.memory.GC.Stats stats() nothrow;
+	core.memory.GC.ProfileStats profileStats() nothrow;
+	void addRoot(void* p) nothrow @nogc;
+	void removeRoot(void* p) nothrow @nogc;
+	@property RootIterator rootIter() return @nogc;
+	void addRange(void* p, size_t sz, const TypeInfo ti = null) nothrow @nogc;
+	void removeRange(void* p) nothrow @nogc;
+	@property RangeIterator rangeIter() return @nogc;
+	void runFinalizers(const scope void[] segment) nothrow;
+	bool inFinalizer() nothrow;
+	ulong allocatedInCurrentThread() nothrow;
+}
+
+// verify GC interface is matching
+// pragma(msg, "GC:   ", __traits(allMembers, GC));
+// pragma(msg, "2_109:", __traits(allMembers, MagoGC!(2_109)));
+// pragma(msg, "2_108:", __traits(allMembers, MagoGC!(2_108)));
+
+static assert(__VERSION__ >= 2_109);
+enum GC_members = __traits(allMembers, GC);
+static assert(GC_members == __traits(allMembers, MagoGCInterface!(2_109)));
+
+class MagoGC(int ver) : MagoGCInterface!(ver)
 {
 	Object o;
 
@@ -63,48 +118,52 @@ class MagoGC : GC
 	override int opCmp(Object o) { return -1; }
 	override bool opEquals(Object o) { return false; }
 
-	void enable()
+	override void enable()
 	{
 	}
 
-	void disable()
+	override void disable()
 	{
 	}
 
-	void collect() nothrow
+	override void collect() nothrow
 	{
 	}
 
-	void collectNoStack() nothrow
+	// method removed in dmd 2.109
+	static if(ver < 2_109)
+	{
+		override void collectNoStack() nothrow
+		{
+		}
+	}
+
+	override void minimize() nothrow
 	{
 	}
 
-	void minimize() nothrow
-	{
-	}
-
-	uint getAttr(void* p) nothrow
-	{
-		return 0;
-	}
-
-	uint setAttr(void* p, uint mask) nothrow
-	{
-		return 0;
-	}
-
-	uint clrAttr(void* p, uint mask) nothrow
+	override uint getAttr(void* p) nothrow
 	{
 		return 0;
 	}
 
-	void* malloc(size_t size, uint bits, const TypeInfo ti) nothrow
+	override uint setAttr(void* p, uint mask) nothrow
+	{
+		return 0;
+	}
+
+	override uint clrAttr(void* p, uint mask) nothrow
+	{
+		return 0;
+	}
+
+	override void* malloc(size_t size, uint bits, const TypeInfo ti) nothrow
 	{
 		void* p = HeapAlloc(heap, 0, size);
 		return p;
 	}
 
-	BlkInfo qalloc(size_t size, uint bits, scope const TypeInfo ti) nothrow
+	override BlkInfo qalloc(size_t size, uint bits, scope const TypeInfo ti) nothrow
 	{
 		BlkInfo retval;
 		retval.base = HeapAlloc(heap, 0, size);
@@ -113,67 +172,67 @@ class MagoGC : GC
 		return retval;
 	}
 
-	void* calloc(size_t size, uint bits, const TypeInfo ti) nothrow
+	override void* calloc(size_t size, uint bits, const TypeInfo ti) nothrow
 	{
 		void* p = HeapAlloc(heap, HEAP_ZERO_MEMORY, size);
 		return p;
 	}
 
-	void* realloc(void* p, size_t size, uint bits, const TypeInfo ti) nothrow
+	override void* realloc(void* p, size_t size, uint bits, const TypeInfo ti) nothrow
 	{
 		void* q = HeapReAlloc(heap, 0, p, size);
 		return q;
 	}
 
-	size_t extend(void* p, size_t minsize, size_t maxsize, const TypeInfo ti) nothrow
+	override size_t extend(void* p, size_t minsize, size_t maxsize, const TypeInfo ti) nothrow
 	{
 		return 0;
 	}
 
-	size_t reserve(size_t size) nothrow
+	override size_t reserve(size_t size) nothrow
 	{
 		return 0;
 	}
 
-	void free(void* p) nothrow @nogc
+	override void free(void* p) nothrow @nogc
 	{
 		HeapFree(heap, 0, p);
 	}
 
-	void* addrOf(void* p) nothrow @nogc
+	override void* addrOf(void* p) nothrow @nogc
 	{
 		return null;
 	}
 
-	size_t sizeOf(void* p) nothrow @nogc
+	override size_t sizeOf(void* p) nothrow @nogc
 	{
 		return 0;
 	}
 
-	BlkInfo query(void* p) nothrow
+	override BlkInfo query(void* p) nothrow
 	{
 		return BlkInfo.init;
 	}
 
-	core.memory.GC.Stats stats() nothrow
+	override core.memory.GC.Stats stats() nothrow
 	{
 		return typeof(return).init;
 	}
 
-	core.memory.GC.ProfileStats profileStats() nothrow
+	override core.memory.GC.ProfileStats profileStats() nothrow
 	{
 		return typeof(return).init;
 	}
 
-	void addRoot(void* p) nothrow @nogc
+	override void addRoot(void* p) nothrow @nogc
 	{
 	}
 
-	void removeRoot(void* p) nothrow @nogc
+	override void removeRoot(void* p) nothrow @nogc
 	{
 	}
 
-	@property RootIterator rootIter() return @nogc
+	override @property RootIterator rootIter() return @nogc
 	{
 		return &rootsApply;
 	}
@@ -183,15 +242,15 @@ class MagoGC : GC
 		return 0;
 	}
 
-	void addRange(void* p, size_t sz, const TypeInfo ti = null) nothrow @nogc
+	override void addRange(void* p, size_t sz, const TypeInfo ti = null) nothrow @nogc
 	{
 	}
 
-	void removeRange(void* p) nothrow @nogc
+	override void removeRange(void* p) nothrow @nogc
 	{
 	}
 
-	@property RangeIterator rangeIter() return @nogc
+	override @property RangeIterator rangeIter() return @nogc
 	{
 		return &rangesApply;
 	}
@@ -201,16 +260,16 @@ class MagoGC : GC
 		return 0;
 	}
 
-	void runFinalizers(const scope void[] segment) nothrow
+	override void runFinalizers(const scope void[] segment) nothrow
 	{
 	}
 
-	bool inFinalizer() nothrow
+	override bool inFinalizer() nothrow
 	{
 		return false;
 	}
 
-	ulong allocatedInCurrentThread() nothrow
+	override ulong allocatedInCurrentThread() nothrow
 	{
 		return 0;
 	}

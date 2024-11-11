@@ -105,6 +105,10 @@ LSTATUS OpenRootRegKey( bool user, bool readWrite, HKEY& hKey )
 {
     REGSAM samDesired = readWrite ? (KEY_READ | KEY_WRITE) : KEY_READ;
     HKEY hive = user ? HKEY_CURRENT_USER : HKEY_LOCAL_MACHINE;
+#if _WIN64
+    if (!user)
+        samDesired |= KEY_WOW64_32KEY;
+#endif
     return RegOpenKeyEx( hive, MAGO_SUBKEY, 0, samDesired, &hKey );
 }
 
