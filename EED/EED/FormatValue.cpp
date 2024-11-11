@@ -472,113 +472,79 @@ namespace MagoEE
         uint32_t elementSize = elemType->GetSize();
         HRESULT hres = S_OK;
 
-        if( complete && length > 0 )
+        struct Closure
         {
-            struct Closure
+            bool dotdotdot = false;
+            size_t toComplete = 0;
+            HRESULT hrCombined = S_OK;
+            std::function<HRESULT(HRESULT, std::wstring)> complete;
+            RefPtr<Type> ubyteType;
+            std::vector<std::wstring> elemStr;
+            std::wstring outStr;
+            HRESULT done(HRESULT hr, size_t cnt)
             {
-                bool dotdotdot = false;
-                size_t toComplete = 0;
-                HRESULT hrCombined = S_OK;
-                std::function<HRESULT(HRESULT, std::wstring)> complete;
-                RefPtr<Type> ubyteType;
-                std::vector<std::wstring> elemStr;
-                HRESULT done(HRESULT hr, size_t cnt)
-                {
-                    hrCombine(hr);
-                    toComplete -= cnt;
-                    if (toComplete != 0)
-                        return hr;
+                hrCombine(hr);
+                toComplete -= cnt;
+                if (toComplete != 0)
+                    return hr;
 
-                    std::wstring outStr = L"[" + elemStr[0];
-                    for( size_t i = 1; i < elemStr.size(); i++ )
-                        outStr.append( L", " ).append( elemStr[i] );
-                    if( dotdotdot )
-                        outStr.append(L", ...");
-                    outStr.append(L"]");
+                outStr = L"[" + elemStr[0];
+                for( size_t i = 1; i < elemStr.size(); i++ )
+                    outStr.append( L", " ).append( elemStr[i] );
+                if( dotdotdot )
+                    outStr.append(L", ...");
+                outStr.append(L"]");
+                if (complete)
                     return complete(hrCombined, outStr);
-                }
-                HRESULT hrCombine(HRESULT hr)
-                {
-                    if (SUCCEEDED(hrCombined) && FAILED(hr))
-                        hrCombined = hr;
-                    return hrCombined;
-                }
-            };
-            auto closure = std::make_shared<Closure>();
-
-            if (length > 8)
-            {
-                closure->dotdotdot = true;
-                length = 8;
+                return hrCombined;
             }
-
-            closure->complete = complete;
-            closure->toComplete = length;
-            closure->ubyteType = ubyteType;
-            closure->elemStr.resize(length);
-
-            for (uint64_t i = 0; i < length; i++)
+            HRESULT hrCombine(HRESULT hr)
             {
-                DataObject elementObj;
-                elementObj._Type = elemType;
-                elementObj.Addr = addr + elementSize * i;
-
-                HRESULT hr = binder->GetValue(elementObj.Addr, elementObj._Type, elementObj.Value);
-                if (FAILED(hr))
-                    return hr;
-
-                auto completeElem = [i, closure](HRESULT hr, std::wstring elemStr)
-                {
-                    closure->elemStr[i] = elemStr;
-                    return closure->done(hr, 1);
-                };
-
-                std::wstring elemStr;
-                hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), completeElem );
-                closure->hrCombine(hr);
-                if (hr == COR_E_OPERATIONCANCELED)
-                {
-                    closure->done(hr, length - i);
-                    break;
-                }
+                if (SUCCEEDED(hrCombined) && FAILED(hr))
+                    hrCombined = hr;
+                return hrCombined;
             }
-            hres = closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
-        }
-        else
+        };
+        auto closure = std::make_shared<Closure>();
+
+        if (length > 8)
         {
-            outStr.append( L"[" );
-            for ( uint64_t i = 0; i < length; i++ )
-            {
-                if ( outStr.length() >= maxLength )
-                {
-                    outStr.append( L", ..." );
-                    break;
-                }
-
-                DataObject elementObj;
-                elementObj._Type = elemType;
-                elementObj.Addr = addr + elementSize * i;
-
-                HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
-                if ( FAILED( hr ) )
-                    return hr;
-
-                std::wstring elemStr;
-                hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), {} );
-                if ( FAILED( hr ) )
-                    return hr;
-
-                if ( i > 0 )
-                    outStr.append( L", " );
-                outStr.append( elemStr );
-            }
-            outStr.append( L"]" );
-            if (complete)
-                hres = complete(hres, outStr);
+            closure->dotdotdot = true;
+            length = 8;
         }
-        if ( ubyteType )
-            ubyteType->Release();
-        return S_OK;
+
+        closure->complete = complete;
+        closure->toComplete = length + 1;     // support length == 0
+        closure->ubyteType.Ref() = ubyteType; // take ownership
+        closure->elemStr.resize(length);
+
+        for (uint64_t i = 0; i < length; i++)
+        {
+            DataObject elementObj;
+            elementObj._Type = elemType;
+            elementObj.Addr = addr + elementSize * i;
+
+            HRESULT hr = binder->GetValue(elementObj.Addr, elementObj._Type, elementObj.Value);
+            if (FAILED(hr))
+                return hr;
+
+            auto completeElem = [i, closure](HRESULT hr, std::wstring elemStr)
+            {
+                closure->elemStr[i] = elemStr;
+                return closure->done(hr, 1);
+            };
+
+            std::wstring elemStr;
+            hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), completeElem );
+            closure->hrCombine(hr);
+            if (hr == COR_E_OPERATIONCANCELED)
+            {
+                closure->done(hr, length - i);
+                break;
+            }
+        }
+        closure->done(S_OK, 1);
+        return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
     }
 
     HRESULT FormatSArray( IValueBinder* binder, Address addr, Type* type, const FormatOptions& fmtopt,
@@ -715,7 +681,7 @@ namespace MagoEE
                 return hr;
 
             std::wstring elemStr;
-            hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), complete );
+            hr = FormatValue( binder, elementObj, fmtopt, elemStr, maxLength - outStr.length(), {} );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -724,7 +690,7 @@ namespace MagoEE
             outStr.append( elemStr );
         }
         outStr.append( L")" );
-        return S_OK;
+        return complete ? complete( S_OK, outStr ) : S_OK; // todo: async support
     }
 
     HRESULT _FormatStruct( IValueBinder* binder, Address addr, const char* srcBuf, Type* type,
