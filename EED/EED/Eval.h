@@ -94,6 +94,27 @@ namespace MagoEE
         FormatOptions( uint32_t r = 0, uint32_t s = 0 ) : radix( r ), specifier( s ) {}
     };
 
+    static const uint32_t kMaxFormatValueLength = 100; // soft limit to eventually abort recursions
+
+    struct FormatData
+    {
+        const FormatOptions& opt;
+        std::wstring outStr;
+        uint32_t maxLength;
+        uint32_t maxRecursion;
+
+        FormatData(const FormatOptions& o, uint32_t ml = 100, uint32_t r = 6)
+            : opt(o), maxLength(ml), maxRecursion(r) {}
+
+        FormatData newScope(uint32_t reserveLen = 0)
+        {
+            auto outlen = outStr.length() + reserveLen;
+            auto maxLen = std::max<uint32_t>(maxLength, outlen) - outlen;
+            return FormatData(opt, maxLen, maxRecursion - (maxRecursion > 0 ? 1 : 0));
+        }
+        bool isTooLong() const { return outStr.length() >= maxLength || maxRecursion == 0; }
+    };
+
     enum SupportedFormatSpecifiers
     {
         FormatSpecRaw = '!',

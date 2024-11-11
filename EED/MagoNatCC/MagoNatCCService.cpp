@@ -1579,17 +1579,16 @@ public:
 
         MagoEE::FormatOptions fmtopt;
         fmtopt.radix = pInspectionContext->Radix();
-        uint32_t maxLength = MagoEE::kMaxFormatValueLength;
-        std::wstring valStr;
+        MagoEE::FormatData fmtdata(fmtopt);
 
         if (retType->AsTypeStruct())
         {
-            tryHR(FormatRawStructValue(this, pbuf, retType, fmtopt, valStr, maxLength));
+            tryHR(FormatRawStructValue(this, pbuf, retType, fmtdata));
         }
         else
         {
             tryHR(FromRawValue(pbuf, retType, value.ObjVal.Value));
-            tryHR(FormatValue(this, value.ObjVal, fmtopt, valStr, maxLength, {}));
+            tryHR(FormatValue(this, value.ObjVal, fmtdata, {}));
         }
 
         tryHR(MagoEE::FillValueTraits(this, value, nullptr, {}));
@@ -1600,7 +1599,7 @@ public:
 
         info.bstrName = SysAllocString(funcName.c_str());
         info.bstrFullName = SysAllocString(funcName.c_str());
-        info.bstrValue = SysAllocString(valStr.c_str());
+        info.bstrValue = SysAllocString(fmtdata.outStr.c_str());
         info.bstrType = SysAllocString(funcType.c_str());
         return S_OK;
     }

@@ -88,11 +88,12 @@ namespace MagoEE
                 outStr = bStr;
                 return hr;
             };
-            hr = MagoEE::FormatValue( binder, objVal, fmtopt, stdStr, kMaxFormatValueLength,
-                complete ? completeEE : std::function<HRESULT(HRESULT, std::wstring)>{});
+            FormatData fmtdata{ fmtopt };
+            hr = MagoEE::FormatValue( binder, objVal, fmtdata,
+                                      complete ? completeEE : std::function<HRESULT(HRESULT, std::wstring)>{});
             if( FAILED( hr ) )
                 return hr;
-            return complete ? hr : completeEE(hr, stdStr);
+            return complete ? hr : completeEE(hr, fmtdata.outStr);
         }
 
         HRESULT GetRawStringLength( IValueBinder* binder, const DataObject& objVal, uint32_t& length )

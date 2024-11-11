@@ -626,12 +626,12 @@ namespace Mago
                 hr = mExprContext->Evaluate( decl, resultObj );
                 if ( hr == S_OK )
                 {
-                    std::wstring valueStr;
                     MagoEE::FormatOptions fmtopts (radix);
-                    hr = MagoEE::FormatValue( mExprContext, resultObj, fmtopts, valueStr, MagoEE::kMaxFormatValueLength, {} );
+                    MagoEE::FormatData fmtdata( fmtopts );
+                    hr = MagoEE::FormatValue( mExprContext, resultObj, fmtdata, {} );
                     if ( hr == S_OK )
                     {
-                        outputStr.AppendFormat( L" = %.*s", valueStr.size(), valueStr.c_str() );
+                        outputStr.AppendFormat( L" = %.*s", fmtdata.outStr.size(), fmtdata.outStr.c_str() );
                     }
                 }
             }

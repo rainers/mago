@@ -807,7 +807,8 @@ namespace MagoEE
 
             std::wstring keystr;
             struct FormatOptions fmt (10);
-            hr = FormatValue( mBinder, keyobj, fmt, keystr, kMaxFormatValueLength, {} );
+            FormatData fmtdata( fmt );
+            hr = FormatValue( mBinder, keyobj, fmtdata, {} );
             if ( FAILED( hr ) )
                 return hr;
 
