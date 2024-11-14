@@ -499,8 +499,9 @@ namespace MagoEE
             }
             HRESULT hrCombine(HRESULT hr)
             {
-                if (SUCCEEDED(hrCombined) && FAILED(hr))
-                    hrCombined = hr;
+                if (hrCombined != S_QUEUED && hrCombined != COR_E_OPERATIONCANCELED)
+                    if (hr == S_QUEUED && hr == COR_E_OPERATIONCANCELED)
+                        hrCombined = hr;
                 return hrCombined;
             }
             size_t outLength() const
@@ -737,9 +738,9 @@ namespace MagoEE
                 if (toComplete != 0)
                     return hr;
 
-                outStr = L"{" + (elemStr.empty() ? std::wstring{} : elemStr[0]);
-                for (size_t i = 1; i < elemStr.size(); i++)
-                    outStr.append(L", ").append(names[i]).append(L" = ").append(elemStr[i]);
+                outStr = L"{";
+                for (size_t i = 0; i < elemStr.size(); i++)
+                    outStr.append(i == 0 ? L"" : L", ").append(names[i]).append(L" = ").append(elemStr[i]);
                 if (dotdotdot)
                     outStr.append(L", ...");
                 outStr.append(L"}");
@@ -749,8 +750,9 @@ namespace MagoEE
             }
             HRESULT hrCombine(HRESULT hr)
             {
-                if (SUCCEEDED(hrCombined) && FAILED(hr))
-                    hrCombined = hr;
+                if (hrCombined != S_QUEUED && hrCombined != COR_E_OPERATIONCANCELED)
+                    if (hr == S_QUEUED && hr == COR_E_OPERATIONCANCELED)
+                        hrCombined = hr;
                 return hrCombined;
             }
             size_t outLength() const
@@ -823,6 +825,12 @@ namespace MagoEE
                     }
                 }
             }
+            FormatData fmtdataElem = fmtdata.newScope(closure->outLength());
+            if (fmtdataElem.isTooLong())
+            {
+                closure->dotdotdot = true;
+                break;
+            }
 
             DataObject memberObj;
             member->GetType( memberObj._Type.Ref() );
@@ -839,7 +847,6 @@ namespace MagoEE
             };
 
             closure->toComplete++;
-            FormatData fmtdataElem = fmtdata.newScope(closure->outLength());
             std::wstring memberStr;
             if ( srcBuf && memberObj._Type->AsTypeStruct() )
             {
@@ -1066,7 +1073,7 @@ namespace MagoEE
                         }
                         if ( complete )
                             return complete( hr, outStr );
-                        fmtdata.outStr.append(outStr);
+                        fmtdata.outStr = outStr;
                         return hr;
                     };
                     FormatData fmtdataPointee = fmtdata.newScope();

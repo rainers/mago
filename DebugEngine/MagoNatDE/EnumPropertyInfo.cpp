@@ -149,8 +149,9 @@ namespace Mago
             }
             HRESULT hrCombine(HRESULT hr)
             {
-                if (SUCCEEDED(hrCombined) && FAILED(hr))
-                    hrCombined = hr;
+                if (hrCombined != S_QUEUED && hrCombined != COR_E_OPERATIONCANCELED)
+                    if (hr == S_QUEUED && hr == COR_E_OPERATIONCANCELED)
+                        hrCombined = hr;
                 return hrCombined;
             }
         };

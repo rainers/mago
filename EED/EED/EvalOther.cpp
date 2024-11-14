@@ -862,7 +862,7 @@ namespace MagoEE
                 return hr;
 
 #if 1
-            if ( Child->_Type->IsPointer() )
+            if ( Child->_Type->IsPointer() && !Child->_Type->IsReference() )
             {
                 // rewrite ptr.field to (*ptr).field
                 auto tn = Child->_Type->AsTypeNext()->GetNext();
