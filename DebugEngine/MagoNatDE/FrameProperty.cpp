@@ -231,23 +231,19 @@ namespace Mago
                 }
                 if ( pstrName.GetName()[0] == '_' && pstrName.GetName()[1] == '_' )
                 {
+                    std::wstring tupleName;
+                    int tuple_idx = MagoEE::GetTupleName( pstrName.GetName(), pstrName.GetLength(), &tupleName );
                     if ( gOptions.recombineTuples )
                     {
-                        std::wstring tupleName;
-                        int idx = MagoEE::GetTupleName( pstrName.GetName(), pstrName.GetLength(), &tupleName );
-                        if( idx == 0 )
+                        if ( tuple_idx == 0 )
                             mNames.push_back( SysAllocStringLen( tupleName.data(), tupleName.length() ) );
-                        if( idx >= 0 )
-                            continue;
-                        if (gOptions.hideInternalNames)
+                        if ( tuple_idx >= 0 )
                             continue;
                     }
-                    else
-                    {
-                        // do not hide tuple symbols
-                        if ( gOptions.hideInternalNames && MagoEE::GetTupleName( pstrName.GetName(), pstrName.GetLength() ) < 0 )
-                            continue;
-                    }
+                    // do not hide tuple or ... parameter symbols
+                    if ( gOptions.hideInternalNames && tuple_idx < 0 &&
+                         MagoEE::GetParamIndex( pstrName.GetName(), pstrName.GetLength() ) < 0 )
+                        continue;
                 }
 
                 hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), bstrName.m_str );

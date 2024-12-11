@@ -656,4 +656,36 @@ namespace MagoEE
     {
         return t_GetTupleName( sym, wcslen( sym ), tupleName );
     }
+
+    // return field index
+    template<typename CH>
+    int t_GetParamIndex( const CH* str, size_t len )
+    {
+        // detect tuple field "__param_%llu"
+        if( len < 9 )
+            return -1;
+
+        for( int i = 0; i < 8; i++ )
+            if( str[i] != "__param_"[i] )
+                return -1;
+
+        int index = 0;
+        for( ; len > 0 && isdigit( str[len - 1] ); --len )
+            index = index * 10 + str[len - 1] - '0';
+
+        if ( len > 8 )
+            return -1;
+
+        return index;
+    }
+
+    int GetParamIndex( const char* sym, size_t len )
+    {
+        return t_GetParamIndex( sym, len );
+    }
+
+    int GetParamIndex( const wchar_t* sym )
+    {
+        return t_GetParamIndex( sym, wcslen(sym) );
+    }
 }

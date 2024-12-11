@@ -134,5 +134,8 @@ namespace MagoEE
     int GetTupleName( const char* sym, size_t len, std::wstring* tupleName = nullptr );
     int GetTupleName( const wchar_t* sym, std::wstring* tupleName = nullptr );
 
+    int GetParamIndex( const char* sym, size_t len );
+    int GetParamIndex( const wchar_t* sym );
+
     std::wstring to_wstring( const char* str, size_t slen );
 }
