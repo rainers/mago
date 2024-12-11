@@ -662,13 +662,61 @@ namespace MagoEE
         if ( type == NULL || type->IsAmbiguousGlobals() )
             return E_FAIL;
 
+        struct Closure
+        {
+            bool dotdotdot = false;
+            size_t toComplete = 0;
+            HRESULT hrCombined = S_OK;
+            std::function<HRESULT(HRESULT, std::wstring)> complete;
+            std::vector<std::wstring> elemStr;
+            std::wstring outStr;
+
+            HRESULT done(HRESULT hr, size_t cnt)
+            {
+                hrCombine(hr);
+                toComplete -= cnt;
+                if (toComplete != 0)
+                    return hr;
+
+                outStr = L"(";
+                for (size_t i = 0; i < elemStr.size(); i++)
+                    outStr.append(i == 0 ? L"" : L", ").append(elemStr[i]);
+                if (dotdotdot)
+                    outStr.append(L", ...");
+                outStr.append(L")");
+                if (complete)
+                    return complete(hrCombined, outStr);
+                return hr;
+            }
+            HRESULT hrCombine(HRESULT hr)
+            {
+                if (hrCombined != S_QUEUED && hrCombined != COR_E_OPERATIONCANCELED)
+                    if (hr == S_QUEUED && hr == COR_E_OPERATIONCANCELED)
+                        hrCombined = hr;
+                return hrCombined;
+            }
+            size_t outLength() const
+            {
+                size_t sz = 2 + 2 * (elemStr.empty() ? 0 : elemStr.size() - 1);
+                for (auto& s : elemStr)
+                    sz += s.size();
+                if (dotdotdot)
+                    sz += 5;
+                return sz;
+            }
+        };
+        auto closure = std::make_shared<Closure>();
+        closure->complete = complete;
+        closure->toComplete = 2; // keep value higher so we can add iteratively
+
+        HRESULT hr = S_OK;
         auto length = type->GetLength();
-        fmtdata.outStr.append( L"(" );
         for ( uint32_t i = 0; i < length; i++ )
         {
-            if ( fmtdata.outStr.length() >= fmtdata.maxLength )
+            FormatData fmtdataElem = fmtdata.newScope(closure->outLength());
+            if (fmtdataElem.isTooLong())
             {
-                fmtdata.outStr.append( L", ..." );
+                closure->dotdotdot = true;
                 break;
             }
 
@@ -679,32 +727,46 @@ namespace MagoEE
             {
                 addr = objVal._Type->IsReference() ? objVal.Value.Addr : objVal.Addr;
                 if (addr == 0)
-                    return E_MAGOEE_NO_ADDRESS;
-                if ( !decl->GetOffset( offset ) )
-                    return E_FAIL;
+                    hr = E_MAGOEE_NO_ADDRESS;
+                else if ( !decl->GetOffset( offset ) )
+                    hr = E_FAIL;
             }
             else if ( !decl->GetAddress( addr ) || addr == 0 )
-                return E_MAGOEE_NO_ADDRESS;
+                hr = E_MAGOEE_NO_ADDRESS;
 
             DataObject elementObj;
-            elementObj._Type = type->GetElementType( i );
-            elementObj.Addr = addr + offset;
+            if ( !FAILED( hr ) )
+            {
+                elementObj._Type = type->GetElementType( i );
+                elementObj.Addr = addr + offset;
 
-            HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
-            if ( FAILED( hr ) )
-                return hr;
+                hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
+            }
 
-            FormatData fmtdataElem = fmtdata.newScope();
-            hr = FormatValue( binder, elementObj, fmtdata, {} );
-            if ( FAILED( hr ) )
-                return hr;
+            closure->toComplete++;
+            closure->elemStr.push_back({});
+            auto idx = closure->elemStr.size() - 1;
+            auto completeElem = [idx, closure](HRESULT hr, std::wstring elemStr)
+                {
+                    closure->elemStr[idx] = elemStr;
+                    return closure->done(hr, 1);
+                };
 
-            if ( i > 0 )
-                fmtdata.outStr.append( L", " );
-            fmtdata.outStr.append( fmtdataElem.outStr );
+            if ( !FAILED( hr ) )
+                hr = FormatValue( binder, elementObj, fmtdataElem,
+                                  complete ? completeElem : std::function<HRESULT(HRESULT, std::wstring)>{});
+            if ( !complete || FAILED( hr ) )
+            {
+                closure->elemStr.back() = fmtdataElem.outStr;
+                closure->done(hr, 1);
+            }
+            if ( hr == COR_E_OPERATIONCANCELED )
+                break;
         }
-        fmtdata.outStr.append( L")" );
-        return complete ? complete( S_OK, fmtdata.outStr ) : S_OK; // todo: async support
+        closure->done(S_OK, 2); // call complete if none queued
+        hr = closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
+        fmtdata.outStr.append(closure->outStr);
+        return hr;
     }
 
     HRESULT _FormatStruct( IValueBinder* binder, Address addr, const char* srcBuf, Type* type,
@@ -768,12 +830,9 @@ namespace MagoEE
             }
         };
         auto closure = std::make_shared<Closure>();
-
         closure->complete = complete;
         closure->toComplete = 2; // keep value higher so we can add iteratively
-        std::wstring str;
 
-        str.append( L"{" );
         RefPtr<Declaration> next;
         for ( int i = 0; ; ++i )
         {
@@ -793,7 +852,7 @@ namespace MagoEE
             closure->names.push_back(member->GetName());
             closure->elemStr.push_back({});
 
-            if (gRecombineTuples)
+            if ( gRecombineTuples )
             {
                 std::wstring tplname;
                 const wchar_t* tname = member->GetName();
@@ -825,8 +884,8 @@ namespace MagoEE
                     }
                 }
             }
-            FormatData fmtdataElem = fmtdata.newScope(closure->outLength());
-            if (fmtdataElem.isTooLong())
+            FormatData fmtdataElem = fmtdata.newScope( closure->outLength() );
+            if ( fmtdataElem.isTooLong() )
             {
                 closure->dotdotdot = true;
                 break;
@@ -840,7 +899,7 @@ namespace MagoEE
                 memberObj.Addr += offset;
 
             auto idx = closure->elemStr.size() - 1;
-            auto completeElem = [idx, closure](HRESULT hr, std::wstring elemStr)
+            auto completeElem = [idx, closure]( HRESULT hr, std::wstring elemStr )
             {
                 closure->elemStr[idx] = elemStr;
                 return closure->done(hr, 1);
