@@ -50,7 +50,16 @@ namespace Mago
             DWORD dwArgCount,
             DEBUG_PROPERTY_INFO* pPropertyInfo );
         
-        STDMETHOD( SetValueAsString )( 
+        STDMETHOD( GetPropertyInfoAsync )(
+            DEBUGPROP_INFO_FLAGS dwFields,
+            DWORD dwRadix,
+            DWORD dwTimeout,
+            IDebugReference2** rgpArgs,
+            DWORD dwArgCount,
+            DEBUG_PROPERTY_INFO* pPropertyInfo,
+            std::function<HRESULT(HRESULT hr, const DEBUG_PROPERTY_INFO&)> complete );
+
+        STDMETHOD( SetValueAsString )(
             LPCOLESTR pszValue,
             DWORD dwRadix,
             DWORD dwTimeout );
@@ -131,7 +140,7 @@ namespace Mago
         HRESULT GetStringViewerText( std::wstring& text );
 
     private:
-        BSTR FormatValue( int radix );
+        HRESULT FormatValue( int radix, BSTR& bstr, std::function<HRESULT(HRESULT, BSTR)> complete );
     };
 
     bool GetPropertyType( ExprContext* exprContext, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& type );

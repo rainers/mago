@@ -501,8 +501,11 @@ namespace MagoST
 
     void Session::cacheGlobals()
     {
+        if( !mGlobals.empty() || !mDebugFuncs.empty() )
+            return;
+
         EnumNamedSymbolsData searchHandle;
-        if( mStore->FindFirstSymbol( SymHeap_GlobalSymbols, nullptr, 0, searchHandle ) != S_OK )
+        if( mStore->FindFirstSymbol( SymHeap_GlobalSymbols, nullptr, 0, searchHandle) != S_OK)
             return;
 
         do
@@ -516,8 +519,39 @@ namespace MagoST
                 break;
 
             DataKind kind = DataIsUnknown;
-            if( !symInfo->GetDataKind( kind ) )
-                break;
+            if ( symInfo->GetSymTag() == SymTagFunction )
+            {
+                // same or preceded by module name
+                auto ends_with = [](const SymString& s, const char* name)
+                    {
+                        auto sptr = s.GetName();
+                        size_t slen = s.GetLength();
+                        size_t nlen = strlen(name);
+                        if (slen == nlen && strncmp(sptr, name, nlen) == 0)
+                            return true;
+                        if (slen <= nlen)
+                            return false;
+                        size_t npos = slen - nlen;
+                        return sptr[npos - 1] == '.' && strncmp(sptr + npos, name, nlen) == 0;
+                    };
+                SymString name;
+                if (symInfo->GetName(name))
+                {
+                    if (ends_with(name, "__debugOverview") ||
+                        ends_with(name, "__debugExpanded") ||
+                        ends_with(name, "__debugStringView"))
+                    {
+                        std::string sname(name.GetName(), name.GetLength());
+                        auto it = mDebugFuncs.find(sname);
+                        if (it == mDebugFuncs.end())
+                            mDebugFuncs.insert({ sname, { symHandle } });
+                        else
+                            it->second.push_back(symHandle);
+                    }
+                }
+            }
+            else if( symInfo->GetDataKind( kind ) )
+            //    break;
             switch( kind )
             {
                 case DataIsFileStatic:
@@ -538,13 +572,13 @@ namespace MagoST
         mStore->FindSymbolDone( searchHandle );
     }
 
-    HRESULT Session::FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles )
+    HRESULT Session::_findMatchingGlobals( std::set<std::string, reverse_less>& symSet,
+        const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles )
     {
-        if( mGlobals.size() == 0 )
-            cacheGlobals();
+        cacheGlobals();
         
         std::string search( nameChars, nameLen );
-        for( auto it = mGlobals.lower_bound( search ); it != mGlobals.end(); ++it )
+        for( auto it = symSet.lower_bound( search ); it != symSet.end(); ++it )
         {
             if ( it->length() < nameLen || search != it->data() + it->length() - nameLen )
                 break;
@@ -564,4 +598,25 @@ namespace MagoST
         return handles.empty() ? E_NOT_FOUND : S_OK;
     }
 
+    HRESULT Session::FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles )
+    {
+        return _findMatchingGlobals( mGlobals, nameChars, nameLen, handles );
+    }
+    HRESULT Session::FindMatchingDebugFuncs( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles )
+    {
+        cacheGlobals();
+
+        std::string search(nameChars, nameLen);
+        for (auto it = mDebugFuncs.lower_bound(search); it != mDebugFuncs.end(); ++it)
+        {
+            if (it->first.length() < nameLen || search != it->first.data() + it->first.length() - nameLen)
+                break;
+            if (it->first.length() > nameLen && it->first[it->first.length() - nameLen - 1] != '.')
+                break;
+
+            for(auto& handle : it->second)
+                handles.push_back( handle );
+        }
+        return handles.empty() ? E_NOT_FOUND : S_OK;
+    }
 }

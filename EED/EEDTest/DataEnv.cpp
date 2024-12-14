@@ -305,6 +305,11 @@ HRESULT DataEnvBinder::FindObject( const wchar_t* name, MagoEE::Declaration*& de
     return mScope->FindObject( name, decl );
 }
 
+HRESULT DataEnvBinder::FindDebugFunc( const wchar_t* name, MagoEE::ITypeStruct* ts, MagoEE::Declaration*& decl )
+{
+    return E_NOTIMPL;
+}
+
 HRESULT DataEnvBinder::GetThis( MagoEE::Declaration*& decl )
 {
     return E_NOTIMPL;

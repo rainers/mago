@@ -17,6 +17,7 @@ namespace MagoEE
     class Declaration;
     class ITypeEnv;
     class ITypeFunction;
+    class ITypeStruct;
     struct String;
 
 
@@ -108,7 +109,7 @@ namespace MagoEE
 
         FormatData newScope(uint32_t reserveLen = 0)
         {
-            auto outlen = outStr.length() + reserveLen;
+            auto outlen = (uint32_t) outStr.length() + reserveLen;
             auto maxLen = std::max<uint32_t>(maxLength, outlen) - outlen;
             return FormatData(opt, maxLen, maxRecursion - (maxRecursion > 0 ? 1 : 0));
         }
@@ -141,7 +142,8 @@ namespace MagoEE
             FindObjectNoClassDeref = 1 << 8,
             FindObjectAny = FindObjectLocal | FindObjectClosure | FindObjectGlobal | FindObjectRegister,
         };
-        virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl, uint32_t findFlags ) = 0;
+        virtual HRESULT FindObject(const wchar_t* name, Declaration*& decl, uint32_t findFlags) = 0;
+        virtual HRESULT FindDebugFunc( const wchar_t* name, ITypeStruct* ts, Declaration*& decl ) = 0;
 
         virtual HRESULT GetThis( Declaration*& decl ) = 0;
         virtual HRESULT GetSuper( Declaration*& decl ) = 0;

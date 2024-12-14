@@ -3715,7 +3715,7 @@ std::shared_ptr<DataObj> VerifyTestElement::EvaluateText( ITypeEnv* typeEnv, ISc
         ThrowError( msg.c_str() );
     }
 
-    hr = expr->Evaluate( options, &binder, result );
+    hr = expr->Evaluate( options, &binder, result, {} );
     if ( FAILED( hr ) )
     {
         wstring msg = L"Couldn't evaluate expression. ";

@@ -254,7 +254,7 @@ namespace MagoEE
             if ( gCallDebuggerFunctions && fmtopts.specifier != FormatSpecRaw && pparentVal->ObjVal.Addr != 0 )
             {
                 Address fnaddr;
-                if ( RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugExpanded", fnaddr ) )
+                if ( RefPtr<Type> fntype = GetDebuggerProp( binder, ts, L"__debugExpanded", fnaddr ) )
                 {
                     hr = EvalDebuggerProp( binder, fntype, fnaddr, pparentVal->ObjVal.Addr, pointeeObj.ObjVal, {} );
                     if ( hr == S_OK )
@@ -263,7 +263,7 @@ namespace MagoEE
                         goto L_retry;
                     }
                 }
-                if( gCallDebuggerRanges && IsForwardRange( pparentVal->ObjVal._Type ) )
+                if( gCallDebuggerRanges && IsForwardRange( binder, pparentVal->ObjVal._Type ) )
                 {
                     en = new EEDEnumRange();
                 }
@@ -298,6 +298,7 @@ namespace MagoEE
         result.HasChildren = false;
         result.HasRawChildren = false;
 
+        bool readAccess = true; // set to false if only type should be evaluated
         DataObject pointeeObj = { 0 };
         const DataObject* pparentVal = &result.ObjVal;
 
@@ -313,7 +314,7 @@ namespace MagoEE
             {
                 // some types just don't allow assignment
             }
-            else if ( pparentVal->Addr != 0 )
+            else if ( readAccess && pparentVal->Addr != 0 )
             {
                 result.ReadOnly = false;
             }
@@ -330,7 +331,7 @@ namespace MagoEE
                     if ( tn->GetNext()->IsChar() )
                     {
                         if ( t->IsPointer() )
-                            return pparentVal->Value.Addr != 0;
+                            return !readAccess || pparentVal->Value.Addr != 0;
                         if ( t->IsSArray() || t->IsDArray() )
                             return true;
                     }
@@ -342,7 +343,7 @@ namespace MagoEE
             {
                 Address fnaddr;
                 if ( gCallDebuggerFunctions )
-                    if( RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugStringView", fnaddr ) )
+                    if( RefPtr<Type> fntype = GetDebuggerProp( binder, ts, L"__debugStringView", fnaddr ) )
                         if( auto tret = GetDebuggerPropType( fntype ) )
                             result.HasString = typeHasString( tret );
             }
@@ -354,7 +355,7 @@ namespace MagoEE
                 if ( ntype == NULL || ntype->GetBackingTy() == Tvoid )
                     result.HasChildren = result.HasRawChildren = false;
 
-                else if ( type->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() )
+                else if ( readAccess && ( type->IsReference() || ntype->IsSArray() || ntype->IsDArray() || ntype->IsAArray() ) )
                 {
                     // auto-follow through pointer
                     pointeeObj._Type = ntype;
@@ -367,7 +368,7 @@ namespace MagoEE
                         goto L_retry;
                     }
                 }
-                result.HasChildren = result.HasRawChildren = pparentVal->Value.Addr != 0;
+                result.HasChildren = result.HasRawChildren = !readAccess || pparentVal->Value.Addr != 0;
             }
             else if ( ITypeSArray* sa = type->AsTypeSArray() )
             {
@@ -376,7 +377,7 @@ namespace MagoEE
             else if ( type->IsDArray() )
             {
                 if( !result.HasString || gExpandableStrings )
-                    result.HasChildren = pparentVal->Value.Array.Length > 0;
+                    result.HasChildren = !readAccess || pparentVal->Value.Array.Length > 0;
                 result.HasRawChildren = true;
             }
             else if( type->IsAArray() )
@@ -384,18 +385,20 @@ namespace MagoEE
                 int aaVersion = -1;
                 union
                 {
-                    BB64            mBB;
-                    BB64_V1         mBB_V1;
+                    BB64    mBB;
+                    BB64_V1 mBB_V1;
                 };
-                if( EEDEnumAArray::ReadBB( binder, type, pparentVal->Value.Addr, aaVersion, mBB ) == S_OK )
+                if( !readAccess )
+                    result.HasChildren = result.HasRawChildren = true;
+                else if( EEDEnumAArray::ReadBB( binder, type, pparentVal->Value.Addr, aaVersion, mBB ) == S_OK )
                     result.HasChildren = result.HasRawChildren = (aaVersion == 1 ? mBB_V1.used - mBB_V1.deleted : mBB.nodes) > 0;
             }
             else if ( ITypeStruct* ts = type->AsTypeStruct() )
             {
-                if ( gCallDebuggerFunctions && pparentVal->Addr != 0 )
+                if ( gCallDebuggerFunctions )
                 {
                     Address fnaddr;
-                    if ( RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugExpanded", fnaddr ) )
+                    if ( RefPtr<Type> fntype = GetDebuggerProp( binder, ts, L"__debugExpanded", fnaddr ) )
                     {
                         pointeeObj._Type = GetDebuggerPropType( fntype );
                         HRESULT hr = E_FAIL;
@@ -405,14 +408,17 @@ namespace MagoEE
                             if ( ts->GetUdtKind() != MagoEE::Udt_Class )
                                 hr = S_OK; // no need to read value to fill traits
                         if ( hr != S_OK )
-                            hr = EvalDebuggerProp( binder, fntype, fnaddr, pparentVal->Addr, pointeeObj, {} );
+                        {
+                            readAccess = false;
+                            hr = S_OK; // EvalDebuggerProp(binder, fntype, fnaddr, pparentVal->Addr, pointeeObj, {});
+                        }
                         if ( hr == S_OK )
                         {
                             pparentVal = &pointeeObj;
                             goto L_retry;
                         }
                     }
-                    else if( gCallDebuggerRanges && IsForwardRange( type ) )
+                    else if( gCallDebuggerRanges && IsForwardRange( binder, type ) )
                     {
                         result.HasChildren = result.HasRawChildren = true;
                         goto L_done;
@@ -425,7 +431,7 @@ namespace MagoEE
                     if ( decl->EnumMembers( members.Ref() ) )
                         result.HasChildren = result.HasRawChildren = members->GetCount() > 0;
                 }
-                else if ( pparentVal->Addr != 0 )
+                else if ( !readAccess || pparentVal->Addr != 0 )
                 {
                     bool hasVTable = false;
                     bool hasChildren = false;
@@ -445,7 +451,7 @@ namespace MagoEE
                     {
                         MagoEE::UdtKind kind;
                         std::wstring className;
-                        if ( decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class )
+                        if ( readAccess && decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class )
                             binder->GetClassName( pparentVal->Addr, className, false );
                         hasDynamicClass = !className.empty();
                     }
@@ -464,9 +470,13 @@ namespace MagoEE
         return hr;
     }
 
-    RefPtr<Type> GetDebuggerProp( ITypeStruct* ts, const wchar_t* call, Address& fnaddr )
+    RefPtr<Type> GetDebuggerProp( IValueBinder* binder, ITypeStruct* ts, const wchar_t* call, Address& fnaddr )
     {
         RefPtr<Declaration> decl = ts->FindObject( call );
+        if ( !decl )
+        {
+            binder->FindDebugFunc( call, ts, decl.Ref() );
+        }
         RefPtr<Type> dgtype;
         if ( decl && decl->GetType( dgtype.Ref() ) )
         {
@@ -478,6 +488,17 @@ namespace MagoEE
                         if ( RefPtr<Type> fntype = ptrtype->GetNext() )
                             if ( fntype->AsTypeFunction() )
                                 return fntype;
+            }
+            else if ( dgtype->IsFunction() )
+            {
+                if ( auto fntype = dgtype->AsTypeFunction() )
+                    if ( auto paramList = fntype->GetParams() )
+                        if ( paramList->List.size() == 1 )
+                            if ( auto ptype = paramList->List.front()->_Type )
+                                if ( ptype->IsPointer() || ptype->IsReference() )
+                                    if( ts->Equals( ptype->AsTypeNext()->GetNext() ) )
+                                        if ( decl->GetAddress( fnaddr ) )
+                                            return dgtype;
             }
             else if ( decl->GetOffset( off ) )
             {
@@ -514,16 +535,16 @@ namespace MagoEE
         return hr;
     }
 
-    bool IsForwardRange( Type* type )
+    bool IsForwardRange( IValueBinder* binder, Type* type )
     {
         auto ts = type->AsTypeStruct();
         if (!ts)
             return false;
         Address addrSave = 0, addrEmpty = 0, addrFront = 0, addrPop = 0;
-        RefPtr<Type> typeSave  = GetDebuggerProp( ts, L"save", addrSave );
-        RefPtr<Type> typeEmpty = typeSave  ? GetDebuggerProp( ts, L"empty", addrEmpty ) : nullptr;
-        RefPtr<Type> typeFront = typeEmpty ? GetDebuggerProp( ts, L"front", addrFront ) : nullptr;
-        RefPtr<Type> typePop   = typeFront ? GetDebuggerProp( ts, L"popFront", addrPop ) : nullptr;
+        RefPtr<Type> typeSave  = GetDebuggerProp( binder, ts, L"save", addrSave );
+        RefPtr<Type> typeEmpty = typeSave  ? GetDebuggerProp( binder, ts, L"empty", addrEmpty ) : nullptr;
+        RefPtr<Type> typeFront = typeEmpty ? GetDebuggerProp( binder, ts, L"front", addrFront ) : nullptr;
+        RefPtr<Type> typePop   = typeFront ? GetDebuggerProp( binder, ts, L"popFront", addrPop ) : nullptr;
         return typePop != nullptr;
     }
 

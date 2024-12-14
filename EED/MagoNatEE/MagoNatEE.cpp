@@ -52,22 +52,6 @@ namespace MagoEE
             return MagoEE::EnumValueChildren( binder, parentExprText, parentVal, typeEnv, strTable, fmtopts, enumerator );
         }
 
-        HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr )
-        {
-            HRESULT         hr = S_OK;
-            std::wstring    stdStr;
-
-            hr = MagoEE::FormatBasicValue( objVal, fmtopt, stdStr );
-            if ( FAILED( hr ) )
-                return hr;
-
-            outStr = SysAllocStringLen( stdStr.c_str(), stdStr.size() );
-            if ( outStr == NULL )
-                return E_OUTOFMEMORY;
-
-            return S_OK;
-        }
-
         HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt,
                              BSTR& outStr, std::function<HRESULT(HRESULT, BSTR)> complete )
         {

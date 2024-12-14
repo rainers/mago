@@ -426,6 +426,8 @@ namespace MagoEE
         virtual UdtKind GetUdtKind() = 0;
         virtual bool GetBaseClassOffset( Type* baseClass, int& offset ) = 0;
 		virtual bool IsPOD() = 0;
+        virtual bool Equals( Type* other ) = 0;
+        virtual const wchar_t* GetName() = 0;
     };
 
 
@@ -448,7 +450,8 @@ namespace MagoEE
         virtual UdtKind GetUdtKind();
         virtual bool GetBaseClassOffset( Type* baseClass, int& offset );
 		virtual bool IsPOD();
-	};
+        virtual const wchar_t* GetName();
+    };
 
 
     class ITypeEnum

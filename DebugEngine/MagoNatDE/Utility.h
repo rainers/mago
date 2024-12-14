@@ -99,7 +99,11 @@ private:
 template <typename T, typename Copy>
 struct ScopedStruct : public T
 {
-    ScopedStruct() { Copy::init( this ); }
+    ScopedStruct() { Copy::init(this); }
+    ScopedStruct(const ScopedStruct& other) {
+        Copy::init(this);
+        Copy::copy(this, &other);
+    }
     ~ScopedStruct() { Copy::destroy( this ); }
     ScopedStruct& operator =(const ScopedStruct& other) { Copy::copy( this, &other ); }
 };

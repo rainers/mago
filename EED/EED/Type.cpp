@@ -1457,6 +1457,10 @@ namespace MagoEE
         return this;
     }
 
+    const wchar_t* TypeStruct::GetName()
+    {
+        return mDecl->GetName();
+    }
 
     //----------------------------------------------------------------------------
     //  TypeEnum

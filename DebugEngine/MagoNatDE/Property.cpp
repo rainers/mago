@@ -33,13 +33,14 @@ namespace Mago
     ////////////////////////////////////////////////////////////////////////////// 
     // IDebugProperty2 
 
-    HRESULT Property::GetPropertyInfo( 
+    HRESULT Property::GetPropertyInfoAsync( 
         DEBUGPROP_INFO_FLAGS dwFields,
         DWORD dwRadix,
         DWORD dwTimeout,
         IDebugReference2** rgpArgs,
         DWORD dwArgCount,
-        DEBUG_PROPERTY_INFO* pPropertyInfo )
+        DEBUG_PROPERTY_INFO* pPropertyInfo,
+        std::function<HRESULT(HRESULT hr, const DEBUG_PROPERTY_INFO&)> complete )
     {
         if ( pPropertyInfo == NULL )
             return E_INVALIDARG;
@@ -60,12 +61,6 @@ namespace Mago
             MagoEE::AppendFormatSpecifier( txt, mFormatOpts );
             pPropertyInfo->bstrFullName = SysAllocString( txt.c_str() );
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_FULLNAME;
-        }
-
-        if ( (dwFields & DEBUGPROP_INFO_VALUE) != 0 )
-        {
-            pPropertyInfo->bstrValue = FormatValue( dwRadix );
-            pPropertyInfo->dwFields |= DEBUGPROP_INFO_VALUE;
         }
 
         if ( (dwFields & DEBUGPROP_INFO_TYPE) != 0 )
@@ -90,9 +85,35 @@ namespace Mago
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
 
-        return S_OK;
+        HRESULT hr = S_OK;
+        if ((dwFields & DEBUGPROP_INFO_VALUE) != 0)
+        {
+            pPropertyInfo->dwFields |= DEBUGPROP_INFO_VALUE;
+            ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
+            Mago::_CopyPropertyInfo::copy( &info, pPropertyInfo );
+            auto completeValue = [info, complete]( HRESULT hr, BSTR outStr ) mutable
+                {
+                    info.bstrValue = outStr;
+                    return complete(hr, info);
+                };
+            hr = FormatValue( dwRadix, pPropertyInfo->bstrValue,
+                complete ? completeValue : std::function<HRESULT(HRESULT, BSTR)>{} );
+        }
+
+        return hr;
     }
-    
+
+    HRESULT Property::GetPropertyInfo( 
+        DEBUGPROP_INFO_FLAGS dwFields,
+        DWORD dwRadix,
+        DWORD dwTimeout,
+        IDebugReference2** rgpArgs,
+        DWORD dwArgCount,
+        DEBUG_PROPERTY_INFO* pPropertyInfo )
+    {
+        return GetPropertyInfoAsync( dwFields, dwRadix, dwTimeout, rgpArgs, dwArgCount, pPropertyInfo, {} );
+    }
+
     HRESULT Property::SetValueAsString( 
         LPCOLESTR pszValue,
         DWORD dwRadix,
@@ -357,22 +378,21 @@ namespace Mago
         return S_OK;
     }
 
-    BSTR Property::FormatValue( int radix )
+    HRESULT Property::FormatValue( int radix, BSTR& bstr, std::function<HRESULT(HRESULT, BSTR)> complete )
     {
         if ( mObjVal.ObjVal._Type == NULL )
-            return NULL;
+            return S_FALSE;
 
         HRESULT     hr = S_OK;
         CComBSTR    str;
 
-        MagoEE::FormatOptions fmtopts (mFormatOpts);
+        MagoEE::FormatOptions fmtopts ( mFormatOpts );
         if (fmtopts.radix == 0)
             fmtopts.radix = radix;
-        hr = MagoEE::EED::FormatValue( mExprContext, mObjVal.ObjVal, fmtopts, str.m_str, {} );
-        if ( FAILED( hr ) )
-            return NULL;
-
-        return str.Detach();
+        hr = MagoEE::EED::FormatValue( mExprContext, mObjVal.ObjVal, fmtopts, str.m_str, complete );
+        if ( hr == S_OK )
+            bstr = str.Detach();
+        return hr;
     }
 
     bool GetPropertyType( ExprContext* exprContext, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& typeStr )

@@ -1228,7 +1228,11 @@ HRESULT ProgramValueEnv::GetRegValue( DWORD reg, MagoEE::DataValueKind& kind, Ma
 {
     // TODO: this should come from Exec or somewhere else
 
+#if _WIN64
     CONTEXT_X86     context = { 0 };
+#else
+    CONTEXT         context = { 0 };
+#endif
     RefPtr<Thread>  thread;
     HANDLE          hThread = NULL;
 

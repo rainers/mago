@@ -10,6 +10,7 @@
 #include "ISession.h"
 
 #include <set>
+#include <map>
 #include <string>
 
 namespace MagoST
@@ -34,10 +35,13 @@ namespace MagoST
             bool operator() (const std::string& s1, const std::string& s2) const;
         };
         std::set<std::string, reverse_less> mGlobals;
+        std::map<std::string, std::vector<SymHandle>, reverse_less> mDebugFuncs;
 
         void cacheGlobals();
         HRESULT _findGlobalSymbol(const char* symbol, std::function<bool(TypeIndex)> fnTest,
                                   SymHandle& handle, SymInfoData& infoData, ISymbolInfo*& symInfo );
+        HRESULT _findMatchingGlobals( std::set<std::string, reverse_less>& symSet,
+            const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles );
 
     public:
         Session( DataSource* dataSource );
@@ -80,6 +84,7 @@ namespace MagoST
             SymHandle& handle );
 
         virtual HRESULT FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles );
+        virtual HRESULT FindMatchingDebugFuncs( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles );
 
         virtual HRESULT FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff );
 

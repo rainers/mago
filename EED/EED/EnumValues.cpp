@@ -1410,7 +1410,7 @@ namespace MagoEE
     {
         Address addrSave = 0;
         auto type = obj._Type;
-        RefPtr<Type> typeSave = GetDebuggerProp( type->AsTypeStruct(), L"save", addrSave );
+        RefPtr<Type> typeSave = GetDebuggerProp( mBinder, type->AsTypeStruct(), L"save", addrSave );
 
         mRange._Type = GetDebuggerPropType( typeSave );
         if ( !mRange._Type->Equals( type ) )
@@ -1428,7 +1428,7 @@ namespace MagoEE
     {
         Address addrLength = 0;
         auto type = mRange._Type;
-        RefPtr<Type> typeLength = GetDebuggerProp( type->AsTypeStruct(), L"length", addrLength );
+        RefPtr<Type> typeLength = GetDebuggerProp( mBinder, type->AsTypeStruct(), L"length", addrLength );
         if ( !typeLength )
             return E_MAGOEE_NOFUNCCALL;
 
@@ -1471,8 +1471,8 @@ namespace MagoEE
 
         auto ts = mRange._Type->AsTypeStruct();
         Address addrEmpty = 0, addrPop = 0;
-        RefPtr<Type> typeEmpty = GetDebuggerProp( ts, L"empty", addrEmpty );
-        RefPtr<Type> typePop = typeEmpty ? GetDebuggerProp( ts, L"popFront", addrPop ) : nullptr;
+        RefPtr<Type> typeEmpty = GetDebuggerProp( mBinder, ts, L"empty", addrEmpty );
+        RefPtr<Type> typePop = typeEmpty ? GetDebuggerProp( mBinder, ts, L"popFront", addrPop ) : nullptr;
         if ( !typePop )
             return E_MAGOEE_NOFUNCCALL;
 
@@ -1567,12 +1567,12 @@ namespace MagoEE
         {
             auto ts = mRange._Type->AsTypeStruct();
             Address addrFront = 0;
-            RefPtr<Type> typeFront = GetDebuggerProp( ts, L"front", addrFront );
+            RefPtr<Type> typeFront = GetDebuggerProp( mBinder, ts, L"front", addrFront );
             if( !typeFront )
                 return E_MAGOEE_NOFUNCCALL;
 
             result.ObjVal._Type = GetDebuggerPropType( typeFront );
-            HRESULT hr = EvalDebuggerProp(mBinder, typeFront, addrFront, mRange.Addr, result.ObjVal, {} );
+            HRESULT hr = EvalDebuggerProp( mBinder, typeFront, addrFront, mRange.Addr, result.ObjVal, {} );
             if ( hr != S_OK )
                 return hr;
             hr = Skip( 1 );

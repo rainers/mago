@@ -942,10 +942,10 @@ namespace MagoEE
     {
         auto ts = type->AsTypeStruct();
         Address addrSave = 0, addrEmpty = 0, addrFront = 0, addrPop = 0;
-        RefPtr<Type> typeSave  = GetDebuggerProp( ts, L"save", addrSave );
-        RefPtr<Type> typeEmpty = typeSave  ? GetDebuggerProp( ts, L"empty", addrEmpty ) : nullptr;
-        RefPtr<Type> typeFront = typeEmpty ? GetDebuggerProp( ts, L"front", addrFront ) : nullptr;
-        RefPtr<Type> typePop   = typeFront ? GetDebuggerProp( ts, L"popFront", addrPop ) : nullptr;
+        RefPtr<Type> typeSave  = GetDebuggerProp( binder, ts, L"save", addrSave );
+        RefPtr<Type> typeEmpty = typeSave  ? GetDebuggerProp( binder, ts, L"empty", addrEmpty ) : nullptr;
+        RefPtr<Type> typeFront = typeEmpty ? GetDebuggerProp( binder, ts, L"front", addrFront ) : nullptr;
+        RefPtr<Type> typePop   = typeFront ? GetDebuggerProp( binder, ts, L"popFront", addrPop ) : nullptr;
         if ( !typePop )
             return E_MAGOEE_NOFUNCCALL;
 
@@ -961,7 +961,7 @@ namespace MagoEE
             return E_MAGOEE_NO_ADDRESS;
 
         Address addrLength = 0;
-        RefPtr<Type> typeLength = GetDebuggerProp( ts, L"length", addrLength );
+        RefPtr<Type> typeLength = GetDebuggerProp( binder, ts, L"length", addrLength );
         if( typeLength )
         {
             DataObject length = { 0 };
@@ -1027,7 +1027,8 @@ namespace MagoEE
             recurse = true;
             HRESULT hr = E_FAIL;
             Address fnaddr;
-            if( RefPtr<Type> fntype = GetDebuggerProp( type->AsTypeStruct(), L"__debugOverview", fnaddr ) )
+            RefPtr<Type> fntype = GetDebuggerProp( binder, type->AsTypeStruct(), L"__debugOverview", fnaddr );
+            if( fntype )
             {
                 FormatData fmtdataProp = fmtdata.newScope();
                 auto completeProp =
@@ -1046,7 +1047,7 @@ namespace MagoEE
                 {
                     hr = EvalDebuggerProp( binder, fntype, fnaddr, addr, obj, {} );
                     if( hr == S_OK )
-                        hr = FormatValue( binder, obj, fmtdataProp, complete );
+                        hr = FormatValue( binder, obj, fmtdata, {} );
                 }
             }
             else if ( gCallDebuggerRanges )
@@ -1408,7 +1409,7 @@ namespace MagoEE
             if ( !gCallDebuggerFunctions )
                 return E_INVALIDARG;
             Address fnaddr;
-            RefPtr<Type> fntype = GetDebuggerProp( ts, L"__debugStringView", fnaddr );
+            RefPtr<Type> fntype = GetDebuggerProp( binder, ts, L"__debugStringView", fnaddr );
             if ( !fntype )
                 return E_INVALIDARG;
 

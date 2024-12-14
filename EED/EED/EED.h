@@ -122,12 +122,12 @@ namespace MagoEE
     HRESULT FillValueTraits( IValueBinder* binder, EvalResult& result, Expression* expr,
         std::function<HRESULT(HRESULT, EvalResult)> complete );
 
-    RefPtr<Type> GetDebuggerProp( ITypeStruct* ts, const wchar_t* call, Address& fnaddr );
+    RefPtr<Type> GetDebuggerProp( IValueBinder* binder, ITypeStruct* ts, const wchar_t* call, Address& fnaddr );
     RefPtr<Type> GetDebuggerPropType( Type* fntype );
     HRESULT EvalDebuggerProp( IValueBinder* binder, RefPtr<Type> fntype, Address fnaddr,
                               Address objAddr, DataObject& propValue,
                               std::function<HRESULT(HRESULT, DataObject)> complete );
-    bool IsForwardRange( Type* type );
+    bool IsForwardRange( IValueBinder* binder, Type* type );
 
     HRESULT GetErrorString( HRESULT hresult, std::wstring& outStr );
 

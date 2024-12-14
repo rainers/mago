@@ -46,7 +46,6 @@ namespace MagoEE
             const FormatOptions& fmtopts,
             IEEDEnumValues*& enumerator );
 
-        EXPORT HRESULT FormatBasicValue( const DataObject& objVal, const FormatOptions& fmtopt, BSTR& outStr );
         EXPORT HRESULT FormatValue( IValueBinder* binder, const DataObject& objVal, const FormatOptions& fmtopt,
             BSTR& outStr, std::function<HRESULT(HRESULT, BSTR)> complete );
 

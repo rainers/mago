@@ -203,6 +203,62 @@ namespace Mago
         return hr;
     }
 
+    HRESULT ExprContext::FindDebugFunc(
+        const wchar_t* name,
+        MagoEE::ITypeStruct* ts,
+        MagoEE::Declaration*& decl )
+    {
+        std::pair<std::wstring, std::wstring> funcAndType{ name, ts->GetName() };
+        auto cacheIt = mDebugFuncCache.find( funcAndType );
+        if( cacheIt != mDebugFuncCache.end() )
+        {
+            if ( !cacheIt->second )
+                return E_NOT_FOUND;
+            decl = cacheIt->second;
+            decl->AddRef();
+            return S_OK;
+        }
+
+        RefPtr<MagoST::ISession>    session;
+        if (GetSession(session.Ref()) != S_OK)
+            return E_NOT_FOUND;
+
+        HRESULT hr;
+        CAutoVectorPtr<char> u8Name;
+        size_t               u8NameLen = 0;
+        hr = Utf16To8( name, wcslen( name ), u8Name.m_p, u8NameLen );
+        if ( FAILED( hr ) )
+            return hr;
+
+        std::vector<SymHandle> handles;
+        hr = session->FindMatchingDebugFuncs( u8Name, u8NameLen, handles );
+
+        for ( auto& h : handles )
+        {
+            RefPtr<MagoEE::Declaration> vdecl;
+            hr = MakeDeclarationFromSymbol( h, vdecl.Ref() );
+            if ( SUCCEEDED( hr ) && vdecl )
+            {
+                RefPtr<MagoEE::Type> type;
+                if (vdecl->GetType(type.Ref()))
+                    if (auto fntype = type->AsTypeFunction())
+                        if (auto paramList = fntype->GetParams())
+                            if (paramList->List.size() == 1)
+                                if (auto ptype = paramList->List.front()->_Type)
+                                    if (ptype->IsPointer() || ptype->IsReference())
+                                        if (ts->Equals(ptype->AsTypeNext()->GetNext()))
+                                        {
+                                            mDebugFuncCache.insert({ funcAndType, vdecl });
+                                            decl = vdecl;
+                                            decl->AddRef();
+                                            return S_OK;
+                                        }
+            }
+        }
+        mDebugFuncCache.insert({ funcAndType, nullptr });
+        return E_NOT_FOUND;
+    }
+
     HRESULT ExprContext::GetThis( MagoEE::Declaration*& decl )
     {
         return FindObject( L"this", decl, FindObjectLocal | FindObjectClosure | FindObjectNoClassDeref );
@@ -1029,7 +1085,7 @@ namespace Mago
         // now try global symbols that end with the name
         std::vector<SymHandle> handles;
         hr = session->FindMatchingGlobals( name, nameLen, handles );
-        if ( handles.empty() == 1 )
+        if ( handles.empty() )
             return E_NOT_FOUND;
         if ( handles.size() == 1 )
             return MakeDeclarationFromSymbolDerefClass( handles.front(), decl, findFlags );

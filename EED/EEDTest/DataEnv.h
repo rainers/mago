@@ -53,6 +53,7 @@ public:
     DataEnvBinder( IValueEnv* env, IScope* scope );
 
     virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl, uint32_t findFlags );
+    virtual HRESULT FindDebugFunc( const wchar_t* name, MagoEE::ITypeStruct* ts, MagoEE::Declaration*& decl );
 
     virtual HRESULT GetThis( MagoEE::Declaration*& decl );
     virtual HRESULT GetSuper( MagoEE::Declaration*& decl );
@@ -70,5 +71,6 @@ public:
 
     virtual HRESULT ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer );
     virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType );
-    virtual HRESULT CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& value, bool saveGC );
+    virtual HRESULT CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg, MagoEE::DataObject& value,
+                                  bool saveGC, std::function<HRESULT(HRESULT, MagoEE::DataObject)> complete);
 };

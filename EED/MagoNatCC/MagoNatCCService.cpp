@@ -1737,7 +1737,7 @@ Evaluation::IL::DkmILCallingConvention::e toCallingConvention(uint8_t callConv)
 }
 
 HRESULT createEvaluationResult(Evaluation::DkmInspectionContext* pInspectionContext, CallStack::DkmStackWalkFrame* pStackFrame,
-                               DEBUG_PROPERTY_INFO& info, Evaluation::DkmSuccessEvaluationResult** ppResultObject)
+                               const DEBUG_PROPERTY_INFO& info, Evaluation::DkmSuccessEvaluationResult** ppResultObject)
 {
     HRESULT hr = E_FAIL;
     CComPtr<Evaluation::DkmDataAddress> dataAddr;
@@ -1785,7 +1785,7 @@ HRESULT createEvaluationResult(Evaluation::DkmInspectionContext* pInspectionCont
 }
 
 HRESULT createEvaluationError(Evaluation::DkmInspectionContext* pInspectionContext, CallStack::DkmStackWalkFrame* pStackFrame,
-                              HRESULT hrErr, Evaluation::DkmLanguageExpression* expr,
+                              HRESULT hrErr, const std::wstring& expr,
                               IDkmCompletionRoutine<Evaluation::DkmEvaluateExpressionAsyncResult>* pCompletionRoutine)
 {
     std::wstring errStr;
@@ -1793,10 +1793,10 @@ HRESULT createEvaluationError(Evaluation::DkmInspectionContext* pInspectionConte
 
     if (MagoEE::GetErrorString(hrErr, errStr) != S_OK)
         MagoEE::GetErrorString(E_MAGOEE_BASE, errStr);
-
+    auto text = toDkmString(expr.c_str());
     tryHR(Evaluation::DkmFailedEvaluationResult::Create(
         pInspectionContext, pStackFrame, 
-        expr->Text(), expr->Text(), toDkmString(errStr.c_str()), 
+        text, text, toDkmString(errStr.c_str()), 
         Evaluation::DkmEvaluationResultFlags::None, nullptr, 
         DkmDataItem::Null(), &pResultObject));
 
@@ -1820,6 +1820,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
 
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, false, exprContext));
+    exprContext->SetWorkList(pWorkList);
 
     std::wstring exprText = pExpression->Text()->Value();
     MagoEE::FormatOptions fmtopt;
@@ -1828,7 +1829,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     RefPtr<MagoEE::IEEDParsedExpr> pExpr;
     hr = MagoEE::ParseText(exprText.c_str(), exprContext->GetTypeEnv(), exprContext->GetStringTable(), pExpr.Ref());
     if (FAILED(hr))
-        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, exprText, pCompletionRoutine);
 
     MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
     options.Radix = pInspectionContext->Radix();
@@ -1841,7 +1842,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
 
     hr = pExpr->Bind(options, exprContext);
     if (FAILED(hr))
-        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, exprText, pCompletionRoutine);
 
     MagoEE::EvalResult value = { 0 };
     hr = pExpr->Evaluate(options, exprContext, value,
@@ -1851,23 +1852,36 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
         (HRESULT hr, MagoEE::EvalResult value)
         {
             RefPtr<Mago::Property> pProperty;
-            tryHR(MakeCComObject(pProperty));
-            tryHR(pProperty->Init(exprText.c_str(), exprText.c_str(), value, exprContext, fmtopt));
+            if(SUCCEEDED(hr))
+                hr = MakeCComObject(pProperty);
+            if (SUCCEEDED(hr))
+                hr = pProperty->Init(exprText.c_str(), exprText.c_str(), value, exprContext, fmtopt);
 
             ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
-            tryHR(pProperty->GetPropertyInfo(DEBUGPROP_INFO_ALL, options.Radix, options.Timeout, nullptr, 0, &info));
+            auto completeInfo = [inspectionContext, exprContext, exprText, completionRoutine]
+                (HRESULT hr, const DEBUG_PROPERTY_INFO& info)
+                {
+                    Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
+                    if (SUCCEEDED(hr))
+                        hr = createEvaluationResult(inspectionContext, exprContext->mStackFrame, info, &pResultObject);
+                    if (FAILED(hr))
+                        return createEvaluationError(inspectionContext, exprContext->mStackFrame, hr, exprText, completionRoutine);
 
-            Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
-            tryHR(createEvaluationResult(inspectionContext, exprContext->mStackFrame, info, &pResultObject));
-
-            Evaluation::DkmEvaluateExpressionAsyncResult result;
-            result.ErrorCode = S_OK;
-            result.pResultObject = pResultObject;
-            completionRoutine->OnComplete(result);
+                    Evaluation::DkmEvaluateExpressionAsyncResult result;
+                    result.ErrorCode = S_OK;
+                    result.pResultObject = pResultObject;
+                    completionRoutine->OnComplete(result);
+                    return hr;
+                };
+            if (SUCCEEDED(hr))
+                hr = pProperty->GetPropertyInfoAsync(DEBUGPROP_INFO_ALL, options.Radix, options.Timeout,
+                                                     nullptr, 0, &info, completeInfo);
+            if (FAILED(hr))
+                return createEvaluationError(inspectionContext, exprContext->mStackFrame, hr, exprText, completionRoutine);
             return hr;
         });
     if (FAILED(hr))
-        return createEvaluationError(pInspectionContext, pStackFrame, hr, pExpression, pCompletionRoutine);
+        return createEvaluationError(pInspectionContext, pStackFrame, hr, exprText, pCompletionRoutine);
 
     return S_OK;
 }

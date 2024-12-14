@@ -318,7 +318,7 @@ namespace Mago
                 return complete(hr, info);
             };
             hr = MagoEE::EED::FormatValue( mExprContext, result.ObjVal, mFormatOpt, info.bstrValue,
-                    complete ? completeEE : std::function<HRESULT(HRESULT, BSTR)>{});
+                    complete ? completeEE : std::function<HRESULT(HRESULT, BSTR)>{} );
         }
         else if( complete )
             return complete( S_OK, info );
