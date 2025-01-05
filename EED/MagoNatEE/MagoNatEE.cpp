@@ -67,6 +67,13 @@ namespace MagoEE
                     if( bStr == NULL )
                         hr = E_OUTOFMEMORY;
                 }
+                else
+                {
+                    std::wstring errStr;
+                    if (MagoEE::GetErrorString(hr, errStr) != S_OK)
+                        MagoEE::GetErrorString(E_MAGOEE_BASE, errStr);
+                    bStr = SysAllocStringLen(errStr.c_str(), errStr.size());
+                }
                 if (complete)
                     return complete(hr, bStr);
                 outStr = bStr;

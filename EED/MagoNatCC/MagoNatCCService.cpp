@@ -1805,7 +1805,7 @@ HRESULT createEvaluationError(Evaluation::DkmInspectionContext* pInspectionConte
         DkmDataItem::Null(), &pResultObject));
 
     Evaluation::DkmEvaluateExpressionAsyncResult result;
-    result.ErrorCode = hrErr;
+    result.ErrorCode = hrErr == COR_E_OPERATIONCANCELED ? hrErr : S_OK; // display error message
     result.pResultObject = pResultObject;
     pCompletionRoutine->OnComplete(result);
     return S_OK;

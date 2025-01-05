@@ -474,22 +474,28 @@ namespace MagoEE
     {
         RefPtr<Declaration> decl = ts->FindObject( call );
         RefPtr<Type> dgtype;
-        if ( !decl )
+        if ( decl )
         {
-            HRESULT hr = binder->FindDebugFunc( call, ts, dgtype.Ref(), fnaddr);
-            if( hr == S_OK )
-                return dgtype;
+            if( !decl->GetType( dgtype.Ref() ) )
+                return nullptr;
+            if ( !decl->GetAddress( fnaddr ) )
+                return nullptr;
         }
-        if ( decl && decl->GetType( dgtype.Ref() ) )
+        else
+        {
+            HRESULT hr = binder->FindDebugFunc( call, ts, dgtype.Ref(), fnaddr );
+            if( hr != S_OK )
+                return nullptr;
+        }
+        if ( dgtype )
         {
             int off;
             if ( dgtype->IsDelegate() ) // delegate has pointer to function as "next"
             {
-                if ( decl->GetAddress( fnaddr ) )
-                    if ( auto ptrtype = dgtype->AsTypeNext()->GetNext()->AsTypeNext() )
-                        if ( RefPtr<Type> fntype = ptrtype->GetNext() )
-                            if ( fntype->AsTypeFunction() )
-                                return fntype;
+                if ( auto ptrtype = dgtype->AsTypeNext()->GetNext()->AsTypeNext() )
+                    if ( RefPtr<Type> fntype = ptrtype->GetNext() )
+                        if ( fntype->AsTypeFunction() )
+                            return fntype;
             }
             else if ( dgtype->IsFunction() )
             {
@@ -499,8 +505,7 @@ namespace MagoEE
                             if ( auto ptype = paramList->List.front()->_Type )
                                 if ( ptype->IsPointer() || ptype->IsReference() )
                                     if( ts->Equals( ptype->AsTypeNext()->GetNext() ) )
-                                        if ( decl->GetAddress( fnaddr ) )
-                                            return dgtype;
+                                        return dgtype;
             }
             else if ( decl->GetOffset( off ) )
             {
