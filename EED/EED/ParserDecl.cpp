@@ -728,7 +728,7 @@ Done:
                         NextToken();
                     }
 
-                    RefPtr<TypeFunction> funcType = new TypeFunction( params.Get(), type2.Get(), callConv, varArgs );
+                    RefPtr<TypeFunction> funcType = new TypeFunction( params.Get(), type2.Get(), nullptr, callConv, varArgs );
                     funcType->SetPure( ispure );
                     funcType->SetNoThrow( isnothrow );
                     funcType->SetProperty( isproperty );
@@ -873,7 +873,6 @@ Done:
     RefPtr<ObjectList>      Parser::ParseTemplateArgList()
     {
         RefPtr<ObjectList>  tiArgs = new ObjectList();
-        RefPtr<Type>        type;
 
         if ( GetTokenCode() != TOKlparen )
             throw 22;

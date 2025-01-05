@@ -17,9 +17,21 @@ namespace MagoEE
     struct EvalResult;
 }
 
-using NextAsyncResult = std::vector<DEBUG_PROPERTY_INFO>;
+namespace Mago
+{
+    class _CopyPropertyInfo
+    {
+    public:
+        static HRESULT copy(DEBUG_PROPERTY_INFO* dest, const DEBUG_PROPERTY_INFO* source);
+        static void init(DEBUG_PROPERTY_INFO* p);
+        static void destroy(DEBUG_PROPERTY_INFO* p);
+    };
 
-using AsyncCompletion = std::function<HRESULT(HRESULT hr, NextAsyncResult)>;
+    typedef ScopedStruct<DEBUG_PROPERTY_INFO, _CopyPropertyInfo> PropertyInfo;
+    typedef ScopedArray<DEBUG_PROPERTY_INFO, _CopyPropertyInfo> PropertyInfoArray;
+}
+
+using AsyncCompletion = std::function<HRESULT(HRESULT hr, const std::vector<Mago::PropertyInfo>&)>;
 
 MIDL_INTERFACE("6c7072c3-1234-408f-a680-fc5a2f96903e")
 IEnumDebugPropertyInfoAsync : public IEnumDebugPropertyInfo2
@@ -30,16 +42,6 @@ public:
 
 namespace Mago
 {
-    class _CopyPropertyInfo
-    {
-    public:
-        static HRESULT copy( DEBUG_PROPERTY_INFO* dest, const DEBUG_PROPERTY_INFO* source );
-        static void init( DEBUG_PROPERTY_INFO* p );
-        static void destroy( DEBUG_PROPERTY_INFO* p );
-    };
-
-    typedef ScopedArray<DEBUG_PROPERTY_INFO, _CopyPropertyInfo> PropertyInfoArray;
-
     typedef CComEnumWithCount< 
         IEnumDebugPropertyInfo2, 
         &IID_IEnumDebugPropertyInfo2, 
@@ -92,7 +94,7 @@ namespace Mago
             const wchar_t* name,
             const wchar_t* fullName,
             DEBUG_PROPERTY_INFO& info,
-            std::function<HRESULT(HRESULT, DEBUG_PROPERTY_INFO)> complete );
+            std::function<HRESULT(HRESULT, const DEBUG_PROPERTY_INFO&)> complete );
 
         HRESULT GetErrorPropertyInfo( 
             HRESULT hrErr,

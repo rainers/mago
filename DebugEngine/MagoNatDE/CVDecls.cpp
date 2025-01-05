@@ -347,6 +347,11 @@ namespace Mago
                         {
                             RefPtr<MagoEE::Type> pointed;
                             mSymStore->GetTypeFromTypeSymbol( type, pointed.Ref() );
+                            // ignore calling convention, different for symbol and type!?
+                            if( pointed && fn )
+                                if ( auto pfn = pointed->AsTypeFunction() )
+                                    if ( auto tfn = fn->AsTypeFunction() )
+                                        pfn->SetCallConv( tfn->GetCallConv() );
                             return pointed && fn ? pointed->Equals(fn) : pointed == fn;
                         };
                         fqName.append( "." ).append( stdName );

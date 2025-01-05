@@ -89,7 +89,7 @@ namespace Mago
         if ((dwFields & DEBUGPROP_INFO_VALUE) != 0)
         {
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_VALUE;
-            ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
+            PropertyInfo info;
             Mago::_CopyPropertyInfo::copy( &info, pPropertyInfo );
             auto completeValue = [info, complete]( HRESULT hr, BSTR outStr ) mutable
                 {

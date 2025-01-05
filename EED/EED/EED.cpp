@@ -473,11 +473,13 @@ namespace MagoEE
     RefPtr<Type> GetDebuggerProp( IValueBinder* binder, ITypeStruct* ts, const wchar_t* call, Address& fnaddr )
     {
         RefPtr<Declaration> decl = ts->FindObject( call );
+        RefPtr<Type> dgtype;
         if ( !decl )
         {
-            binder->FindDebugFunc( call, ts, decl.Ref() );
+            HRESULT hr = binder->FindDebugFunc( call, ts, dgtype.Ref(), fnaddr);
+            if( hr == S_OK )
+                return dgtype;
         }
-        RefPtr<Type> dgtype;
         if ( decl && decl->GetType( dgtype.Ref() ) )
         {
             int off;

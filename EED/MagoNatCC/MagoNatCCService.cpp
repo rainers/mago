@@ -1226,6 +1226,10 @@ public:
         bool passRetbuf;
         MagoEE::DataObject obj;
 
+        ~CallFunctionComplete()
+        {
+        }
+
         virtual void STDMETHODCALLTYPE OnComplete(const Evaluation::DkmExecuteQueryAsyncResult& res)
         {
             HRESULT hr = res.ErrorCode;
@@ -1505,7 +1509,7 @@ public:
     }
 
     HRESULT EvalReturnValue(Evaluation::DkmInspectionContext* pInspectionContext, 
-                            Evaluation::DkmNativeRawReturnValue* pNativeRetValue, DEBUG_PROPERTY_INFO& info)
+                            Evaluation::DkmNativeRawReturnValue* pNativeRetValue, Mago::PropertyInfo& info)
     {
         std::wstring funcName;
         DkmInstructionAddress* funcAddr = pNativeRetValue->ReturnFrom();
@@ -1857,7 +1861,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
             if (SUCCEEDED(hr))
                 hr = pProperty->Init(exprText.c_str(), exprText.c_str(), value, exprContext, fmtopt);
 
-            ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
+            Mago::PropertyInfo info;
             auto completeInfo = [inspectionContext, exprContext, exprText, completionRoutine]
                 (HRESULT hr, const DEBUG_PROPERTY_INFO& info)
                 {
@@ -2043,8 +2047,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItems(
     for (ULONG i = 0; i < Count; i++)
     {
         ULONG fetched;
-        ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
-        Mago::_CopyPropertyInfo::init(&info);
+        Mago::PropertyInfo info;
         HRESULT hr = pEnum->Next(1, &info, &fetched);
         if (SUCCEEDED(hr) && fetched == 1 && info.pProperty)
         {
@@ -2081,7 +2084,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
     closure->enumContext = pEnumContext;
 
     HRESULT hr = pEnum->NextAsync(Count,
-        [closure, pEnumContext](HRESULT status, NextAsyncResult infos)
+        [closure, pEnumContext](HRESULT status, const std::vector<Mago::PropertyInfo>& infos)
         {
             Evaluation::DkmEvaluationEnumAsyncResult res;
             tryHR(DkmAllocArray(infos.size(), &res.Items));
@@ -2160,7 +2163,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateReturnValue(
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, false, exprContext));
 
-    ScopedStruct<DEBUG_PROPERTY_INFO, Mago::_CopyPropertyInfo> info;
+    Mago::PropertyInfo info;
     tryHR(exprContext->EvalReturnValue(pInspectionContext, pNativeRetValue, info));
 
     Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;

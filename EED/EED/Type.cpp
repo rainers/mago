@@ -1072,8 +1072,9 @@ namespace MagoEE
     //  TypeFunction
     //----------------------------------------------------------------------------
 
-    TypeFunction::TypeFunction( ParameterList* params, Type* retType, uint8_t callConv, int varArgs )
+    TypeFunction::TypeFunction( ParameterList* params, Type* retType, Type* thisPtrType, uint8_t callConv, int varArgs )
         :   TypeNext( Tfunction, retType ),
+            mThisPointerType( thisPtrType ),
             Params( params ),
             VarArgs( varArgs ),
             mCallConv( callConv ),
@@ -1086,7 +1087,7 @@ namespace MagoEE
 
     RefPtr<Type> TypeFunction::Copy()
     {
-        RefPtr<Type>    type = new TypeFunction( Params.Get(), Next.Get(), mCallConv, VarArgs );
+        RefPtr<Type>    type = new TypeFunction( Params.Get(), Next.Get(), mThisPointerType.Get(), mCallConv, VarArgs);
         ITypeFunction* funcType = type->AsTypeFunction();
         funcType->SetPure( mIsPure );
         funcType->SetNoThrow( mIsNoThrow );
@@ -1217,12 +1218,17 @@ namespace MagoEE
         return this;
     }
 
-    Type*   TypeFunction::GetReturnType()
+    Type* TypeFunction::GetReturnType()
     {
         return Next;
     }
 
-    int     TypeFunction::GetVarArgs()
+    Type* TypeFunction::GetThisPointerType()
+    {
+        return mThisPointerType;
+    }
+
+    int TypeFunction::GetVarArgs()
     {
         return VarArgs;
     }

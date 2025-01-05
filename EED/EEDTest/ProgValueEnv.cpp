@@ -1058,6 +1058,8 @@ RefPtr<Type> ProgramValueEnv::GetFunctionTypeFromTypeSymbol(
     RefPtr<MagoEE::ParameterList>   params;
     TypeIndex       retTI = 0;
     RefPtr<Type>    retType;
+    TypeIndex       thisTI = 0;
+    RefPtr<Type>    thisPtrType;
     uint32_t        paramCount = 0;
     TypeIndex       paramListTI = 0;
     TypeHandle      paramListTH = { 0 };
@@ -1106,8 +1108,12 @@ RefPtr<Type> ProgramValueEnv::GetFunctionTypeFromTypeSymbol(
     if ( !symInfo->GetCallConv( callConv ) )
         throw L"Couldn't get calling convention.";
 
+    if ( symInfo->GetThis( thisTI ) )
+    {
+        thisPtrType = GetTypeFromTypeSymbol(session, thisTI, typeEnv);
+    }
     // TODO: var args
-    hr = typeEnv->NewFunction( retType, params, callConv, 0, type.Ref() );
+    hr = typeEnv->NewFunction( retType, thisPtrType, params, callConv, 0, type.Ref() );
     if ( FAILED( hr ) )
         throw L"Couldn't make new function type.";
 

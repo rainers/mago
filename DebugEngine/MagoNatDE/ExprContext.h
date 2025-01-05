@@ -29,7 +29,9 @@ namespace Mago
         std::vector<MagoST::SymHandle>  mBlockSH;
         RefPtr<MagoEE::ITypeEnv>        mTypeEnv;
         RefPtr<MagoEE::NameTable>       mStrTable;
-        std::map<std::pair<std::wstring, std::wstring>, RefPtr<MagoEE::Declaration>> mDebugFuncCache;
+        // don't store Declaration because it creates a reference cycle to ExprContext
+        std::map<std::pair<std::wstring, std::wstring>,
+                 std::pair<RefPtr<MagoEE::Type>, MagoEE::Address>> mDebugFuncCache;
 
     public:
         ExprContext();
@@ -59,7 +61,7 @@ namespace Mago
         // MagoEE::IValueBinder 
         virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl, uint32_t findFlags );
         virtual HRESULT FindObjectType( MagoEE::Declaration* decl, const wchar_t* name, MagoEE::Type*& type );
-        virtual HRESULT FindDebugFunc(const wchar_t* name, MagoEE::ITypeStruct* ts, MagoEE::Declaration*& decl);
+        virtual HRESULT FindDebugFunc(const wchar_t* name, MagoEE::ITypeStruct* ts, MagoEE::Type*& type, MagoEE::Address& fnaddr );
 
         virtual HRESULT GetThis( MagoEE::Declaration*& decl );
         virtual HRESULT GetSuper( MagoEE::Declaration*& decl );

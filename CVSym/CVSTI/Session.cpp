@@ -519,9 +519,10 @@ namespace MagoST
                 break;
 
             DataKind kind = DataIsUnknown;
-            if ( symInfo->GetSymTag() == SymTagFunction )
+            SymTag tag = symInfo->GetSymTag();
+            if ( tag == SymTagFunction || tag == SymTagMethod )
             {
-                // same or preceded by module name
+                // same or preceded by module/struct name
                 auto ends_with = [](const SymString& s, const char* name)
                     {
                         auto sptr = s.GetName();

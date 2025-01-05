@@ -135,10 +135,12 @@ namespace Mago
 
         struct Closure
         {
+            Closure(ULONG cnt) : infos(cnt) {}
+
             AsyncCompletion complete;
             size_t toComplete = 0;
             HRESULT hrCombined = S_OK;
-            NextAsyncResult infos;
+            std::vector<Mago::PropertyInfo> infos;
             HRESULT done(HRESULT hr, size_t cnt)
             {
                 hrCombine(hr);
@@ -155,10 +157,9 @@ namespace Mago
                 return hrCombined;
             }
         };
-        auto closure = std::make_shared<Closure>();
+        auto closure = std::make_shared<Closure>(celt);
         closure->complete = complete;
         closure->toComplete = celt;
-        closure->infos.resize( celt );
         for (i = 0; i < celt; i++)
         {
             // keep enumerating even if we fail to get an item
@@ -167,14 +168,14 @@ namespace Mago
                 {
                     if( SUCCEEDED( hr ) )
                     {
-                        auto completeInfo = [i, closure](HRESULT hr, DEBUG_PROPERTY_INFO info)
+                        auto completeInfo = [i, closure](HRESULT hr, const DEBUG_PROPERTY_INFO& info)
                         {
-                            closure->infos[i] = info;
+                            Mago::_CopyPropertyInfo::copy(&closure->infos[i], &info);
                             hr = closure->done(hr, 1);
                             return hr;
                         };
                         hr = GetPropertyInfo(res.result, res.name.c_str(), res.fullName.c_str(), closure->infos[i],
-                            closure->complete ? completeInfo : std::function<HRESULT(HRESULT, DEBUG_PROPERTY_INFO)>{});
+                            closure->complete ? completeInfo : std::function<HRESULT(HRESULT, const DEBUG_PROPERTY_INFO&)>{});
                         if (!closure->complete)
                             hr = closure->done(hr, 1);
                     }
@@ -259,7 +260,7 @@ namespace Mago
         const wchar_t* name,
         const wchar_t* fullName,
         DEBUG_PROPERTY_INFO& info,
-        std::function<HRESULT(HRESULT, DEBUG_PROPERTY_INFO)> complete )
+        std::function<HRESULT(HRESULT, const DEBUG_PROPERTY_INFO&)> complete )
     {
         HRESULT hr = S_OK;
 
@@ -312,10 +313,12 @@ namespace Mago
         if ( (mFields & DEBUGPROP_INFO_VALUE) != 0 )
         {
             info.dwFields |= DEBUGPROP_INFO_VALUE;
-            auto completeEE = [info, complete](HRESULT hr, BSTR outStr) mutable
+            Mago::PropertyInfo info2;
+            Mago::_CopyPropertyInfo::copy(&info2, &info);
+            auto completeEE = [info2, complete](HRESULT hr, BSTR outStr) mutable
             {
-                info.bstrValue = outStr;
-                return complete(hr, info);
+                info2.bstrValue = outStr;
+                return complete(hr, info2);
             };
             hr = MagoEE::EED::FormatValue( mExprContext, result.ObjVal, mFormatOpt, info.bstrValue,
                     complete ? completeEE : std::function<HRESULT(HRESULT, BSTR)>{} );

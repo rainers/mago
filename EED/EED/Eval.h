@@ -143,7 +143,7 @@ namespace MagoEE
             FindObjectAny = FindObjectLocal | FindObjectClosure | FindObjectGlobal | FindObjectRegister,
         };
         virtual HRESULT FindObject(const wchar_t* name, Declaration*& decl, uint32_t findFlags) = 0;
-        virtual HRESULT FindDebugFunc( const wchar_t* name, ITypeStruct* ts, Declaration*& decl ) = 0;
+        virtual HRESULT FindDebugFunc( const wchar_t* name, ITypeStruct* ts, Type*& type, Address& fnaddr ) = 0;
 
         virtual HRESULT GetThis( Declaration*& decl ) = 0;
         virtual HRESULT GetSuper( Declaration*& decl ) = 0;

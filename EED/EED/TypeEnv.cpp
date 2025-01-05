@@ -184,9 +184,9 @@ namespace MagoEE
         return S_OK;
     }
 
-    HRESULT TypeEnv::NewFunction( Type* returnType, ParameterList* params, uint8_t callConv, int varArgs, Type*& type )
+    HRESULT TypeEnv::NewFunction( Type* returnType, Type* thisPtrType, ParameterList* params, uint8_t callConv, int varArgs, Type*& type )
     {
-        type = new TypeFunction( params, returnType, callConv, varArgs );
+        type = new TypeFunction( params, returnType, thisPtrType, callConv, varArgs );
         type->AddRef();
         return S_OK;
     }

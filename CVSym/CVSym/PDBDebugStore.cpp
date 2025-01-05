@@ -499,7 +499,23 @@ namespace MagoST
             return hr == S_OK;
         }
 
-        virtual bool GetThis( TypeIndex& index ) { UNREF_PARAM( index ); return false; }
+        virtual bool GetThis( TypeIndex& index )
+        {
+            IDiaSymbol* pSymbol = NULL;
+            if (mStore->getSession()->symbolById(mId, &pSymbol) != S_OK)
+                return false;
+
+            IDiaSymbol* thisSymbol = NULL;
+            HRESULT hr = pSymbol->get_objectPointerType(&thisSymbol);
+            if( hr == S_OK)
+            {
+                DWORD typeID;
+                hr = thisSymbol->get_symIndexId(&index);
+                thisSymbol->Release();
+            }
+            pSymbol->Release();
+            return hr == S_OK;
+        }
         virtual bool GetThisAdjust( int32_t& adjust ) { UNREF_PARAM( adjust ); return false; }
 
         virtual bool GetOemId( uint32_t& oemId ) { UNREF_PARAM( oemId ); return false; }

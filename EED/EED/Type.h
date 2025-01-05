@@ -348,6 +348,7 @@ namespace MagoEE
     {
     public:
         virtual Type*   GetReturnType() = 0;
+        virtual Type*   GetThisPointerType() = 0;
         virtual int     GetVarArgs() = 0;
         virtual ParameterList*  GetParams() = 0;
 
@@ -373,11 +374,12 @@ namespace MagoEE
         bool                    mIsProperty;
         uint8_t                 mCallConv; // as CV_call_e in cvconst.h
         TRUST                   mTrust;
+        RefPtr<Type>            mThisPointerType;
         RefPtr<ParameterList>   Params;
         int                     VarArgs;
 
     public:
-        TypeFunction( ParameterList* params, Type* retType, uint8_t callConv, int varArgs );
+        TypeFunction( ParameterList* params, Type* retType, Type* thisPtrType, uint8_t callConv, int varArgs );
         virtual RefPtr<Type>    Copy();
         virtual bool IsFunction();
         virtual bool Equals( Type* other );
@@ -386,6 +388,7 @@ namespace MagoEE
 
         // ITypeFunction
         virtual Type*   GetReturnType();
+        virtual Type*   GetThisPointerType();
         virtual int     GetVarArgs();
         virtual ParameterList*  GetParams();
 

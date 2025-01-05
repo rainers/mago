@@ -53,7 +53,7 @@ public:
     DataEnvBinder( IValueEnv* env, IScope* scope );
 
     virtual HRESULT FindObject( const wchar_t* name, MagoEE::Declaration*& decl, uint32_t findFlags );
-    virtual HRESULT FindDebugFunc( const wchar_t* name, MagoEE::ITypeStruct* ts, MagoEE::Declaration*& decl );
+    virtual HRESULT FindDebugFunc( const wchar_t* name, MagoEE::ITypeStruct* ts, MagoEE::Type*& type, MagoEE::Address& fnaddr);
 
     virtual HRESULT GetThis( MagoEE::Declaration*& decl );
     virtual HRESULT GetSuper( MagoEE::Declaration*& decl );

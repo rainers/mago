@@ -206,20 +206,21 @@ namespace Mago
     HRESULT ExprContext::FindDebugFunc(
         const wchar_t* name,
         MagoEE::ITypeStruct* ts,
-        MagoEE::Declaration*& decl )
+        MagoEE::Type*& dbgfntype, MagoEE::Address& fnaddr )
     {
         std::pair<std::wstring, std::wstring> funcAndType{ name, ts->GetName() };
         auto cacheIt = mDebugFuncCache.find( funcAndType );
         if( cacheIt != mDebugFuncCache.end() )
         {
-            if ( !cacheIt->second )
+            if ( !cacheIt->second.first )
                 return E_NOT_FOUND;
-            decl = cacheIt->second;
-            decl->AddRef();
+            dbgfntype = cacheIt->second.first;
+            dbgfntype->AddRef();
+            fnaddr = cacheIt->second.second;
             return S_OK;
         }
 
-        RefPtr<MagoST::ISession>    session;
+        RefPtr<MagoST::ISession> session;
         if (GetSession(session.Ref()) != S_OK)
             return E_NOT_FOUND;
 
@@ -239,23 +240,40 @@ namespace Mago
             hr = MakeDeclarationFromSymbol( h, vdecl.Ref() );
             if ( SUCCEEDED( hr ) && vdecl )
             {
+                if (!vdecl->GetAddress(fnaddr))
+                    continue;
                 RefPtr<MagoEE::Type> type;
                 if (vdecl->GetType(type.Ref()))
                     if (auto fntype = type->AsTypeFunction())
                         if (auto paramList = fntype->GetParams())
-                            if (paramList->List.size() == 1)
+                        {
+                            if (paramList->List.size() == 0)
+                            {
+                                if (auto thisPtr = fntype->GetThisPointerType())
+                                    if (thisPtr->IsPointer() || thisPtr->IsReference())
+                                        if (ts->Equals(thisPtr->AsTypeNext()->GetNext()))
+                                        {
+                                            // convert to delegate
+                                            RefPtr<MagoEE::Type> dgtype;
+                                            hr = mTypeEnv->NewDelegate(type, dgtype.Ref());
+                                            mDebugFuncCache.insert({ funcAndType, { dgtype, fnaddr } });
+                                            dbgfntype = dgtype.Detach();
+                                            return S_OK;
+                                        }
+                            }
+                            else if (paramList->List.size() == 1)
                                 if (auto ptype = paramList->List.front()->_Type)
                                     if (ptype->IsPointer() || ptype->IsReference())
                                         if (ts->Equals(ptype->AsTypeNext()->GetNext()))
                                         {
-                                            mDebugFuncCache.insert({ funcAndType, vdecl });
-                                            decl = vdecl;
-                                            decl->AddRef();
+                                            mDebugFuncCache.insert({ funcAndType, { type, fnaddr } });
+                                            dbgfntype = type;
                                             return S_OK;
                                         }
+                        }
             }
         }
-        mDebugFuncCache.insert({ funcAndType, nullptr });
+        mDebugFuncCache.insert({ funcAndType, { nullptr, 0 } });
         return E_NOT_FOUND;
     }
 
@@ -1714,6 +1732,8 @@ namespace Mago
         RefPtr<MagoEE::ParameterList>   params;
         MagoST::TypeIndex       retTI = 0;
         RefPtr<MagoEE::Type>    retType;
+        TypeIndex               thisTI = 0;
+        RefPtr<MagoEE::Type>    thisPtrType;
         MagoST::TypeIndex       paramListTI = 0;
         MagoST::TypeHandle      paramListTH = { 0 };
         MagoST::SymInfoData     paramListInfoData = { 0 };
@@ -1768,8 +1788,24 @@ namespace Mago
         if ( !symInfo->GetCallConv( callConv ) )
             return E_FAIL;
 
+        if ( symInfo->GetThis( thisTI ) )
+        {
+            hr = GetTypeFromTypeSymbol( thisTI, thisPtrType.Ref() );
+            if ( FAILED( hr ) )
+                return hr;
+            if ( !thisPtrType->IsPointer() )
+            {
+                // DIA returns type of struct, not the pointer
+                RefPtr<MagoEE::Type> ptrType;
+                hr = mTypeEnv->NewPointer( thisPtrType, ptrType.Ref() );
+                if ( FAILED( hr ) )
+                    return hr;
+                thisPtrType = ptrType;
+            }
+        }
+
         // TODO: var args
-        hr = mTypeEnv->NewFunction( retType, params, callConv, 0, type );
+        hr = mTypeEnv->NewFunction( retType, thisPtrType, params, callConv, 0, type );
         if ( FAILED( hr ) )
             return hr;
 
