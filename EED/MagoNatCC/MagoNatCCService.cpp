@@ -972,6 +972,8 @@ public:
             if (FAILED(tryFindSymbol(L"__D4core8internal2gc4impl5protoQo7ProtoGC14collectNoStackMFNbZv", cnsaddr)))
                 druntime_version = 2'109;
         }
+        MagoEE::Address isProxiedAddr; // collectNoStack removed?
+        bool ldc = SUCCEEDED(tryFindSymbol(L"_gc_isProxied", isProxiedAddr));
 
         auto nativeRuntime = Native::DkmNativeRuntimeInstance::TryCast(mStackFrame->RuntimeInstance());
         if (!nativeRuntime)
@@ -994,8 +996,14 @@ public:
         RegCloseKey(hKey);
         if (ret != ERROR_SUCCESS)
             return HRESULT_FROM_WIN32(ret);
-
+        
         magogcPathLen = (int)wcslen(magogcPath);
+        if (ldc && magogcPathLen > 4 && magogcPath[magogcPathLen - 4] == '.')
+        {
+            wcscpy(magogcPath + magogcPathLen - 4, L"_LDC.dll");
+            magogcPathLen += 4;
+        }
+
         MagoEE::Address argbuf = helper->getTmpBuffer(2 * magogcPathLen + 2);
         if (argbuf == 0)
             return E_MAGOEE_CANNOTALLOCTRAMP;
