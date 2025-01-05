@@ -44,11 +44,13 @@ namespace Mago
     ExprContext::ExprContext()
         :   mPC( 0 )
     {
+        mSymStore = new SymbolStore(this);
         memset( &mFuncSH, 0, sizeof mFuncSH );
     }
 
     ExprContext::~ExprContext()
     {
+        mSymStore->setExprContext(nullptr);
     }
 
 
@@ -165,7 +167,7 @@ namespace Mago
 
         if ( ( findFlags & FindObjectRegister ) != 0 )
         {
-            decl = RegisterCVDecl::CreateRegisterSymbol( this, u8Name );
+            decl = RegisterCVDecl::CreateRegisterSymbol( mSymStore, u8Name );
             if( decl )
             {
                 decl->AddRef();
@@ -267,7 +269,7 @@ namespace Mago
                                         if (ts->Equals(ptype->AsTypeNext()->GetNext()))
                                         {
                                             mDebugFuncCache.insert({ funcAndType, { type, fnaddr } });
-                                            dbgfntype = type;
+                                            dbgfntype = type.Detach();
                                             return S_OK;
                                         }
                         }
@@ -544,7 +546,7 @@ namespace Mago
 
         hr = ReadMemory( 
             (Address64) addr, 
-            targetSize, 
+            (uint32_t) targetSize, 
             lenRead, 
             targetBuf );
         if ( FAILED( hr ) )
@@ -711,10 +713,10 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = WriteFloat( 
-                sourceBuf + PartSize, 
-                sizeof sourceBuf - PartSize, 
-                type, 
+            hr = WriteFloat(
+                sourceBuf + PartSize,
+                uint32_t( sizeof sourceBuf - PartSize ),
+                type,
                 value.Complex80Value.ImaginaryPart );
         }
         else if ( type->IsDArray() )
@@ -727,10 +729,10 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = WriteInt( 
-                sourceBuf + LengthSize, 
-                sizeof sourceBuf - LengthSize, 
-                arrayType->GetPointerType(), 
+            hr = WriteInt(
+                sourceBuf + LengthSize,
+                uint32_t( sizeof sourceBuf - LengthSize ),
+                arrayType->GetPointerType(),
                 value.Array.Addr );
         }
         else if ( type->IsAArray() )
@@ -746,9 +748,9 @@ namespace Mago
             if ( FAILED( hr ) )
                 return hr;
 
-            hr = WriteInt( 
-                sourceBuf + AddressSize, 
-                sizeof sourceBuf - AddressSize, 
+            hr = WriteInt(
+                sourceBuf + AddressSize,
+                uint32_t( sizeof sourceBuf - AddressSize ),
                 voidPtrType, 
                 value.Delegate.FuncAddr );
         }
@@ -760,7 +762,7 @@ namespace Mago
 
         hr = WriteMemory( 
             (Address64) addr, 
-            sourceSize, 
+            (uint32_t) sourceSize, 
             lenWritten, 
             sourceBuf );
         if ( FAILED( hr ) )
@@ -1040,7 +1042,7 @@ namespace Mago
                 if ( FAILED( hr ) )
                     break;
 
-                auto closDecl = new ClosureVarCVDecl( this, fieldInfoData, fieldInfo, closureSH, chain );
+                auto closDecl = new ClosureVarCVDecl( mSymStore, fieldInfoData, fieldInfo, closureSH, chain );
                 closDecl->SetType( type );
                 closDecl->AddRef();
 
@@ -1359,7 +1361,7 @@ namespace Mago
         case LocIsStatic:
         case LocIsThisRel:
         case LocIsTLS:
-            cvDecl = new GeneralCVDecl( this, infoData, symInfo );
+            cvDecl = new GeneralCVDecl( mSymStore, infoData, symInfo );
             break;
 
         default:
@@ -1393,7 +1395,7 @@ namespace Mago
             return hr;
 
         RefPtr<FunctionCVDecl>   cvDecl;
-        cvDecl = new FunctionCVDecl( this, infoData, symInfo );
+        cvDecl = new FunctionCVDecl( mSymStore, infoData, symInfo );
         cvDecl->SetType( type );
 
         decl = cvDecl.Detach();
@@ -1453,7 +1455,7 @@ namespace Mago
             RefPtr<GeneralCVDecl>   cvDecl;
             RefPtr<MagoEE::Type>    type;
 
-            cvDecl = new GeneralCVDecl( this, infoData, symInfo );
+            cvDecl = new GeneralCVDecl( mSymStore, infoData, symInfo );
             if ( cvDecl == NULL )
                 return E_OUTOFMEMORY;
 
@@ -1486,7 +1488,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        cvDecl = new GeneralCVDecl( this, infoData, symInfo );
+        cvDecl = new GeneralCVDecl( mSymStore, infoData, symInfo );
         if ( cvDecl == NULL )
             return E_OUTOFMEMORY;
 
@@ -1521,7 +1523,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        cvDecl = new VTableCVDecl( this, count, ptype );
+        cvDecl = new VTableCVDecl( mSymStore, count, ptype );
         if ( cvDecl == NULL )
             return E_OUTOFMEMORY;
 
@@ -1820,7 +1822,7 @@ namespace Mago
     {
         RefPtr<MagoEE::Declaration> decl;
 
-        decl = new TypeCVDecl( this, typeHandle, infoData, symInfo );
+        decl = new TypeCVDecl( mSymStore, typeHandle, infoData, symInfo );
         if ( decl == NULL )
             return E_OUTOFMEMORY;
 
@@ -2102,4 +2104,87 @@ namespace Mago
     {
         return mThread->GetProgram()->GetDRuntime();
     }
+
+    // SymbolStore
+    void SymbolStore::AddRef()
+    {
+        InterlockedIncrement(&mRefCount);
+    }
+
+    void SymbolStore::Release()
+    {
+        InterlockedDecrement(&mRefCount);
+        _ASSERT(mRefCount >= 0);
+        if (mRefCount == 0)
+            delete this;
+    }
+
+    HRESULT SymbolStore::GetSession(MagoST::ISession*& session)
+    {
+        if (mExprContext)
+            return mExprContext->GetSession(session);
+        return E_WRONG_STATE;
+    }
+    
+    MagoEE::ITypeEnv* SymbolStore::GetTypeEnv()
+    {
+        return mExprContext ? mExprContext->GetTypeEnv() : nullptr;
+    }
+    
+    Mago::IRegisterSet* SymbolStore::GetRegisterSet()
+    {
+        return mExprContext ? mExprContext->GetRegisterSet() : nullptr;
+    }
+
+    HRESULT SymbolStore::FindObject(const wchar_t* name, MagoEE::Declaration*& decl, uint32_t findFlags)
+    {
+        if (mExprContext)
+            return mExprContext->FindObject(name, decl, findFlags);
+        return E_WRONG_STATE;
+    }
+    
+    HRESULT SymbolStore::MakeDeclarationFromSymbol(MagoST::TypeHandle handle, MagoEE::Declaration*& decl)
+    {
+        if (mExprContext)
+            return mExprContext->MakeDeclarationFromSymbol(handle, decl);
+        return E_WRONG_STATE;
+    }
+    
+    HRESULT SymbolStore::MakeDeclarationFromDataSymbol(const MagoST::SymInfoData& infoData,
+        MagoST::ISymbolInfo* symInfo, MagoEE::Declaration*& decl)
+    {
+        if (mExprContext)
+            return mExprContext->MakeDeclarationFromDataSymbol(infoData, symInfo, decl);
+        return E_WRONG_STATE;
+    }
+    
+    HRESULT SymbolStore::MakeDeclarationFromDataSymbol(const MagoST::SymInfoData& infoData,
+        MagoST::ISymbolInfo* symInfo, MagoEE::Type* type, MagoEE::Declaration*& decl)
+    {
+        if (mExprContext)
+            return mExprContext->MakeDeclarationFromDataSymbol(infoData, symInfo, type, decl);
+        return E_WRONG_STATE;
+    }
+
+    HRESULT SymbolStore::GetTypeFromTypeSymbol(MagoST::TypeIndex typeIndex, MagoEE::Type*& type)
+    {
+        if (mExprContext)
+            return mExprContext->GetTypeFromTypeSymbol(typeIndex, type);
+        return E_WRONG_STATE;
+    }
+
+    HRESULT SymbolStore::GetAddress(MagoEE::Declaration* decl, MagoEE::Address& addr)
+    {
+        if (mExprContext)
+            return mExprContext->GetAddress(decl, addr);
+        return E_WRONG_STATE;
+    }
+
+    HRESULT SymbolStore::ReadMemory(MagoEE::Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer)
+    {
+        if (mExprContext)
+            return mExprContext->ReadMemory(addr, sizeToRead, sizeRead, buffer);
+        return E_WRONG_STATE;
+    }
+
 }

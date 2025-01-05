@@ -15,12 +15,44 @@ namespace Mago
     class Thread;
     class IRegisterSet;
     class DRuntime;
+    class ExprContext;
+
+    // delegate to ExprContext to avoid circular references through MagoEE::Declaration
+    class SymbolStore
+    {
+        long mRefCount;
+        ExprContext* mExprContext; // weak reference
+
+    public:
+        SymbolStore(ExprContext* context) : mRefCount(0), mExprContext(context) {}
+        
+        void setExprContext(ExprContext* context) { mExprContext = context; }
+
+        void AddRef();
+        void Release();
+
+        HRESULT GetSession(MagoST::ISession*& session);
+        MagoEE::ITypeEnv* GetTypeEnv();
+        Mago::IRegisterSet* GetRegisterSet();
+
+        HRESULT FindObject(const wchar_t* name, MagoEE::Declaration*& decl, uint32_t findFlags);
+        HRESULT MakeDeclarationFromSymbol(MagoST::TypeHandle handle, MagoEE::Declaration*& decl);
+        HRESULT MakeDeclarationFromDataSymbol(const MagoST::SymInfoData& infoData,
+            MagoST::ISymbolInfo* symInfo, MagoEE::Declaration*& decl);
+        HRESULT MakeDeclarationFromDataSymbol(const MagoST::SymInfoData& infoData,
+            MagoST::ISymbolInfo* symInfo,MagoEE::Type* type, MagoEE::Declaration*& decl);
+        HRESULT GetTypeFromTypeSymbol(MagoST::TypeIndex typeIndex, MagoEE::Type*& type);
+
+        HRESULT GetAddress(MagoEE::Declaration* decl, MagoEE::Address& addr);
+        HRESULT ReadMemory(MagoEE::Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer);
+    };
 
     class ExprContext : 
         public CComObjectRootEx<CComMultiThreadModel>,
         public IDebugExpressionContext2,
         public MagoEE::IValueBinder
     {
+        RefPtr<SymbolStore>             mSymStore;
         Address64                       mPC;
         RefPtr<IRegisterSet>            mRegSet;
         RefPtr<Module>                  mModule;

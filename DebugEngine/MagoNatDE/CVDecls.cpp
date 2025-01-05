@@ -21,7 +21,7 @@ namespace Mago
 //----------------------------------------------------------------------------
 
     CVDecl::CVDecl( 
-        ExprContext* symStore,
+        SymbolStore* symStore,
         const MagoST::SymInfoData& infoData, 
         MagoST::ISymbolInfo* symInfo )
         :   mRefCount( 0 ),
@@ -276,7 +276,7 @@ namespace Mago
 //----------------------------------------------------------------------------
 
     GeneralCVDecl::GeneralCVDecl( 
-            ExprContext* symStore,
+            SymbolStore* symStore,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo )
     :   CVDecl( symStore, infoData, symInfo )
@@ -304,7 +304,7 @@ namespace Mago
 //----------------------------------------------------------------------------
 
     FunctionCVDecl::FunctionCVDecl(
-            ExprContext* symStore,
+            SymbolStore* symStore,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo )
     : GeneralCVDecl( symStore, infoData, symInfo )
@@ -395,7 +395,7 @@ namespace Mago
 //  ClosureVarCVDecl
 //----------------------------------------------------------------------------
 
-    ClosureVarCVDecl::ClosureVarCVDecl( ExprContext* symStore, 
+    ClosureVarCVDecl::ClosureVarCVDecl( SymbolStore* symStore, 
                                         const MagoST::SymInfoData& infoData,
                                         MagoST::ISymbolInfo* symInfo,
                                         const MagoST::SymHandle& closureSH,
@@ -478,7 +478,7 @@ namespace Mago
 //----------------------------------------------------------------------------
 
     TypeCVDecl::TypeCVDecl( 
-            ExprContext* symStore,
+            SymbolStore* symStore,
             MagoST::TypeHandle typeHandle,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo )
@@ -985,7 +985,7 @@ namespace Mago
 //----------------------------------------------------------------------------
 
     TypeCVDeclMembers::TypeCVDeclMembers( 
-        ExprContext* symStore,
+        SymbolStore* symStore,
         const MagoST::SymInfoData& infoData, 
         MagoST::ISymbolInfo* symInfo )
         :   mRefCount( 0 ),
@@ -2247,7 +2247,7 @@ namespace Mago
 
     MagoST::SymInfoData registerInfoData;
 
-    RegisterCVDecl::RegisterCVDecl( ExprContext* symStore, uint32_t regIndex )
+    RegisterCVDecl::RegisterCVDecl( SymbolStore* symStore, uint32_t regIndex )
         : GeneralCVDecl( symStore, registerInfoData, (ISymbolInfo*) &registerInfoData )
     {
         // CVDecl asumes registerInfoData is an instance of mSymInfo
@@ -2265,7 +2265,7 @@ namespace Mago
         return true;
     }
 
-    RegisterCVDecl* RegisterCVDecl::CreateRegisterSymbol( ExprContext* symStore, const char* name )
+    RegisterCVDecl* RegisterCVDecl::CreateRegisterSymbol( SymbolStore* symStore, const char* name )
     {
         char uname[12];
         auto len = strlen( name );
@@ -2278,7 +2278,8 @@ namespace Mago
         if( it == mapNameToRegIndex.end() )
             return nullptr;
 
-        bool isx64 = symStore->GetRegisterSet()->is64Bit();
+        auto regSet = symStore->GetRegisterSet();
+        bool isx64 = regSet && regSet->is64Bit();
         if( !isx64 && regDesc[it->second].cvreg > CV_AMD64_MM71 )
             return nullptr;
 
@@ -2298,7 +2299,7 @@ namespace Mago
         virtual bool GetLocation( LocationType& locType ) { locType = LocIsThisRel; return true; }
     };
 
-    VTableCVDecl::VTableCVDecl( ExprContext* symStore, uint32_t count, MagoEE::Type* type )
+    VTableCVDecl::VTableCVDecl( SymbolStore* symStore, uint32_t count, MagoEE::Type* type )
         : GeneralCVDecl( symStore, registerInfoData, (ISymbolInfo*) &registerInfoData )
     {
         // CVDecl asumes registerInfoData is an instance of mSymInfo

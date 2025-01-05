@@ -1213,7 +1213,7 @@ namespace MagoEE
                     GetTupleName( tplname, &tname );
                     std::vector<RefPtr<Declaration>> fields;
                     fields.push_back( decl );
-                    decl.Detach();
+                    decl.Release();
 
                     RefPtr<Declaration> fdecl;
                     while ( mMembers->Next( fdecl.Ref() ) )

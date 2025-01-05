@@ -863,7 +863,7 @@ namespace MagoEE
                 {
                     std::vector<RefPtr<Declaration>> fields;
                     fields.push_back( member );
-                    member.Detach();
+                    member.Release();
                     while ( members->Next( member.Ref() ) )
                     {
                         tname = member->GetName();

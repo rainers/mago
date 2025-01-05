@@ -12,7 +12,7 @@
 
 namespace Mago
 {
-    class ExprContext;
+    class SymbolStore;
 
 
     class CVDecl : public MagoEE::Declaration
@@ -21,7 +21,7 @@ namespace Mago
         CComBSTR                    mName;
 
     protected:
-        RefPtr<ExprContext>         mSymStore;
+        RefPtr<SymbolStore>         mSymStore;
 
         RefPtr<MagoST::ISession>    mSession;
         MagoST::SymInfoData         mSymInfoData;
@@ -31,7 +31,7 @@ namespace Mago
 
     public:
         CVDecl( 
-            ExprContext* symStore,
+            SymbolStore* symStore,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo );
         virtual ~CVDecl();
@@ -43,7 +43,7 @@ namespace Mago
 
         virtual const wchar_t* GetName();
 
-        virtual bool hasGetAddressOverload(); // workaround against stack-overflow if called by ExprContext::GetAddress
+        virtual bool hasGetAddressOverload(); // workaround against stack-overflow if called by SymbolStore::GetAddress
 
         //virtual bool GetType( MagoEE::Type*& type );
         virtual bool GetAddress( MagoEE::Address& addr );
@@ -77,7 +77,7 @@ namespace Mago
 
     public:
         GeneralCVDecl( 
-            ExprContext* symStore,
+            SymbolStore* symStore,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo );
 
@@ -89,7 +89,7 @@ namespace Mago
     class FunctionCVDecl : public GeneralCVDecl
     {
     public:
-        FunctionCVDecl( ExprContext* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo );
+        FunctionCVDecl( SymbolStore* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo );
 
         virtual bool hasGetAddressOverload();
         virtual bool GetAddress( MagoEE::Address& addr );
@@ -103,7 +103,7 @@ namespace Mago
         std::vector<MagoST::TypeHandle> mChain;
 
     public:
-        ClosureVarCVDecl( ExprContext* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo,
+        ClosureVarCVDecl( SymbolStore* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo,
                           const MagoST::SymHandle& closureSH, const std::vector<MagoST::TypeHandle>& chain );
 
         virtual bool hasGetAddressOverload();
@@ -118,7 +118,7 @@ namespace Mago
 
     public:
         TypeCVDecl( 
-            ExprContext* symStore,
+            SymbolStore* symStore,
             MagoST::TypeHandle typeHandle,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo );
@@ -176,18 +176,18 @@ namespace Mago
     class RegisterCVDecl : public GeneralCVDecl
     {
     public:
-        RegisterCVDecl( ExprContext* symStore, uint32_t reg );
+        RegisterCVDecl( SymbolStore* symStore, uint32_t reg );
         ~RegisterCVDecl();
     
         virtual bool IsRegister();
 
-        static RegisterCVDecl* CreateRegisterSymbol( ExprContext* symStore, const char* name );
+        static RegisterCVDecl* CreateRegisterSymbol( SymbolStore* symStore, const char* name );
     };
 
     class VTableCVDecl : public GeneralCVDecl
     {
     public:
-        VTableCVDecl( ExprContext* symStore, uint32_t count, MagoEE::Type* type );
+        VTableCVDecl( SymbolStore* symStore, uint32_t count, MagoEE::Type* type );
         ~VTableCVDecl();
     
         virtual bool IsField();
@@ -197,7 +197,7 @@ namespace Mago
     {
         long                        mRefCount;
 
-        RefPtr<ExprContext>         mSymStore;
+        RefPtr<SymbolStore>         mSymStore;
         RefPtr<MagoST::ISession>    mSession;
         MagoST::SymInfoData         mSymInfoData;
         MagoST::ISymbolInfo*        mSymInfo;
@@ -208,7 +208,7 @@ namespace Mago
 
     public:
         TypeCVDeclMembers( 
-            ExprContext* symStore,
+            SymbolStore* symStore,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo );
 

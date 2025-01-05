@@ -3563,7 +3563,7 @@ void VerifyCompareMemory( DataEnv* oldEnv, DataEnv* newEnv, size_t addr, size_t 
                 }
 
                 wchar_t buf[40 + 1] = L"";
-                swprintf_s( buf, L"(%d bytes at %08x)", (j - i), i );
+                swprintf_s( buf, L"(%zd bytes at %0zx)", (j - i), i );
                 msg.append( buf );
 
                 // we want to find all the patches that don't match
