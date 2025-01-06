@@ -575,6 +575,8 @@ namespace MagoEE
         if ( arrayType->GetElement()->IsChar() )
         {
             _formatString( binder, addr, arrayType->GetLength(), arrayType->GetElement(), fmtdata.outStr );
+            if ( complete )
+                return complete(S_OK, fmtdata.outStr);
             return S_OK;
         }
         else
