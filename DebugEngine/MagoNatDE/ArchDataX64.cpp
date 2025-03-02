@@ -209,7 +209,11 @@ namespace
 
     void ArchDataX64::GetThreadContextSpec( ArchThreadContextSpec& spec )
     {
+#ifdef _M_ARM64
+        spec.FeatureMask = CONTEXT_FULL;
+#else
         spec.FeatureMask = CONTEXT_FULL | CONTEXT_SEGMENTS;
+#endif
         spec.ExtFeatureMask = 0;
         spec.Size = sizeof( CONTEXT_X64 );
     }
@@ -227,7 +231,11 @@ namespace
     {
         const IMAGE_RUNTIME_FUNCTION_ENTRY* funcEntry = (IMAGE_RUNTIME_FUNCTION_ENTRY*) pdata;
         begin = imageBase + funcEntry->BeginAddress;
+#ifdef _M_ARM64
+        end = begin + funcEntry->FunctionLength;
+#else
         end = imageBase + funcEntry->EndAddress;
+#endif
     }
 
 

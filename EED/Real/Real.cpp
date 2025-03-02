@@ -99,6 +99,24 @@ uint16_t    Real10::Compare( const Real10& left, const Real10& right )
 
     return status;
 }
+#elif defined _M_ARM64
+bool    Real10::IsZero() const
+{
+    _ASSERT(false);
+    return false;
+}
+
+bool    Real10::IsNan() const
+{
+    _ASSERT(false);
+    return false;
+}
+
+uint16_t    Real10::Compare(const Real10& left, const Real10& right)
+{
+    _ASSERT(false);
+    return 0;
+}
 #endif // _WIN64
 
 bool         Real10::IsLess( uint16_t status )
@@ -403,6 +421,81 @@ void    Real10::FromUInt64( uint64_t i )
     }
 }
 
+#elif defined _M_ARM64
+
+bool    Real10::FitsInDouble() const
+{
+    _ASSERT(false);
+    return false;
+}
+
+bool    Real10::FitsInFloat() const
+{
+    _ASSERT(false);
+    return false;
+}
+
+double  Real10::ToDouble() const
+{
+    _ASSERT(false);
+    return 0;
+}
+
+float   Real10::ToFloat() const
+{
+    _ASSERT(false);
+    return 0;
+}
+
+int16_t Real10::ToInt16() const
+{
+    _ASSERT(false);
+    return 0;
+}
+
+int32_t Real10::ToInt32() const
+{
+    _ASSERT(false);
+    return 0;
+}
+
+int64_t Real10::ToInt64() const
+{
+    _ASSERT(false);
+    return 0;
+}
+
+uint64_t Real10::ToUInt64() const
+{
+    _ASSERT(false);
+    return 0;
+}
+
+void    Real10::FromDouble( double d )
+{
+    _ASSERT(false);
+}
+
+void    Real10::FromFloat( float f )
+{
+    _ASSERT(false);
+}
+
+void    Real10::FromInt32( int32_t i )
+{
+    _ASSERT(false);
+}
+
+void    Real10::FromInt64( int64_t i )
+{
+    _ASSERT(false);
+}
+
+void    Real10::FromUInt64( uint64_t i )
+{
+    _ASSERT(false);
+}
+
 #endif // _WIN64
 
 void    Real10::LoadInfinity()
@@ -624,6 +717,42 @@ void    Real10::Abs( const Real10& orig )
     }
 }
 
+#elif defined _M_ARM64
+
+void    Real10::Add(const Real10& left, const Real10& right)
+{
+    _ASSERT(false);
+}
+
+void    Real10::Sub(const Real10& left, const Real10& right)
+{
+    _ASSERT(false);
+}
+
+void    Real10::Mul(const Real10& left, const Real10& right)
+{
+    _ASSERT(false);
+}
+
+void    Real10::Div(const Real10& left, const Real10& right)
+{
+    _ASSERT(false);
+}
+
+void    Real10::Rem(const Real10& left, const Real10& right)
+{
+    _ASSERT(false);
+}
+
+void    Real10::Negate(const Real10& orig)
+{
+    _ASSERT(false);
+}
+
+void    Real10::Abs(const Real10& orig)
+{
+    _ASSERT(false);
+}
 #endif // _WIN64
 
 errno_t Real10::Parse( const wchar_t* str, Real10& val )

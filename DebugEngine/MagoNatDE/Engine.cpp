@@ -433,7 +433,7 @@ namespace Mago
         HRESULT hr = S_OK;
         bool    useInProcDebugger = true;
 
-#if defined( _M_IX86 ) || defined( _M_X64 )
+#if defined( _M_IX86 ) || defined( _M_X64 ) || defined( _M_ARM64 )
         IMAGE_FILE_HEADER   fileHeader;
 
         if ( !ReadFileHeader( pszExe, fileHeader ) )
@@ -442,6 +442,8 @@ namespace Mago
         if ( fileHeader.Machine == IMAGE_FILE_MACHINE_I386 )
             useInProcDebugger = true;
         else if ( fileHeader.Machine == IMAGE_FILE_MACHINE_AMD64 )
+            useInProcDebugger = false;
+        else if ( fileHeader.Machine == IMAGE_FILE_MACHINE_ARM64 )
             useInProcDebugger = false;
         else
             return E_UNSUPPORTED_BINARY;

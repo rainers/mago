@@ -1590,6 +1590,10 @@ HRESULT Exec::GetPData(
     }
 
     return S_FALSE;
+#elif defined( _M_ARM64 )
+    // Unreferenced parameters
+    process; address; imageBase; size; sizeRead; pdata;
+    return E_NOTIMPL;
 #else
 #error Customize this implementation by getting pdata size and comparing routines from IMachine.
 #endif

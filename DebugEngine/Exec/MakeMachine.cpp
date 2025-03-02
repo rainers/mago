@@ -28,13 +28,18 @@ HRESULT MakeMachine( WORD machineType, IMachine*& machine )
         hr = MakeMachineX86( machine );
     }
 #elif defined( _M_X64 )
-    if ( machineType == IMAGE_FILE_MACHINE_I386 )
+    if (machineType == IMAGE_FILE_MACHINE_I386)
     {
-        hr = MakeMachineX86( machine );
+        hr = MakeMachineX86(machine);
     }
-    else if ( machineType == IMAGE_FILE_MACHINE_AMD64 )
+    else if (machineType == IMAGE_FILE_MACHINE_AMD64)
     {
-        hr = MakeMachineX64( machine );
+        hr = MakeMachineX64(machine);
+    }
+#elif defined( _M_ARM64 )
+    if (machineType == IMAGE_FILE_MACHINE_ARM64)
+    {
+// todo:        hr = MakeMachineARM64(machine);
     }
 #else
 #error Mago doesn't implement a core debugger for the current architecture.
