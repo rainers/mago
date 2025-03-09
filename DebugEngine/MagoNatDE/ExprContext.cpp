@@ -163,6 +163,28 @@ namespace Mago
             hr = FindGlobalSymbol( u8Name, u8NameLen, decl, findFlags );
             if ( hr == S_OK )
                 return hr;
+
+            if ( auto p = strrchr( u8Name.m_p, '.' ) )
+            {
+                size_t parentName = p - u8Name.m_p;
+                RefPtr<MagoEE::Declaration> edecl;
+
+                hr = FindGlobalSymbol( u8Name, parentName, edecl.Ref(), findFlags);
+                if( hr == S_OK && edecl )
+                {
+                    RefPtr<MagoEE::Type> type;
+                    if ( edecl->GetType( type.Ref() ) )
+                    {
+                        if ( auto et = type->AsTypeEnum() )
+                        {
+                            auto vname = MagoEE::to_wstring( p + 1, strlen( p + 1 ) );
+                            auto vdecl = et->FindObject( vname.c_str() );
+                            decl = vdecl.Detach();
+                            return S_OK;
+                        }
+                    }
+                }
+            }
         }
 
         if ( ( findFlags & FindObjectRegister ) != 0 )
@@ -1252,6 +1274,10 @@ namespace Mago
             hr = MakeDeclarationFromTypedefSymbol( infoData, symInfo, decl );
             break;
 
+        case SymTagEnum:
+            hr = MakeDeclarationFromEnumSymbol( infoData, symInfo, decl );
+            break;
+
         default:
             // try type declarations
             if( symInfo->GetType( typeIndex ) )
@@ -1399,6 +1425,16 @@ namespace Mago
         cvDecl->SetType( type );
 
         decl = cvDecl.Detach();
+        return S_OK;
+    }
+
+    HRESULT ExprContext::MakeDeclarationFromEnumSymbol(
+        const MagoST::SymInfoData& infoData,
+        MagoST::ISymbolInfo* symInfo,
+        MagoEE::Declaration*& decl )
+    {
+        decl = new TypeCVDecl( mSymStore, infoData, symInfo );
+        decl->AddRef();
         return S_OK;
     }
 
@@ -1822,7 +1858,7 @@ namespace Mago
     {
         RefPtr<MagoEE::Declaration> decl;
 
-        decl = new TypeCVDecl( mSymStore, typeHandle, infoData, symInfo );
+        decl = new TypeCVDecl( mSymStore, infoData, symInfo );
         if ( decl == NULL )
             return E_OUTOFMEMORY;
 

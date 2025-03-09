@@ -253,6 +253,10 @@ namespace MagoEE
             objVal._Type->ToString( outStr );
             outStr.append( 1, L'.' );
             outStr.append( name );
+            outStr.append(1, L' ');
+            outStr.append(1, L'(');
+            hr = FormatInt(objVal, fmtopt, outStr);
+            outStr.append(1, L')');
         }
         else
         {

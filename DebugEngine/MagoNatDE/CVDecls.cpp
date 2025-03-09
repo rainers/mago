@@ -479,11 +479,9 @@ namespace Mago
 
     TypeCVDecl::TypeCVDecl( 
             SymbolStore* symStore,
-            MagoST::TypeHandle typeHandle,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo )
-    :   CVDecl( symStore, infoData, symInfo ),
-        mTypeHandle( typeHandle )
+    :   CVDecl( symStore, infoData, symInfo )
     {
     }
 

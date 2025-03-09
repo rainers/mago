@@ -232,6 +232,11 @@ namespace Mago
             MagoST::ISymbolInfo* symInfo, 
             MagoEE::Declaration*& decl );
 
+        HRESULT MakeDeclarationFromEnumSymbol( 
+            const MagoST::SymInfoData& infoData, 
+            MagoST::ISymbolInfo* symInfo, 
+            MagoEE::Declaration*& decl );
+
         HRESULT MakeDeclarationFromBaseClassSymbol(
             const MagoST::SymInfoData& infoData,
             MagoST::ISymbolInfo* symInfo,
