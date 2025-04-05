@@ -805,14 +805,13 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
-            std::wstring keystr;
             struct FormatOptions fmt (10);
             FormatData fmtdata( fmt );
             hr = FormatValue( mBinder, keyobj, fmtdata, {} );
             if ( FAILED( hr ) )
                 return hr;
 
-            name = L"[" + keystr + L"]";
+            name = L"[" + fmtdata.outStr + L"]";
 
             bool isIdent = IsIdentifier( mParentExprText.data() );
             fullName.clear();
