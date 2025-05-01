@@ -70,8 +70,7 @@ namespace MagoEE
                 else
                 {
                     std::wstring errStr;
-                    if (MagoEE::GetErrorString(hr, errStr) != S_OK)
-                        MagoEE::GetErrorString(E_MAGOEE_BASE, errStr);
+                    MagoEE::GetErrorString(hr, errStr);
                     bStr = SysAllocStringLen(errStr.c_str(), errStr.size());
                 }
                 if (complete)

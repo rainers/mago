@@ -555,8 +555,6 @@ namespace MagoEE
         return typePop != nullptr;
     }
 
-    static const wchar_t    gCommonErrStr[] = L": Error: ";
-
     static const wchar_t*   gErrStrs[] = 
     {
         L"Expression couldn't be evaluated",
@@ -567,6 +565,7 @@ namespace MagoEE
         L"Type resolve failed",
         L"Bad cast",
         L"Expression has no address",
+        L"Expression has invalid address",
         L"L-value expected",
         L"Can't cast to bool",
         L"Divide by zero",
@@ -612,18 +611,24 @@ namespace MagoEE
         DWORD   fac = HRESULT_FACILITY( hresult );
         DWORD   code = HRESULT_CODE( hresult );
 
+        wchar_t codeStr[256] = L"";
         if ( fac != MagoEE::HR_FACILITY )
-            return S_FALSE;
+        {
+            swprintf_s(codeStr, 256, L"E%08x: ", hresult);
+            DWORD nRet = FormatMessage( FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_SYSTEM,
+                NULL, hresult, 0, codeStr + 11, _countof(codeStr) - 11, NULL);
+            if ( nRet == 0 )
+                swprintf_s( codeStr + 11, _countof(codeStr) - 11, L"unknown system error" );
+        }
+        else
+        {
+            if ( code >= _countof( gErrStrs ) )
+                code = 0;
 
-        if ( code >= _countof( gErrStrs ) )
-            code = 0;
+            swprintf_s( codeStr, _countof(codeStr), L"D%04d: Error: %s", code + 1, gErrStrs[code] );
+        }
 
-        wchar_t codeStr[10];
-        swprintf_s( codeStr, 10, L"D%04d", code + 1 );
         outStr = codeStr;
-        outStr.append( gCommonErrStr );
-        outStr.append( gErrStrs[code] );
-
         return S_OK;
     }
 

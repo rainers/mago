@@ -116,6 +116,19 @@ public:
         _In_ DkmEventDescriptorS* pEventDescriptor
     );
 
+    // IDkmNativeSteppingCallSiteProvider
+    virtual HRESULT STDMETHODCALLTYPE GetSteppingCallSites(
+        _In_ Native::DkmNativeInstructionAddress* pNativeAddress,
+        _In_ const DkmArray<Symbols::DkmSteppingRange>& SteppingRanges,
+        _Out_ DkmArray<Stepping::DkmNativeSteppingCallSite*>* pCallSites
+    );
+
+    // IDkmNativeJustMyCodeProvider158
+    virtual HRESULT STDMETHODCALLTYPE IsUserCodeExtended(
+        _In_ Native::DkmNativeInstructionAddress* pNativeAddress,
+        _In_ DkmWorkList* pWorkList,
+        _In_ IDkmCompletionRoutine<Native::DkmIsUserCodeExtendedAsyncResult>* pCompletionRoutine
+    );
 };
 
 OBJECT_ENTRY_AUTO(CMagoNatCCService::ClassId, CMagoNatCCService)

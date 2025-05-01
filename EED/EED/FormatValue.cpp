@@ -520,7 +520,7 @@ namespace MagoEE
         };
         auto closure = std::make_shared<Closure>();
 
-        if (length > 8)
+        if ( length > 8 )
         {
             closure->dotdotdot = true;
             length = 8;
@@ -529,40 +529,46 @@ namespace MagoEE
         closure->complete = complete;
         closure->toComplete = length + 1;     // support length == 0
         closure->ubyteType.Ref() = ubyteType; // take ownership
-        closure->elemStr.resize(length);
+        closure->elemStr.resize( length );
 
-        for (uint64_t i = 0; i < length; i++)
+        for ( uint64_t i = 0; i < length; i++ )
         {
             DataObject elementObj;
             elementObj._Type = elemType;
             elementObj.Addr = addr + elementSize * i;
 
-            HRESULT hr = binder->GetValue(elementObj.Addr, elementObj._Type, elementObj.Value);
-            if (FAILED(hr))
-                return hr;
-
-            auto completeElem = [i, closure](HRESULT hr, std::wstring elemStr)
+            HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
+            if ( FAILED( hr ) )
             {
-                closure->elemStr[i] = elemStr;
-                return closure->done(hr, 1);
-            };
-            FormatData fmtdataElem = fmtdata.newScope(closure->outLength());
-            hr = FormatValue( binder, elementObj, fmtdataElem,
-                              complete ? completeElem : std::function<HRESULT(HRESULT, std::wstring)>{} );
-            if (!complete || FAILED(hr))
-            {
-                closure->elemStr[i] = fmtdataElem.outStr;
-                closure->done(hr, 1);
-            }
-            if (hr == COR_E_OPERATIONCANCELED)
-            {
-                closure->dotdotdot = true;
-                closure->done(hr, length - i);
+                // always a read error or internal state error
+                GetErrorString( hr, closure->elemStr[i] );
+                closure->done( hr, length - i );
                 break;
             }
+
+            auto completeElem = [i, closure]( HRESULT hr, std::wstring elemStr )
+            {
+                closure->elemStr[i] = elemStr;
+                return closure->done( hr, 1 );
+            };
+            FormatData fmtdataElem = fmtdata.newScope( closure->outLength() );
+
+            hr = FormatValue( binder, elementObj, fmtdataElem,
+                                complete ? completeElem : std::function<HRESULT(HRESULT, std::wstring)>{} );
+            if ( hr == COR_E_OPERATIONCANCELED )
+            {
+                closure->dotdotdot = true;
+                closure->done( hr, length - i );
+                break;
+            }
+            if ( !complete || FAILED( hr ) )
+            {
+                closure->elemStr[i] = fmtdataElem.outStr;
+                closure->done( hr, 1 );
+            }
         }
-        closure->done(S_OK, 1);
-        fmtdata.outStr.append(closure->outStr);
+        closure->done( S_OK, 1 );
+        fmtdata.outStr.append( closure->outStr );
         return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
     }
 

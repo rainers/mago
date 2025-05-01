@@ -90,7 +90,11 @@ public:
         uint8_t* buffer )
     {
         // assume single process for now
-        tryHR(mProcess->ReadMemory(address, DkmReadMemoryFlags::None, buffer, length, &lengthRead));
+        HRESULT hr = mProcess->ReadMemory(address, DkmReadMemoryFlags::None, buffer, length, &lengthRead);
+        if (hr == E_INVALID_MEMORY_ADDRESS)
+            return E_MAGOEE_INVALID_ADDRESS;
+        if (FAILED(hr))
+            return hr;
         lengthUnreadable = length - lengthRead;
         return S_OK;
     }
@@ -883,6 +887,7 @@ public:
         size_t               u16NameLen = 0;
         BSTR u16Str = NULL;
         hr = Utf8To16(demangled, strlen(demangled), u16Str);
+        free(demangled);
         if (FAILED(hr))
             return false;
 
@@ -1803,8 +1808,7 @@ HRESULT createEvaluationError(Evaluation::DkmInspectionContext* pInspectionConte
     std::wstring errStr;
     Evaluation::DkmFailedEvaluationResult* pResultObject = nullptr;
 
-    if (MagoEE::GetErrorString(hrErr, errStr) != S_OK)
-        MagoEE::GetErrorString(E_MAGOEE_BASE, errStr);
+    MagoEE::GetErrorString(hrErr, errStr);
     auto text = toDkmString(expr.c_str());
     tryHR(Evaluation::DkmFailedEvaluationResult::Create(
         pInspectionContext, pStackFrame, 
@@ -2099,14 +2103,11 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
             res.ErrorCode = status;
             for (ULONG i = 0; i < infos.size(); i++)
             {
-                if (infos[i].pProperty)
-                {
-                    Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
-                    HRESULT hr = createEvaluationResult(closure->enumContext->InspectionContext(),
-                        closure->enumContext->StackFrame(), infos[i], &pResultObject);
-                    if (SUCCEEDED(hr))
-                        res.Items.Members[i] = pResultObject;
-                }
+                Evaluation::DkmSuccessEvaluationResult* pResultObject = nullptr;
+                HRESULT hr = createEvaluationResult(closure->enumContext->InspectionContext(),
+                    closure->enumContext->StackFrame(), infos[i], &pResultObject);
+                if (SUCCEEDED(hr))
+                    res.Items.Members[i] = pResultObject;
             }
             gNumRequestCompleted++;
             if (status != S_OK)
@@ -2293,4 +2294,21 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::OnExceptionTriggerHit(
     if (message)
         message->Post();
     return S_FALSE;
+}
+
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetSteppingCallSites(
+    _In_ Native::DkmNativeInstructionAddress* pNativeAddress,
+    _In_ const DkmArray<Symbols::DkmSteppingRange>& SteppingRanges,
+    _Out_ DkmArray<Stepping::DkmNativeSteppingCallSite*>* pCallSites)
+{
+    // for "Step into specific"
+    return E_NOTIMPL;
+}
+
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::IsUserCodeExtended(
+    _In_ Native::DkmNativeInstructionAddress* pNativeAddress,
+    _In_ DkmWorkList* pWorkList,
+    _In_ IDkmCompletionRoutine<Native::DkmIsUserCodeExtendedAsyncResult>* pCompletionRoutine)
+{
+    return E_NOTIMPL;
 }

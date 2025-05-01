@@ -20,6 +20,8 @@
 #include "ICoreProcess.h"
 #include <MagoCVConst.h>
 
+#include "../../EED/EED/Scanner.h"
+#include "../../EED/EED/Parser.h"
 #include "../../CVSym/CVSym/Util.h"
 
 #include <algorithm>
@@ -1850,6 +1852,37 @@ namespace Mago
         return S_OK;
     }
 
+    bool stripModifier(const char*& name, size_t& len)
+    {
+        if( len == 0 || name[len - 1] != ')' )
+            return false;
+        size_t modlen = 0;
+        if( len > 6 && strncmp( name, "const(", 6 ) == 0 )
+            modlen = 6;
+        else if( len > 10 && strncmp( name, "immutable(", 10 ) == 0 )
+            modlen = 10;
+        else if( len > 7 && strncmp( name, "shared(", 7 ) == 0 )
+            modlen = 7;
+        else if( len > 7 && strncmp( name, "inout(", 7 ) == 0 )
+            modlen = 7;
+        else
+            return false;
+        auto nname = name + modlen;
+        int parenLevel = 0;
+        for( size_t p = 0; p < len - modlen - 1; p++ )
+        {
+            if( nname[p] == '(' )
+                parenLevel++;
+            else if ( nname[p] == ')' )
+                if( --parenLevel < 0 )
+                    return false;
+        }
+        name = nname;
+        len = len - modlen - 1;
+        stripModifier(name, len);
+        return true;
+    }
+
     HRESULT ExprContext::GetUdtTypeFromTypeSymbol( 
         MagoST::TypeHandle typeHandle,
         const MagoST::SymInfoData& infoData,
@@ -1872,6 +1905,7 @@ namespace Mago
         bool usesDchar = false;
         const char* namePtr = name.GetName();
         size_t nameLen = name.GetLength();
+        stripModifier( namePtr, nameLen );
         if( nameLen == 6 && strncmp( namePtr, "string", 6 ) == 0 )
             isArray = isString = true;
         else if( nameLen == 7 && strncmp( namePtr, "wstring", 7 ) == 0 )
@@ -1882,7 +1916,7 @@ namespace Mago
             isArray = true;
         if( !isArray && nameLen > 2 )
         {
-            isArray = strcmp( namePtr + nameLen - 2, "[]" ) == 0;
+            isArray = strncmp( namePtr + nameLen - 2, "[]", 2 ) == 0;
             usesDchar = isArray && ( ( nameLen == 7 && strncmp( namePtr, "dchar[]", 7 ) == 0 ) || 
                                      ( nameLen == 14 && strncmp( namePtr, "const(dchar)[]", 14 ) == 0 ) );
         }

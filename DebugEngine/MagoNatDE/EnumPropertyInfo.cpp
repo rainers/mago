@@ -191,12 +191,15 @@ namespace Mago
             std::wstring name;
             std::wstring fullName;
             hr = mEEEnum->EvaluateNext( options, result, name, fullName, completeItem );
-            closure->hrCombine( hr );
-            if (hr == COR_E_OPERATIONCANCELED)
+            if ( hr == COR_E_OPERATIONCANCELED )
             {
                 closure->done( hr, celt - i );
                 break;
             }
+            if( FAILED( hr ) )
+                completeItem(hr, { name, fullName });
+            else
+                closure->hrCombine( hr );
         }
         return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
     }
@@ -227,31 +230,19 @@ namespace Mago
         const wchar_t* fullName, 
         IDebugProperty2** ppResult )
     {
-        HRESULT      hr = S_OK;
-        std::wstring errStr;
-
-        hr = MagoEE::GetErrorString( hrErr, errStr );
-
-        // use a general error, if original error couldn't be found
-        if ( hr == S_FALSE )
-            hr = MagoEE::GetErrorString( E_MAGOEE_BASE, errStr );
-
-        if ( hr == S_OK )
+        RefPtr<ErrorProperty> errProp;
+        HRESULT hr = MakeCComObject( errProp );
+        if ( SUCCEEDED( hr ) )
         {
-            RefPtr<ErrorProperty>   errProp;
-
-            hr = MakeCComObject( errProp );
-            if ( SUCCEEDED( hr ) )
+            std::wstring errStr;
+            MagoEE::GetErrorString( hrErr, errStr );
+            hr = errProp->Init( name, fullName, errStr.c_str() );
+            if ( hr == S_OK )
             {
-                hr = errProp->Init( name, fullName, errStr.c_str() );
-                if ( hr == S_OK )
-                {
-                    *ppResult = errProp.Detach();
-                    return S_OK;
-                }
+                *ppResult = errProp.Detach();
+                return S_OK;
             }
         }
-
         return hrErr;
     }
 
