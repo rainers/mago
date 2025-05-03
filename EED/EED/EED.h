@@ -97,6 +97,7 @@ namespace MagoEE
     extern bool gHideReferencePointers;
     extern bool gRemoveLeadingHexZeroes;
     extern bool gRecombineTuples;
+    extern bool gShortenTypeNames;
     extern bool gShowDArrayLengthInType;
     extern bool gCallDebuggerFunctions;
     extern bool gCallDebuggerRanges;
@@ -138,4 +139,5 @@ namespace MagoEE
     int GetParamIndex( const wchar_t* sym );
 
     std::wstring to_wstring( const char* str, size_t slen );
+    std::string to_string( const wchar_t* str, size_t slen );
 }

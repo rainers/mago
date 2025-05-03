@@ -8,6 +8,7 @@
 #pragma once
 
 #include <functional>
+#include <string>
 
 namespace MagoST
 {
@@ -67,6 +68,9 @@ namespace MagoST
 
         virtual HRESULT FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles ) = 0;
         virtual HRESULT FindMatchingDebugFuncs( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles ) = 0;
+
+        virtual HRESULT FindUDTShortName(const char* nameChars, size_t nameLen, std::string& shortName) = 0;
+        virtual HRESULT FindUDTLongName( const char* nameChars, size_t nameLen, std::string& longName ) = 0;
 
         virtual HRESULT FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff ) = 0;
 

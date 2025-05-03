@@ -199,6 +199,15 @@ namespace Mago
             }
         }
 
+        if ( ( findFlags & FindObjectTryFQN ) != 0 && MagoEE::gShortenTypeNames )
+        {
+            std::string longName;
+            if ( session->FindUDTLongName( u8Name, u8NameLen, longName) == S_OK )
+            {
+                auto wlongName = MagoEE::to_wstring( longName.data(), longName.size() );
+                return FindObject( wlongName.c_str(), decl, findFlags & ~FindObjectTryFQN );
+            }
+        }
         return E_NOT_FOUND;
     }
 
@@ -594,6 +603,24 @@ namespace Mago
         return GetDRuntime()->GetAAVersion();
     }
 
+    bool ExprContext::ShortenClassName( std::wstring& className )
+    {
+        if( !MagoEE::gShortenTypeNames || className.find( '.' ) == std::wstring::npos )
+            return false;
+
+        RefPtr<MagoST::ISession> session;
+        if ( GetSession( session.Ref() ) != S_OK )
+            return false;
+
+        std::string u8Name = MagoEE::to_string( className.data(), className.size() );
+        std::string shortName;
+        if( session->FindUDTShortName( u8Name.data(), u8Name.size(), shortName ) != S_OK )
+            return false;
+
+        className = MagoEE::to_wstring( shortName.data(), shortName.size() );
+        return true;
+    }
+
     HRESULT ExprContext::GetClassName( MagoEE::Address addr, std::wstring& className, bool derefOnce )
     {
         HRESULT hr;
@@ -611,7 +638,8 @@ namespace Mago
         if ( SUCCEEDED( hr ) )
         {
             className = bstrClassname;
-            SysFreeString(bstrClassname);
+            SysFreeString( bstrClassname );
+            ShortenClassName( className );
             return S_OK;
         }
         // guess from vtbl symbol name
@@ -638,6 +666,7 @@ namespace Mago
                     hr = E_FAIL;
             }
         }
+        ShortenClassName( className );
         return hr;
     }
 

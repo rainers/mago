@@ -551,24 +551,64 @@ namespace MagoST
                     }
                 }
             }
-            else if( symInfo->GetDataKind( kind ) )
-            //    break;
-            switch( kind )
+            else if ( tag == SymTagUDT || tag == SymTagEnum )
             {
-                case DataIsFileStatic:
-                case DataIsGlobal:
-                case DataIsStaticLocal:
+                SymString name;
+                if ( symInfo->GetName( name ) )
                 {
-                    SymString name;
-                    if( symInfo->GetName( name ) )
+                    auto pname = name.GetName();
+                    auto pos = name.GetLength();
+                    while ( pos > 0 && pname[pos - 1] != '.' )
+                        pos--;
+                    if ( pos > 0 && strncmp( pname, "CAPTURE.", 8 ) != 0 )
                     {
-                        mGlobals.insert( std::string( name.GetName(), name.GetLength() ) );
+                        mUDTshorts.insert( {
+                            std::string( pname, name.GetLength() ),
+                            std::string( pname + pos, name.GetLength() - pos ) } );
                     }
-                    break;
                 }
             }
-
+            else if( symInfo->GetDataKind( kind ) )
+            {
+                //    break;
+                switch( kind )
+                {
+                    case DataIsFileStatic:
+                    case DataIsGlobal:
+                    case DataIsStaticLocal:
+                    {
+                        SymString name;
+                        if( symInfo->GetName( name ) )
+                        {
+                            mGlobals.insert( std::string( name.GetName(), name.GetLength() ) );
+                        }
+                        break;
+                    }
+                }
+            }
         } while ( mStore->FindNextSymbol( searchHandle ) == S_OK );
+
+        auto prev = mUDTshorts.begin();
+        for( auto it = mUDTshorts.begin(); it != mUDTshorts.end(); ++it )
+        {
+            while( it->first.size() > prev->first.size() &&
+                   it->first.compare( 0, prev->first.size(), prev->first ) == 0 &&
+                   it->first[prev->first.size()] == '.' )
+            {
+                // an enclosing type adds its name to the sub type short name
+                it->second = prev->second + "." + it->second;
+                ++it;
+                if ( it == mUDTshorts.end() )
+                    goto L_done;
+            }
+            prev = it;
+        }
+    L_done:
+        for( auto it = mUDTshorts.begin(); it != mUDTshorts.end(); ++it )
+        {
+            auto fqnit = mUDTfqns.insert({ &(it->second), {} });
+            fqnit.first->second.push_back(&(it->first));
+        }
 
         mStore->FindSymbolDone( searchHandle );
     }
@@ -619,5 +659,33 @@ namespace MagoST
                 handles.push_back( handle );
         }
         return handles.empty() ? E_NOT_FOUND : S_OK;
+    }
+
+    HRESULT Session::FindUDTShortName( const char* nameChars, size_t nameLen, std::string& shortName )
+    {
+        cacheGlobals();
+
+        std::string search( nameChars, nameLen );
+        auto it = mUDTshorts.find( search );
+        if( it == mUDTshorts.end() )
+            return E_NOT_FOUND;
+        auto itfqn = mUDTfqns.find( &it->second );
+        _ASSERT( itfqn != mUDTfqns.end() );
+        if( itfqn->second.size() > 1 )
+            return E_FAIL;
+        shortName = it->second;
+        return S_OK;
+    }
+
+    HRESULT Session::FindUDTLongName( const char* nameChars, size_t nameLen, std::string& longName )
+    {
+        cacheGlobals();
+
+        std::string search( nameChars, nameLen );
+        auto it = mUDTfqns.find( &search );
+        if( it == mUDTfqns.end() || it->second.size() != 1 )
+            return E_NOT_FOUND;
+        longName = *(it->second[0]);
+        return S_OK;
     }
 }

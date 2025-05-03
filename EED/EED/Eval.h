@@ -140,6 +140,7 @@ namespace MagoEE
             FindObjectGlobal = 1 << 2,
             FindObjectRegister = 1 << 3,
             FindObjectNoClassDeref = 1 << 8,
+            FindObjectTryFQN = 1 << 9,
             FindObjectAny = FindObjectLocal | FindObjectClosure | FindObjectGlobal | FindObjectRegister,
         };
         virtual HRESULT FindObject(const wchar_t* name, Declaration*& decl, uint32_t findFlags) = 0;

@@ -339,7 +339,8 @@ namespace MagoEE
         if ( resolvedType != NULL )
             return resolvedType;
 
-        hr = binder->FindObject( Id->Str, decl.Ref(), IValueBinder::FindObjectAny );
+        uint32_t flags = IValueBinder::FindObjectAny | ( Parts.empty() ? IValueBinder::FindObjectTryFQN : 0 );
+        hr = binder->FindObject( Id->Str, decl.Ref(), flags );
         if ( FAILED( hr ) )
             return NULL;
 

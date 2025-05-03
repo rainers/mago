@@ -37,6 +37,14 @@ namespace MagoST
         std::set<std::string, reverse_less> mGlobals;
         std::map<std::string, std::vector<SymHandle>, reverse_less> mDebugFuncs;
 
+        std::map<std::string, std::string> mUDTshorts; // FQN -> short name
+        // short name -> FQNs, values in mUDTshorts
+        struct less_string_ptr {
+            bool operator()(const std::string* s1, const std::string* s2) const { return *s1 < *s2; }
+        };
+        std::map<const std::string*, std::vector<const std::string*>, less_string_ptr> mUDTfqns;
+
+
         void cacheGlobals();
         HRESULT _findGlobalSymbol(const char* symbol, std::function<bool(TypeIndex)> fnTest,
                                   SymHandle& handle, SymInfoData& infoData, ISymbolInfo*& symInfo );
@@ -85,6 +93,9 @@ namespace MagoST
 
         virtual HRESULT FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles );
         virtual HRESULT FindMatchingDebugFuncs( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles );
+
+        virtual HRESULT FindUDTShortName( const char* nameChars, size_t nameLen, std::string& shortName );
+        virtual HRESULT FindUDTLongName( const char* nameChars, size_t nameLen, std::string& longName );
 
         virtual HRESULT FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff );
 

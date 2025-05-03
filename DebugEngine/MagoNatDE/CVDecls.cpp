@@ -71,7 +71,12 @@ namespace Mago
             if ( !mSymInfo->GetName( pstrName ) )
                 return NULL;
 
-            hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), mName.m_str );
+            std::string shortName;
+            if( MagoEE::gShortenTypeNames && mSession &&
+                mSession->FindUDTShortName( pstrName.GetName(), pstrName.GetLength(), shortName) == S_OK )
+                hr = Utf8To16( shortName.c_str(), shortName.length(), mName.m_str );
+            else
+                hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), mName.m_str );
             if ( FAILED( hr ) )
                 return NULL;
         }

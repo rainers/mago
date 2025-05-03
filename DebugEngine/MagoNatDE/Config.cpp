@@ -230,6 +230,11 @@ bool readMagoOptions()
     else
         gOptions.recombineTuples = true;
 
+    if ( GetRegValue( hKey, L"shortenTypeNames", &val ) == S_OK )
+        gOptions.shortenTypeNames = val != 0;
+    else
+        gOptions.shortenTypeNames = true;
+
     if (GetRegValue(hKey, L"maxArrayElements", &val) == S_OK)
         gOptions.maxArrayElements = val;
     else
@@ -259,7 +264,9 @@ bool readMagoOptions()
     MagoEE::gMaxArrayLength = gOptions.maxArrayElements;
     MagoEE::gHideReferencePointers = gOptions.hideReferencePointers;
     MagoEE::gRemoveLeadingHexZeroes = gOptions.removeLeadingHexZeroes;
+    MagoEE::gExpandableStrings = gOptions.expandableStrings;
     MagoEE::gRecombineTuples = gOptions.recombineTuples;
+    MagoEE::gShortenTypeNames = gOptions.shortenTypeNames;
     MagoEE::gShowDArrayLengthInType = gOptions.showDArrayLengthInType;
     MagoEE::gCallDebuggerFunctions = gOptions.callDebuggerFunctions;
     MagoEE::gCallDebuggerRanges = gOptions.callDebuggerRanges;

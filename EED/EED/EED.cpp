@@ -89,6 +89,7 @@ namespace MagoEE
     bool gHideReferencePointers = true;
     bool gRemoveLeadingHexZeroes = false;
     bool gRecombineTuples = true;
+    bool gShortenTypeNames = true;
     bool gShowDArrayLengthInType = true;
     bool gCallDebuggerFunctions = true;
     bool gCallDebuggerRanges = true;
@@ -645,6 +646,15 @@ namespace MagoEE
         wname.resize( len );
         MultiByteToWideChar( CP_UTF8, 0, str, slen, (wchar_t*)wname.data(), len );
         return wname;
+    }
+    
+    std::string to_string( const wchar_t* str, size_t slen )
+    {
+        int len = WideCharToMultiByte( CP_UTF8, 0, str, slen, NULL, 0, NULL, NULL);
+        std::string name;
+        name.resize( len );
+        WideCharToMultiByte( CP_UTF8, 0, str, slen, (char*)name.data(), len, NULL, NULL);
+        return name;
     }
     
     template<typename CH>

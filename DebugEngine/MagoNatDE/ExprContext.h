@@ -154,6 +154,8 @@ namespace Mago
 
         virtual DRuntime* GetDRuntime();
 
+        bool ShortenClassName( std::wstring& className );
+
         ////////////////////////////////////////////////////////////
         MagoEE::ITypeEnv* GetTypeEnv();
         MagoEE::NameTable* GetStringTable();
