@@ -336,7 +336,8 @@ namespace Mago
         IRegisterSet* regSet,
         Thread* thread,
         Module* module,
-        int ptrSize )
+        int ptrSize,
+        ExprContext* exprContext )
     {
         _ASSERT( regSet != NULL );
         _ASSERT( thread != NULL );
@@ -348,6 +349,7 @@ namespace Mago
         mThread = thread;
         mModule = module;
         mPtrSize = ptrSize;
+        mExprContext = exprContext;
     }
 
     HRESULT StackFrame::GetLineInfo( LineInfo& info )
@@ -602,7 +604,7 @@ namespace Mago
                 continue;
 
             if ( paramCount > 0 )
-                outputStr.AppendChar( L',' );
+                outputStr.Append( L", " );
 
             if ( (flags & FIF_FUNCNAME_ARGS_TYPES) != 0 )
             {
@@ -610,13 +612,15 @@ namespace Mago
                 {
                     typeStr.clear();
                     type->ToString( typeStr );
-                    outputStr.AppendFormat( L" %.*s", typeStr.size(), typeStr.c_str() );
+                    outputStr.Append( typeStr.c_str() );
                 }
             }
 
             if ( (flags & FIF_FUNCNAME_ARGS_NAMES) != 0 )
             {
-                outputStr.AppendFormat( L" %s", decl->GetName() );
+                if ( (flags & FIF_FUNCNAME_ARGS_TYPES) != 0 )
+                    outputStr.AppendChar( L' ' );
+                outputStr.Append( decl->GetName() );
             }
 
             if ( (flags & FIF_FUNCNAME_ARGS_VALUES) != 0 )
@@ -631,16 +635,14 @@ namespace Mago
                     hr = MagoEE::FormatValue( mExprContext, resultObj, fmtdata, {} );
                     if ( hr == S_OK )
                     {
-                        outputStr.AppendFormat( L" = %.*s", fmtdata.outStr.size(), fmtdata.outStr.c_str() );
+                        if ( ( flags & (FIF_FUNCNAME_ARGS_TYPES | FIF_FUNCNAME_ARGS_NAMES) ) != 0 )
+                            outputStr.Append( L" = " );
+                        outputStr.Append( fmtdata.outStr.c_str() );
                     }
                 }
             }
-
             paramCount++;
         }
-
-        if ( paramCount > 0 )
-            outputStr.AppendChar( L' ' );
 
         return S_OK;
     }

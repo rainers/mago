@@ -129,6 +129,22 @@ public:
         _In_ DkmWorkList* pWorkList,
         _In_ IDkmCompletionRoutine<Native::DkmIsUserCodeExtendedAsyncResult>* pCompletionRoutine
     );
+
+    // IDkmLanguageFrameDecoder
+    virtual HRESULT STDMETHODCALLTYPE GetFrameName(
+        _In_ Evaluation::DkmInspectionContext* pInspectionContext,
+        _In_ DkmWorkList* pWorkList,
+        _In_ CallStack::DkmStackWalkFrame* pFrame,
+        _In_ Evaluation::DkmVariableInfoFlags_t ArgumentFlags,
+        _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameNameAsyncResult>* pCompletionRoutine
+    );
+
+    virtual HRESULT STDMETHODCALLTYPE GetFrameReturnType(
+        _In_ Evaluation::DkmInspectionContext* pInspectionContext,
+        _In_ DkmWorkList* pWorkList,
+        _In_ CallStack::DkmStackWalkFrame* pFrame,
+        _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameReturnTypeAsyncResult>* pCompletionRoutine
+    );
 };
 
 OBJECT_ENTRY_AUTO(CMagoNatCCService::ClassId, CMagoNatCCService)

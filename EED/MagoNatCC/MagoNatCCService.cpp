@@ -2312,3 +2312,36 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::IsUserCodeExtended(
 {
     return E_NOTIMPL;
 }
+
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameName(
+    _In_ Evaluation::DkmInspectionContext* pInspectionContext,
+    _In_ DkmWorkList* pWorkList,
+    _In_ CallStack::DkmStackWalkFrame* pFrame,
+    _In_ Evaluation::DkmVariableInfoFlags_t ArgumentFlags,
+    _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameNameAsyncResult>* pCompletionRoutine)
+{
+    using namespace Evaluation;
+    RefPtr<CCExprContext> exprContext;
+    tryHR(InitExprContext(pInspectionContext, pWorkList, pFrame, false, exprContext));
+    exprContext->SetWorkList(pWorkList);
+
+    bool types = ArgumentFlags & DkmVariableInfoFlags::Types;
+    bool names = ArgumentFlags & DkmVariableInfoFlags::Names;
+    bool values = ArgumentFlags & DkmVariableInfoFlags::Values;
+    std::string funcName = exprContext->GetFunctionName(names, types, values, pInspectionContext->Radix());
+
+    DkmGetFrameNameAsyncResult res;
+    res.ErrorCode = DkmString::Create(CP_UTF8, funcName.data(), funcName.size(), &res.pFrameName);
+    pCompletionRoutine->OnComplete(res);
+    return S_OK;
+}
+
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameReturnType(
+    _In_ Evaluation::DkmInspectionContext* pInspectionContext,
+    _In_ DkmWorkList* pWorkList,
+    _In_ CallStack::DkmStackWalkFrame* pFrame,
+    _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameReturnTypeAsyncResult>* pCompletionRoutine)
+{
+    return E_NOTIMPL;
+}
+

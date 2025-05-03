@@ -99,7 +99,8 @@ namespace Mago
             IRegisterSet* regSet,
             Thread* thread,
             Module* module,
-            int ptrSize );
+            int ptrSize,
+            ExprContext* exprContext = nullptr );
 
     private:
         HRESULT GetLineInfo( LineInfo& info );

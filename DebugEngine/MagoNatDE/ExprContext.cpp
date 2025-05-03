@@ -23,6 +23,8 @@
 #include "../../EED/EED/Scanner.h"
 #include "../../EED/EED/Parser.h"
 #include "../../CVSym/CVSym/Util.h"
+#include "../../DebugEngine/MagoNatDE/StackFrame.h"
+#include "../../DebugEngine/MagoNatDE/EnumFrameInfo.h"
 
 #include <algorithm>
 
@@ -1229,6 +1231,22 @@ namespace Mago
     MagoST::SymHandle ExprContext::GetFunctionSH()
     {
         return mFuncSH;
+    }
+
+    std::string ExprContext::GetFunctionName( bool names, bool types, bool values, int radix )
+    {
+        RefPtr<Mago::StackFrame> stackFrame;
+        auto hr = MakeCComObject(stackFrame);
+        stackFrame->Init(mPC, mRegSet, mThread, mModule, mTypeEnv->GetPointerSize(), this);
+        FRAMEINFO info = { 0 };
+        FRAMEINFO_FLAGS flags = FIF_FUNCNAME
+            | (names ? FIF_FUNCNAME_ARGS_NAMES : 0)
+            | (types ? FIF_FUNCNAME_ARGS_TYPES : 0)
+            | (values ? FIF_FUNCNAME_ARGS_VALUES : 0);
+        stackFrame->GetInfo( flags, radix, &info );
+        std::string funcName = MagoEE::to_string( info.m_bstrFuncName, wcslen(info.m_bstrFuncName) );
+        _CopyFrameInfo::destroy( &info );
+        return funcName;
     }
 
     Mago::IRegisterSet* ExprContext::GetRegisterSet()
