@@ -163,7 +163,9 @@ namespace Mago
         Mago::IRegisterSet* GetRegisterSet();
         const std::vector<MagoST::SymHandle>& GetBlockSH();
         DWORD GetPC(); // RVA
-        std::string GetFunctionName( bool names, bool types, bool values, int radix );
+        HRESULT GetFunctionName( bool names, bool types, bool values, int radix,
+            std::string& funcName, std::function<HRESULT(HRESULT hr, std::string& funcName)> complete );
+        std::wstring GetFunctionReturnType();
 
         HRESULT GetAddress( MagoEE::Declaration* decl, MagoEE::Address& addr );
 

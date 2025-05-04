@@ -46,4 +46,7 @@ namespace Mago
         _CopyFrameInfo, 
         CComMultiThreadModel
     > EnumDebugFrameInfo;
+
+    typedef ScopedStruct<FRAMEINFO, _CopyFrameInfo> FrameInfo;
+
 }

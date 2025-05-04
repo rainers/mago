@@ -30,6 +30,7 @@
 // 
 // to be used as return code for async requests, S_OK means evaluated eagerly
 #define S_QUEUED ((HRESULT)2L)
+#define E_OPERATIONCANCELED 0x8013153b // identical to COR_E_OPERATIONCANCELED
 
 namespace MagoEE
 {

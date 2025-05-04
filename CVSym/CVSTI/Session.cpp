@@ -499,7 +499,7 @@ namespace MagoST
         return l1 < l2;
     }
 
-    void Session::cacheGlobals()
+    void Session::_cacheGlobals()
     {
         if( !mGlobals.empty() || !mDebugFuncs.empty() )
             return;
@@ -549,6 +549,17 @@ namespace MagoST
                         else
                             it->second.push_back(symHandle);
                     }
+
+                    auto pname = name.GetName();
+                    auto pos = name.GetLength();
+                    while (pos > 0 && pname[pos - 1] != '.')
+                        pos--;
+                    if (pos > 0 )
+                    {
+                        mFuncShorts.insert({
+                            std::string(pname, name.GetLength()),
+                            std::string(pname + pos, name.GetLength() - pos) });
+                    }
                 }
             }
             else if ( tag == SymTagUDT || tag == SymTagEnum )
@@ -588,6 +599,15 @@ namespace MagoST
             }
         } while ( mStore->FindNextSymbol( searchHandle ) == S_OK );
 
+        mStore->FindSymbolDone(searchHandle);
+
+        _finalizeUDTshorts();
+        _buildUDTfqns();
+        _finalizeFuncShorts();
+    }
+
+    void Session::_finalizeUDTshorts()
+    {
         auto prev = mUDTshorts.begin();
         for( auto it = mUDTshorts.begin(); it != mUDTshorts.end(); ++it )
         {
@@ -599,24 +619,44 @@ namespace MagoST
                 it->second = prev->second + "." + it->second;
                 ++it;
                 if ( it == mUDTshorts.end() )
-                    goto L_done;
+                    return;
             }
             prev = it;
         }
-    L_done:
+    }
+
+    void Session::_buildUDTfqns()
+    {
         for( auto it = mUDTshorts.begin(); it != mUDTshorts.end(); ++it )
         {
             auto fqnit = mUDTfqns.insert({ &(it->second), {} });
             fqnit.first->second.push_back(&(it->first));
         }
+    }
 
-        mStore->FindSymbolDone( searchHandle );
+    void Session::_finalizeFuncShorts()
+    {
+        auto funcit = mFuncShorts.begin();
+        for (auto udtit = mUDTshorts.begin(); udtit != mUDTshorts.end(); ++udtit)
+        {
+            while (funcit != mFuncShorts.end() && funcit->first < udtit->first)
+                ++funcit;
+            while (funcit != mFuncShorts.end() &&
+                funcit->first.size() > udtit->first.size() &&
+                funcit->first.compare(0, udtit->first.size(), udtit->first) == 0 &&
+                funcit->first[udtit->first.size()] == '.')
+            {
+                // an enclosing type keeps its short name within the func short name
+                funcit->second = funcit->first.substr(udtit->first.size() - udtit->second.size());
+                ++funcit;
+            }
+        }
     }
 
     HRESULT Session::_findMatchingGlobals( std::set<std::string, reverse_less>& symSet,
         const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles )
     {
-        cacheGlobals();
+        _cacheGlobals();
         
         std::string search( nameChars, nameLen );
         for( auto it = symSet.lower_bound( search ); it != symSet.end(); ++it )
@@ -645,7 +685,7 @@ namespace MagoST
     }
     HRESULT Session::FindMatchingDebugFuncs( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles )
     {
-        cacheGlobals();
+        _cacheGlobals();
 
         std::string search(nameChars, nameLen);
         for (auto it = mDebugFuncs.lower_bound(search); it != mDebugFuncs.end(); ++it)
@@ -663,7 +703,7 @@ namespace MagoST
 
     HRESULT Session::FindUDTShortName( const char* nameChars, size_t nameLen, std::string& shortName )
     {
-        cacheGlobals();
+        _cacheGlobals();
 
         std::string search( nameChars, nameLen );
         auto it = mUDTshorts.find( search );
@@ -679,7 +719,7 @@ namespace MagoST
 
     HRESULT Session::FindUDTLongName( const char* nameChars, size_t nameLen, std::string& longName )
     {
-        cacheGlobals();
+        _cacheGlobals();
 
         std::string search( nameChars, nameLen );
         auto it = mUDTfqns.find( &search );
@@ -688,4 +728,17 @@ namespace MagoST
         longName = *(it->second[0]);
         return S_OK;
     }
+
+    HRESULT Session::FindFuncShortName( const char* nameChars, size_t nameLen, std::string& shortName )
+    {
+        _cacheGlobals();
+
+        std::string search( nameChars, nameLen );
+        auto it = mFuncShorts.find( search );
+        if( it == mFuncShorts.end() )
+            return E_NOT_FOUND;
+        shortName = it->second;
+        return S_OK;
+    }
+
 }

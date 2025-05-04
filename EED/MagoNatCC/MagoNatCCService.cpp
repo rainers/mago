@@ -57,6 +57,8 @@
 
 #define tryHR(x) do { HRESULT _hr = (x); if(FAILED(_hr)) return _hr; } while(false)
 
+static_assert(E_OPERATIONCANCELED == COR_E_OPERATIONCANCELED, "bad E_OPERATIONCANCELED");
+
 Evaluation::IL::DkmILCallingConvention::e toCallingConvention(uint8_t callConv);
 CComPtr<DkmString> toDkmString(const wchar_t* str);
 
@@ -2328,12 +2330,18 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameName(
     bool types = ArgumentFlags & DkmVariableInfoFlags::Types;
     bool names = ArgumentFlags & DkmVariableInfoFlags::Names;
     bool values = ArgumentFlags & DkmVariableInfoFlags::Values;
-    std::string funcName = exprContext->GetFunctionName(names, types, values, pInspectionContext->Radix());
-
-    DkmGetFrameNameAsyncResult res;
-    res.ErrorCode = DkmString::Create(CP_UTF8, funcName.data(), funcName.size(), &res.pFrameName);
-    pCompletionRoutine->OnComplete(res);
-    return S_OK;
+    auto completeFunc = [complete = RefPtr<IDkmCompletionRoutine<DkmGetFrameNameAsyncResult>>(pCompletionRoutine),
+        exprContext](HRESULT hr, const std::string& funcName)
+        {
+            DkmGetFrameNameAsyncResult res;
+            res.ErrorCode = DkmString::Create(CP_UTF8, funcName.data(), funcName.size(), &res.pFrameName);
+            complete->OnComplete(res);
+            return hr;
+        };
+    std::string funcName;
+    HRESULT hr = exprContext->GetFunctionName(names, types, values,
+        pInspectionContext->Radix(), funcName, completeFunc);
+    return hr == S_QUEUED ? S_OK : hr;
 }
 
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameReturnType(
@@ -2342,6 +2350,17 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameReturnType(
     _In_ CallStack::DkmStackWalkFrame* pFrame,
     _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameReturnTypeAsyncResult>* pCompletionRoutine)
 {
-    return E_NOTIMPL;
+    using namespace Evaluation;
+    RefPtr<CCExprContext> exprContext;
+    tryHR(InitExprContext(pInspectionContext, pWorkList, pFrame, false, exprContext));
+    exprContext->SetWorkList(pWorkList);
+
+    std::wstring retType = exprContext->GetFunctionReturnType();
+
+    DkmGetFrameReturnTypeAsyncResult res;
+    res.ErrorCode = retType.empty() ? E_FAIL : S_OK;
+    res.pReturnType = toDkmString(retType.c_str());
+    pCompletionRoutine->OnComplete(res);
+    return S_OK;
 }
 

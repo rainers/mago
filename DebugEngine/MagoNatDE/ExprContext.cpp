@@ -326,7 +326,26 @@ namespace Mago
 
     HRESULT ExprContext::GetReturnType( MagoEE::Type*& type )
     {
-        return E_NOTIMPL;
+        RefPtr<MagoST::ISession> session;
+        if ( GetSession( session.Ref() ) != S_OK )
+            return E_NOT_FOUND;
+
+        SymInfoData     infoData = { 0 };
+        ISymbolInfo* symInfo = NULL;
+
+        HRESULT hr = session->GetSymbolInfo( mFuncSH, infoData, symInfo );
+        if ( FAILED( hr ) )
+            return hr;
+
+        MagoST::TypeIndex typeIndex;
+        if ( !symInfo->GetType( typeIndex ) )
+            return E_FAIL;
+
+        hr = GetTypeFromTypeSymbol( typeIndex, type );
+        if ( FAILED( hr ) )
+            return hr;
+
+        return hr;
     }
 
     HRESULT ExprContext::NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl )
@@ -1233,20 +1252,41 @@ namespace Mago
         return mFuncSH;
     }
 
-    std::string ExprContext::GetFunctionName( bool names, bool types, bool values, int radix )
+    HRESULT ExprContext::GetFunctionName( bool names, bool types, bool values, int radix,
+        std::string& funcName, std::function<HRESULT(HRESULT hr, std::string& name)> complete )
     {
         RefPtr<Mago::StackFrame> stackFrame;
-        auto hr = MakeCComObject(stackFrame);
-        stackFrame->Init(mPC, mRegSet, mThread, mModule, mTypeEnv->GetPointerSize(), this);
+        auto hr = MakeCComObject( stackFrame );
+        if ( FAILED( hr ) )
+            return hr;
+        stackFrame->Init( mPC, mRegSet, mThread, mModule, mTypeEnv->GetPointerSize(), this );
         FRAMEINFO info = { 0 };
         FRAMEINFO_FLAGS flags = FIF_FUNCNAME
             | (names ? FIF_FUNCNAME_ARGS_NAMES : 0)
             | (types ? FIF_FUNCNAME_ARGS_TYPES : 0)
             | (values ? FIF_FUNCNAME_ARGS_VALUES : 0);
-        stackFrame->GetInfo( flags, radix, &info );
-        std::string funcName = MagoEE::to_string( info.m_bstrFuncName, wcslen(info.m_bstrFuncName) );
+        auto completeInfo = [complete]( HRESULT hr, const FRAMEINFO& info )
+            {
+                std::string funcName;
+                if ( info.m_dwValidFields & FIF_FUNCNAME )
+                    funcName = MagoEE::to_string( info.m_bstrFuncName, wcslen( info.m_bstrFuncName ) );
+                return complete ? complete( hr, funcName ) : hr;
+            };
+        hr = stackFrame->GetInfoAsync( flags, radix, &info,
+            complete ? completeInfo : std::function<HRESULT(HRESULT, const FRAMEINFO&)>{});
+        if ( hr == S_OK && ( info.m_dwValidFields & FIF_FUNCNAME ) )
+            funcName = MagoEE::to_string( info.m_bstrFuncName, wcslen( info.m_bstrFuncName ) );
         _CopyFrameInfo::destroy( &info );
-        return funcName;
+        return hr;
+    }
+
+    std::wstring ExprContext::GetFunctionReturnType()
+    {
+        std::wstring retType;
+        RefPtr<MagoEE::Type> type;
+        if( GetReturnType( type.Ref() ) == S_OK )
+            type->ToString( retType );
+        return retType;
     }
 
     Mago::IRegisterSet* ExprContext::GetRegisterSet()

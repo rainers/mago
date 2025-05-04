@@ -15,6 +15,9 @@
 #include "FrameProperty.h"
 #include "RegisterSet.h"
 #include "MagoCVConst.h"
+#include "../../DebugEngine/MagoNatDE/EnumFrameInfo.h"
+
+#include <memory>
 
 
 namespace Mago
@@ -90,6 +93,15 @@ namespace Mago
        UINT            nRadix,
        FRAMEINFO*      pFrameInfo )
     {
+        return GetInfoAsync( dwFieldSpec, nRadix, pFrameInfo, {} );
+    }
+
+    HRESULT StackFrame::GetInfoAsync(
+       FRAMEINFO_FLAGS dwFieldSpec,
+       UINT            nRadix,
+       FRAMEINFO*      pFrameInfo,
+       std::function<HRESULT(HRESULT hr, const FRAMEINFO& frameInfo)> complete )
+    {
         if ( pFrameInfo == NULL )
             return E_INVALIDARG;
 
@@ -147,13 +159,6 @@ namespace Mago
             pFrameInfo->m_dwValidFields |= FIF_DEBUGINFO;
         }
 
-        if ( (dwFieldSpec & FIF_FUNCNAME) != 0 )
-        {
-            hr = GetFunctionName( dwFieldSpec, nRadix, &pFrameInfo->m_bstrFuncName );
-            if ( SUCCEEDED( hr ) )
-                pFrameInfo->m_dwValidFields |= FIF_FUNCNAME;
-        }
-
         if ( (dwFieldSpec & FIF_RETURNTYPE) != 0 )
         {
             //pFrameInfo->m_bstrReturnType;
@@ -185,10 +190,36 @@ namespace Mago
             }
         }
 
+        if ( (dwFieldSpec & FIF_FUNCNAME) != 0 )
+        {
+            std::function<HRESULT(HRESULT hr, const std::wstring&)> funcComplete;
+            if ( complete )
+            {
+                FrameInfo frameInfo;
+                Mago::_CopyFrameInfo::copy(&frameInfo, pFrameInfo);
+                funcComplete = [frameInfo , complete] (HRESULT hr, const std::wstring& funcName) mutable
+                {
+                    if (SUCCEEDED(hr))
+                    {
+                        frameInfo.m_dwValidFields |= FIF_FUNCNAME;
+                        frameInfo.m_bstrFuncName = SysAllocString( funcName.c_str() );
+                    }
+                    hr = complete(hr, frameInfo);
+                    return hr;
+                };
+            }
+
+            hr = GetFunctionName( dwFieldSpec, nRadix, &pFrameInfo->m_bstrFuncName, funcComplete );
+            if ( hr == S_OK )
+                pFrameInfo->m_dwValidFields |= FIF_FUNCNAME;
+        }
+        else if( complete )
+            return complete( hr, *pFrameInfo );
+
         //FIF_STALECODE m_fStaleCode
         //FIF_ANNOTATEDFRAME m_fAnnotatedFrame
 
-        return S_OK;
+        return hr;
     }
 
     HRESULT StackFrame::GetPhysicalStackRange( 
@@ -409,9 +440,10 @@ namespace Mago
     }
 
     HRESULT StackFrame::GetFunctionName( 
-        FRAMEINFO_FLAGS flags, 
-        UINT radix, 
-        BSTR* funcName )
+        FRAMEINFO_FLAGS flags,
+        UINT radix,
+        BSTR* funcName,
+        std::function<HRESULT(HRESULT hr, const std::wstring&)> complete )
     {
         _ASSERT( funcName != NULL );
         HRESULT hr = S_OK;
@@ -428,7 +460,7 @@ namespace Mago
             }
         }
 
-        hr = AppendFunctionNameWithSymbols( flags, radix, fullName );
+        hr = AppendFunctionNameWithSymbols( flags, radix, fullName, complete );
         if ( FAILED( hr ) )
         {
             hr = AppendFunctionNameWithAddress( flags, radix, fullName );
@@ -436,7 +468,8 @@ namespace Mago
                 return hr;
         }
 
-        *funcName = fullName.AllocSysString();
+        if( hr == S_OK )
+            *funcName = fullName.AllocSysString();
 
         return hr;
     }
@@ -458,7 +491,8 @@ namespace Mago
     HRESULT StackFrame::AppendFunctionNameWithSymbols( 
         FRAMEINFO_FLAGS flags, 
         UINT radix, 
-        CString& fullName )
+        CString& fullName,
+        std::function<HRESULT(HRESULT hr, const std::wstring&)> complete )
     {
         HRESULT hr = S_OK;
         RefPtr<MagoST::ISession>    session;
@@ -479,7 +513,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = AppendFunctionNameWithSymbols( flags, radix, session, symInfo, fullName );
+        hr = AppendFunctionNameWithSymbols( flags, radix, session, symInfo, fullName, complete );
 
         // for reference: you get the language by going to a lexical ancestor
         // that's a compiland, then you get a compiland detail from it
@@ -492,7 +526,8 @@ namespace Mago
         UINT radix, 
         MagoST::ISession* session,
         MagoST::ISymbolInfo* symInfo, 
-        CString& fullName )
+        CString& fullName,
+        std::function<HRESULT(HRESULT hr, const std::wstring&)> complete )
     {
         _ASSERT( session != NULL );
         _ASSERT( symInfo != NULL );
@@ -503,19 +538,19 @@ namespace Mago
         if ( !symInfo->GetName( pstrName ) )
             return E_NOT_FOUND;
 
-        hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), funcNameBstr.m_str );
+        std::string shortName;
+        if( session->FindFuncShortName( pstrName.GetName(), pstrName.GetLength(), shortName ) == S_OK )
+            hr = Utf8To16( shortName.data(), shortName.size(), funcNameBstr.m_str );
+        else
+            hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), funcNameBstr.m_str );
         if ( FAILED( hr ) )
             return hr;
 
         fullName.Append( funcNameBstr );
         fullName.AppendChar( L'(' );
 
-        if ( (flags & FIF_FUNCNAME_ARGS_ALL) != 0 )
-        {
-            AppendArgs( flags, radix, session, symInfo, fullName );
-        }
-
-        fullName.AppendChar( L')' );
+        CString tailName;
+        tailName.AppendChar( L')' );
 
         bool hasLineInfo = false;
         Address64 baseAddr = mPC;
@@ -531,7 +566,7 @@ namespace Mago
                 DWORD lineNumber = line.LineBegin.dwLine + 1;
                 const wchar_t* lineStr = GetString( IDS_LINE );
 
-                fullName.AppendFormat( L" %s %u", lineStr, lineNumber );
+                tailName.AppendFormat( L" %s %u", lineStr, lineNumber );
             }
         }
 
@@ -550,10 +585,15 @@ namespace Mago
         if ( ((flags & FIF_FUNCNAME_OFFSET) != 0) && (mPC != baseAddr) )
         {
             const wchar_t* bytesStr = GetString( IDS_BYTES );
-            fullName.AppendFormat( L" + 0x%x %s", (uint32_t) (mPC - baseAddr), bytesStr );
+            tailName.AppendFormat( L" + 0x%x %s", (uint32_t) (mPC - baseAddr), bytesStr );
         }
 
-        return S_OK;
+        if ((flags & FIF_FUNCNAME_ARGS_ALL) != 0)
+        {
+            hr = AppendArgs(flags, radix, session, symInfo, fullName, tailName, complete);
+        }
+
+        return hr;
     }
 
     HRESULT StackFrame::AppendArgs(
@@ -561,15 +601,15 @@ namespace Mago
         UINT radix, 
         MagoST::ISession* session,
         MagoST::ISymbolInfo* symInfo, 
-        CString& outputStr )
+        CString& outputStr,
+        CString& tailStr,
+        std::function<HRESULT(HRESULT hr, const std::wstring&)> complete )
     {
         _ASSERT( session != NULL );
         _ASSERT( symInfo != NULL );
         HRESULT             hr = S_OK;
         MagoST::SymbolScope funcScope = { 0 };
         MagoST::SymHandle   childSH = { 0 };
-        int                 paramCount = 0;
-        std::wstring        typeStr;
 
         hr = MakeExprContext();
         if ( FAILED( hr ) )
@@ -579,7 +619,61 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        while ( session->NextSymbol( funcScope, childSH, ~0 ) )
+        struct Param
+        {
+            std::wstring type;
+            std::wstring name;
+            std::wstring value;
+        };
+        struct Closure
+        {
+            std::vector<Param> params;
+            std::wstring headStr;
+            std::wstring tailStr;
+            HRESULT hrCombined = S_OK;
+            size_t toComplete = 1; // keep it above 0 until all requests queued
+            std::function<HRESULT(HRESULT hr, const std::wstring&)> complete;
+
+            HRESULT done(HRESULT hr, size_t cnt)
+            {
+                hrCombine(hr);
+                toComplete -= cnt;
+                if (toComplete == 0 && complete)
+                    return complete(hrCombined, buildFuncName());
+                return hr;
+            }
+            HRESULT hrCombine(HRESULT hr)
+            {
+                if (hrCombined != S_QUEUED && hrCombined != E_OPERATIONCANCELED)
+                    if (hrCombined == S_OK || hr == S_QUEUED || hr == E_OPERATIONCANCELED)
+                        hrCombined = hr;
+                return hrCombined;
+            }
+
+            std::wstring buildFuncName()
+            {
+                std::wstring str;
+                for ( auto& p : params )
+                {
+                    if ( !str.empty() )
+                        str.append( L", " );
+                    str.append( p.type );
+                    if (!p.type.empty() && !p.name.empty())
+                        str.append(L" ");
+                    str.append(p.name);
+                    if ((!p.type.empty() || !p.name.empty()) && !p.value.empty())
+                        str.append(L" = ");
+                    str.append(p.value);
+                }
+                return headStr + str + tailStr;
+            }
+        };
+        auto closure = std::make_shared<Closure>();
+        closure->headStr = outputStr;
+        closure->tailStr = tailStr;
+        closure->complete = complete;
+
+        while ( session->NextSymbol( funcScope, childSH, ~0u ) )
         {
             MagoST::SymInfoData     childData = { 0 };
             MagoST::ISymbolInfo*    childSym = NULL;
@@ -603,24 +697,21 @@ namespace Mago
             if ( decl == NULL )
                 continue;
 
-            if ( paramCount > 0 )
-                outputStr.Append( L", " );
+            closure->params.push_back({});
 
             if ( (flags & FIF_FUNCNAME_ARGS_TYPES) != 0 )
             {
                 if ( decl->GetType( type.Ref() ) )
                 {
-                    typeStr.clear();
+                    std::wstring typeStr;
                     type->ToString( typeStr );
-                    outputStr.Append( typeStr.c_str() );
+                    closure->params.back().type = typeStr;
                 }
             }
 
             if ( (flags & FIF_FUNCNAME_ARGS_NAMES) != 0 )
             {
-                if ( (flags & FIF_FUNCNAME_ARGS_TYPES) != 0 )
-                    outputStr.AppendChar( L' ' );
-                outputStr.Append( decl->GetName() );
+                closure->params.back().name = decl->GetName();
             }
 
             if ( (flags & FIF_FUNCNAME_ARGS_VALUES) != 0 )
@@ -630,21 +721,34 @@ namespace Mago
                 hr = mExprContext->Evaluate( decl, resultObj );
                 if ( hr == S_OK )
                 {
+                    closure->toComplete++;
                     MagoEE::FormatOptions fmtopts (radix);
                     MagoEE::FormatData fmtdata( fmtopts );
-                    hr = MagoEE::FormatValue( mExprContext, resultObj, fmtdata, {} );
-                    if ( hr == S_OK )
+                    auto completeValue = !complete ? std::function<HRESULT(HRESULT, std::wstring)>{} :
+                        [closure, idx = closure->params.size() - 1](HRESULT hr, std::wstring valStr)
+                        {
+                            closure->params[idx].value = valStr;
+                            return closure->done(hr, 1);
+                        };
+                    hr = MagoEE::FormatValue( mExprContext, resultObj, fmtdata, completeValue );
+                    if (hr == S_OK)
                     {
-                        if ( ( flags & (FIF_FUNCNAME_ARGS_TYPES | FIF_FUNCNAME_ARGS_NAMES) ) != 0 )
-                            outputStr.Append( L" = " );
-                        outputStr.Append( fmtdata.outStr.c_str() );
+                        if ( !completeValue )
+                            closure->params.back().value = fmtdata.outStr;
                     }
+                    else if (hr != S_QUEUED)
+                        closure->done(hr, 1);
+                    if (hr == E_OPERATIONCANCELED)
+                        break;
                 }
+                else
+                    MagoEE::GetErrorString( hr, closure->params.back().value );
             }
-            paramCount++;
         }
-
-        return S_OK;
+        closure->done(S_OK, 1);
+        if( !complete )
+            outputStr = closure->buildFuncName().c_str();
+        return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
     }
 
     HRESULT StackFrame::GetLanguageName( BSTR* langName )

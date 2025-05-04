@@ -102,37 +102,48 @@ namespace Mago
             int ptrSize,
             ExprContext* exprContext = nullptr );
 
+        STDMETHOD( GetInfoAsync )( 
+           FRAMEINFO_FLAGS dwFieldSpec,
+           UINT            nRadix,
+           FRAMEINFO*      pFrameInfo,
+           std::function<HRESULT(HRESULT hr, const FRAMEINFO& frameInfo)> complete );
+
     private:
         HRESULT GetLineInfo( LineInfo& info );
 
-        HRESULT GetFunctionName( 
-            FRAMEINFO_FLAGS flags, 
-            UINT radix, 
-            BSTR* funcName );
+        HRESULT GetFunctionName(
+            FRAMEINFO_FLAGS flags,
+            UINT radix,
+            BSTR* funcName,
+            std::function<HRESULT(HRESULT hr, const std::wstring&)> complete = {} );
 
-        HRESULT AppendFunctionNameWithSymbols( 
-            FRAMEINFO_FLAGS flags, 
-            UINT radix, 
+        HRESULT AppendFunctionNameWithSymbols(
+            FRAMEINFO_FLAGS flags,
+            UINT radix,
+            CString& fullName,
+            std::function<HRESULT(HRESULT hr, const std::wstring&)> complete );
+
+        HRESULT AppendFunctionNameWithAddress(
+            FRAMEINFO_FLAGS flags,
+            UINT radix,
             CString& fullName );
 
-        HRESULT AppendFunctionNameWithAddress( 
-            FRAMEINFO_FLAGS flags, 
-            UINT radix, 
-            CString& fullName );
-
-        HRESULT AppendFunctionNameWithSymbols( 
-            FRAMEINFO_FLAGS flags, 
-            UINT radix, 
+        HRESULT AppendFunctionNameWithSymbols(
+            FRAMEINFO_FLAGS flags,
+            UINT radix,
             MagoST::ISession* session,
-            MagoST::ISymbolInfo* symInfo, 
-            CString& fullName );
+            MagoST::ISymbolInfo* symInfo,
+            CString& fullName,
+            std::function<HRESULT(HRESULT hr, const std::wstring&)> complete );
 
         HRESULT AppendArgs(
-            FRAMEINFO_FLAGS flags, 
-            UINT radix, 
+            FRAMEINFO_FLAGS flags,
+            UINT radix,
             MagoST::ISession* session,
-            MagoST::ISymbolInfo* symInfo, 
-            CString& outputStr );
+            MagoST::ISymbolInfo* symInfo,
+            CString& outputStr,
+            CString& tailStr,
+            std::function<HRESULT(HRESULT hr, const std::wstring&)> complete );
 
         HRESULT GetLanguageName( BSTR* langName );
 
