@@ -743,9 +743,15 @@ public:
     Mago::Address64 mSEH = 0;
     Mago::Address64 mInstanceGC = 0;
 
-    CCExprContext() {}
+    static std::atomic<uint32_t> sNumInstances;
+
+    CCExprContext()
+    {
+        sNumInstances++;
+    }
     ~CCExprContext() 
     {
+        sNumInstances--;
     }
     
     HRESULT Init(DkmProcess* process, DkmWorkList* workList, CallStack::DkmStackWalkFrame* frame)
@@ -1625,6 +1631,8 @@ public:
 
     Mago::IRegisterSet* getRegSet() { return mModule->mRegSet; }
 };
+
+std::atomic<uint32_t> CCExprContext::sNumInstances;
 
 ///////////////////////////////////////////////////////////////////////////////
 CComPtr<DkmString> toDkmString(const wchar_t* str)

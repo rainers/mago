@@ -539,7 +539,8 @@ namespace Mago
             return E_NOT_FOUND;
 
         std::string shortName;
-        if( session->FindFuncShortName( pstrName.GetName(), pstrName.GetLength(), shortName ) == S_OK )
+        if( MagoEE::gShortenTypeNames &&
+            session->FindFuncShortName( pstrName.GetName(), pstrName.GetLength(), shortName ) == S_OK )
             hr = Utf8To16( shortName.data(), shortName.size(), funcNameBstr.m_str );
         else
             hr = Utf8To16( pstrName.GetName(), pstrName.GetLength(), funcNameBstr.m_str );
@@ -722,30 +723,29 @@ namespace Mago
                 if ( hr == S_OK )
                 {
                     closure->toComplete++;
-                    MagoEE::FormatOptions fmtopts (radix);
+                    MagoEE::FormatOptions fmtopts( radix );
                     MagoEE::FormatData fmtdata( fmtopts );
-                    auto completeValue = !complete ? std::function<HRESULT(HRESULT, std::wstring)>{} :
-                        [closure, idx = closure->params.size() - 1](HRESULT hr, std::wstring valStr)
+                    auto completeValue = !complete ? std::function<HRESULT( HRESULT, std::wstring )>{} :
+                        [closure, idx = closure->params.size() - 1]( HRESULT hr, std::wstring valStr )
                         {
                             closure->params[idx].value = valStr;
                             return closure->done(hr, 1);
                         };
                     hr = MagoEE::FormatValue( mExprContext, resultObj, fmtdata, completeValue );
-                    if (hr == S_OK)
+                    if ( hr != S_QUEUED && !completeValue )
                     {
-                        if ( !completeValue )
+                        if ( hr == S_OK )
                             closure->params.back().value = fmtdata.outStr;
+                        closure->done( hr, 1 );
                     }
-                    else if (hr != S_QUEUED)
-                        closure->done(hr, 1);
-                    if (hr == E_OPERATIONCANCELED)
+                    if ( hr == E_OPERATIONCANCELED )
                         break;
                 }
                 else
                     MagoEE::GetErrorString( hr, closure->params.back().value );
             }
         }
-        closure->done(S_OK, 1);
+        closure->done( S_OK, 1 );
         if( !complete )
             outputStr = closure->buildFuncName().c_str();
         return closure->toComplete > 0 ? S_QUEUED : closure->hrCombined;
