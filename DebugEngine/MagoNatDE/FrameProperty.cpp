@@ -156,8 +156,8 @@ namespace Mago
 
         hr = MagoEE::ParseText( 
             fullName.c_str(), 
-            mExprContext->GetTypeEnv(), 
-            mExprContext->GetStringTable(), 
+            mExprContext->GetModuleContext()->GetTypeEnv(), 
+            mExprContext->GetModuleContext()->GetStringTable(), 
             parsedExpr.Ref() );
         if ( FAILED( hr ) )
             return hr;

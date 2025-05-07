@@ -143,6 +143,6 @@ namespace Mago
         HRESULT FormatValue( int radix, BSTR& bstr, std::function<HRESULT(HRESULT, BSTR)> complete );
     };
 
-    bool GetPropertyType( ExprContext* exprContext, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& type );
-    DWORD GetPropertyAttr( ExprContext* exprContext, const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts );
+    bool GetPropertyType( MagoEE::IValueBinder* binder, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& type );
+    DWORD GetPropertyAttr( const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts );
 }

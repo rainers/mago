@@ -458,7 +458,7 @@ namespace MagoEE
                     return E_MAGOEE_NO_ADDRESS;
                 addr = array.Addr + offset;
             }
-            else if ( !elemDecl->GetAddress( addr ) )
+            else if ( !elemDecl->GetAddress( addr , binder ) )
                 return E_MAGOEE_NO_ADDRESS;
         }
         else
@@ -782,7 +782,7 @@ namespace MagoEE
         }
         else if ( !Decl->IsRegister() )
         {
-            if ( !Decl->GetAddress( obj.Addr ) )
+            if ( !Decl->GetAddress( obj.Addr, binder ) )
                 obj.Addr = 0;
         }
 
@@ -813,7 +813,7 @@ namespace MagoEE
 
         if ( !thisType->IsPointer() )
         {
-            if ( !thisDecl->GetAddress( addr ) )
+            if ( !thisDecl->GetAddress( addr, binder ) )
                 return E_FAIL;
         }
         else
@@ -1048,7 +1048,7 @@ namespace MagoEE
 
                     obj.Value.Delegate.FuncAddr = vtblptr.Addr;
                 }
-                else if( !Decl->GetAddress( obj.Value.Delegate.FuncAddr ) )
+                else if( !Decl->GetAddress( obj.Value.Delegate.FuncAddr, binder ) )
                     return E_MAGOEE_NO_ADDRESS;
 
                 obj.Value.Delegate.ContextAddr = parent.Value.Addr;
@@ -1064,7 +1064,7 @@ namespace MagoEE
         }
         // else is some other value: constant, var
         else
-            Decl->GetAddress( obj.Addr );
+            Decl->GetAddress( obj.Addr, binder );
 
         if ( mode == EvalMode_Address )
         {
@@ -1143,7 +1143,7 @@ namespace MagoEE
         UNREFERENCED_PARAMETER( evalData );
 
         obj._Type = _Type;
-        Decl->GetAddress( obj.Addr );
+        Decl->GetAddress( obj.Addr, binder );
 
         if ( mode == EvalMode_Address )
         {
@@ -1191,7 +1191,7 @@ namespace MagoEE
         UNREFERENCED_PARAMETER( evalData );
 
         obj._Type = _Type;
-        Decl->GetAddress( obj.Addr );
+        Decl->GetAddress( obj.Addr, binder );
 
         if ( mode == EvalMode_Address )
         {
@@ -1563,7 +1563,7 @@ namespace MagoEE
         }
         else
         {
-            if( !ne->Decl || !ne->Decl->GetAddress( callee.Addr ) )
+            if( !ne->Decl || !ne->Decl->GetAddress( callee.Addr, binder ) )
                 return E_MAGOEE_NO_ADDRESS;
         }
 

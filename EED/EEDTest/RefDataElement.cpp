@@ -42,7 +42,7 @@ bool DeclRefDataElement::GetAddress( MagoEE::Address& addr )
     if ( mDecl.Get() == NULL )
         throw L"Declaration not found.";
 
-    return mDecl->GetAddress( addr );
+    return mDecl->GetAddress( addr, nullptr );
 }
 
 void DeclRefDataElement::AddChild( Element* elem )

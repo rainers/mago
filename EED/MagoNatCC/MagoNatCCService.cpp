@@ -1657,12 +1657,13 @@ HRESULT InitExprContext(Evaluation::DkmInspectionContext* pInspectionContext,
         forceReinit = true; 
     }
     auto session = pInspectionContext->InspectionSession();
-    if (!forceReinit)
-        if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
+    if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
+        if (!forceReinit)
             return exprContext->SetStackFrame(pStackFrame);
     auto process = pInspectionContext->RuntimeInstance()->Process();
 
-    tryHR(MakeCComObject(exprContext));
+    if (!exprContext)
+        tryHR(MakeCComObject(exprContext));
     tryHR(exprContext->Init(process, pWorkList, pStackFrame));
 
 #if 1 // disable if caching causes too much trouble
@@ -1852,8 +1853,9 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     MagoEE::FormatOptions fmtopt;
     tryHR(MagoEE::StripFormatSpecifier(exprText, fmtopt));
 
+    auto modContext = exprContext->GetModuleContext();
     RefPtr<MagoEE::IEEDParsedExpr> pExpr;
-    hr = MagoEE::ParseText(exprText.c_str(), exprContext->GetTypeEnv(), exprContext->GetStringTable(), pExpr.Ref());
+    hr = MagoEE::ParseText(exprText.c_str(), modContext->GetTypeEnv(), modContext->GetStringTable(), pExpr.Ref());
     if (FAILED(hr))
         return createEvaluationError(pInspectionContext, pStackFrame, hr, exprText, pCompletionRoutine);
 

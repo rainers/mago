@@ -151,7 +151,7 @@ bool LValueObj::GetAddress( MagoEE::Address& addr )
         return true;
     }
 
-    if ( (mDecl.Get() != NULL) && mDecl->GetAddress( addr ) )
+    if ( (mDecl.Get() != NULL) && mDecl->GetAddress( addr, nullptr ) )
         return true;
 
     return false;

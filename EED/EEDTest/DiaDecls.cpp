@@ -83,7 +83,7 @@ const wchar_t* DiaDecl::GetName()
     return mName;
 }
 
-bool DiaDecl::GetAddress( MagoEE::Address& addr )
+bool DiaDecl::GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder )
 {
     HRESULT     hr = S_OK;
     uint32_t    offset = 0;

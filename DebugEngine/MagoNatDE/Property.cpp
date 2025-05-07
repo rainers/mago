@@ -81,7 +81,7 @@ namespace Mago
 
         if ( (dwFields & DEBUGPROP_INFO_ATTRIB) != 0 )
         {
-            pPropertyInfo->dwAttrib = GetPropertyAttr( mExprContext, mObjVal, mFormatOpts );
+            pPropertyInfo->dwAttrib = GetPropertyAttr( mObjVal, mFormatOpts );
             pPropertyInfo->dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
 
@@ -174,11 +174,11 @@ namespace Mago
         RefPtr<MagoEE::IEEDEnumValues>  enumVals;
 
         hr = MagoEE::EnumValueChildren( 
-            mExprContext, 
+            mExprContext,
             mFullExprText, 
             mObjVal, 
-            mExprContext->GetTypeEnv(),
-            mExprContext->GetStringTable(),
+            mExprContext->GetModuleContext()->GetTypeEnv(),
+            mExprContext->GetModuleContext()->GetStringTable(),
             mFormatOpts,
             enumVals.Ref() );
         if ( FAILED( hr ) )
@@ -395,7 +395,7 @@ namespace Mago
         return hr;
     }
 
-    bool GetPropertyType( ExprContext* exprContext, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& typeStr )
+    bool GetPropertyType( MagoEE::IValueBinder* binder, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& typeStr )
     {
         if ( objVal._Type == NULL )
             return false;
@@ -409,7 +409,7 @@ namespace Mago
             MagoEE::UdtKind kind;
             std::wstring className;
             if ( decl && decl->GetUdtKind( kind ) && kind == MagoEE::Udt_Class )
-                exprContext->GetClassName( objVal.Addr, className, true );
+                binder->GetClassName( objVal.Addr, className, true );
             if ( !className.empty() && className != typeStr )
                 typeStr.append( L" {" ).append( className ).append( L"}" );
         }
@@ -427,7 +427,7 @@ namespace Mago
         return true;
     }
 
-    DWORD GetPropertyAttr( ExprContext* exprContext, const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts )
+    DWORD GetPropertyAttr( const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts )
     {
         DWORD dwAttrib = 0;
         if ( objVal.HasString )

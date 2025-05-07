@@ -40,7 +40,7 @@ bool DeclDataElement::GetType( MagoEE::Type*& type )
     return false;
 }
 
-bool DeclDataElement::GetAddress( MagoEE::Address& addr )
+bool DeclDataElement::GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder )
 {
     return false;
 }
@@ -226,7 +226,7 @@ bool VarDataElement::GetType( MagoEE::Type*& type )
     return true;
 }
 
-bool VarDataElement::GetAddress( MagoEE::Address& addr )
+bool VarDataElement::GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder )
 {
     addr = mAddr;
     return true;

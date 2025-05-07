@@ -143,7 +143,7 @@ namespace MagoEE
             FindObjectTryFQN = 1 << 9,
             FindObjectAny = FindObjectLocal | FindObjectClosure | FindObjectGlobal | FindObjectRegister,
         };
-        virtual HRESULT FindObject(const wchar_t* name, Declaration*& decl, uint32_t findFlags) = 0;
+        virtual HRESULT FindObject( const wchar_t* name, Declaration*& decl, uint32_t findFlags ) = 0;
         virtual HRESULT FindDebugFunc( const wchar_t* name, ITypeStruct* ts, Type*& type, Address& fnaddr ) = 0;
 
         virtual HRESULT GetThis( Declaration*& decl ) = 0;
@@ -151,6 +151,7 @@ namespace MagoEE
         virtual HRESULT GetReturnType( Type*& type ) = 0;
         virtual HRESULT NewTuple( const wchar_t* name, const std::vector<RefPtr<Declaration>>& decls, Declaration*& decl ) = 0;
 
+        virtual HRESULT GetAddress( Declaration* decl, Address& addr ) = 0;
         virtual HRESULT GetValue( Declaration* decl, DataValue& value ) = 0;
         virtual HRESULT GetValue( Address addr, Type* type, DataValue& value ) = 0;
         virtual HRESULT GetValue( Address aArrayAddr, const DataObject& key, Address& valueAddr ) = 0;

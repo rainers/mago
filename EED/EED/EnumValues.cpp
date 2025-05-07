@@ -952,7 +952,7 @@ namespace MagoEE
                 return E_MAGOEE_NO_ADDRESS;
             addr = mParentVal.ObjVal.Addr + offset;
         }
-        else if ( !decl->GetAddress( addr) )
+        else if ( !decl->GetAddress( addr, mBinder ) )
             return E_MAGOEE_NO_ADDRESS;
         if ( addr == 0 )
             return E_MAGOEE_NO_ADDRESS;

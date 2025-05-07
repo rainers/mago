@@ -32,7 +32,7 @@ public:
     virtual void Release() { DataElement::Release(); }
 
     virtual bool GetType( MagoEE::Type*& type );
-    virtual bool GetAddress( MagoEE::Address& addr );
+    virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
 
     virtual bool GetOffset( int& offset );
     virtual bool GetSize( uint32_t& size );
@@ -80,7 +80,7 @@ public:
 
     // Declaration
     virtual bool GetType( MagoEE::Type*& type );
-    virtual bool GetAddress( MagoEE::Address& addr );
+    virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
     virtual bool IsVar();
 };
 

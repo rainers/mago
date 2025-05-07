@@ -46,7 +46,7 @@ namespace Mago
         virtual bool hasGetAddressOverload(); // workaround against stack-overflow if called by SymbolStore::GetAddress
 
         //virtual bool GetType( MagoEE::Type*& type );
-        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
         virtual bool GetOffset( int& offset );
         virtual bool GetSize( uint32_t& size );
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
@@ -92,7 +92,7 @@ namespace Mago
         FunctionCVDecl( SymbolStore* symStore, const MagoST::SymInfoData& infoData, MagoST::ISymbolInfo* symInfo );
 
         virtual bool hasGetAddressOverload();
-        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
         virtual bool IsFunction();
         virtual bool IsStaticFunction();
     };
@@ -107,7 +107,7 @@ namespace Mago
                           const MagoST::SymHandle& closureSH, const std::vector<MagoST::TypeHandle>& chain );
 
         virtual bool hasGetAddressOverload();
-        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
         virtual bool IsField();
         virtual bool IsVar();
     };
@@ -240,7 +240,7 @@ namespace Mago
         virtual bool hasGetAddressOverload();
 
         virtual bool GetType( MagoEE::Type*& type );
-        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
         virtual bool GetOffset( int& offset );
         virtual bool GetSize( uint32_t& size );
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
@@ -283,7 +283,7 @@ namespace Mago
         virtual const wchar_t* GetName();
 
         virtual bool GetType( MagoEE::Type*& type );
-        virtual bool GetAddress( MagoEE::Address& addr );
+        virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
         virtual bool GetOffset( int& offset );
         virtual bool GetSize( uint32_t& size );
         virtual bool GetBackingTy( MagoEE::ENUMTY& ty );

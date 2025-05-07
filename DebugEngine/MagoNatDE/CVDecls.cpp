@@ -89,11 +89,11 @@ namespace Mago
         return false;
     }
 
-    bool CVDecl::GetAddress( MagoEE::Address& addr )
+    bool CVDecl::GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder )
     {
         HRESULT hr = S_OK;
 
-        hr = mSymStore->GetAddress( this, addr );
+        hr = binder->GetAddress( this, addr );
         if ( FAILED( hr ) )
             return false;
 
@@ -321,7 +321,7 @@ namespace Mago
         return true;
     }
 
-    bool FunctionCVDecl::GetAddress( MagoEE::Address& addr )
+    bool FunctionCVDecl::GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder )
     {
         uint32_t    offset = 0;
         uint16_t    sec = 0;
@@ -416,7 +416,7 @@ namespace Mago
         return true;
     }
 
-    bool ClosureVarCVDecl::GetAddress( MagoEE::Address& addr )
+    bool ClosureVarCVDecl::GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder )
     {
         MagoST::SymInfoData     closureInfoData = { 0 };
         MagoST::ISymbolInfo*    closureInfo = NULL;
@@ -429,7 +429,7 @@ namespace Mago
         if( hr != S_OK )
             return false;
 
-        hr = mSymStore->GetAddress( closureDecl, addr );
+        hr = binder->GetAddress( closureDecl, addr );
         if( hr != S_OK )
             return false;
 
@@ -573,7 +573,7 @@ namespace Mago
         if ( !symInfo->GetLength( size ) )
             return false;
 
-        ty = ExprContext::GetBasicTy( baseTypeId, size );
+        ty = ModuleContext::GetBasicTy( baseTypeId, size );
         if ( ty == MagoEE::Tnone )
             return false;
 
@@ -1240,7 +1240,7 @@ namespace Mago
         return true;
     }
 
-    bool ClassRefDecl::GetAddress( MagoEE::Address& addr )
+    bool ClassRefDecl::GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder )
     {
         return false;
     }
@@ -1386,9 +1386,9 @@ namespace Mago
         return true;
     }
 
-    bool TupleDecl::GetAddress( MagoEE::Address& addr )
+    bool TupleDecl::GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder )
     {
-        return firstField()->GetAddress( addr );
+        return firstField()->GetAddress( addr, binder );
     }
 
     bool TupleDecl::GetOffset( int& offset )
@@ -2281,8 +2281,8 @@ namespace Mago
         if( it == mapNameToRegIndex.end() )
             return nullptr;
 
-        auto regSet = symStore->GetRegisterSet();
-        bool isx64 = regSet && regSet->is64Bit();
+        auto typeEnv = symStore->GetTypeEnv();
+        bool isx64 = typeEnv && typeEnv->GetPointerSize() == 8;
         if( !isx64 && regDesc[it->second].cvreg > CV_AMD64_MM71 )
             return nullptr;
 

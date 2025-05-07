@@ -479,7 +479,7 @@ namespace MagoEE
         {
             if( !decl->GetType( dgtype.Ref() ) )
                 return nullptr;
-            if ( !decl->GetAddress( fnaddr ) )
+            if ( !decl->GetAddress( fnaddr, binder ) )
                 return nullptr;
         }
         else

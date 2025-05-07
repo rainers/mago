@@ -297,7 +297,7 @@ namespace Mago
 
         if ( (mFields & DEBUGPROP_INFO_ATTRIB) != 0 )
         {
-            info.dwAttrib = GetPropertyAttr( mExprContext, result, mFormatOpt );
+            info.dwAttrib = GetPropertyAttr( result, mFormatOpt );
             info.dwFields |= DEBUGPROP_INFO_ATTRIB;
         }
 

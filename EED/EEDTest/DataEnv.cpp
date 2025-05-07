@@ -62,7 +62,7 @@ std::shared_ptr<DataObj> DataEnv::GetValue( MagoEE::Declaration* decl )
         MagoEE::Address addr = 0;
         RefPtr<Type>    type;
 
-        decl->GetAddress( addr );
+        decl->GetAddress( addr, nullptr );
         decl->GetType( type.Ref() );
 
         return GetValue( addr, type.Get(), decl );
@@ -331,6 +331,11 @@ HRESULT DataEnvBinder::NewTuple( const wchar_t* name, const std::vector<RefPtr<D
 }
 
 
+HRESULT DataEnvBinder::GetAddress( MagoEE::Declaration* decl, MagoEE::Address& addr )
+{
+    return E_NOTIMPL;
+}
+
 HRESULT DataEnvBinder::GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& value )
 {
     std::shared_ptr<DataObj> val = mDataEnv->GetValue( decl );
@@ -374,7 +379,7 @@ HRESULT DataEnvBinder::SetValue( MagoEE::Declaration* decl, const MagoEE::DataVa
     RefPtr<Type>    type;
     RValueObj       obj;
 
-    if ( !decl->GetAddress( addr ) )
+    if ( !decl->GetAddress( addr, this ) )
         throw L"Couldn't get address.";
     if ( !decl->GetType( type.Ref() ) )
         throw L"Couldn't get type.";

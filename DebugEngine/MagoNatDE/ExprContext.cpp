@@ -44,17 +44,24 @@ using namespace MagoST;
 namespace Mago
 {
     // ExprContext
-
     ExprContext::ExprContext()
         :   mPC( 0 )
     {
-        mSymStore = new SymbolStore(this);
         memset( &mFuncSH, 0, sizeof mFuncSH );
     }
 
-    ExprContext::~ExprContext()
+    // ModuleContext
+
+    ModuleContext::ModuleContext()
     {
-        mSymStore->setExprContext(nullptr);
+        mSymStore = new SymbolStore(this);
+        // mStackContext = nullptr; // new ExprContext();
+    }
+
+    ModuleContext::~ModuleContext()
+    {
+        mSymStore->setModuleContext(nullptr);
+        // delete mStackContext;
     }
 
 
@@ -74,7 +81,7 @@ namespace Mago
             BSTR* pbstrError,
             UINT* pichError )
     {
-        Log::LogMessage( "ExprContext::ParseText\n" );
+        Log::LogMessage( "ModuleContext::ParseText\n" );
 
         HRESULT hr = S_OK;
         RefPtr<Expr>    expr;
@@ -84,7 +91,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        hr = MagoEE::ParseText( pszCode, GetTypeEnv(), GetStringTable(), parsedExpr.Ref() );
+        hr = MagoEE::ParseText( pszCode, mModuleContext->GetTypeEnv(), mModuleContext->GetStringTable(), parsedExpr.Ref() );
         if ( FAILED( hr ) )
         {
             MagoEE::EED::GetErrorString( hr, *pbstrError );
@@ -121,7 +128,7 @@ namespace Mago
 
         decl->GetType( resultObj._Type.Ref() );
 
-        decl->GetAddress( resultObj.Addr );
+        decl->GetAddress( resultObj.Addr, this );
 
         return S_OK;
     }
@@ -152,7 +159,7 @@ namespace Mago
         {
             hr = FindLocalSymbol( u8Name, u8NameLen, symHandle );
             if ( hr == S_OK )
-                return MakeDeclarationFromSymbolDerefClass( symHandle, decl, findFlags );
+                return mModuleContext->MakeDeclarationFromSymbolDerefClass( symHandle, decl, findFlags );
         }
         
         if ( ( findFlags & FindObjectClosure ) != 0 )
@@ -193,7 +200,7 @@ namespace Mago
 
         if ( ( findFlags & FindObjectRegister ) != 0 )
         {
-            decl = RegisterCVDecl::CreateRegisterSymbol( mSymStore, u8Name );
+            decl = RegisterCVDecl::CreateRegisterSymbol( mModuleContext->mSymStore, u8Name );
             if( decl )
             {
                 decl->AddRef();
@@ -213,7 +220,7 @@ namespace Mago
         return E_NOT_FOUND;
     }
 
-    HRESULT ExprContext::FindObjectType( 
+    HRESULT ModuleContext::FindObjectType( 
         MagoEE::Declaration* decl,
         const wchar_t* name, 
         MagoEE::Type*& type )
@@ -240,7 +247,7 @@ namespace Mago
         return hr;
     }
 
-    HRESULT ExprContext::FindDebugFunc(
+    HRESULT ModuleContext::FindDebugFunc(
         const wchar_t* name,
         MagoEE::ITypeStruct* ts,
         MagoEE::Type*& dbgfntype, MagoEE::Address& fnaddr )
@@ -258,7 +265,7 @@ namespace Mago
         }
 
         RefPtr<MagoST::ISession> session;
-        if (GetSession(session.Ref()) != S_OK)
+        if ( GetSession(session.Ref()) != S_OK )
             return E_NOT_FOUND;
 
         HRESULT hr;
@@ -277,13 +284,13 @@ namespace Mago
             hr = MakeDeclarationFromSymbol( h, vdecl.Ref() );
             if ( SUCCEEDED( hr ) && vdecl )
             {
-                if (!vdecl->GetAddress(fnaddr))
-                    continue;
                 RefPtr<MagoEE::Type> type;
                 if (vdecl->GetType(type.Ref()))
                     if (auto fntype = type->AsTypeFunction())
                         if (auto paramList = fntype->GetParams())
                         {
+                            if (!vdecl->GetAddress(fnaddr, nullptr)) // function does not need a IValueBinder
+                                continue;
                             if (paramList->List.size() == 0)
                             {
                                 if (auto thisPtr = fntype->GetThisPointerType())
@@ -341,14 +348,14 @@ namespace Mago
         if ( !symInfo->GetType( typeIndex ) )
             return E_FAIL;
 
-        hr = GetTypeFromTypeSymbol( typeIndex, type );
+        hr = mModuleContext->GetTypeFromTypeSymbol( typeIndex, type );
         if ( FAILED( hr ) )
             return hr;
 
         return hr;
     }
 
-    HRESULT ExprContext::NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl )
+    HRESULT ModuleContext::NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl )
     {
         decl = new TupleDecl( name, new MagoEE::TypeTuple( decls, false ), mTypeEnv );
         decl->AddRef();
@@ -368,7 +375,7 @@ namespace Mago
         MagoEE::DataValue           dataVal = { 0 };
         RefPtr<MagoST::ISession>    session;
 
-        if ( !mModule->GetSymbolSession( session ) )
+        if ( !mModuleContext->mModule->GetSymbolSession( session ) )
             return E_NOT_FOUND;
 
         if ( !sym->GetLocation( loc ) )
@@ -443,7 +450,7 @@ namespace Mago
                 Address64       tlsArrayPtrAddr = 0;
                 Address64       tlsArrayAddr = 0;
                 Address64       tlsBufAddr = 0;
-                uint32_t        ptrSize = mTypeEnv->GetPointerSize();
+                uint32_t        ptrSize = mModuleContext->mTypeEnv->GetPointerSize();
 
                 if ( !sym->GetAddressOffset( offset ) )
                     return E_FAIL;
@@ -496,7 +503,7 @@ namespace Mago
             break;
 
         default:
-            if( !cvDecl->hasGetAddressOverload() || !cvDecl->GetAddress( addr ) )
+            if( !cvDecl->hasGetAddressOverload() || !cvDecl->GetAddress( addr, this ) )
                 return E_FAIL;
             break;
         }
@@ -571,7 +578,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::GetValue( 
+    HRESULT ModuleContext::GetValue( 
         MagoEE::Address addr, 
         MagoEE::Type* type, 
         MagoEE::DataValue& value )
@@ -611,7 +618,7 @@ namespace Mago
         return FromRawValue( targetBuf, type, value );
     }
 
-    HRESULT ExprContext::GetValue(
+    HRESULT ModuleContext::GetValue(
         MagoEE::Address aArrayAddr, 
         const MagoEE::DataObject& key, 
         MagoEE::Address& valueAddr )
@@ -619,12 +626,12 @@ namespace Mago
         return GetDRuntime()->GetValue( aArrayAddr, key, valueAddr );
     }
 
-    int ExprContext::GetAAVersion()
+    int ModuleContext::GetAAVersion()
     {
         return GetDRuntime()->GetAAVersion();
     }
 
-    bool ExprContext::ShortenClassName( std::wstring& className )
+    bool ModuleContext::ShortenClassName( std::wstring& className )
     {
         if( !MagoEE::gShortenTypeNames || className.find( '.' ) == std::wstring::npos )
             return false;
@@ -642,7 +649,7 @@ namespace Mago
         return true;
     }
 
-    HRESULT ExprContext::GetClassName( MagoEE::Address addr, std::wstring& className, bool derefOnce )
+    HRESULT ModuleContext::GetClassName( MagoEE::Address addr, std::wstring& className, bool derefOnce )
     {
         HRESULT hr;
         if ( addr == 0 )
@@ -747,7 +754,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::SetValue( 
+    HRESULT ModuleContext::SetValue( 
         MagoEE::Address addr, 
         MagoEE::Type* type, 
         const MagoEE::DataValue& value )
@@ -847,7 +854,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::ReadMemory( 
+    HRESULT ModuleContext::ReadMemory( 
         MagoEE::Address addr, 
         uint32_t sizeToRead, 
         uint32_t& sizeRead, 
@@ -857,10 +864,10 @@ namespace Mago
         uint32_t        len = sizeToRead;
         uint32_t        lenRead = 0;
         uint32_t        lenUnreadable = 0;
-        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
+        IDebuggerProxy* debuggerProxy = mProgram->GetDebuggerProxy();
 
         hr = debuggerProxy->ReadMemory(
-            mThread->GetCoreProcess(),
+            mProgram->GetCoreProcess(),
             (Address64) addr,
             len,
             lenRead,
@@ -874,7 +881,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::WriteMemory( 
+    HRESULT ModuleContext::WriteMemory( 
         MagoEE::Address addr, 
         uint32_t sizeToWrite, 
         uint32_t& sizeWritten, 
@@ -883,10 +890,10 @@ namespace Mago
         HRESULT         hr = S_OK;
         uint32_t        len = sizeToWrite;
         uint32_t        lenWritten = 0;
-        IDebuggerProxy* debuggerProxy = mThread->GetDebuggerProxy();
+        IDebuggerProxy* debuggerProxy = mProgram->GetDebuggerProxy();
 
         hr = debuggerProxy->WriteMemory(
-            mThread->GetCoreProcess(),
+            mProgram->GetCoreProcess(),
             (Address64) addr,
             len,
             lenWritten,
@@ -913,8 +920,7 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        SymHandle globalSH;
-        hr = FindGlobalSymbol( session, u8Name, u8NameLen, symHandle );
+        hr = ModuleContext::FindGlobalSymbol( session, u8Name, u8NameLen, symHandle );
         if ( FAILED(hr) )
             return hr;
 
@@ -939,7 +945,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )
+    HRESULT ModuleContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )
     {
         RefPtr<MagoST::ISession>    session;
         MagoST::SymHandle           symHandle = { 0 };
@@ -980,7 +986,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
+    HRESULT ModuleContext::CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
                                        MagoEE::DataObject& value, bool saveGC,
                                        std::function < HRESULT(HRESULT, MagoEE::DataObject)> complete )
     {
@@ -990,7 +996,7 @@ namespace Mago
     ////////////////////////////////////////////////////////////////////////////// 
 
     HRESULT ExprContext::Init( 
-        Module* module, 
+        Module* module,
         Thread* thread,
         MagoST::SymHandle funcSH, 
         std::vector<MagoST::SymHandle>& blockSH,
@@ -1001,17 +1007,37 @@ namespace Mago
         _ASSERT( module != NULL );
         _ASSERT( thread != NULL );
 
-        mModule = module;
+        if ( !mModuleContext || mModuleContext->mModule != module )
+        {
+            mModuleContext = nullptr;
+            MakeCComObject( mModuleContext );
+            HRESULT hr = mModuleContext->Init( module, thread->GetProgram() );
+            if( FAILED( hr ) )
+                return hr;
+        }
         mThread = thread;
         mFuncSH = funcSH;
         mBlockSH = blockSH;
         mPC = pc;
         mRegSet = regSet;
 
+        return S_OK;
+    }
+
+    HRESULT ModuleContext::Init( 
+        Module* module, 
+        Program* program )
+    {
+        _ASSERT( module != NULL );
+        _ASSERT( program != NULL );
+
+        mModule = module;
+        mProgram = program;
+
         // we have to be able to evaluate expressions even if there aren't symbols
 
         HRESULT hr = S_OK;
-        ArchData*   archData = mThread->GetCoreProcess()->GetArchData();
+        ArchData*   archData = program->GetCoreProcess()->GetArchData();
 
         if ( mTypeEnv == NULL )
         {
@@ -1112,11 +1138,11 @@ namespace Mago
                 if ( !fieldInfo->GetType( typeIndex ) )
                     break;
 
-                hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
+                hr = mModuleContext->GetTypeFromTypeSymbol( typeIndex, type.Ref() );
                 if ( FAILED( hr ) )
                     break;
 
-                auto closDecl = new ClosureVarCVDecl( mSymStore, fieldInfoData, fieldInfo, closureSH, chain );
+                auto closDecl = new ClosureVarCVDecl( mModuleContext->mSymStore, fieldInfoData, fieldInfo, closureSH, chain );
                 closDecl->SetType( type );
                 closDecl->AddRef();
 
@@ -1142,7 +1168,7 @@ namespace Mago
             return E_NOT_FOUND;
 
         SymHandle globalSH;
-        HRESULT hr = FindGlobalSymbol( session, name, nameLen, globalSH );
+        HRESULT hr = ModuleContext::FindGlobalSymbol( session, name, nameLen, globalSH );
         if ( FAILED( hr ) )
         {
             // look for static and global symbols by adding the scope to the name
@@ -1162,7 +1188,7 @@ namespace Mago
                     while ( scopeName.length() > 0 )
                     {
                         std::string symName = scopeName + "." + sym;
-                        hr = FindGlobalSymbol( session, symName.c_str(), symName.length(), globalSH );
+                        hr = ModuleContext::FindGlobalSymbol( session, symName.c_str(), symName.length(), globalSH );
                         if ( SUCCEEDED( hr ) )
                             break;
                         std::string::reverse_iterator it = std::find( scopeName.rbegin(), scopeName.rend(), '.' );
@@ -1174,7 +1200,7 @@ namespace Mago
             }
         }
         if ( SUCCEEDED( hr ) )
-            return MakeDeclarationFromSymbolDerefClass( globalSH, decl, findFlags );
+            return mModuleContext->MakeDeclarationFromSymbolDerefClass( globalSH, decl, findFlags );
 
         // now try global symbols that end with the name
         std::vector<SymHandle> handles;
@@ -1182,25 +1208,25 @@ namespace Mago
         if ( handles.empty() )
             return E_NOT_FOUND;
         if ( handles.size() == 1 )
-            return MakeDeclarationFromSymbolDerefClass( handles.front(), decl, findFlags );
+            return mModuleContext->MakeDeclarationFromSymbolDerefClass( handles.front(), decl, findFlags );
 
         std::vector<RefPtr<MagoEE::Declaration>> vars;
         for ( auto& h : handles )
         {
             RefPtr<MagoEE::Declaration> vdecl;
-            hr = MakeDeclarationFromSymbolDerefClass( h, vdecl.Ref(), findFlags );
+            hr = mModuleContext->MakeDeclarationFromSymbolDerefClass( h, vdecl.Ref(), findFlags );
             if ( SUCCEEDED( hr ) )
                 vars.push_back( vdecl );
         }
         if( !vars.empty() && SUCCEEDED(hr) )
         {
-            decl = new TupleDecl( L"globals", new MagoEE::TypeTuple( vars, true ), mTypeEnv );
+            decl = new TupleDecl( L"globals", new MagoEE::TypeTuple( vars, true ), mModuleContext->mTypeEnv );
             decl->AddRef();
         }
         return hr;
     }
 
-    HRESULT ExprContext::FindGlobalSymbol( MagoST::ISession* session, const char* name, size_t nameLen, MagoST::SymHandle& globalSH )
+    HRESULT ModuleContext::FindGlobalSymbol( MagoST::ISession* session, const char* name, size_t nameLen, MagoST::SymHandle& globalSH )
     {
         HRESULT hr = S_OK;
         MagoST::EnumNamedSymbolsData    enumData = { 0 };
@@ -1226,7 +1252,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::GetSession( MagoST::ISession*& session )
+    HRESULT ModuleContext::GetSession( MagoST::ISession*& session )
     {
         RefPtr<MagoST::ISession>    spSession;
 
@@ -1237,12 +1263,20 @@ namespace Mago
         return S_OK;
     }
 
-    MagoEE::ITypeEnv* ExprContext::GetTypeEnv()
+    HRESULT ExprContext::GetSession( MagoST::ISession*& session )
+    {
+        if ( mModuleContext )
+            return mModuleContext->GetSession( session );
+        return E_WRONG_STATE;
+    }
+    
+
+    MagoEE::ITypeEnv* ModuleContext::GetTypeEnv()
     {
         return mTypeEnv;
     }
 
-    MagoEE::NameTable* ExprContext::GetStringTable()
+    MagoEE::NameTable* ModuleContext::GetStringTable()
     {
         return mStrTable;
     }
@@ -1259,7 +1293,7 @@ namespace Mago
         auto hr = MakeCComObject( stackFrame );
         if ( FAILED( hr ) )
             return hr;
-        stackFrame->Init( mPC, mRegSet, mThread, mModule, mTypeEnv->GetPointerSize(), this );
+        stackFrame->Init( mPC, mRegSet, mThread, mModuleContext->mModule, mModuleContext->mTypeEnv->GetPointerSize(), this );
         FRAMEINFO info = { 0 };
         FRAMEINFO_FLAGS flags = FIF_FUNCNAME
             | (names ? FIF_FUNCNAME_ARGS_NAMES : 0)
@@ -1301,10 +1335,10 @@ namespace Mago
 
     DWORD ExprContext::GetPC()
     {
-        return (DWORD)(mPC - mModule->GetAddress());
+        return (DWORD)(mPC - mModuleContext->mModule->GetAddress());
     }
 
-    HRESULT ExprContext::MakeDeclarationFromSymbolDerefClass( SymHandle handle, MagoEE::Declaration*& decl, uint32_t findFlags )
+    HRESULT ModuleContext::MakeDeclarationFromSymbolDerefClass( SymHandle handle, MagoEE::Declaration*& decl, uint32_t findFlags )
     {
         RefPtr<MagoEE::Declaration> origDecl;
 
@@ -1314,7 +1348,7 @@ namespace Mago
 
 #if USE_REFERENCE_TYPE
         MagoEE::UdtKind udtKind = MagoEE::Udt_Struct;
-        if ( ( findFlags & FindObjectNoClassDeref ) == 0 && origDecl->IsType()
+        if ( ( findFlags & ExprContext::FindObjectNoClassDeref ) == 0 && origDecl->IsType()
             && origDecl->GetUdtKind( udtKind ) && ( udtKind == MagoEE::Udt_Class ) )
         {
             decl = new ClassRefDecl( origDecl, mTypeEnv );
@@ -1329,7 +1363,7 @@ namespace Mago
     }
 
     // TODO: these declarations can be cached. We can keep a small cache for each module
-    HRESULT ExprContext::MakeDeclarationFromSymbol( 
+    HRESULT ModuleContext::MakeDeclarationFromSymbol( 
         MagoST::SymHandle handle, 
         MagoEE::Declaration*& decl )
     {
@@ -1388,7 +1422,7 @@ namespace Mago
         return hr;
     }
 
-    HRESULT ExprContext::MakeDeclarationFromSymbol( 
+    HRESULT ModuleContext::MakeDeclarationFromSymbol( 
         MagoST::TypeHandle handle, 
         MagoEE::Declaration*& decl )
     {
@@ -1436,7 +1470,7 @@ namespace Mago
         return hr;
     }
 
-    HRESULT ExprContext::MakeDeclarationFromDataSymbol( 
+    HRESULT ModuleContext::MakeDeclarationFromDataSymbol( 
         const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo, 
         MagoEE::Declaration*& decl )
@@ -1455,7 +1489,7 @@ namespace Mago
         return MakeDeclarationFromDataSymbol( infoData, symInfo, type, decl );
     }
 
-    HRESULT ExprContext::MakeDeclarationFromDataSymbol( 
+    HRESULT ModuleContext::MakeDeclarationFromDataSymbol( 
         const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo, 
         MagoEE::Type* type,
@@ -1492,7 +1526,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::MakeDeclarationFromFunctionSymbol(
+    HRESULT ModuleContext::MakeDeclarationFromFunctionSymbol(
         const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo,
         MagoEE::Declaration*& decl )
@@ -1517,7 +1551,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::MakeDeclarationFromEnumSymbol(
+    HRESULT ModuleContext::MakeDeclarationFromEnumSymbol(
         const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo,
         MagoEE::Declaration*& decl )
@@ -1527,7 +1561,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::MakeDeclarationFromTypedefSymbol(
+    HRESULT ModuleContext::MakeDeclarationFromTypedefSymbol(
         const MagoST::SymInfoData& infoData, 
         MagoST::ISymbolInfo* symInfo, 
         MagoEE::Declaration*& decl )
@@ -1596,7 +1630,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::MakeDeclarationFromBaseClassSymbol( 
+    HRESULT ModuleContext::MakeDeclarationFromBaseClassSymbol( 
         const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo, 
         MagoEE::Declaration*& decl )
@@ -1624,7 +1658,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::MakeDeclarationFromVTableShapeSymbol( 
+    HRESULT ModuleContext::MakeDeclarationFromVTableShapeSymbol( 
         const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo, 
         MagoEE::Declaration*& decl )
@@ -1657,7 +1691,7 @@ namespace Mago
         return S_OK;
     }
 
-    MagoEE::ENUMTY ExprContext::GetBasicTy( DWORD diaBaseTypeId, DWORD size )
+    MagoEE::ENUMTY ModuleContext::GetBasicTy( DWORD diaBaseTypeId, DWORD size )
     {
         MagoEE::ENUMTY  ty = MagoEE::Tnone;
 
@@ -1733,7 +1767,7 @@ namespace Mago
         return ty;
     }
 
-    HRESULT ExprContext::GetTypeFromTypeSymbol( 
+    HRESULT ModuleContext::GetTypeFromTypeSymbol( 
         MagoST::TypeIndex typeIndex,
         MagoEE::Type*& type )
     {
@@ -1849,7 +1883,7 @@ namespace Mago
         return E_FAIL;
     }
 
-    HRESULT ExprContext::GetFunctionTypeFromTypeSymbol( 
+    HRESULT ModuleContext::GetFunctionTypeFromTypeSymbol( 
         MagoST::TypeHandle typeHandle,
         const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo,
@@ -1970,7 +2004,7 @@ namespace Mago
         return true;
     }
 
-    HRESULT ExprContext::GetUdtTypeFromTypeSymbol( 
+    HRESULT ModuleContext::GetUdtTypeFromTypeSymbol( 
         MagoST::TypeHandle typeHandle,
         const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo,
@@ -2091,7 +2125,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::GetBasicTypeFromTypeSymbol( 
+    HRESULT ModuleContext::GetBasicTypeFromTypeSymbol( 
             const MagoST::SymInfoData& infoData,
             MagoST::ISymbolInfo* symInfo,
             MagoEE::Type*& type )
@@ -2123,7 +2157,7 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ExprContext::GetCustomTypeFromTypeSymbol( 
+    HRESULT ModuleContext::GetCustomTypeFromTypeSymbol( 
         const MagoST::SymInfoData& infoData, 
         MagoST::ISymbolInfo* symInfo,
         MagoEE::Type*& type )
@@ -2262,6 +2296,11 @@ namespace Mago
         return mThread->GetProgram()->GetDRuntime();
     }
 
+    DRuntime* ModuleContext::GetDRuntime()
+    {
+        return mProgram->GetDRuntime();
+    }
+
     // SymbolStore
     void SymbolStore::AddRef()
     {
@@ -2278,69 +2317,50 @@ namespace Mago
 
     HRESULT SymbolStore::GetSession(MagoST::ISession*& session)
     {
-        if (mExprContext)
-            return mExprContext->GetSession(session);
+        if (mModuleContext)
+            return mModuleContext->GetSession(session);
         return E_WRONG_STATE;
     }
     
     MagoEE::ITypeEnv* SymbolStore::GetTypeEnv()
     {
-        return mExprContext ? mExprContext->GetTypeEnv() : nullptr;
-    }
-    
-    Mago::IRegisterSet* SymbolStore::GetRegisterSet()
-    {
-        return mExprContext ? mExprContext->GetRegisterSet() : nullptr;
-    }
-
-    HRESULT SymbolStore::FindObject(const wchar_t* name, MagoEE::Declaration*& decl, uint32_t findFlags)
-    {
-        if (mExprContext)
-            return mExprContext->FindObject(name, decl, findFlags);
-        return E_WRONG_STATE;
+        return mModuleContext ? mModuleContext->GetTypeEnv() : nullptr;
     }
     
     HRESULT SymbolStore::MakeDeclarationFromSymbol(MagoST::TypeHandle handle, MagoEE::Declaration*& decl)
     {
-        if (mExprContext)
-            return mExprContext->MakeDeclarationFromSymbol(handle, decl);
+        if (mModuleContext)
+            return mModuleContext->MakeDeclarationFromSymbol(handle, decl);
         return E_WRONG_STATE;
     }
     
     HRESULT SymbolStore::MakeDeclarationFromDataSymbol(const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo, MagoEE::Declaration*& decl)
     {
-        if (mExprContext)
-            return mExprContext->MakeDeclarationFromDataSymbol(infoData, symInfo, decl);
+        if (mModuleContext)
+            return mModuleContext->MakeDeclarationFromDataSymbol(infoData, symInfo, decl);
         return E_WRONG_STATE;
     }
     
     HRESULT SymbolStore::MakeDeclarationFromDataSymbol(const MagoST::SymInfoData& infoData,
         MagoST::ISymbolInfo* symInfo, MagoEE::Type* type, MagoEE::Declaration*& decl)
     {
-        if (mExprContext)
-            return mExprContext->MakeDeclarationFromDataSymbol(infoData, symInfo, type, decl);
+        if (mModuleContext)
+            return mModuleContext->MakeDeclarationFromDataSymbol(infoData, symInfo, type, decl);
         return E_WRONG_STATE;
     }
 
     HRESULT SymbolStore::GetTypeFromTypeSymbol(MagoST::TypeIndex typeIndex, MagoEE::Type*& type)
     {
-        if (mExprContext)
-            return mExprContext->GetTypeFromTypeSymbol(typeIndex, type);
-        return E_WRONG_STATE;
-    }
-
-    HRESULT SymbolStore::GetAddress(MagoEE::Declaration* decl, MagoEE::Address& addr)
-    {
-        if (mExprContext)
-            return mExprContext->GetAddress(decl, addr);
+        if (mModuleContext)
+            return mModuleContext->GetTypeFromTypeSymbol(typeIndex, type);
         return E_WRONG_STATE;
     }
 
     HRESULT SymbolStore::ReadMemory(MagoEE::Address addr, uint32_t sizeToRead, uint32_t& sizeRead, uint8_t* buffer)
     {
-        if (mExprContext)
-            return mExprContext->ReadMemory(addr, sizeToRead, sizeRead, buffer);
+        if (mModuleContext)
+            return mModuleContext->ReadMemory(addr, sizeToRead, sizeRead, buffer);
         return E_WRONG_STATE;
     }
 

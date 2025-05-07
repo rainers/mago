@@ -694,7 +694,7 @@ namespace Mago
             if ( !childSym->GetDataKind( kind ) || kind != MagoST::DataIsParam )
                 continue;
 
-            mExprContext->MakeDeclarationFromSymbol( childSH, decl.Ref() );
+            mExprContext->GetModuleContext()->MakeDeclarationFromSymbol( childSH, decl.Ref() );
             if ( decl == NULL )
                 continue;
 

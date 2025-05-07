@@ -60,6 +60,7 @@ public:
     virtual HRESULT GetReturnType( MagoEE::Type*& type );
     virtual HRESULT NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl );
 
+    virtual HRESULT GetAddress( MagoEE::Declaration* decl, MagoEE::Address& addr );
     virtual HRESULT GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& value );
     virtual HRESULT GetValue( MagoEE::Address addr, MagoEE::Type* type, MagoEE::DataValue& value );
     virtual HRESULT GetValue( MagoEE::Address aArrayAddr, const MagoEE::DataObject& key, MagoEE::Address& valueAddr );

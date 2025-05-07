@@ -37,7 +37,7 @@ public:
     virtual const wchar_t* GetName();
 
     //virtual bool GetType( MagoEE::Type*& type );
-    virtual bool GetAddress( MagoEE::Address& addr );
+    virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
     virtual bool GetOffset( int& offset );
     virtual bool GetSize( uint32_t& size );
     virtual bool GetBackingTy( MagoEE::ENUMTY& ty );
@@ -84,7 +84,7 @@ public:
 
     virtual bool GetType( MagoEE::Type*& type );
 #if 0
-    virtual bool GetAddress( MagoEE::Address& addr );
+    virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
     virtual bool GetOffset( int& offset );
     virtual bool GetSize( uint32_t& size );
 
@@ -119,7 +119,7 @@ public:
 
     virtual bool GetType( MagoEE::Type*& type );
 #if 0
-    virtual bool GetAddress( MagoEE::Address& addr );
+    virtual bool GetAddress( MagoEE::Address& addr, MagoEE::IValueBinder* binder );
     virtual bool GetOffset( int& offset );
 #endif
     virtual bool GetSize( uint32_t& size );

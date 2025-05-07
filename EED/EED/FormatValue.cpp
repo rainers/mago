@@ -743,7 +743,7 @@ namespace MagoEE
                 else if ( !decl->GetOffset( offset ) )
                     hr = E_FAIL;
             }
-            else if ( !decl->GetAddress( addr ) || addr == 0 )
+            else if ( !decl->GetAddress( addr, binder ) || addr == 0 )
                 hr = E_MAGOEE_NO_ADDRESS;
 
             DataObject elementObj;
