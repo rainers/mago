@@ -771,13 +771,16 @@ public:
           return E_FAIL;
 
         // Restore/Create CCModule in DkmModule
-        hr = module->GetDataItem(&mModule.Ref());
-        if (!mModule)
+        RefPtr<CCModule> ccMod;
+        hr = module->GetDataItem(&ccMod.Ref());
+        if (!ccMod || !mModule || mModule->mProcess != process)
         {
-            mModule = new CCModule; 
+            mModule = new CCModule;
             tryHR(mModule->Init(process, module));
             tryHR(module->SetDataItem(DkmDataCreationDisposition::CreateAlways, mModule.Get()));
         }
+        else
+            mModule = ccMod;
 
         mWorkList = workList;
         mStackFrame = frame;
@@ -788,7 +791,8 @@ public:
         tryHR(mModule->FindFunction(va, funcSH, blockSH));
 
         // setup a fake environment for Mago
-        tryHR(MakeCComObject(mThread));
+        if (!mThread)
+            tryHR(MakeCComObject(mThread));
         mThread->SetProgram(mModule->mProgram, mModule->mDebuggerProxy);
 
         return ExprContext::Init(mModule->mModule, mThread, funcSH, blockSH, va, mModule->mRegSet);
