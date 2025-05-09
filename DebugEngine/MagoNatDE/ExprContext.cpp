@@ -1778,6 +1778,13 @@ namespace Mago
         MagoST::ISymbolInfo*    symInfo = NULL;
         RefPtr<MagoST::ISession>    session;
 
+        auto cacheIt = mTypeCache.find( typeIndex );
+        if( cacheIt != mTypeCache.end() )
+        {
+            type = cacheIt->second;
+            type->AddRef();
+            return S_OK;
+        }
         if ( GetSession( session.Ref() ) != S_OK )
             return E_FAIL;
 
@@ -1794,13 +1801,16 @@ namespace Mago
         {
         case SymTagUDT:
         case SymTagEnum:
-            return GetUdtTypeFromTypeSymbol( typeTH, infoData, symInfo, type );
+            hr = GetUdtTypeFromTypeSymbol( typeTH, infoData, symInfo, type );
+            break;
 
         case SymTagFunctionType:
-            return GetFunctionTypeFromTypeSymbol( typeTH, infoData, symInfo, type );
+            hr = GetFunctionTypeFromTypeSymbol( typeTH, infoData, symInfo, type );
+            break;
 
         case SymTagBaseType:
-            return GetBasicTypeFromTypeSymbol( infoData, symInfo, type );
+            hr = GetBasicTypeFromTypeSymbol( infoData, symInfo, type );
+            break;
 
         case SymTagPointerType:
             {
@@ -1832,7 +1842,6 @@ namespace Mago
                     return E_NOT_FOUND;
 
                 type = pointer.Detach();
-                return S_OK;
             }
             break;
 
@@ -1864,23 +1873,25 @@ namespace Mago
                     return hr;
 
                 type = arrayType.Detach();
-                return S_OK;
             }
             break;
 
         case SymTagTypedef:
-            _ASSERT( false );
-            break;
+            _ASSERT(false);
+            return E_FAIL;
 
         case SymTagCustomType:
-            return GetCustomTypeFromTypeSymbol( infoData, symInfo, type );
+            hr = GetCustomTypeFromTypeSymbol( infoData, symInfo, type );
+            break;
 
         //case SymTagManagedType:
         default:
             return E_FAIL;
         }
 
-        return E_FAIL;
+        if (hr == S_OK)
+            mTypeCache[typeIndex] = type;
+        return hr;
     }
 
     HRESULT ModuleContext::GetFunctionTypeFromTypeSymbol( 

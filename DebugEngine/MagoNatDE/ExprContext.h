@@ -56,6 +56,7 @@ namespace Mago
         // don't store Declaration because it creates a reference cycle to ModuleContext
         std::map<std::pair<std::wstring, std::wstring>,
                  std::pair<RefPtr<MagoEE::Type>, MagoEE::Address>> mDebugFuncCache;
+        std::map<MagoST::TypeIndex, RefPtr<MagoEE::Type>> mTypeCache;
 
         DECLARE_NOT_AGGREGATABLE(ModuleContext)
         BEGIN_COM_MAP(ModuleContext)
