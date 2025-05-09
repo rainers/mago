@@ -366,6 +366,11 @@ namespace MagoST
         return mStore->NextType( scope, handle );
     }
 
+    HRESULT Session::EndTypeScope( TypeScope& scope )
+    {
+        return mStore->EndTypeScope( scope );
+    }
+
     HRESULT Session::FindChildType( 
         TypeHandle parentHandle, 
         const char* nameChars, 
@@ -403,7 +408,8 @@ namespace MagoST
                 if ( tag != SymTagFunction )
                 {
                     handle = childHandle;
-                    return S_OK;
+                    found = S_OK;
+                    break;
                 }
 
                 // until we support overload sets, prefer an overload with zero arguments
@@ -422,19 +428,15 @@ namespace MagoST
                 std::vector<TypeIndex> indexes;
                 if ( !funcInfo->GetTypes( indexes ) )
                     continue;
-                if ( indexes.size() == 0 )
-                {
-                    handle = childHandle;
-                    return S_OK;
-                }
-                else if ( found == S_FALSE )
+                if ( indexes.size() == 0 || found == S_FALSE )
                 {
                     handle = childHandle;
                     found = S_OK;
+                    break;
                 }
             }
         }
-
+        mStore->EndTypeScope( scope );
         return found;
     }
 

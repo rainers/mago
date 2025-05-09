@@ -704,6 +704,7 @@ namespace Mago
             if ( !(this->*functor)( memberInfo, classInfo, context ) )
                 break;
         }
+        mSession->EndTypeScope( flistScope );
     }
 
     bool TypeCVDecl::FindClassInList(
@@ -815,7 +816,9 @@ namespace Mago
                 return E_NOT_FOUND;
 
             // base classes are first in the field list
-            if ( !mSession->NextType( scope, baseTH ) )
+            bool hasNext = mSession->NextType( scope, baseTH );
+            mSession->EndTypeScope( scope );
+            if ( !hasNext )
                 return E_NOT_FOUND;
 
             hr = mSession->GetTypeInfo( baseTH, baseInfoData, baseInfo );
@@ -933,6 +936,8 @@ namespace Mago
                 found = true;
         }
 
+        mSession->EndTypeScope( scope );
+
         if ( !found )
             return E_NOT_FOUND;
 
@@ -1009,6 +1014,11 @@ namespace Mago
         Reset();
     }
 
+    TypeCVDeclMembers::~TypeCVDeclMembers()
+    {
+        ResetListScopes();
+    }
+
     void TypeCVDeclMembers::AddRef()
     {
         InterlockedIncrement( &mRefCount );
@@ -1054,6 +1064,15 @@ namespace Mago
         return true;
     }
 
+    void TypeCVDeclMembers::ResetListScopes()
+    {
+        while ( !mListScopes.empty() )
+        {
+            mSession->EndTypeScope( mListScopes.back() );
+            mListScopes.pop_back();
+        }
+    }
+
     bool TypeCVDeclMembers::Reset()
     {
         MagoST::TypeIndex   flistIndex = 0;
@@ -1067,7 +1086,6 @@ namespace Mago
             return false;
 
         count = CountMembers();
-        mListScopes.resize(1);
 
         if ( !mSymInfo->GetFieldList( flistIndex ) )
             return false;
@@ -1075,9 +1093,12 @@ namespace Mago
         if ( !mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
             return false;
 
-        if ( mSession->SetChildTypeScope( flistHandle, mListScopes[0] ) != S_OK )
+        ResetListScopes();
+        MagoST::TypeScope scope;
+        if ( mSession->SetChildTypeScope( flistHandle, scope ) != S_OK )
             return false;
 
+        mListScopes.push_back( scope );
         mCount = count;
 
         return true;
@@ -1122,9 +1143,11 @@ namespace Mago
         if ( !mSession->GetTypeFromTypeIndex( flistIndex, flistHandle ) )
             return 0;
 
-        mListScopes.resize(1);
-        if ( mSession->SetChildTypeScope( flistHandle, mListScopes[0] ) != S_OK )
+        ResetListScopes();
+        MagoST::TypeScope scope;
+        if ( mSession->SetChildTypeScope( flistHandle, scope ) != S_OK )
             return 0;
+        mListScopes.push_back( scope );
 
         // let NextMember() filter what fields to show
         for ( uint16_t i = 0; /*i < maxCount*/; i++ )
@@ -1151,9 +1174,10 @@ namespace Mago
 
         while ( !mSession->NextType( mListScopes.back(), memberTH ) )
         {
-            if (mListScopes.size() == 1)
-                return 0;
+            mSession->EndTypeScope( mListScopes.back() );
             mListScopes.pop_back();
+            if (mListScopes.empty())
+                return 0;
         }
 
         if ( mSession->GetTypeInfo( memberTH, infoData, symInfo ) != S_OK )

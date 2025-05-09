@@ -834,6 +834,11 @@ namespace MagoST
         return (this->*scopeIn->NextType)( scope, handle );
     }
 
+    HRESULT DebugStore::EndTypeScope( TypeScope& scope )
+    {
+        return S_OK;
+    }
+
     bool DebugStore::NextTypeMList( TypeScope& scope, TypeHandle& handle )
     {
         TypeScopeIn* scopeIn = (TypeScopeIn*) &scope;

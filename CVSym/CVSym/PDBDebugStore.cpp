@@ -30,7 +30,7 @@ namespace PDBStore
     struct TypeScopeIn
     {
         DWORD id;
-        DWORD current;
+        IDiaEnumSymbols* pEnumSymbols;
     };
 
     struct EnumNamedSymbolsDataIn
@@ -1028,8 +1028,10 @@ namespace MagoST
     {
         PDBStore::TypeScopeIn& scopeIn = (PDBStore::TypeScopeIn&) scope;
 
-        scopeIn.current = 0;
-        return mGlobal->get_symIndexId( &scopeIn.id );
+        HRESULT hr = mGlobal->get_symIndexId( &scopeIn.id );
+        if( hr == S_OK )
+            hr = mGlobal->findChildrenEx( SymTagNull, NULL, nsNone, &scopeIn.pEnumSymbols );
+        return hr;
     }
 
     bool PDBDebugStore::GetTypeFromTypeIndex( TypeIndex typeIndex, TypeHandle& handle )
@@ -1044,10 +1046,14 @@ namespace MagoST
         PDBStore::TypeHandleIn& typeIn = (PDBStore::TypeHandleIn&) handle;
         PDBStore::TypeScopeIn& scopeIn = (PDBStore::TypeScopeIn&) scope;
 
+        IDiaSymbol* pSymbol = NULL;
+        HRESULT hr = _symbolById( scopeIn.id, &pSymbol );
+        if ( hr == S_OK )
+            hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &scopeIn.pEnumSymbols );
+        if ( pSymbol )
+            pSymbol->Release();
         scopeIn.id = typeIn.id;
-        scopeIn.current = 0;
-
-        return S_OK;
+        return hr;
     }
 
     bool PDBDebugStore::NextType( TypeScope& scope, TypeHandle& handle )
@@ -1055,28 +1061,27 @@ namespace MagoST
         PDBStore::TypeHandleIn& typeIn = (PDBStore::TypeHandleIn&) handle;
         PDBStore::TypeScopeIn& scopeIn = (PDBStore::TypeScopeIn&) scope;
 
-        IDiaSymbol* pSymbol = NULL;
-        HRESULT hr = _symbolById( scopeIn.id, &pSymbol );
-        IDiaEnumSymbols* pEnumSymbols = NULL;
-        if ( hr == S_OK )
-            hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &pEnumSymbols );
         IDiaSymbol* pChild = NULL;
-        if ( hr == S_OK )
-            hr = pEnumSymbols->Item( scopeIn.current, &pChild );
-        if ( hr == S_OK )
-            scopeIn.current++;
-        if ( hr == S_OK )
+        DWORD fetched = 0;
+        HRESULT hr = scopeIn.pEnumSymbols->Next( 1, &pChild, &fetched );
+        if ( hr == S_OK && pChild )
+        {
             hr = pChild->get_symIndexId( &typeIn.id );
-
-        if ( pChild )
             pChild->Release();
-        if ( pEnumSymbols )
-            pEnumSymbols->Release();
-        if ( pSymbol )
-            pSymbol->Release();
-        return hr == S_OK;
+        }
+        return hr == S_OK && pChild;
     }
 
+    HRESULT PDBDebugStore::EndTypeScope( TypeScope& scope )
+    {
+        PDBStore::TypeScopeIn& scopeIn = (PDBStore::TypeScopeIn&) scope;
+        if (scopeIn.pEnumSymbols)
+        {
+            scopeIn.pEnumSymbols->Release();
+            scopeIn.pEnumSymbols = NULL;
+        }
+        return S_OK;
+    }
 
     HRESULT PDBDebugStore::GetTypeInfo( TypeHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo )
     {

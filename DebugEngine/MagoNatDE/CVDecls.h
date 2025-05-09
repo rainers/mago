@@ -208,6 +208,7 @@ namespace Mago
             SymbolStore* symStore,
             const MagoST::SymInfoData& infoData, 
             MagoST::ISymbolInfo* symInfo );
+        ~TypeCVDeclMembers();
 
         virtual void AddRef();
         virtual void Release();
@@ -221,6 +222,7 @@ namespace Mago
         uint16_t CountMembers();
         // -1 for non-printable, 0 for no more, 1 for ok
         int NextMember( MagoST::TypeHandle& memberTH );
+        void ResetListScopes();
     };
 
 

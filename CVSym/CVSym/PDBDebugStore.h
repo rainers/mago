@@ -61,6 +61,7 @@ namespace MagoST
         virtual HRESULT SetChildTypeScope( TypeHandle handle, TypeScope& scope );
 
         virtual bool NextType( TypeScope& scope, TypeHandle& handle );
+        virtual HRESULT EndTypeScope( TypeScope& scope );
 
         virtual bool GetTypeFromTypeIndex( TypeIndex typeIndex, TypeHandle& handle );
 
