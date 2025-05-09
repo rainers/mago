@@ -253,10 +253,7 @@ namespace Mago
         HRESULT hr = S_OK;
 
         // ignore any error, because we don't have to have symbols for expression eval
-        if (mExprContext == NULL || mExprContext->GetPC() + mModule->GetAddress() != mPC)
-            hr = FindFunction();
-        else
-            mFuncSH = mExprContext->GetFunctionSH(); // mBlockSH unusd
+        hr = FindFunction();
 
         if ( mExprContext == NULL )
         {
@@ -786,6 +783,13 @@ namespace Mago
 
         if ( mModule.Get() == NULL )
             return E_NOT_FOUND;
+
+        if ( mExprContext && mExprContext->GetPC() + mModule->GetAddress() == mPC )
+        {
+            mFuncSH = mExprContext->GetFunctionSH();
+            if ( memcmp( &mFuncSH, &symHandle, sizeof mFuncSH ) != 0 )
+                return S_OK;
+        }
 
         if ( !mModule->GetSymbolSession( session ) )
             return E_NOT_FOUND;

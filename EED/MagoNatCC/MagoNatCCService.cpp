@@ -773,7 +773,7 @@ public:
         // Restore/Create CCModule in DkmModule
         RefPtr<CCModule> ccMod;
         hr = module->GetDataItem(&ccMod.Ref());
-        if (!ccMod || !mModule || mModule->mProcess != process)
+        if (!ccMod || (mModule && mModule->mProcess != process))
         {
             mModule = new CCModule;
             tryHR(mModule->Init(process, module));
