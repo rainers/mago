@@ -185,13 +185,13 @@ namespace MagoST
         if ( FAILED( hr ) )
             return hr;
 
+        hr = S_FALSE;
         for ( ; mStore->NextSymbol( scope, childHandle, pcrva ); )
         {
             ISymbolInfo*    symInfo = NULL;
             SymString       pstrName;
 
-            hr = mStore->GetSymbolInfo( childHandle, infoData, symInfo );
-            if ( hr != S_OK )
+            if( mStore->GetSymbolInfo( childHandle, infoData, symInfo ) != S_OK )
                 continue;
 
             if ( !symInfo->GetName( pstrName ) )
@@ -200,11 +200,13 @@ namespace MagoST
             if ( (nameLen == pstrName.GetLength()) && (memcmp( nameChars, pstrName.GetName(), nameLen ) == 0) )
             {
                 handle = childHandle;
-                return S_OK;
+                hr = S_OK;
+                break;
             }
         }
 
-        return S_FALSE;
+        mStore->EndSymbolScope( scope );
+        return hr;
     }
 
     HRESULT Session::FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff )
@@ -312,6 +314,8 @@ namespace MagoST
                 }
             }
 
+            mStore->EndSymbolScope( scope );
+
             if ( foundChild )
                 parentHandle = curHandle;
             else
@@ -330,6 +334,11 @@ namespace MagoST
     bool Session::NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr )
     {
         return mStore->NextSymbol( scope, handle, addr );
+    }
+
+    HRESULT Session::EndSymbolScope( SymbolScope& scope )
+    {
+        return mStore->EndSymbolScope( scope );
     }
 
     HRESULT Session::GetSymbolInfo( SymHandle handle, SymInfoData& privateData, ISymbolInfo*& symInfo )

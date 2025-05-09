@@ -253,6 +253,7 @@ namespace Mago
                 mNames.push_back( bstrName );
                 bstrName.Detach();
             }
+            session->EndSymbolScope( scope );
         }
 
         mExprContext = exprContext;

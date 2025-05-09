@@ -8,6 +8,7 @@
 #pragma once
 
 #include "DebugStore.h"
+#include <map>
 #include <memory>
 
 struct IDiaDataSource;
@@ -20,6 +21,7 @@ struct IDiaSourceFile;
 namespace MagoST
 {
     class IAddressMap;
+    class PDBSymbolInfo;
 
     class PDBDebugStore : public IDebugStore
     {
@@ -40,6 +42,7 @@ namespace MagoST
         virtual HRESULT SetChildSymbolScope( SymHandle handle, SymbolScope& scope );
 
         virtual bool NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr );
+        virtual HRESULT EndSymbolScope( SymbolScope& scope );
 
         virtual HRESULT FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data );
         virtual HRESULT FindNextSymbol( EnumNamedSymbolsData& handle );
@@ -89,6 +92,8 @@ namespace MagoST
         uint32_t getCompilandCount();
         HRESULT initSession();
 
+        HRESULT _symbolById( DWORD id, IDiaSymbol** pSymbol );
+
         bool mInit;
         IDiaDataSource  *mSource;
         IDiaSession     *mSession;
@@ -102,5 +107,10 @@ namespace MagoST
         std::unique_ptr<char>  mLastFileInfoName;
         std::unique_ptr<DWORD> mLastSegInfoOffsets;
         std::unique_ptr<WORD>  mLastSegInfoLineNumbers;
+
+        std::vector<RefPtr<IDiaSymbol>> mSymbolCache;
+        std::map<DWORD, RefPtr<IDiaSymbol>> mSymbolCacheMap;
+
+        friend class PDBSymbolInfo;
     };
 }

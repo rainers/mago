@@ -24,7 +24,7 @@ namespace PDBStore
     struct SymbolScopeIn
     {
         DWORD id;
-        DWORD current;
+        IDiaEnumSymbols* pEnumSymbols;
     };
 
     struct TypeScopeIn
@@ -167,7 +167,7 @@ namespace MagoST
         virtual void dump(DWORD id) const
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( id, &pSymbol ) == S_OK )
+            if( mStore->_symbolById( id, &pSymbol ) == S_OK )
             {
                 char str[1280];
                 DWORD tag = SymTagNull;
@@ -190,7 +190,7 @@ namespace MagoST
         {
             DWORD tag = SymTagNull;
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) == S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) == S_OK )
             {
                 pSymbol->get_symTag( &tag );
                 pSymbol->Release();
@@ -202,7 +202,7 @@ namespace MagoST
         {
             DWORD type = ~0U;
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) == S_OK)
+            if( mStore->_symbolById( mId, &pSymbol ) == S_OK)
             {
                 pSymbol->get_typeId( &type );
                 if( type == ~0 )
@@ -234,7 +234,7 @@ namespace MagoST
         virtual bool GetName( SymString& name )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
             BSTR bstrName = NULL;
             pSymbol->get_name( &bstrName );
@@ -246,7 +246,7 @@ namespace MagoST
         virtual bool GetAddressOffset( uint32_t& offset )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr;
@@ -261,7 +261,7 @@ namespace MagoST
         virtual bool GetAddressSegment( uint16_t& segment ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             DWORD section = 0;
@@ -277,7 +277,7 @@ namespace MagoST
         virtual bool GetDataKind( DataKind& dataKind ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK)
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK)
                 return false;
 
             HRESULT hr = pSymbol->get_dataKind( (DWORD*) &dataKind );
@@ -288,7 +288,7 @@ namespace MagoST
         virtual bool GetLength( uint32_t& length )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             ULONGLONG llength = 0;
@@ -301,7 +301,7 @@ namespace MagoST
         virtual bool GetLocation( LocationType& locType ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_locationType( (DWORD*) &locType );
@@ -312,7 +312,7 @@ namespace MagoST
         virtual bool GetOffset( int32_t& offset )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_offset( (LONG*) &offset );
@@ -323,7 +323,7 @@ namespace MagoST
         virtual bool GetRegister( uint32_t& reg )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_registerId( (DWORD*) &reg );
@@ -338,7 +338,7 @@ namespace MagoST
         virtual bool GetUdtKind( UdtKind& udtKind )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_udtKind( (DWORD*) &udtKind );
@@ -349,7 +349,7 @@ namespace MagoST
         virtual bool GetValue( Variant& value ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             VARIANT var;
@@ -383,7 +383,7 @@ namespace MagoST
         virtual bool GetBasicType( DWORD& basicType )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_baseType( &basicType );
@@ -396,7 +396,7 @@ namespace MagoST
         virtual bool GetCount( uint32_t& count ) 
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if ( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_count( (DWORD*) &count );
@@ -407,7 +407,7 @@ namespace MagoST
         virtual bool GetFieldCount( uint16_t& count )
         {
             IDiaSymbol* pSymbol = NULL;
-            if( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             LONG cnt = 0;
@@ -432,7 +432,7 @@ namespace MagoST
         virtual bool GetVShape( TypeIndex& index )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if ( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr = pSymbol->get_virtualTableShapeId( &index );
@@ -443,7 +443,7 @@ namespace MagoST
         virtual bool GetVtblOffset( int& offset )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if ( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             BOOL virt;
@@ -460,7 +460,7 @@ namespace MagoST
         virtual bool GetCallConv( uint8_t& callConv )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( mStore->getSession()->symbolById(mId, &pSymbol) != S_OK )
+            if ( mStore->_symbolById(mId, &pSymbol) != S_OK )
                 return false;
 
             DWORD cc;
@@ -480,7 +480,7 @@ namespace MagoST
         virtual bool GetClass( TypeIndex& index )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if ( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             IDiaSymbol* classSymbol = NULL;
@@ -502,7 +502,7 @@ namespace MagoST
         virtual bool GetThis( TypeIndex& index )
         {
             IDiaSymbol* pSymbol = NULL;
-            if (mStore->getSession()->symbolById(mId, &pSymbol) != S_OK)
+            if (mStore->_symbolById(mId, &pSymbol) != S_OK)
                 return false;
 
             IDiaSymbol* thisSymbol = NULL;
@@ -524,7 +524,7 @@ namespace MagoST
         {
 	    // supposed to work for OEM types and argument lists
             IDiaSymbol* pSymbol = NULL;
-            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if ( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             DWORD count;
@@ -554,7 +554,7 @@ namespace MagoST
                                 if( argSymbol->get_typeId( &typeID ) == S_OK )
                                 {
                                     IDiaSymbol* typeSymbol = NULL;
-                                    if( mStore->getSession()->symbolById( typeID, &typeSymbol ) == S_OK )
+                                    if( mStore->_symbolById( typeID, &typeSymbol ) == S_OK )
                                     {
                                         DWORD baseType;
                                         if( typeSymbol->get_baseType( &baseType ) != S_OK || baseType != btNoType )
@@ -588,7 +588,7 @@ namespace MagoST
         virtual bool GetMod( uint16_t& mod )
         {
             IDiaSymbol* pSymbol = NULL;
-            if ( mStore->getSession()->symbolById( mId, &pSymbol ) != S_OK )
+            if ( mStore->_symbolById( mId, &pSymbol ) != S_OK )
                 return false;
 
             HRESULT hr;
@@ -800,6 +800,42 @@ namespace MagoST
         
     }
 
+    HRESULT PDBDebugStore::_symbolById( DWORD id, IDiaSymbol** pSymbol)
+    {
+        bool useMap = id >= 10'000'000;
+        if ( useMap )
+        {
+            auto it = mSymbolCacheMap.find( id );
+            if( it != mSymbolCacheMap.end() )
+            {
+                *pSymbol = it->second;
+                (*pSymbol)->AddRef();
+                return S_OK;
+            }
+        }
+        else
+        {
+            if( id < mSymbolCache.size() && mSymbolCache[id] )
+            {
+                *pSymbol = mSymbolCache[id];
+                (*pSymbol)->AddRef();
+                return S_OK;
+            }
+        }
+        HRESULT hr = mSession->symbolById( id, pSymbol );
+        if( hr == S_OK && *pSymbol )
+        {
+            if ( useMap )
+                mSymbolCacheMap[id] = *pSymbol;
+            else
+            {
+                if ( mSymbolCache.size() <= id )
+                    mSymbolCache.resize( id + 1000 );
+                mSymbolCache[id] = *pSymbol;
+            }
+        }
+        return hr;
+    }
     HRESULT PDBDebugStore::SetCompilandSymbolScope( DWORD compilandIndex, SymbolScope& scope )
     {
         UNREFERENCED_PARAMETER( compilandIndex );
@@ -823,9 +859,14 @@ namespace MagoST
         PDBStore::SymHandleIn& symIn = (PDBStore::SymHandleIn&) handle;
         PDBStore::SymbolScopeIn& scopeIn = (PDBStore::SymbolScopeIn&) scope;
 
+        IDiaSymbol* pSymbol = NULL;
+        HRESULT hr = _symbolById(symIn.id, &pSymbol);
+        if (hr == S_OK && pSymbol)
+            hr = pSymbol->findChildrenEx(SymTagNull, NULL, nsNone, &scopeIn.pEnumSymbols);
         scopeIn.id = symIn.id;
-        scopeIn.current = 0;
-        return S_OK;
+        if (pSymbol)
+            pSymbol->Release();
+        return hr;
     }
 
     bool PDBDebugStore::NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr )
@@ -833,29 +874,29 @@ namespace MagoST
         PDBStore::SymHandleIn& symIn = (PDBStore::SymHandleIn&) handle;
         PDBStore::SymbolScopeIn& scopeIn = (PDBStore::SymbolScopeIn&) scope;
 
-        IDiaSymbol* pSymbol = NULL;
-        HRESULT hr = mSession->symbolById( scopeIn.id, &pSymbol );
-        IDiaEnumSymbols* pEnumSymbols = NULL;
-        if ( hr == S_OK && pSymbol )
-            if ( addr == ~0 )
-                hr = pSymbol->findChildrenEx( SymTagNull, NULL, nsNone, &pEnumSymbols );
-            else
-                hr = pSymbol->findChildrenExByRVA( SymTagNull, NULL, nsNone, addr, &pEnumSymbols );
         IDiaSymbol* pChild = NULL;
-        if ( hr == S_OK && pEnumSymbols )
-            hr = pEnumSymbols->Item( scopeIn.current, &pChild );
-        if ( hr == S_OK && pChild )
-            scopeIn.current++;
-        if ( hr == S_OK && pChild )
-            hr = pChild->get_symIndexId( &symIn.id );
+        if ( !scopeIn.pEnumSymbols )
+            return S_FALSE;
 
-        if ( pChild )
+        DWORD fetched = 0;
+        HRESULT hr = scopeIn.pEnumSymbols->Next( 1, &pChild, &fetched );
+        if ( hr == S_OK && pChild )
+        {
+            hr = pChild->get_symIndexId( &symIn.id );
             pChild->Release();
-        if ( pEnumSymbols )
-            pEnumSymbols->Release();
-        if ( pSymbol )
-            pSymbol->Release();
+        }
         return hr == S_OK && pChild;
+    }
+
+    HRESULT PDBDebugStore::EndSymbolScope( SymbolScope& scope )
+    {
+        PDBStore::SymbolScopeIn& scopeIn = (PDBStore::SymbolScopeIn&)scope;
+        if (scopeIn.pEnumSymbols)
+        {
+            scopeIn.pEnumSymbols->Release();
+            scopeIn.pEnumSymbols = NULL;
+        }
+        return S_OK;
     }
 
     HRESULT PDBDebugStore::FindFirstSymbol( SymbolHeapId heapId, const char* nameChars, size_t nameLen, EnumNamedSymbolsData& data )
@@ -1015,7 +1056,7 @@ namespace MagoST
         PDBStore::TypeScopeIn& scopeIn = (PDBStore::TypeScopeIn&) scope;
 
         IDiaSymbol* pSymbol = NULL;
-        HRESULT hr = mSession->symbolById( scopeIn.id, &pSymbol );
+        HRESULT hr = _symbolById( scopeIn.id, &pSymbol );
         IDiaEnumSymbols* pEnumSymbols = NULL;
         if ( hr == S_OK )
             hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &pEnumSymbols );

@@ -253,7 +253,10 @@ namespace Mago
         HRESULT hr = S_OK;
 
         // ignore any error, because we don't have to have symbols for expression eval
-        hr = FindFunction();
+        if (mExprContext == NULL || mExprContext->GetPC() + mModule->GetAddress() != mPC)
+            hr = FindFunction();
+        else
+            mFuncSH = mExprContext->GetFunctionSH(); // mBlockSH unusd
 
         if ( mExprContext == NULL )
         {
@@ -745,6 +748,8 @@ namespace Mago
                     MagoEE::GetErrorString( hr, closure->params.back().value );
             }
         }
+        session->EndSymbolScope( funcScope );
+
         closure->done( S_OK, 1 );
         if( !complete )
             outputStr = closure->buildFuncName().c_str();

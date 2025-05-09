@@ -380,6 +380,11 @@ namespace MagoST
         return true;
     }
 
+    HRESULT DebugStore::EndSymbolScope( SymbolScope& scope )
+    {
+        return S_OK;
+    }
+
     bool DebugStore::FollowReference( CodeViewSymbol* origSym, SymHandleIn* internalHandle )
     {
         // try to chase down the reference
