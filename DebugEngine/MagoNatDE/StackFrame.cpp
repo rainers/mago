@@ -674,6 +674,9 @@ namespace Mago
         closure->tailStr = tailStr;
         closure->complete = complete;
 
+        bool showTypes = (flags & FIF_FUNCNAME_ARGS_TYPES) != 0;
+        bool showNames = (flags & FIF_FUNCNAME_ARGS_NAMES) != 0;
+        bool showValues = (flags & FIF_FUNCNAME_ARGS_VALUES) != 0;
         while ( session->NextSymbol( funcScope, childSH, ~0u ) )
         {
             MagoST::SymInfoData     childData = { 0 };
@@ -691,31 +694,41 @@ namespace Mago
             if ( tag == MagoST::SymTagEndOfArgs )
                 break;
 
-            if ( !childSym->GetDataKind( kind ) || kind != MagoST::DataIsParam )
+            bool tryThis = tag == MagoST::SymTagData && closure->params.empty() && showValues;
+            bool isParam = childSym->GetDataKind(kind) && kind == MagoST::DataIsParam;
+            if ( !tryThis && !isParam )
                 continue;
 
             mExprContext->GetModuleContext()->MakeDeclarationFromSymbol( childSH, decl.Ref() );
             if ( decl == NULL )
                 continue;
 
-            closure->params.push_back({});
+            std::wstring typeStr;
+            std::wstring nameStr;
 
-            if ( (flags & FIF_FUNCNAME_ARGS_TYPES) != 0 )
+            if ( showTypes )
             {
                 if ( decl->GetType( type.Ref() ) )
-                {
-                    std::wstring typeStr;
                     type->ToString( typeStr );
-                    closure->params.back().type = typeStr;
-                }
             }
 
-            if ( (flags & FIF_FUNCNAME_ARGS_NAMES) != 0 )
+            if ( showNames || tryThis )
             {
-                closure->params.back().name = decl->GetName();
+                nameStr = decl->GetName();
+                if ( tryThis && !isParam )
+                {
+                    if ( nameStr == L"this" )
+                        typeStr.clear(); // type already in the name
+                    else
+                        continue;
+                }
+                if (!showNames)
+                    nameStr.clear();
             }
 
-            if ( (flags & FIF_FUNCNAME_ARGS_VALUES) != 0 )
+            closure->params.push_back({ typeStr, nameStr });
+
+            if ( showValues )
             {
                 MagoEE::DataObject resultObj = { 0 };
 
