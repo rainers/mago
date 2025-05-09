@@ -76,13 +76,16 @@ public:
 
     RefPtr<T>& operator =( T* other )
     {
-        if ( p != NULL )
-            p->Release();
+        if( p != other )
+        {
+            if ( p != NULL )
+                p->Release();
 
-        p = other;
+            p = other;
 
-        if ( p != NULL )
-            p->AddRef();
+            if ( p != NULL )
+                p->AddRef();
+        }
 
         return *this;
     }
