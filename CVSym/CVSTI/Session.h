@@ -12,6 +12,7 @@
 #include <set>
 #include <map>
 #include <string>
+#include <unordered_map>
 
 namespace MagoST
 {
@@ -29,6 +30,7 @@ namespace MagoST
         RefPtr<DataSource>  mDataSource;
         IDebugStore*        mStore;         // valid while we hold onto data source
         RefPtr<IAddressMap> mAddrMap;
+        std::unordered_map<uint64_t, std::pair<SymHandle, DWORD>> mAddrSymbolMap;
 
         struct reverse_less
         {
@@ -37,8 +39,8 @@ namespace MagoST
         std::set<std::string, reverse_less> mGlobals;
         std::map<std::string, std::vector<SymHandle>, reverse_less> mDebugFuncs;
 
-        std::map<std::string, std::string> mUDTshorts; // FQN -> short name
         std::map<std::string, std::string> mFuncShorts; // FQN -> short name
+        std::map<std::string, std::string> mUDTshorts; // FQN -> short name
         // short name -> FQNs, values in mUDTshorts
         struct less_string_ptr {
             bool operator()(const std::string* s1, const std::string* s2) const { return *s1 < *s2; }

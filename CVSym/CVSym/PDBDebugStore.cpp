@@ -1047,12 +1047,11 @@ namespace MagoST
         PDBStore::TypeScopeIn& scopeIn = (PDBStore::TypeScopeIn&) scope;
 
         IDiaSymbol* pSymbol = NULL;
-        HRESULT hr = _symbolById( scopeIn.id, &pSymbol );
+        HRESULT hr = _symbolById( typeIn.id, &pSymbol );
         if ( hr == S_OK )
             hr = pSymbol->findChildren( SymTagNull, NULL, nsNone, &scopeIn.pEnumSymbols );
         if ( pSymbol )
             pSymbol->Release();
-        scopeIn.id = typeIn.id;
         return hr;
     }
 

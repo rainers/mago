@@ -230,7 +230,32 @@ namespace MagoST
 
     HRESULT Session::FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff )
     {
-        return mStore->FindSymbol( heapId, segment, offset, handle, symOff );
+        uint64_t segoff = ((uint64_t)segment << 32) | offset;
+        auto it = mAddrSymbolMap.find( segoff );
+        if( it != mAddrSymbolMap.end() )
+        {
+            handle = it->second.first;
+            symOff = it->second.second;
+            return S_OK;
+        }
+        HRESULT hr = mStore->FindSymbol( heapId, segment, offset, handle, symOff );
+        if (hr != S_OK)
+            return hr;
+        if ( mAddrSymbolMap.size() >= 0x4000 )
+        {
+            // remove last (oldest?) element in a random bucket
+            uint64_t val = mAddrSymbolMap.begin()->first;
+            auto buckets = mAddrSymbolMap.bucket_count();
+            for ( auto idx = std::rand() % buckets; idx < buckets; idx++ )
+                if ( mAddrSymbolMap.bucket_size( idx ) > 0 )
+                {
+                    val = std::prev( mAddrSymbolMap.end( idx ) )->first;
+                    break;
+                }
+            mAddrSymbolMap.erase( val );
+        }
+        mAddrSymbolMap[segoff] = { handle, symOff };
+        return S_OK;
     }
 
     HRESULT Session::FindOuterSymbolByRVA( SymbolHeapId heapId, DWORD rva, SymHandle& handle )
@@ -243,7 +268,7 @@ namespace MagoST
             return HRESULT_FROM_WIN32( ERROR_NOT_FOUND );
 
         DWORD symOff;
-        return mStore->FindSymbol( heapId, sec, offset, handle, symOff );
+        return FindOuterSymbolByAddr( heapId, sec, offset, handle, symOff );
     }
 
     HRESULT Session::FindOuterSymbolByVA( SymbolHeapId heapId, DWORD64 va, SymHandle& handle )
@@ -510,6 +535,92 @@ namespace MagoST
         return l1 < l2;
     }
 
+    static std::string stripOneMember(const char* name, size_t len)
+    {
+        // strip one-member template duplication "fun!(arg).fun" -> "fun!(arg)"
+        std::string nameBuf;
+        size_t spos = 0;
+        while (spos + 1 < len)
+        {
+            auto p = (const char*)memchr(name + spos, '!', len - spos - 1);
+            if (!p)
+                break;
+            spos = p - name + 2;
+            if (p[1] == '(' || iswalpha( p[1] ) || p[1] == '_')
+            {
+                auto q = p + 2;
+                if ( p[1] == '(' )
+                {
+                    int parens = 1;
+                    while ( q < name + len && parens > 0 )
+                    {
+                        if ( *q == '(' )
+                            parens++;
+                        else if ( *q == ')' )
+                            parens--;
+                        q++;
+                    }
+                }
+                else
+                {
+                    while ( q < name + len && ( iswalnum( *q ) || *q == '_' ) )
+                        q++;
+                }
+                if (q < name + len + 1 && *q == '.')
+                {
+                    q++;
+                    if ( iswalpha( *q ) || *q == '_' )
+                    {
+                        auto end = q + 1;
+                        while ( end < name + len && ( iswalnum( *end ) || *end == '_' ) )
+                            end++;
+                        size_t idlen = end - q;
+                        if( p - idlen >= name && memcmp( p - idlen, q, idlen ) == 0 )
+                        {
+                            char prevch = p - idlen == name ? 0 : p[-1 - idlen];
+                            if( !iswalnum( prevch ) && prevch != '_' )
+                            {
+                                if ( name != nameBuf.data() )
+                                    nameBuf.assign( name, len );
+                                nameBuf.erase(q - name - 1, idlen + 1);
+                                name = nameBuf.data();
+                                len = nameBuf.size();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return nameBuf;
+    }
+
+    static int getLastDotPos( const char* pname, size_t len )
+    {
+        int parens = 0;
+        int pos = len;
+        while (pos > 0 && pname[pos - 1] != '.' || parens > 0)
+        {
+            pos--;
+            if ( pname[pos] == ')' )
+                parens++;
+            else if ( pname[pos] == '(' )
+                parens--;
+        }
+        return pos;
+    }
+
+    static std::string getShortName( const char* name, size_t len )
+    {
+        std::string nameBuf = stripOneMember( name, len );
+        name = nameBuf.empty() ? name : nameBuf.data();
+        len = nameBuf.empty() ? len : nameBuf.size();
+        int pos = getLastDotPos( name, len );
+        if (pos < 0)
+            return {};
+
+        return std::string(name + pos, len - pos);
+    }
+
     void Session::_cacheGlobals()
     {
         if( !mGlobals.empty() || !mDebugFuncs.empty() )
@@ -560,34 +671,17 @@ namespace MagoST
                         else
                             it->second.push_back(symHandle);
                     }
-
-                    auto pname = name.GetName();
-                    auto pos = name.GetLength();
-                    while (pos > 0 && pname[pos - 1] != '.')
-                        pos--;
-                    if (pos > 0 )
-                    {
-                        mFuncShorts.insert({
-                            std::string(pname, name.GetLength()),
-                            std::string(pname + pos, name.GetLength() - pos) });
-                    }
+                    // any function can be scope of other functions or types
+                    mFuncShorts.insert({ std::string( name.GetName(), name.GetLength() ), {} });
                 }
             }
             else if ( tag == SymTagUDT || tag == SymTagEnum )
             {
                 SymString name;
-                if ( symInfo->GetName( name ) )
+                if ( symInfo->GetName( name ) ) // && strncmp( name.GetName(), "CAPTURE.", 8 ) != 0 )
                 {
-                    auto pname = name.GetName();
-                    auto pos = name.GetLength();
-                    while ( pos > 0 && pname[pos - 1] != '.' )
-                        pos--;
-                    if ( pos > 0 && strncmp( pname, "CAPTURE.", 8 ) != 0 )
-                    {
-                        mUDTshorts.insert( {
-                            std::string( pname, name.GetLength() ),
-                            std::string( pname + pos, name.GetLength() - pos ) } );
-                    }
+                    if( getLastDotPos( name.GetName(), name.GetLength() ) >= 0 )
+                        mUDTshorts.insert( { std::string( name.GetName(), name.GetLength() ), {} } );
                 }
             }
             else if( symInfo->GetDataKind( kind ) )
@@ -627,12 +721,15 @@ namespace MagoST
                    it->first[prev->first.size()] == '.' )
             {
                 // an enclosing type adds its name to the sub type short name
-                it->second = prev->second + "." + it->second;
+                std::string shortName = getShortName( it->first.data(), it->first.size() );
+                it->second = prev->second + "." + shortName;
                 ++it;
                 if ( it == mUDTshorts.end() )
                     return;
             }
             prev = it;
+            std::string shortName = getShortName( prev->first.data(), prev->first.size() );
+            prev->second = shortName.empty() ? prev->first : shortName;
         }
     }
 
@@ -651,14 +748,19 @@ namespace MagoST
         for (auto udtit = mUDTshorts.begin(); udtit != mUDTshorts.end(); ++udtit)
         {
             while (funcit != mFuncShorts.end() && funcit->first < udtit->first)
+            {
+                std::string shortName = getShortName(funcit->first.data(), funcit->first.size());
+                funcit->second = shortName.empty() ? funcit->first : shortName;
                 ++funcit;
+            }
             while (funcit != mFuncShorts.end() &&
                 funcit->first.size() > udtit->first.size() &&
                 funcit->first.compare(0, udtit->first.size(), udtit->first) == 0 &&
                 funcit->first[udtit->first.size()] == '.')
             {
                 // an enclosing type keeps its short name within the func short name
-                funcit->second = funcit->first.substr(udtit->first.size() - udtit->second.size());
+                std::string shortName = getShortName(funcit->first.data(), funcit->first.size());
+                funcit->second = udtit->second + "." + shortName;
                 ++funcit;
             }
         }
