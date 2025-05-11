@@ -1654,20 +1654,18 @@ HRESULT InitExprContext(Evaluation::DkmInspectionContext* pInspectionContext,
                         bool forceReinit,
                         RefPtr<CCExprContext>& exprContext)
 {
-    static UINT64 lastFrameBase = 0;
-    if (pStackFrame->FrameBase() != lastFrameBase)
-    {
-        lastFrameBase = pStackFrame->FrameBase();
-        forceReinit = true; 
-    }
     auto session = pInspectionContext->InspectionSession();
     if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
-        if (!forceReinit)
-            return exprContext->SetStackFrame(pStackFrame);
-    auto process = pInspectionContext->RuntimeInstance()->Process();
+    {
+        if (exprContext->mWorkList == pWorkList && exprContext->mStackFrame == pStackFrame)
+            return S_OK;
+        exprContext = nullptr;
+    }
+    else // new inspection context
+        readMagoOptions();
 
-    if (!exprContext)
-        tryHR(MakeCComObject(exprContext));
+    tryHR(MakeCComObject(exprContext));
+    auto process = pInspectionContext->RuntimeInstance()->Process();
     tryHR(exprContext->Init(process, pWorkList, pStackFrame));
 
 #if 1 // disable if caching causes too much trouble
