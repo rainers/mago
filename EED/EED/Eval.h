@@ -101,7 +101,7 @@ namespace MagoEE
 
     struct FormatData
     {
-        const FormatOptions& opt;
+        FormatOptions opt;
         std::wstring outStr;
         uint32_t maxLength;
         uint32_t maxRecursion;
