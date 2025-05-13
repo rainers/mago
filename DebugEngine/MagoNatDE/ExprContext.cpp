@@ -40,7 +40,6 @@ using namespace MagoST;
 #define DMD_OEM_AARRAY      2
 #define DMD_OEM_DELEGATE    3
 
-
 namespace Mago
 {
     // ExprContext
@@ -945,6 +944,11 @@ namespace Mago
         return S_OK;
     }
 
+    HRESULT ModuleContext::AddFunctionAttributes( uint16_t sec, uint32_t offset, RefPtr<MagoEE::Type>& type )
+    {
+        return E_NOTIMPL;
+    }
+
     HRESULT ModuleContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )
     {
         RefPtr<MagoST::ISession>    session;
@@ -976,6 +980,28 @@ namespace Mago
             hr = GetTypeFromTypeSymbol( typeIndex, *pType );
             if ( FAILED( hr ) )
                 return hr;
+
+            if ( (*pType)->IsFunction() )
+            {
+                RefPtr<MagoEE::Type> fntype = *pType;
+                if( AddFunctionAttributes( sec, offset, fntype ) == S_OK )
+                {
+                    (*pType)->Release();
+                    *pType = fntype.Detach();
+                }
+            }
+            else if ((*pType)->IsDelegate())
+            {
+                if (auto ptrtype = (*pType)->AsTypeNext()->GetNext()->AsTypeNext())
+                {
+                    RefPtr<MagoEE::Type> fntype = ptrtype->GetNext();
+                    if ( AddFunctionAttributes( sec, offset, fntype ) == S_OK )
+                    {
+                        // todo: path delegate?
+                        ptrtype = ptrtype;
+                    }
+                }
+            }
         }
 
         SymString pstrName;
@@ -1534,19 +1560,38 @@ namespace Mago
         HRESULT                 hr = S_OK;
         MagoST::TypeIndex       typeIndex = 0;
         RefPtr<MagoEE::Type>    type;
-        RefPtr<MagoST::ISession> session;
 
         if ( !symInfo->GetType( typeIndex ) )
             return E_FAIL;
 
         hr = GetTypeFromTypeSymbol( typeIndex, type.Ref() );
-        if ( FAILED(hr) )
+        if ( FAILED( hr ) )
             return hr;
+
+
+        uint16_t seg = 0;
+        uint32_t off;
+        if ( symInfo->GetAddressSegment( seg ) && symInfo->GetAddressOffset( off ) )
+        {
+            AddFunctionAttributes( seg, off, type );
+        }
 
         RefPtr<FunctionCVDecl>   cvDecl;
         cvDecl = new FunctionCVDecl( mSymStore, infoData, symInfo );
         cvDecl->SetType( type );
-
+        MagoEE::Address addr;
+        if( seg == 0 && cvDecl->GetAddress( addr, nullptr ) )
+        {
+            RefPtr<MagoST::ISession> session;
+            if ( GetSession( session.Ref() ) != S_OK )
+                return E_NOT_FOUND;
+            seg = session->GetSecOffsetFromRVA( addr - mModule->GetAddress(), off);
+            if( seg != 0 )
+            {
+                AddFunctionAttributes( seg, off, type );
+                cvDecl->SetType( type );
+            }
+        }
         decl = cvDecl.Detach();
         return S_OK;
     }

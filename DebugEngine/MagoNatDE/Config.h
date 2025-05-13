@@ -57,6 +57,7 @@ struct MagoOptions
     bool showDArrayLengthInType;
     bool callDebuggerFunctions;
     bool callDebuggerRanges;
+    bool callPropertyMethods;
     bool callDebuggerUseMagoGC;
     int  maxArrayElements;
 };

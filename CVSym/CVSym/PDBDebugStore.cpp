@@ -983,9 +983,12 @@ namespace MagoST
         IDiaSymbol* pSymbol1 = NULL;
         IDiaSymbol* pSymbol2 = NULL;
         IDiaSymbol* pSymbol3 = NULL;
-        mSession->findSymbolByAddr( segment, offset, SymTagPublicSymbol, &pSymbol1 );
-        mSession->findSymbolByAddr( segment, offset, SymTagFunction, &pSymbol2 );
-        mSession->findSymbolByAddr( segment, offset, SymTagData, &pSymbol3 );
+        if( heapId == MagoST::SymHeap_PublicSymbols )
+            mSession->findSymbolByAddr( segment, offset, SymTagPublicSymbol, &pSymbol1 );
+        if ( heapId != MagoST::SymHeap_PublicSymbols )
+            mSession->findSymbolByAddr( segment, offset, SymTagFunction, &pSymbol2 );
+        if ( heapId != MagoST::SymHeap_PublicSymbols )
+            mSession->findSymbolByAddr( segment, offset, SymTagData, &pSymbol3 );
         IDiaSymbol* pSymbol = pSymbol1;
         DWORD bestoff = 0;
         DWORD off, sec;

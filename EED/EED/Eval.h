@@ -81,6 +81,7 @@ namespace MagoEE
     {
         bool    AllowAssignment;
         bool    AllowFuncExec;
+        bool    AllowPropertyExec;
         uint8_t Radix;
         int     Timeout;
 
@@ -90,9 +91,10 @@ namespace MagoEE
     struct FormatOptions
     {
         uint32_t radix;
-        uint32_t specifier; // some of https://msdn.microsoft.com/en-us/library/75w45ekt.aspx
+        bool raw;
+        bool prop;
 
-        FormatOptions( uint32_t r = 0, uint32_t s = 0 ) : radix( r ), specifier( s ) {}
+        FormatOptions( uint32_t r = 0 ) : radix( r ), raw( false ), prop( false ) {}
     };
 
     static const uint32_t kMaxFormatValueLength = 100; // soft limit to eventually abort recursions

@@ -115,6 +115,8 @@ namespace Mago
                                       MagoEE::DataObject& value, bool saveGC,
                                       std::function < HRESULT(HRESULT, MagoEE::DataObject)> complete );
 
+        virtual HRESULT AddFunctionAttributes( uint16_t sec, uint32_t offset, RefPtr<MagoEE::Type>& type );
+
         virtual DRuntime* GetDRuntime();
 
         bool ShortenClassName( std::wstring& className );
@@ -240,6 +242,7 @@ namespace Mago
 
         Thread* GetThread();
         ModuleContext* GetModuleContext() { return mModuleContext; }
+        void setModuleContext( ModuleContext* context ) { mModuleContext = context; }
 
         //////////////////////////////////////////////////////////// 
         // IDebugExpressionContext2 

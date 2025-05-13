@@ -255,6 +255,11 @@ bool readMagoOptions()
     else
         gOptions.callDebuggerRanges = false;
 
+    if (GetRegValue(hKey, L"callPropertyMethods", &val) == S_OK)
+        gOptions.callPropertyMethods = val != 0;
+    else
+        gOptions.callPropertyMethods = false;
+
     if (GetRegValue(hKey, L"callDebuggerUseMagoGC", &val) == S_OK)
         gOptions.callDebuggerUseMagoGC = val != 0;
     else
@@ -270,6 +275,7 @@ bool readMagoOptions()
     MagoEE::gShowDArrayLengthInType = gOptions.showDArrayLengthInType;
     MagoEE::gCallDebuggerFunctions = gOptions.callDebuggerFunctions;
     MagoEE::gCallDebuggerRanges = gOptions.callDebuggerRanges;
+    MagoEE::gCallPropertyMethods = gOptions.callPropertyMethods;
     MagoEE::gCallDebuggerUseMagoGC = gOptions.callDebuggerUseMagoGC;
 
     RegCloseKey( hKey );

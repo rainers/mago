@@ -102,6 +102,7 @@ namespace MagoEE
     extern bool gShowDArrayLengthInType;
     extern bool gCallDebuggerFunctions;
     extern bool gCallDebuggerRanges;
+    extern bool gCallPropertyMethods;
     extern bool gCallDebuggerUseMagoGC;
 
     extern uint32_t gMaxArrayLength;

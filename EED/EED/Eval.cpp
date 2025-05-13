@@ -17,7 +17,7 @@
 
 namespace MagoEE
 {
-    EvalOptions EvalOptions::defaults = { false, false, 10, 1000 };
+    EvalOptions EvalOptions::defaults = { false, false, false, 10, 1000 };
 
     HRESULT Expression::Semantic( const EvalData& evalData, ITypeEnv* typeEnv, IValueBinder* binder )
     {

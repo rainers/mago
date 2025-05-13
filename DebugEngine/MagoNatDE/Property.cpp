@@ -435,9 +435,9 @@ namespace Mago
         if ( objVal.ReadOnly )
             dwAttrib |= DBG_ATTRIB_VALUE_READONLY;
 
-        if ( fmtOpts.specifier != MagoEE::FormatSpecRaw && objVal.HasChildren )
+        if ( !fmtOpts.raw && objVal.HasChildren )
             dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
-        if (fmtOpts.specifier == MagoEE::FormatSpecRaw && objVal.HasRawChildren )
+        if ( fmtOpts.raw && objVal.HasRawChildren )
             dwAttrib |= DBG_ATTRIB_OBJ_IS_EXPANDABLE;
 
         if ( objVal.ObjVal._Type != NULL )

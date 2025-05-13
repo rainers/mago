@@ -607,7 +607,7 @@ namespace MagoEE
         if ( arrayType == NULL )
             return E_FAIL;
 
-        if ( fmtdata.opt.specifier != FormatSpecRaw && arrayType->GetElement()->IsChar() )
+        if ( !fmtdata.opt.raw && arrayType->GetElement()->IsChar() )
         {
             _formatString( binder, array.Addr, array.Length, arrayType->GetElement(), fmtdata.outStr );
             if ( complete )
@@ -615,8 +615,8 @@ namespace MagoEE
         }
         else
         {
-            bool showLength = fmtdata.opt.specifier == FormatSpecRaw || !gShowDArrayLengthInType;
-            bool showPtr    = fmtdata.opt.specifier == FormatSpecRaw || !gHideReferencePointers;
+            bool showLength = fmtdata.opt.raw || !gShowDArrayLengthInType;
+            bool showPtr    = fmtdata.opt.raw || !gHideReferencePointers;
 
             if( showLength || showPtr )
                 fmtdata.outStr.append( 1, L'{' );
@@ -645,7 +645,7 @@ namespace MagoEE
             if ( showLength || showPtr )
                 fmtdata.outStr.append( 1, L'}' );
 
-            if (fmtdata.opt.specifier != FormatSpecRaw )
+            if ( !fmtdata.opt.raw )
             {
                 if ( showLength || showPtr )
                     fmtdata.outStr.append( 1, L' ' );
@@ -1034,7 +1034,7 @@ namespace MagoEE
                           std::function<HRESULT(HRESULT, std::wstring)> complete )
 	{
         static bool recurse = false;
-        if ( gCallDebuggerFunctions && !recurse && fmtdata.opt.specifier != FormatSpecRaw )
+        if ( gCallDebuggerFunctions && !recurse && !fmtdata.opt.raw )
         {
             recurse = true;
             HRESULT hr = E_FAIL;
@@ -1085,7 +1085,7 @@ namespace MagoEE
         HRESULT hr = S_OK;
         RefPtr<Type>    pointeeType = objVal._Type->AsTypeNext()->GetNext();
 
-        if (fmtdata.opt.specifier == FormatSpecRaw || !gHideReferencePointers || !objVal._Type->IsReference() )
+        if ( fmtdata.opt.raw || !gHideReferencePointers || !objVal._Type->IsReference() )
         {
             hr = FormatAddress( objVal.Value.Addr, objVal._Type, fmtdata.outStr );
             if ( FAILED( hr ) )

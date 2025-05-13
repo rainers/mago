@@ -63,6 +63,7 @@ Evaluation::IL::DkmILCallingConvention::e toCallingConvention(uint8_t callConv);
 CComPtr<DkmString> toDkmString(const wchar_t* str);
 
 extern "C" char* dlang_demangle(const char* mangled, int options);
+extern "C" const char* dlang_demangle_funcattr(const char* mangled);
 
 // stub to read/write memory from process, all other functions supposed to not be called
 class CCDebuggerProxy : public Mago::IDebuggerProxy
@@ -269,6 +270,138 @@ EXTERN_C const GUID DECLSPEC_SELECTANY guidIDiaSession =
 EXTERN_C const GUID DECLSPEC_SELECTANY guidIDiaSession2013 =
 { 0x6FC5D63F, 0x011E, 0x40C2, { 0x8D, 0xD2, 0xE6, 0x48, 0x6E, 0x9D, 0x6B, 0x68 } };
 
+class CCModuleContext : public Mago::ModuleContext
+{
+public:
+    HRESULT AddFunctionAttributes(uint16_t sec, uint32_t offset, RefPtr<MagoEE::Type>& type) override
+    {
+        RefPtr<MagoST::ISession> session;
+        if (GetSession(session.Ref()) != S_OK)
+            return E_NOT_FOUND;
+
+        MagoST::SymHandle pubHandle;
+        DWORD off = 0;
+        HRESULT hr = session->FindOuterSymbolByAddr( MagoST::SymHeap_PublicSymbols, sec, offset, pubHandle, off );
+        if ( FAILED( hr ) )
+            return hr;
+
+        MagoST::SymInfoData infoData = { 0 };
+        MagoST::ISymbolInfo* symInfo;
+        hr = session->GetSymbolInfo( pubHandle, infoData, symInfo );
+        if ( FAILED( hr ) )
+            return hr;
+
+        SymString pstrName;
+        if ( !symInfo->GetName( pstrName ) )
+            return E_FAIL;
+        
+        // parse until the first function type
+        auto name = pstrName.GetName();
+        size_t len = pstrName.GetLength();
+        if ( 1 >= len || name[0] != '_' )
+            return E_NOT_FOUND;
+        size_t pos = 1;
+        while ( pos < len && name[pos] == '_' )
+            pos++;
+        if ( pos >= len || name[pos] != 'D' )
+            return E_NOT_FOUND;
+
+        std::string mangled( name + pos - 1, len );
+        auto fnattr = dlang_demangle_funcattr( mangled.c_str() );
+        if( !fnattr )
+            return E_NOT_FOUND;
+
+        bool attr_const = false;
+        bool attr_immutable = false;
+        bool attr_shared = false;
+        bool attr_inout = false;
+        bool attr_pure = false;
+        bool attr_nogc = false;
+        bool attr_nothrow = false;
+        bool attr_property = false;
+        int attr_trust = 0;
+        if ( *fnattr == 'M' )
+        {
+            fnattr++; // member function
+            if ( *fnattr == 'O' )
+            {
+                fnattr++;
+                attr_shared = true;
+            }
+            if ( *fnattr == 'N' && fnattr[1] ==  'g' )
+            {
+                fnattr += 2;
+                attr_inout = true;
+            }
+            if ( *fnattr == 'x' )
+            {
+                fnattr++;
+                attr_const = true;
+            }
+            if ( *fnattr == 'y' )
+            {
+                fnattr++;
+                attr_immutable = true;
+            }
+        }
+        switch( *fnattr )
+        {
+            case 'F': // extern(D)
+            case 'U': // extern(C)
+            case 'V': // extern(Pascal)
+            case 'W': // extern(Windows)
+            case 'R': // extern(C++)
+            case 'Y': // extern(Objective-C)
+                break;
+            default:
+                return E_NOT_FOUND;
+        }
+        fnattr++;
+        while( *fnattr == 'N' )
+        {
+            fnattr++;
+            switch( *fnattr )
+            {
+            case 'a': attr_pure = true; break; /* pure */
+            case 'b': attr_nothrow = true; break; /* nothrow */
+            case 'c': break; /* ref */
+            case 'd': attr_property = true; break; /* @property */
+            case 'e': attr_trust = TRUSTtrusted; break; /* @trusted */
+            case 'f': attr_trust = TRUSTsafe; /* @safe */
+            case 'g': /* inout parameter is represented as 'Ng'. */
+            case 'h': /* vector parameter is represented as 'Nh'. */
+            case 'k': /* return parameter is represented as 'Nk'. */
+                   /* If we see these, then we know we're really in the
+                   parameter list.  Rewind and break.  */
+                goto L_done;
+            case 'i': attr_nogc = true; break; /* @nogc */
+            case 'j': break; /* return */
+            case 'l': break; /* scope */
+            default:
+                goto L_done;
+            }
+            fnattr++;
+        }
+    L_done:
+        auto fntype = type->AsTypeFunction();
+        if( !fntype )
+            return E_INVALIDARG;
+        if( fntype->IsPure() != attr_pure ||
+            fntype->IsNoThrow() != attr_nothrow ||
+            fntype->IsProperty() != attr_property )
+        {
+            auto ntype = type->Copy();
+            auto nfntype = ntype->AsTypeFunction();
+            nfntype->SetPure( attr_pure );
+            nfntype->SetNoThrow( attr_nothrow );
+            nfntype->SetProperty( attr_property );
+            type = ntype;
+            return S_OK;
+        }
+        return S_FALSE;
+    }
+};
+
 class DECLSPEC_UUID("598DECC9-CF79-4E90-A408-5E1433B4DBFF") CCModule : public CCDataItem<CCModule>
 {
     friend class CCExprContext;
@@ -288,6 +421,7 @@ protected:
     RefPtr<Mago::IRegisterSet> mRegSet;
     RefPtr<Mago::Module> mModule;
     RefPtr<Mago::Program> mProgram;
+    RefPtr<CCModuleContext> mModuleContext;
 
     CCDebuggerProxy* mDebuggerProxy;
     RefPtr<DkmProcess> mProcess;
@@ -342,6 +476,8 @@ public:
         UniquePtr<Mago::DRuntime> druntime(new Mago::DRuntime(mDebuggerProxy, localprocess));
         mProgram->SetDRuntime(druntime);
 
+        tryHR(MakeCComObject(mModuleContext));
+        mModuleContext->Init(mModule, mProgram);
         return S_OK;
     }
 
@@ -794,7 +930,8 @@ public:
         if (!mThread)
             tryHR(MakeCComObject(mThread));
         mThread->SetProgram(mModule->mProgram, mModule->mDebuggerProxy);
-
+        
+        setModuleContext(mModule->mModuleContext);
         return ExprContext::Init(mModule->mModule, mThread, funcSH, blockSH, va, mModule->mRegSet);
     }
 
@@ -1869,6 +2006,8 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
         options.AllowAssignment = true;
     if ((evalFlags & Evaluation::DkmEvaluationFlags::NoFuncEval) == 0)
         options.AllowFuncExec = true;
+    if (fmtopt.prop)
+        options.AllowPropertyExec = true;
 
     hr = pExpr->Bind(options, exprContext);
     if (FAILED(hr))

@@ -230,7 +230,7 @@ namespace MagoST
 
     HRESULT Session::FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff )
     {
-        uint64_t segoff = ((uint64_t)segment << 32) | offset;
+        uint64_t segoff = ((uint64_t)heapId << 48) | ((uint64_t)segment << 32) | offset;
         auto it = mAddrSymbolMap.find( segoff );
         if( it != mAddrSymbolMap.end() )
         {
@@ -453,11 +453,12 @@ namespace MagoST
                 std::vector<TypeIndex> indexes;
                 if ( !funcInfo->GetTypes( indexes ) )
                     continue;
-                if ( indexes.size() == 0 || found == S_FALSE )
+                if ( indexes.empty() || found == S_FALSE )
                 {
                     handle = childHandle;
                     found = S_OK;
-                    break;
+                    if( indexes.empty() )
+                        break;
                 }
             }
         }

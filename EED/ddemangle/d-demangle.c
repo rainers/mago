@@ -1796,6 +1796,58 @@ dlang_demangle (const char *mangled, int options)
   return demangled;
 }
 
+// return the pointer to the function attributes inside mangled
+char*
+dlang_demangle_funcattr(const char* mangled)
+{
+  string decl;
+  const char* fattr = NULL;
+
+  if (mangled == NULL || *mangled == '\0')
+    return NULL;
+
+  if (strncmp (mangled, "_D", 2) != 0)
+    return NULL;
+
+  if (strcmp (mangled, "_Dmain") == 0)
+    return NULL;
+
+  string_init (&decl);
+
+  state opts;
+  opts.flags = (DMGL_PARAMS | DMGL_VERBOSE);
+  opts.mangled = mangled;
+  opts.last_backref = strlen (mangled);
+
+  mangled += 2;
+  size_t n = 0;
+  do
+    {
+      if (n++)
+	string_append (&decl, ".");
+
+      /* Skip over anonymous symbols.  */
+      while (*mangled == '0')
+	mangled++;
+
+      mangled = dlang_identifier (&decl, mangled, &opts);
+
+      /* Consume the encoded arguments.  However if this is not followed by the
+	 next encoded length, then this is not a continuation of a qualified
+	 name, in which case we backtrack and return the current unconsumed
+	 position of the mangled decl.  */
+      if (mangled && dlang_call_convention_p (mangled, &opts))
+	{
+          fattr = mangled;
+          break;
+	}
+    }
+  while (mangled && dlang_symbol_name_p (mangled, &opts));
+  mangled = dlang_parse_mangle (&decl, mangled, &opts);
+  string_delete (&decl);
+  return fattr;
+}
+
 #ifdef STANDALONE_DEMANGLER
 
 /* Main entry for a demangling filter executable.  It will filter

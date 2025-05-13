@@ -79,6 +79,25 @@ namespace MagoEE
             hr = mExpr->Evaluate( EvalMode_Value, evalData, binder, result.ObjVal );
             if ( FAILED( hr ) )
                 return hr;
+
+            if( auto type = result.ObjVal._Type )
+                if( type->IsDelegate() )
+                    if ( auto ptrtype = type->AsTypeNext()->GetNext()->AsTypeNext() )
+                    {
+                        auto func = ptrtype->GetNext()->AsTypeFunction();
+                        if( func->GetParams()->List.empty() &&
+                            ( options.AllowPropertyExec || ( gCallPropertyMethods && func->IsProperty() ) ) )
+                        {
+                            EvalResult propResult = { 0 };
+                            auto addr = result.ObjVal.Value.Delegate.FuncAddr;
+                            auto ctxt = result.ObjVal.Value.Delegate.ContextAddr;
+                            propResult.ObjVal._Type = func->GetReturnType();
+                            hr = binder->CallFunction( addr, func, ctxt, propResult.ObjVal, false, {} );
+                            if( SUCCEEDED( hr ) )
+                                hr = FillValueTraits( binder, propResult, mExpr, complete );
+                            return hr;
+                        }
+                }
             return FillValueTraits( binder, result, mExpr, complete );
         }
 
@@ -93,6 +112,7 @@ namespace MagoEE
     bool gShowDArrayLengthInType = true;
     bool gCallDebuggerFunctions = true;
     bool gCallDebuggerRanges = true;
+    bool gCallPropertyMethods = true;
     bool gCallDebuggerUseMagoGC = true;
 
     uint32_t gMaxArrayLength = 1000;
@@ -133,23 +153,47 @@ namespace MagoEE
         return S_OK;
     }
 
+    static bool isFormatSpecifier( wchar_t ch )
+    {
+        // some of https://msdn.microsoft.com/en-us/library/75w45ekt.aspx
+        return ch == '!' || ch == 'x' || ch == 'd' || ch == '@';
+    }
+
     HRESULT StripFormatSpecifier( std::wstring& text, FormatOptions& fmtopt )
     {
         size_t textlen = text.size();
-        if( textlen > 2 && text[textlen - 2] == ',')
+        while ( textlen > 2 && isFormatSpecifier( text[textlen - 1] ) )
+            textlen--;
+        if( textlen > 1 && text[textlen - 1] == ',')
         {
-            fmtopt.specifier = text[textlen - 1];
-            text.resize(textlen - 2);
+            for( size_t p = textlen; p < text.size(); p++ )
+            {
+                switch( text[p] )
+                {
+                case '!': fmtopt.raw = true; break;
+                case '@': fmtopt.prop = true; break;
+                case 'x': fmtopt.radix = 16; break;
+                case 'd': fmtopt.radix = 10; break;
+                }
+            }
+            text.resize(textlen - 1);
         }
         return S_OK;
     }
 
     HRESULT AppendFormatSpecifier( std::wstring& text, const FormatOptions& fmtopt )
     {
-        if ( fmtopt.specifier )
+        if ( fmtopt.raw || fmtopt.prop || fmtopt.radix != 0 )
         {
             text.push_back( ',' );
-            text.push_back( (wchar_t) fmtopt.specifier );
+            if( fmtopt.raw )
+                text.push_back( '!' );
+            if( fmtopt.prop )
+                text.push_back( '@' );
+            if( fmtopt.radix == 16 )
+                text.push_back( 'x' );
+            else if( fmtopt.radix == 10 )
+                text.push_back( 'd' );
         }
         return S_OK;
     }
@@ -241,7 +285,7 @@ namespace MagoEE
         }
         else if ( pparentVal->ObjVal._Type->IsDArray() )
         {
-            if ( fmtopts.specifier == FormatSpecRaw )
+            if ( fmtopts.raw )
                 en = new EEDEnumRawDArray();
             else
                 en = new EEDEnumDArray();
@@ -252,7 +296,7 @@ namespace MagoEE
         }
         else if ( auto ts = pparentVal->ObjVal._Type->AsTypeStruct() )
         {
-            if ( gCallDebuggerFunctions && fmtopts.specifier != FormatSpecRaw && pparentVal->ObjVal.Addr != 0 )
+            if ( gCallDebuggerFunctions && !fmtopts.raw && pparentVal->ObjVal.Addr != 0 )
             {
                 Address fnaddr;
                 if ( RefPtr<Type> fntype = GetDebuggerProp( binder, ts, L"__debugExpanded", fnaddr ) )
