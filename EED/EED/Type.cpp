@@ -1081,6 +1081,7 @@ namespace MagoEE
             mIsPure( false ),
             mIsNoThrow( false ),
             mIsProperty( false ),
+            mIsConst( false ),
             mTrust( TRUSTdefault )
     {
     }
@@ -1092,6 +1093,7 @@ namespace MagoEE
         funcType->SetPure( mIsPure );
         funcType->SetNoThrow( mIsNoThrow );
         funcType->SetProperty( mIsProperty );
+        funcType->SetConst( mIsConst );
         funcType->SetTrust( mTrust );
         return type;
     }
@@ -1253,6 +1255,11 @@ namespace MagoEE
         return mIsProperty;
     }
 
+    bool TypeFunction::IsConst()
+    {
+        return mIsConst;
+    }
+
     TRUST TypeFunction::GetTrust()
     {
         return mTrust;
@@ -1282,6 +1289,11 @@ namespace MagoEE
     void TypeFunction::SetProperty( bool value )
     {
         mIsProperty = value;
+    }
+
+    void TypeFunction::SetConst( bool value )
+    {
+        mIsConst = value;
     }
 
     void TypeFunction::SetTrust( TRUST value )

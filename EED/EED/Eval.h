@@ -93,8 +93,9 @@ namespace MagoEE
         uint32_t radix;
         bool raw;
         bool prop;
+        bool stack;
 
-        FormatOptions( uint32_t r = 0 ) : radix( r ), raw( false ), prop( false ) {}
+        FormatOptions( uint32_t r = 0 ) : radix( r ), raw( false ), prop( false ), stack( false ) {}
     };
 
     static const uint32_t kMaxFormatValueLength = 100; // soft limit to eventually abort recursions
@@ -106,14 +107,14 @@ namespace MagoEE
         uint32_t maxLength;
         uint32_t maxRecursion;
 
-        FormatData(const FormatOptions& o, uint32_t ml = 100, uint32_t r = 6)
-            : opt(o), maxLength(ml), maxRecursion(r) {}
+        FormatData( const FormatOptions& o, uint32_t ml = 100, uint32_t r = 6 )
+            : opt( o ), maxLength( ml ), maxRecursion( r ) {}
 
-        FormatData newScope(uint32_t reserveLen = 0)
+        FormatData newScope( uint32_t reserveLen = 0 )
         {
             auto outlen = (uint32_t) outStr.length() + reserveLen;
-            auto maxLen = std::max<uint32_t>(maxLength, outlen) - outlen;
-            return FormatData(opt, maxLen, maxRecursion - (maxRecursion > 0 ? 1 : 0));
+            auto maxLen = std::max<uint32_t>( maxLength, outlen ) - outlen;
+            return FormatData( opt, maxLen, maxRecursion - ( maxRecursion > 0 ? 1 : 0 ) );
         }
         bool isTooLong() const { return outStr.length() >= maxLength || maxRecursion == 0; }
     };

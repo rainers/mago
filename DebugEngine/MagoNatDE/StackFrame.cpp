@@ -703,6 +703,14 @@ namespace Mago
             if ( decl == NULL )
                 continue;
 
+            if ( gOptions.hideInternalNames )
+            {
+                auto name = decl->GetName();
+                if ( name && name[0] == '_' && name[1] == '_' && MagoEE::GetParamIndex( name ) < 0 )
+                    // do not hide ... parameter symbols
+                    continue;
+            }
+
             std::wstring typeStr;
             std::wstring nameStr;
 
@@ -737,7 +745,8 @@ namespace Mago
                 {
                     closure->toComplete++;
                     MagoEE::FormatOptions fmtopts( radix );
-                    MagoEE::FormatData fmtdata( fmtopts );
+                    fmtopts.stack = true;
+                    MagoEE::FormatData fmtdata( fmtopts, 32, 2 );
                     auto completeValue = !complete ? std::function<HRESULT( HRESULT, std::wstring )>{} :
                         [closure, idx = closure->params.size() - 1]( HRESULT hr, std::wstring valStr )
                         {

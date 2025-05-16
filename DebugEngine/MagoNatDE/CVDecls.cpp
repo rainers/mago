@@ -867,7 +867,7 @@ namespace Mago
 
             if ( decl && decl->IsFunction() )
             {
-                if (!decl->IsStaticFunction())
+                if ( !decl->IsStaticFunction() )
                 {
                     RefPtr<MagoEE::Type> type;
                     RefPtr<MagoEE::Type> dgtype;

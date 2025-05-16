@@ -356,12 +356,14 @@ namespace MagoEE
         virtual bool    IsPure() = 0;
         virtual bool    IsNoThrow() = 0;
         virtual bool    IsProperty() = 0;
+        virtual bool    IsConst() = 0;
         virtual TRUST   GetTrust() = 0;
 
         virtual void    SetCallConv( uint8_t value ) = 0;
         virtual void    SetPure( bool value ) = 0;
         virtual void    SetNoThrow( bool value ) = 0;
         virtual void    SetProperty( bool value ) = 0;
+        virtual void    SetConst( bool value ) = 0;
         virtual void    SetTrust( TRUST value ) = 0;
     };
 
@@ -372,6 +374,7 @@ namespace MagoEE
         bool                    mIsPure;
         bool                    mIsNoThrow;
         bool                    mIsProperty;
+        bool                    mIsConst;  // const/immutable/inout from mangling
         uint8_t                 mCallConv; // as CV_call_e in cvconst.h
         TRUST                   mTrust;
         RefPtr<Type>            mThisPointerType;
@@ -396,12 +399,14 @@ namespace MagoEE
         virtual bool    IsPure();
         virtual bool    IsNoThrow();
         virtual bool    IsProperty();
+        virtual bool    IsConst();
         virtual TRUST   GetTrust();
 
         virtual void    SetCallConv( uint8_t value );
         virtual void    SetPure( bool value );
         virtual void    SetNoThrow( bool value );
         virtual void    SetProperty( bool value );
+        virtual void    SetConst( bool value );
         virtual void    SetTrust( TRUST value );
     };
 

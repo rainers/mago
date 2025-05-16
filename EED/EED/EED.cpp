@@ -67,6 +67,39 @@ namespace MagoEE
             return S_OK;
         }
 
+        static ITypeFunction* getPropertyCallFunc(const EvalOptions& options, RefPtr<Type> type)
+        {
+            if ( !type || !type->IsDelegate() )
+                return nullptr;
+            auto ptrtype = type->AsTypeNext()->GetNext()->AsTypeNext();
+            if ( !ptrtype )
+                return nullptr;
+            auto func = ptrtype->GetNext()->AsTypeFunction();
+            if ( !func->GetParams()->List.empty() )
+                return nullptr;
+
+            if ( options.AllowPropertyExec )
+                return func;
+            auto isConstThis = [&]()
+                {
+                    if ( func->IsConst() )
+                        return true;
+                    if ( auto thistype = func->GetThisPointerType() )
+                        if( auto tnext = type->AsTypeNext() ) // deref pointer to this
+                            return tnext->GetNext()->IsConst();
+                    return false;
+                };
+            if ( gCallPropertyMethods == kCallPropAndPureConst && func->IsProperty() && func->IsPure() && isConstThis() )
+                return func;
+            if ( gCallPropertyMethods == kCallPropAndConst && func->IsProperty() && isConstThis() )
+                return func;
+            if ( gCallPropertyMethods == kCallPropAny && func->IsProperty() )
+                return func;
+            if ( gCallPropertyMethods == kCallPropOrPureConst && ( func->IsProperty() || ( func->IsPure() && isConstThis() ) ) )
+                return func;
+            return nullptr;
+        }
+
         virtual HRESULT Evaluate( const EvalOptions& options, IValueBinder* binder, EvalResult& result,
             std::function<HRESULT(HRESULT, EvalResult)> complete )
         {
@@ -80,24 +113,28 @@ namespace MagoEE
             if ( FAILED( hr ) )
                 return hr;
 
-            if( auto type = result.ObjVal._Type )
-                if( type->IsDelegate() )
-                    if ( auto ptrtype = type->AsTypeNext()->GetNext()->AsTypeNext() )
+            if( auto func = getPropertyCallFunc( options, result.ObjVal._Type ) )
+            {
+                EvalResult propResult = { 0 };
+                auto addr = result.ObjVal.Value.Delegate.FuncAddr;
+                auto ctxt = result.ObjVal.Value.Delegate.ContextAddr;
+                propResult.ObjVal._Type = func->GetReturnType();
+                auto completeProp = !complete ? std::function<HRESULT(HRESULT, MagoEE::DataObject)>{} :
+                    [complete, expr = mExpr, binder, propResult](HRESULT hr, MagoEE::DataObject objval) mutable
                     {
-                        auto func = ptrtype->GetNext()->AsTypeFunction();
-                        if( func->GetParams()->List.empty() &&
-                            ( options.AllowPropertyExec || ( gCallPropertyMethods && func->IsProperty() ) ) )
-                        {
-                            EvalResult propResult = { 0 };
-                            auto addr = result.ObjVal.Value.Delegate.FuncAddr;
-                            auto ctxt = result.ObjVal.Value.Delegate.ContextAddr;
-                            propResult.ObjVal._Type = func->GetReturnType();
-                            hr = binder->CallFunction( addr, func, ctxt, propResult.ObjVal, false, {} );
-                            if( SUCCEEDED( hr ) )
-                                hr = FillValueTraits( binder, propResult, mExpr, complete );
-                            return hr;
-                        }
-                }
+                        propResult.ObjVal = objval;
+                        if ( SUCCEEDED( hr ) )
+                            hr = FillValueTraits( binder, propResult, expr, complete ); // not really async
+                        else
+                            hr = complete( hr, propResult );
+                        return hr;
+                    };
+                hr = binder->CallFunction( addr, func, ctxt, propResult.ObjVal, true, completeProp );
+                if( hr == S_OK ) // not when S_QUEUED
+                    hr = FillValueTraits( binder, propResult, mExpr, complete );
+                return hr;
+            }
+
             return FillValueTraits( binder, result, mExpr, complete );
         }
 
@@ -112,7 +149,7 @@ namespace MagoEE
     bool gShowDArrayLengthInType = true;
     bool gCallDebuggerFunctions = true;
     bool gCallDebuggerRanges = true;
-    bool gCallPropertyMethods = true;
+    uint8_t gCallPropertyMethods = 0;
     bool gCallDebuggerUseMagoGC = true;
 
     uint32_t gMaxArrayLength = 1000;

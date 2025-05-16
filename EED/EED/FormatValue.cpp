@@ -814,9 +814,10 @@ namespace MagoEE
 
                 outStr = L"{";
                 for (size_t i = 0; i < elemStr.size(); i++)
-                    outStr.append(i == 0 ? L"" : L", ").append(names[i]).append(L" = ").append(elemStr[i]);
+                    if (!elemStr[i].empty())
+                        outStr.append(i == 0 ? L"" : L", ").append(names[i]).append(L" = ").append(elemStr[i]);
                 if (dotdotdot)
-                    outStr.append(L", ...");
+                    outStr.append(outStr.length() == 1 ? L"..." : L", ...");
                 outStr.append(L"}");
                 if (complete)
                     return complete(hrCombined, outStr);
@@ -1062,7 +1063,7 @@ namespace MagoEE
                         hr = FormatValue( binder, obj, fmtdata, {} );
                 }
             }
-            else if ( gCallDebuggerRanges )
+            else if ( gCallDebuggerRanges && !fmtdata.opt.stack )
                 hr = FormatRange( binder, addr, type, fmtdata, complete );
 
             recurse = false;

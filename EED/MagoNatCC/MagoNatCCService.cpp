@@ -383,18 +383,21 @@ public:
             fnattr++;
         }
     L_done:
+        attr_const = attr_const || attr_immutable || attr_inout;
         auto fntype = type->AsTypeFunction();
         if( !fntype )
             return E_INVALIDARG;
         if( fntype->IsPure() != attr_pure ||
             fntype->IsNoThrow() != attr_nothrow ||
-            fntype->IsProperty() != attr_property )
+            fntype->IsProperty() != attr_property ||
+            fntype->IsConst() != attr_const )
         {
             auto ntype = type->Copy();
             auto nfntype = ntype->AsTypeFunction();
             nfntype->SetPure( attr_pure );
             nfntype->SetNoThrow( attr_nothrow );
             nfntype->SetProperty( attr_property );
+            nfntype->SetConst( attr_const );
             type = ntype;
             return S_OK;
         }

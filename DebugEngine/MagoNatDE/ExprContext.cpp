@@ -990,9 +990,9 @@ namespace Mago
                     *pType = fntype.Detach();
                 }
             }
-            else if ((*pType)->IsDelegate())
+            else if ( (*pType)->IsDelegate() )
             {
-                if (auto ptrtype = (*pType)->AsTypeNext()->GetNext()->AsTypeNext())
+                if ( auto ptrtype = (*pType)->AsTypeNext()->GetNext()->AsTypeNext() )
                 {
                     RefPtr<MagoEE::Type> fntype = ptrtype->GetNext();
                     if ( AddFunctionAttributes( sec, offset, fntype ) == S_OK )

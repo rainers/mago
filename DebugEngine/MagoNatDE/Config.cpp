@@ -256,9 +256,9 @@ bool readMagoOptions()
         gOptions.callDebuggerRanges = false;
 
     if (GetRegValue(hKey, L"callPropertyMethods", &val) == S_OK)
-        gOptions.callPropertyMethods = val != 0;
+        gOptions.callPropertyMethods = val;
     else
-        gOptions.callPropertyMethods = false;
+        gOptions.callPropertyMethods = MagoEE::kCallPropNever;
 
     if (GetRegValue(hKey, L"callDebuggerUseMagoGC", &val) == S_OK)
         gOptions.callDebuggerUseMagoGC = val != 0;
