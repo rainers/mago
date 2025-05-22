@@ -960,7 +960,7 @@ namespace Mago
         uint16_t    sec = 0;
         uint32_t    offset = 0;
         uint32_t    symOff = 0;
-        HRESULT hr = session->FindGlobalSymbolByAddr( addr, symHandle, sec, offset, symOff );
+        HRESULT hr = session->FindGlobalSymbolByAddr( addr, true, symHandle, sec, offset, symOff );
         if ( FAILED( hr ) )
             return hr;
 

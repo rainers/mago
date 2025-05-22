@@ -272,7 +272,18 @@ EXTERN_C const GUID DECLSPEC_SELECTANY guidIDiaSession2013 =
 
 class CCModuleContext : public Mago::ModuleContext
 {
+    Symbols::DkmModule* mDkmModule; // no RefPtr to avoid cyclic ref count
+
 public:
+    HRESULT Init(
+        Mago::Module* module,
+        Mago::Program* program,
+        Symbols::DkmModule* dkmModule)
+    {
+        mDkmModule = dkmModule;
+        return ModuleContext::Init(module, program);
+    }
+
     HRESULT AddFunctionAttributes(uint16_t sec, uint32_t offset, RefPtr<MagoEE::Type>& type) override
     {
         RefPtr<MagoST::ISession> session;
@@ -403,6 +414,62 @@ public:
         }
         return S_FALSE;
     }
+
+    static bool demangleDSymbol(std::wstring& symName)
+    {
+        size_t len = symName.length();
+        if (len < 1 || symName[0] != '_')
+            return false;
+        size_t pos = 1;
+        while (pos < len && symName[pos] == '_')
+            pos++;
+        if (pos >= len || symName[pos] != 'D')
+            return false;
+
+        CAutoVectorPtr<char> u8Name;
+        size_t               u8NameLen = 0;
+        HRESULT hr = Utf16To8(symName.data() + pos - 1, len - pos + 1, u8Name.m_p, u8NameLen);
+        if (FAILED(hr))
+            return false;
+
+        char* demangled = dlang_demangle(u8Name, 0);
+        if (!demangled)
+            return false;
+
+        CAutoVectorPtr<char> u16Name;
+        size_t               u16NameLen = 0;
+        BSTR u16Str = NULL;
+        hr = Utf8To16(demangled, strlen(demangled), u16Str);
+        free(demangled);
+        if (FAILED(hr))
+            return false;
+
+        symName = u16Str;
+        SysFreeString(u16Str);
+        return true;
+    }
+
+    HRESULT SymbolFromAddr(MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType) override
+    {
+        HRESULT hr = ModuleContext::SymbolFromAddr(addr, symName, pType);
+        if (FAILED(hr))
+            return hr;
+        if (symName.length() > 0 && symName[0] == '?')
+        {
+            // Undecorate C++ symbols
+            if (mDkmModule)
+            {
+                RefPtr<DkmString> undec;
+                if (mDkmModule->UndecorateName(toDkmString(symName.c_str()), 0x7ff, &undec.Ref()) == S_OK)
+                {
+                    symName = undec->Value();
+                }
+            }
+        }
+        else
+            demangleDSymbol(symName);
+        return S_OK;
+    }
 };
 
 class DECLSPEC_UUID("598DECC9-CF79-4E90-A408-5E1433B4DBFF") CCModule : public CCDataItem<CCModule>
@@ -480,7 +547,7 @@ public:
         mProgram->SetDRuntime(druntime);
 
         tryHR(MakeCComObject(mModuleContext));
-        mModuleContext->Init(mModule, mProgram);
+        mModuleContext->Init(mModule, mProgram, module);
         return S_OK;
     }
 
@@ -1012,66 +1079,6 @@ public:
     virtual Mago::Address64 GetTebBase()
     {
         return mStackFrame->Thread()->TebAddress();
-    }
-
-    static bool demangleDSymbol(std::wstring& symName)
-    {
-        size_t len = symName.length();
-        if (len < 1 || symName[0] != '_')
-            return false;
-        size_t pos = 1;
-        while (pos < len && symName[pos] == '_')
-            pos++;
-        if (pos >= len || symName[pos] != 'D')
-            return false;
-
-        CAutoVectorPtr<char> u8Name;
-        size_t               u8NameLen = 0;
-        HRESULT hr = Utf16To8(symName.data() + pos - 1, len - pos + 1, u8Name.m_p, u8NameLen);
-        if (FAILED(hr))
-            return false;
-
-        char* demangled = dlang_demangle(u8Name, 0);
-        if (!demangled)
-            return false;
-
-        CAutoVectorPtr<char> u16Name;
-        size_t               u16NameLen = 0;
-        BSTR u16Str = NULL;
-        hr = Utf8To16(demangled, strlen(demangled), u16Str);
-        free(demangled);
-        if (FAILED(hr))
-            return false;
-
-        symName = u16Str;
-        SysFreeString(u16Str);
-        return true;
-    }
-
-    virtual HRESULT SymbolFromAddr(MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType)
-    {
-        HRESULT hr = ExprContext::SymbolFromAddr(addr, symName, pType);
-        if (FAILED(hr))
-            return hr;
-        if (symName.length() > 0 && symName[0] == '?')
-        {
-            // Undecorate C++ symbols
-            CComPtr<Symbols::DkmInstructionSymbol> pInstruction;
-            if (mStackFrame->GetInstructionSymbol(&pInstruction) == S_OK)
-            {
-                if (Symbols::DkmModule* module = pInstruction->Module())
-                {
-                    RefPtr<DkmString> undec;
-                    if (module->UndecorateName(toDkmString(symName.c_str()), 0x7ff, &undec.Ref()) == S_OK)
-                    {
-                        symName = undec->Value();
-                    }
-                }
-            }
-        }
-        else
-            demangleDSymbol(symName);
-        return S_OK;
     }
 
     HRESULT FindFunctionAddress(const wchar_t* dllname, const wchar_t* funcname, MagoEE::Address& fnaddr)

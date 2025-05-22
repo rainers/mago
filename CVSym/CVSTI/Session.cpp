@@ -209,7 +209,7 @@ namespace MagoST
         return hr;
     }
 
-    HRESULT Session::FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff )
+    HRESULT Session::FindGlobalSymbolByAddr( uint64_t va, bool exact, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff )
     {
         sec = GetSecOffsetFromVA( va, offset );
         if ( sec == 0 )
@@ -217,13 +217,17 @@ namespace MagoST
 
         DWORD off = 0;
         HRESULT hr = FindOuterSymbolByAddr( MagoST::SymHeap_GlobalSymbols, sec, offset, symHandle, off );
-        if ( FAILED( hr ) )
+        if ( FAILED( hr ) || ( exact && off != 0 ) )
             hr = FindOuterSymbolByAddr( MagoST::SymHeap_StaticSymbols, sec, offset, symHandle, off );
-        if ( FAILED( hr ) )
+        if ( FAILED( hr ) || ( exact && off != 0 ) )
             hr = FindOuterSymbolByAddr( MagoST::SymHeap_PublicSymbols, sec, offset, symHandle, off );
 
         if ( !FAILED( hr ) )
+        {
             symOff = off;
+            if ( exact && off != 0 )
+                hr = E_NOT_FOUND;
+        }
 
         return hr;
     }
@@ -595,11 +599,12 @@ namespace MagoST
         return nameBuf;
     }
 
+    // returns position after '.', 0 if not found
     static int getLastDotPos( const char* pname, size_t len )
     {
         int parens = 0;
-        int pos = len;
-        while (pos > 0 && pname[pos - 1] != '.' || parens > 0)
+        int pos = (int)len;
+        while ( pos > 0 && pname[pos - 1] != '.' || parens > 0 )
         {
             pos--;
             if ( pname[pos] == ')' )
@@ -616,10 +621,10 @@ namespace MagoST
         name = nameBuf.empty() ? name : nameBuf.data();
         len = nameBuf.empty() ? len : nameBuf.size();
         int pos = getLastDotPos( name, len );
-        if (pos < 0)
+        if ( pos <= 0 )
             return {};
 
-        return std::string(name + pos, len - pos);
+        return std::string( name + pos, len - pos );
     }
 
     void Session::_cacheGlobals()
@@ -673,7 +678,7 @@ namespace MagoST
                             it->second.push_back(symHandle);
                     }
                     // any function can be scope of other functions or types
-                    mFuncShorts.insert({ std::string( name.GetName(), name.GetLength() ), {} });
+                    _addFQNSymbol( false, name.GetName(), name.GetLength() );
                 }
             }
             else if ( tag == SymTagUDT || tag == SymTagEnum )
@@ -681,8 +686,7 @@ namespace MagoST
                 SymString name;
                 if ( symInfo->GetName( name ) ) // && strncmp( name.GetName(), "CAPTURE.", 8 ) != 0 )
                 {
-                    if( getLastDotPos( name.GetName(), name.GetLength() ) >= 0 )
-                        mUDTshorts.insert( { std::string( name.GetName(), name.GetLength() ), {} } );
+                    _addFQNSymbol( true, name.GetName(), name.GetLength() );
                 }
             }
             else if( symInfo->GetDataKind( kind ) )
@@ -710,6 +714,40 @@ namespace MagoST
         _finalizeUDTshorts();
         _buildUDTfqns();
         _finalizeFuncShorts();
+    }
+
+    void Session::_addFQNSymbol( bool udt, const char* symbol, size_t len )
+    {
+        auto& shorts = udt ? mUDTshorts : mFuncShorts;
+        shorts.insert( { std::string( symbol, len ), {} } );
+
+        int pos = getLastDotPos( symbol, len );
+        if ( pos > 0 )
+        {
+
+            std::string mod( symbol, pos );
+            if( !mModuleNames.empty() )
+            {
+                auto it = std::lower_bound( mModuleNames.begin(), mModuleNames.end(), mod );
+                if ( it != mModuleNames.end() && *it == mod )
+                    return; // already in mModuleNames
+                if ( it != mModuleNames.begin() )
+                {
+                    auto before = it;
+                    auto& m = *(--before);
+                    if( m.compare( 0, m.length(), mod, 0, m.length() ) == 0 )
+                        return; // shorter modname found
+                }
+                while( it != mModuleNames.end() )
+                {
+                    auto& m = *it;
+                    if ( mod.compare( 0, mod.length(), m, 0, mod.length()) != 0 )
+                        break;
+                    it = mModuleNames.erase( it ); // remove longer modname
+                }
+            }
+            mModuleNames.insert( mod );
+        }
     }
 
     void Session::_finalizeUDTshorts()
@@ -746,22 +784,21 @@ namespace MagoST
     void Session::_finalizeFuncShorts()
     {
         auto funcit = mFuncShorts.begin();
-        for (auto udtit = mUDTshorts.begin(); udtit != mUDTshorts.end(); ++udtit)
+        for ( auto modit = mModuleNames.begin(); modit != mModuleNames.end(); ++modit )
         {
-            while (funcit != mFuncShorts.end() && funcit->first < udtit->first)
+            while ( funcit != mFuncShorts.end() && funcit->first < *modit )
             {
-                std::string shortName = getShortName(funcit->first.data(), funcit->first.size());
+                std::string shortName = stripOneMember( funcit->first.data(), funcit->first.size() );
                 funcit->second = shortName.empty() ? funcit->first : shortName;
                 ++funcit;
             }
-            while (funcit != mFuncShorts.end() &&
-                funcit->first.size() > udtit->first.size() &&
-                funcit->first.compare(0, udtit->first.size(), udtit->first) == 0 &&
-                funcit->first[udtit->first.size()] == '.')
+            while ( funcit != mFuncShorts.end() &&
+                funcit->first.size() > modit->size() &&
+                funcit->first.compare( 0, modit->size(), *modit ) == 0 )
             {
-                // an enclosing type keeps its short name within the func short name
-                std::string shortName = getShortName(funcit->first.data(), funcit->first.size());
-                funcit->second = udtit->second + "." + shortName;
+                auto relName = funcit->first.substr( modit->size() );
+                auto stripped = stripOneMember( relName.data(), relName.size() );
+                funcit->second = stripped.empty() ? relName : stripped;
                 ++funcit;
             }
         }
@@ -849,7 +886,7 @@ namespace MagoST
 
         std::string search( nameChars, nameLen );
         auto it = mFuncShorts.find( search );
-        if( it == mFuncShorts.end() )
+        if( it == mFuncShorts.end() || it->second.empty() )
             return E_NOT_FOUND;
         shortName = it->second;
         return S_OK;

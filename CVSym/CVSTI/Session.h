@@ -39,6 +39,7 @@ namespace MagoST
         std::set<std::string, reverse_less> mGlobals;
         std::map<std::string, std::vector<SymHandle>, reverse_less> mDebugFuncs;
 
+        std::set<std::string> mModuleNames; // FQN with trailing dot
         std::map<std::string, std::string> mFuncShorts; // FQN -> short name
         std::map<std::string, std::string> mUDTshorts; // FQN -> short name
         // short name -> FQNs, values in mUDTshorts
@@ -47,7 +48,7 @@ namespace MagoST
         };
         std::map<const std::string*, std::vector<const std::string*>, less_string_ptr> mUDTfqns;
 
-
+        void _addFQNSymbol( bool udt, const char* symbol, size_t len );
         void _cacheGlobals();
         void _finalizeUDTshorts();
         void _buildUDTfqns();
@@ -105,7 +106,7 @@ namespace MagoST
         virtual HRESULT FindUDTLongName( const char* nameChars, size_t nameLen, std::string& longName );
         virtual HRESULT FindFuncShortName( const char* nameChars, size_t nameLen, std::string& shortName );
 
-        virtual HRESULT FindGlobalSymbolByAddr( uint64_t va, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff );
+        virtual HRESULT FindGlobalSymbolByAddr( uint64_t va, bool exact, SymHandle& symHandle, uint16_t& sec, uint32_t& offset, uint32_t& symOff );
 
         virtual HRESULT FindOuterSymbolByAddr( SymbolHeapId heapId, WORD segment, DWORD offset, SymHandle& handle, DWORD& symOff );
         virtual HRESULT FindOuterSymbolByRVA( SymbolHeapId heapId, DWORD rva, SymHandle& handle );
