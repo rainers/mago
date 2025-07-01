@@ -116,6 +116,7 @@ namespace MagoEE
             if( auto func = getPropertyCallFunc( options, result.ObjVal._Type ) )
             {
                 EvalResult propResult = { 0 };
+                propResult.fmtOptions = result.fmtOptions;
                 auto addr = result.ObjVal.Value.Delegate.FuncAddr;
                 auto ctxt = result.ObjVal.Value.Delegate.ContextAddr;
                 propResult.ObjVal._Type = func->GetReturnType();
@@ -345,7 +346,7 @@ namespace MagoEE
                         goto L_retry;
                     }
                 }
-                if( gCallDebuggerRanges && IsForwardRange( binder, pparentVal->ObjVal._Type ) )
+                if( gCallDebuggerRanges && !fmtopts.raw && IsForwardRange( binder, pparentVal->ObjVal._Type ) )
                 {
                     en = new EEDEnumRange();
                 }
@@ -424,7 +425,7 @@ namespace MagoEE
             else if ( auto ts = type->AsTypeStruct() )
             {
                 Address fnaddr;
-                if ( gCallDebuggerFunctions )
+                if ( gCallDebuggerFunctions && !result.fmtOptions.raw )
                     if( RefPtr<Type> fntype = GetDebuggerProp( binder, ts, L"__debugStringView", fnaddr ) )
                         if( auto tret = GetDebuggerPropType( fntype ) )
                             result.HasString = typeHasString( tret );
@@ -477,7 +478,7 @@ namespace MagoEE
             }
             else if ( ITypeStruct* ts = type->AsTypeStruct() )
             {
-                if ( gCallDebuggerFunctions )
+                if ( gCallDebuggerFunctions && !result.fmtOptions.raw )
                 {
                     Address fnaddr;
                     if ( RefPtr<Type> fntype = GetDebuggerProp( binder, ts, L"__debugExpanded", fnaddr ) )
@@ -500,7 +501,7 @@ namespace MagoEE
                             goto L_retry;
                         }
                     }
-                    else if( gCallDebuggerRanges && IsForwardRange( binder, type ) )
+                    else if( gCallDebuggerRanges && !result.fmtOptions.raw && IsForwardRange( binder, type ) )
                     {
                         result.HasChildren = result.HasRawChildren = true;
                         goto L_done;

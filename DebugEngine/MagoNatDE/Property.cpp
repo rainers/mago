@@ -188,7 +188,8 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
-        MagoEE::FormatOptions fmtopts (dwRadix);
+        MagoEE::FormatOptions fmtopts = mFormatOpts;
+        fmtopts.radix = dwRadix;
         hr = enumProps->Init( enumVals, mExprContext, dwFields, fmtopts );
         if ( FAILED( hr ) )
             return hr;

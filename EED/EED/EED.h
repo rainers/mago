@@ -47,6 +47,7 @@ namespace MagoEE
         bool        IsBaseClass;
         bool        IsMostDerivedClass;
         bool        IsArrayContinuation; // for arr[1000..length]
+        FormatOptions fmtOptions;  // remember options for display
     };
 
     class IEEDParsedExpr

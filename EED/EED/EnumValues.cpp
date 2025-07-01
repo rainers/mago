@@ -89,6 +89,7 @@ namespace MagoEE
             res.result = evres;
             return complete(hr, res);
         };
+        result.fmtOptions = mParentVal.fmtOptions;
         return FillValueTraits( mBinder, result, nullptr, completeTraits );
     }
 

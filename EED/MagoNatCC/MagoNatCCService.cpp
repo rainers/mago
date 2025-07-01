@@ -2024,6 +2024,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
         return createEvaluationError(pInspectionContext, pStackFrame, hr, exprText, pCompletionRoutine);
 
     MagoEE::EvalResult value = { 0 };
+    value.fmtOptions = fmtopt;
     hr = pExpr->Evaluate(options, exprContext, value,
         [exprContext, exprText, fmtopt, options,
         inspectionContext = RefPtr<Evaluation::DkmInspectionContext>(pInspectionContext),

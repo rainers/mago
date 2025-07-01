@@ -91,9 +91,9 @@ namespace MagoEE
     struct FormatOptions
     {
         uint32_t radix;
-        bool raw;
-        bool prop;
-        bool stack;
+        bool raw;   // with modifier '!'
+        bool prop;  // with modifier '@'
+        bool stack; // displayed in the call stack
 
         FormatOptions( uint32_t r = 0 ) : radix( r ), raw( false ), prop( false ), stack( false ) {}
     };
