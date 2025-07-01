@@ -19,6 +19,7 @@ namespace MagoEE
 
 namespace Mago
 {
+    class ExprContext;
     class _CopyPropertyInfo
     {
     public:
@@ -37,7 +38,7 @@ MIDL_INTERFACE("6c7072c3-1234-408f-a680-fc5a2f96903e")
 IEnumDebugPropertyInfoAsync : public IEnumDebugPropertyInfo2
 {
 public:
-    virtual HRESULT STDMETHODCALLTYPE NextAsync( ULONG celt, AsyncCompletion complete ) = 0;
+    virtual HRESULT STDMETHODCALLTYPE NextAsync( Mago::ExprContext* exprContext, ULONG celt, AsyncCompletion complete ) = 0;
 };
 
 namespace Mago
@@ -80,7 +81,7 @@ namespace Mago
         STDMETHOD(Reset)();
         STDMETHOD(Clone)( IEnumDebugPropertyInfo2** ppEnum );
         STDMETHOD(GetCount)( ULONG* count );
-        STDMETHOD(NextAsync)( ULONG celt, AsyncCompletion res );
+        STDMETHOD(NextAsync)( ExprContext* exprContext, ULONG celt, AsyncCompletion res );
 
         HRESULT Init( 
             MagoEE::IEEDEnumValues* eeEnum, 

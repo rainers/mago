@@ -475,6 +475,7 @@ public:
 class DECLSPEC_UUID("598DECC9-CF79-4E90-A408-5E1433B4DBFF") CCModule : public CCDataItem<CCModule>
 {
     friend class CCExprContext;
+    friend class CMagoNatCCService;
 
 public:
     CCModule() : mDebuggerProxy(nullptr) {}
@@ -1446,8 +1447,10 @@ public:
         HRESULT hr_gc = S_FALSE;
         if (saveGC && MagoEE::gCallDebuggerUseMagoGC)
             hr_gc = SwitchToMagoGC();
+
+        CallFunctionComplete* pCompletionRoutine = nullptr;
         struct Exit { ~Exit() { fn(); } std::function<void()> fn; };
-        Exit ex{ [&]() { RestoreInstanceGC(); } };
+        Exit ex{ [&]() { if (!pCompletionRoutine) RestoreInstanceGC(); } };
 
         using namespace Evaluation::IL;
 
@@ -1457,6 +1460,7 @@ public:
         UINT32 ptrSize = mModule->mArchData->GetPointerSize();
         bool isX64 = ptrSize == 8;
         bool passRetbuf = false;
+        bool passRetbufFirst = false;
         UINT32 returnInRegisterLimit = 8; // EDX:EAX on x86, RAX on x64
 
         DkmILCallingConvention::e CallingConvention = toCallingConvention(callConv);
@@ -1465,7 +1469,7 @@ public:
 
         if (!isX64)
             tryHR( DisableSEH() );
-        Exit ex2{ [&]() { RestoreSEH(); } };
+        Exit ex2{ [&]() { if (!pCompletionRoutine && !isX64) RestoreSEH(); } };
 
         DkmILFunctionEvaluationArgumentFlags::e thisArgflags = DkmILFunctionEvaluationArgumentFlags::ThisPointer;
         MagoEE::Address tramp = 0;
@@ -1505,6 +1509,11 @@ public:
             retbuf = helper->getTmpBuffer(ReturnValueSize);
             if (retbuf == 0)
                 return E_MAGOEE_CALLFAILED;
+            if (ReturnValueSize > returnInRegisterLimit && isX64)
+            {
+                passRetbuf = passRetbufFirst = true;
+                ReturnValueSize = ptrSize; // returns the passed hidden reference
+            }
         }
 
         DkmILFunctionEvaluationFlags::e evalFlags = arg != 0 && tramp == 0 ? DkmILFunctionEvaluationFlags::HasThisPointer
@@ -1552,13 +1561,19 @@ public:
             tryHR(pushArg(addr, DkmILFunctionEvaluationArgumentFlags::Default));
         }
 
+        if (passRetbuf && passRetbufFirst)
+        {
+            // push argument (return buffer pointer)
+            tryHR(pushArg(retbuf, DkmILFunctionEvaluationArgumentFlags::Default));
+        }
+
         if (arg != 0)
         {
             // push argument (context pointer)
             tryHR(pushArg(arg, thisArgflags));
         }
 
-        if (passRetbuf)
+        if (passRetbuf && !passRetbufFirst)
         {
             // push argument (return buffer pointer)
             tryHR(pushArg(retbuf, DkmILFunctionEvaluationArgumentFlags::Default));
@@ -1598,7 +1613,7 @@ public:
         auto worklist = complete ? mWorkList : nullptr;
         if (worklist)
         {
-            auto pCompletionRoutine = new CallFunctionComplete;
+            pCompletionRoutine = new CallFunctionComplete;
             pCompletionRoutine->exprContext = this;
             pCompletionRoutine->complete = complete;
             pCompletionRoutine->retbuf = retbuf;
@@ -1615,6 +1630,7 @@ public:
             }
             // OutputDebugString(L"Execute failed\n");
             pCompletionRoutine->Release();
+            pCompletionRoutine = nullptr; // for cleanup methods
         }
         else
         {
@@ -2106,7 +2122,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetChildren(
         pEnum->QueryInterface(__uuidof(IEnumDebugPropertyInfoAsync), (void**)&pEnumAsync.Ref());
     if (pEnumAsync)
     {
-        tryHR(_GetItemsAsync(pEnumContext, pEnumAsync, InitialRequestSize, pCompletionRoutine, nullptr));
+        tryHR(_GetItemsAsync(exprContext, pEnumContext, pEnumAsync, InitialRequestSize, pCompletionRoutine, nullptr));
     }
     else
     {
@@ -2200,7 +2216,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetItems(
         pEnum->QueryInterface(__uuidof(IEnumDebugPropertyInfoAsync), (void**) &pEnumAsync.Ref());
     if (pEnumAsync)
     {
-        tryHR(_GetItemsAsync(pEnumContext, pEnumAsync, Count, nullptr, pCompletionRoutine));
+        tryHR(_GetItemsAsync(exprContext, pEnumContext, pEnumAsync, Count, nullptr, pCompletionRoutine));
     }
     else
     {
@@ -2248,6 +2264,7 @@ int gNumRequestCompleted = 0;
 int gNumRequestFailed = 0;
 
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
+    _In_ CCExprContext* exprContext,
     _In_ Evaluation::DkmEvaluationResultEnumContext* pEnumContext,
     _In_ IEnumDebugPropertyInfoAsync* pEnum,
     _In_ UINT32 Count,
@@ -2259,7 +2276,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
     closure->completionGetItems = pCompletionGetItems;
     closure->enumContext = pEnumContext;
 
-    HRESULT hr = pEnum->NextAsync(Count,
+    HRESULT hr = pEnum->NextAsync(exprContext, Count,
         [closure, pEnumContext](HRESULT status, const std::vector<Mago::PropertyInfo>& infos)
         {
             Evaluation::DkmEvaluationEnumAsyncResult res;
@@ -2460,6 +2477,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::OnExceptionTriggerHit(
     return S_FALSE;
 }
 
+// IDkmNativeSteppingCallSiteProvider (experimental, not enabled in vsdconfigxml)
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetSteppingCallSites(
     _In_ Native::DkmNativeInstructionAddress* pNativeAddress,
     _In_ const DkmArray<Symbols::DkmSteppingRange>& SteppingRanges,
@@ -2469,14 +2487,36 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetSteppingCallSites(
     return E_NOTIMPL;
 }
 
+// IDkmNativeJustMyCodeProvider158 (experimental, not enabled in vsdconfigxml)
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::IsUserCodeExtended(
-    _In_ Native::DkmNativeInstructionAddress* pNativeAddress,
+    _In_ Native::DkmNativeInstructionAddress* pAddress,
     _In_ DkmWorkList* pWorkList,
     _In_ IDkmCompletionRoutine<Native::DkmIsUserCodeExtendedAsyncResult>* pCompletionRoutine)
 {
-    return E_NOTIMPL;
+    auto module = pAddress->ModuleInstance();
+    RefPtr<CCModule> ccMod;
+    HRESULT hr = module->GetDataItem(&ccMod.Ref());
+    if (!ccMod)
+    {
+        RefPtr<Symbols::DkmModule> symMod;
+        tryHR(module->GetModule(&symMod.Ref()));
+        ccMod = new CCModule();
+        tryHR(ccMod->Init(module->Process(), symMod));
+        module->SetDataItem(DkmDataCreationDisposition::CreateAlways, ccMod.Get());
+    }
+    std::wstring sym;
+    DWORD offset = 0;
+    MagoEE::Address addr = module->BaseAddress() + pAddress->RVA();
+    hr = ccMod->mModuleContext->SymbolFromAddr( addr, sym, nullptr, &offset );
+    Native::DkmIsUserCodeExtendedAsyncResult result;
+    result.ErrorCode = S_OK;
+    result.Reason = hr == S_OK ? Native::DkmNativeNonUserCodeReason::None : Native::DkmNativeNonUserCodeReason::NoSourceInfo;
+    result.UserCode = hr == S_OK;
+    pCompletionRoutine->OnComplete(result);
+    return S_OK;
 }
 
+// IDkmLanguageFrameDecoder
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameName(
     _In_ Evaluation::DkmInspectionContext* pInspectionContext,
     _In_ DkmWorkList* pWorkList,

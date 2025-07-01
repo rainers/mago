@@ -10,6 +10,7 @@
 
 struct IEnumDebugPropertyInfo2;
 struct IEnumDebugPropertyInfoAsync;
+class CCExprContext;
 
 class ATL_NO_VTABLE CMagoNatCCService :
     // Inherit from CMagoNatCCServiceContract to provide the list of interfaces that
@@ -39,6 +40,7 @@ protected:
         _In_ UINT32 Count,
         _Out_ DkmArray<Evaluation::DkmEvaluationResult*>& Items);
     HRESULT STDMETHODCALLTYPE _GetItemsAsync(
+        _In_ CCExprContext* exprContext,
         _In_ Evaluation::DkmEvaluationResultEnumContext* pEnumContext,
         _In_ IEnumDebugPropertyInfoAsync* pEnum,
         _In_ UINT32 Count,

@@ -122,13 +122,16 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT EnumDebugPropertyInfo2::NextAsync(ULONG celt, AsyncCompletion complete)
+    HRESULT EnumDebugPropertyInfo2::NextAsync( ExprContext* exprContext, ULONG celt, AsyncCompletion complete )
     {
         _ASSERT( complete );
         HRESULT     hr = S_OK;
         uint32_t    countLeft = mEEEnum->GetCount() - mEEEnum->GetIndex();
         uint32_t    i = 0;
         MagoEE::EvalOptions options = MagoEE::EvalOptions::defaults;
+
+        if ( exprContext )
+            mExprContext = exprContext;
 
         if (celt > countLeft)
             celt = countLeft;
