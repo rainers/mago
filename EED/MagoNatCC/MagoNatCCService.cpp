@@ -449,9 +449,9 @@ public:
         return true;
     }
 
-    HRESULT SymbolFromAddr(MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType) override
+    HRESULT SymbolFromAddr(MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType, DWORD* pOffset) override
     {
-        HRESULT hr = ModuleContext::SymbolFromAddr(addr, symName, pType);
+        HRESULT hr = ModuleContext::SymbolFromAddr(addr, symName, pType, pOffset);
         if (FAILED(hr))
             return hr;
         if (symName.length() > 0 && symName[0] == '?')

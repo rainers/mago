@@ -109,7 +109,7 @@ namespace Mago
             uint32_t& sizeWritten, 
             uint8_t* buffer );
 
-        virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType );
+        virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType, DWORD* pOffset = nullptr );
 
         virtual HRESULT CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
                                       MagoEE::DataObject& value, bool saveGC,
@@ -304,8 +304,8 @@ namespace Mago
 
         virtual HRESULT FindGlobalSymbolAddr( const std::wstring& symName, MagoEE::Address& addr );
 
-        virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )
-        { return mModuleContext->SymbolFromAddr( addr, symName, pType ); }
+        virtual HRESULT SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType, DWORD* pOffset = nullptr )
+        { return mModuleContext->SymbolFromAddr( addr, symName, pType, pOffset ); }
 
         virtual HRESULT CallFunction( MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
                                       MagoEE::DataObject& value, bool saveGC,

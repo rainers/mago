@@ -949,7 +949,7 @@ namespace Mago
         return E_NOTIMPL;
     }
 
-    HRESULT ModuleContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )
+    HRESULT ModuleContext::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType, DWORD* pOffset )
     {
         RefPtr<MagoST::ISession>    session;
         MagoST::SymHandle           symHandle = { 0 };
@@ -957,14 +957,17 @@ namespace Mago
         if ( GetSession( session.Ref() ) != S_OK )
             return E_NOT_FOUND;
 
+        bool exact = pOffset == nullptr;
         uint16_t    sec = 0;
         uint32_t    offset = 0;
         uint32_t    symOff = 0;
-        HRESULT hr = session->FindGlobalSymbolByAddr( addr, true, symHandle, sec, offset, symOff );
+        HRESULT hr = session->FindGlobalSymbolByAddr( addr, exact, symHandle, sec, offset, symOff );
         if ( FAILED( hr ) )
             return hr;
 
-        if ( symOff != 0 )
+        if( pOffset )
+            *pOffset = symOff;
+        else if ( symOff != 0 )
             return E_NOT_FOUND;
 
         MagoST::SymInfoData infoData = { 0 };

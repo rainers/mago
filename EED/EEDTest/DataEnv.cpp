@@ -407,7 +407,7 @@ HRESULT DataEnvBinder::ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, ui
     return E_NOTIMPL;
 }
 
-HRESULT DataEnvBinder::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType )
+HRESULT DataEnvBinder::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType, DWORD* pOffset = nullptr )
 {
     return E_NOTIMPL;
 }
