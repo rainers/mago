@@ -49,21 +49,27 @@ For more information about this file, see https://github.com/Microsoft/ConcordEx
           </Filter>
           <Interface Name="IDkmLanguageFrameDecoder"/>
         </InterfaceGroup>
-		  <!--
-		  <InterfaceGroup>
-			  <Filter>
-				  <RuntimeId RequiredValue="DkmRuntimeId.Native"/>
-			  </Filter>
-			  <Interface Name="IDkmNativeSteppingCallSiteProvider"/>
-		  </InterfaceGroup>
-		  <InterfaceGroup>
-			  <Filter>
-				  <RuntimeId RequiredValue="DkmRuntimeId.Native"/>
-			  </Filter>
-			  <Interface Name="IDkmNativeJustMyCodeProvider158"/>
-		  </InterfaceGroup>
-		  -->
-	  </Implements>
+        <!--
+        <InterfaceGroup>
+          <Filter>
+            <RuntimeId RequiredValue="DkmRuntimeId.Native"/>
+          </Filter>
+          <Interface Name="IDkmNativeSteppingCallSiteProvider"/>
+        </InterfaceGroup>
+        <InterfaceGroup>
+          <Filter>
+            <RuntimeId RequiredValue="DkmRuntimeId.Native"/>
+          </Filter>
+          <Interface Name="IDkmNativeJustMyCodeProvider158"/>
+        </InterfaceGroup>
+        <InterfaceGroup>
+          <Filter>
+            <LanguageId RequiredValue="guidDLanguageId"/>
+          </Filter>
+          <Interface Name="IDkmStepperFactory"/>
+        </InterfaceGroup>
+        -->
+      </Implements>
     </Class>
     
   </NativeComponent>
