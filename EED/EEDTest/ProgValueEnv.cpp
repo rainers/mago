@@ -236,6 +236,7 @@ void ConvertVariantToDataVal( const Variant& var, MagoEE::DataValue& dataVal )
     switch ( var.Tag )
     {
     case VarTag_Char:   dataVal.Int64Value = var.Data.I8;   break;
+    case VarTag_UChar:  dataVal.UInt64Value = var.Data.U8;  break;
     case VarTag_Short:  dataVal.Int64Value = var.Data.I16;  break;
     case VarTag_UShort: dataVal.UInt64Value = var.Data.U16;  break;
     case VarTag_Long:   dataVal.Int64Value = var.Data.I32;  break;

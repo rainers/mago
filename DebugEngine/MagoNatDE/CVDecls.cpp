@@ -922,6 +922,7 @@ namespace Mago
             switch ( value.Tag )
             {
             case MagoST::VarTag_Char:       u64 = value.Data.I8;  break;
+            case MagoST::VarTag_UChar:      u64 = value.Data.U8;  break;
             case MagoST::VarTag_Short:      u64 = value.Data.I16; break;
             case MagoST::VarTag_UShort:     u64 = value.Data.U16; break;
             case MagoST::VarTag_Long:       u64 = value.Data.I32; break;

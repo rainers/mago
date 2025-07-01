@@ -115,6 +115,7 @@ namespace MagoST
     enum VariantTag
     {
         VarTag_Char = 0x8000,
+        VarTag_UChar = 0x8011,
         VarTag_Short = 0x8001,
         VarTag_UShort = 0x8002,
         VarTag_Long = 0x8003,
@@ -138,6 +139,7 @@ namespace MagoST
         union 
         {
             int8_t      I8;
+            uint8_t     U8;
             int16_t     I16;
             uint16_t    U16;
             int32_t     I32;

@@ -358,11 +358,15 @@ namespace MagoST
             if( hr == S_OK )
                 switch( var.vt )
                 {
-                case VT_I1: value.Tag = VarTag_Char;  value.Data.I8 = var.bVal; break;
-                case VT_I2: value.Tag = VarTag_Short; value.Data.I16 = var.iVal; break;
-                case VT_I4: value.Tag = VarTag_Long;  value.Data.I32 = var.lVal; break;
-                case VT_I8: value.Tag = VarTag_Quadword; value.Data.I64 = var.llVal; break;
-                default:    value.Tag = VarTag_Long;  value.Data.I32 = 0; 
+                case VT_I1:  value.Tag = VarTag_Char;      value.Data.I8 = var.bVal; break;
+                case VT_UI1: value.Tag = VarTag_UChar;     value.Data.U8 = var.bVal; break;
+                case VT_I2:  value.Tag = VarTag_Short;     value.Data.I16 = var.iVal; break;
+                case VT_UI2: value.Tag = VarTag_UShort;    value.Data.U16 = var.iVal; break;
+                case VT_I4:  value.Tag = VarTag_Long;      value.Data.I32 = var.lVal; break;
+                case VT_UI4: value.Tag = VarTag_ULong;     value.Data.U32 = var.lVal; break;
+                case VT_I8:  value.Tag = VarTag_Quadword;  value.Data.I64 = var.llVal; break;
+                case VT_UI8: value.Tag = VarTag_UQuadword; value.Data.U64 = var.llVal; break;
+                default:     value.Tag = VarTag_Long;      value.Data.I32 = 0; 
                     assert( false );
                     break;
                 }
