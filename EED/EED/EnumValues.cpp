@@ -452,7 +452,10 @@ namespace MagoEE
         fullName.append( name );
 
         mCountDone++;
-        return EvaluateExpr( options, result, fullName );
+        auto hr = EvaluateExpr( options, result, fullName );
+        if (complete)
+            hr = complete(hr, EvaluateNextResult{ std::move(name), std::move(fullName), result });
+        return hr;
     }
 
 

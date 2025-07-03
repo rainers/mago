@@ -708,7 +708,7 @@ namespace MagoEE
             if ( code >= _countof( gErrStrs ) )
                 code = 0;
 
-            swprintf_s( codeStr, _countof(codeStr), L"D%04d: Error: %s", code + 1, gErrStrs[code] );
+            swprintf_s( codeStr, _countof(codeStr), L"D%04d: %s", code + 1, gErrStrs[code] );
         }
 
         outStr = codeStr;

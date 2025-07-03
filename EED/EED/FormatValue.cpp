@@ -484,11 +484,11 @@ namespace MagoEE
             RefPtr<Type> ubyteType;
             std::vector<std::wstring> elemStr;
             std::wstring outStr;
-            HRESULT done(HRESULT hr, size_t cnt)
+            HRESULT done( HRESULT hr, size_t cnt )
             {
-                hrCombine(hr);
+                hrCombine( hr );
                 toComplete -= cnt;
-                if (toComplete != 0)
+                if ( toComplete != 0 )
                     return hr;
 
                 outStr = L"[" + (elemStr.empty() ? std::wstring{} : elemStr[0]);
@@ -498,22 +498,22 @@ namespace MagoEE
                     outStr.append(L", ...");
                 outStr.append(L"]");
                 if (complete)
-                    return complete(hrCombined, outStr);
+                    return complete( hrCombined, outStr );
                 return hrCombined;
             }
-            HRESULT hrCombine(HRESULT hr)
+            HRESULT hrCombine( HRESULT hr )
             {
                 if (hrCombined != S_QUEUED && hrCombined != COR_E_OPERATIONCANCELED)
-                    if (hr == S_QUEUED && hr == COR_E_OPERATIONCANCELED)
-                        hrCombined = hr;
+                    if (hr == S_QUEUED || hr == COR_E_OPERATIONCANCELED)
+                        hrCombined = hr; // do not propagate errors on elements
                 return hrCombined;
             }
             size_t outLength() const
             {
                 size_t sz = 2 + 2 * (elemStr.empty() ? 0 : elemStr.size() - 1);
-                for (auto& s : elemStr)
+                for ( auto& s : elemStr )
                     sz += s.size();
-                if (dotdotdot)
+                if ( dotdotdot )
                     sz += 5;
                 return sz;
             }
@@ -703,7 +703,7 @@ namespace MagoEE
             HRESULT hrCombine(HRESULT hr)
             {
                 if (hrCombined != S_QUEUED && hrCombined != COR_E_OPERATIONCANCELED)
-                    if (hr == S_QUEUED && hr == COR_E_OPERATIONCANCELED)
+                    if (hr == S_QUEUED || hr == COR_E_OPERATIONCANCELED)
                         hrCombined = hr;
                 return hrCombined;
             }
@@ -798,6 +798,7 @@ namespace MagoEE
         struct Closure
         {
             bool dotdotdot = false;
+            int8_t allInvalidAddress = -1;
             size_t toComplete = 0;
             HRESULT hrCombined = S_OK;
             std::function<HRESULT(HRESULT, std::wstring)> complete;
@@ -808,17 +809,29 @@ namespace MagoEE
             HRESULT done(HRESULT hr, size_t cnt)
             {
                 hrCombine(hr);
+                if (cnt == 1) // not for the "tail call"
+                {
+                    if (hr != E_MAGOEE_INVALID_ADDRESS)
+                        allInvalidAddress = 0;
+                    else if (allInvalidAddress != 0)
+                        allInvalidAddress = 1;
+                }
                 toComplete -= cnt;
                 if (toComplete != 0)
                     return hr;
 
-                outStr = L"{";
-                for (size_t i = 0; i < elemStr.size(); i++)
-                    if (!elemStr[i].empty())
-                        outStr.append(i == 0 ? L"" : L", ").append(names[i]).append(L" = ").append(elemStr[i]);
-                if (dotdotdot)
-                    outStr.append(outStr.length() == 1 ? L"..." : L", ...");
-                outStr.append(L"}");
+                if (allInvalidAddress > 0)
+                    GetErrorString(E_MAGOEE_INVALID_ADDRESS, outStr);
+                else
+                {
+                    outStr = L"{";
+                    for (size_t i = 0; i < elemStr.size(); i++)
+                        if (!elemStr[i].empty())
+                            outStr.append(i == 0 ? L"" : L", ").append(names[i]).append(L" = ").append(elemStr[i]);
+                    if (dotdotdot)
+                        outStr.append(outStr.length() == 1 ? L"..." : L", ...");
+                    outStr.append(L"}");
+                }
                 if (complete)
                     return complete(hrCombined, outStr);
                 return hr;
@@ -826,8 +839,8 @@ namespace MagoEE
             HRESULT hrCombine(HRESULT hr)
             {
                 if (hrCombined != S_QUEUED && hrCombined != COR_E_OPERATIONCANCELED)
-                    if (hr == S_QUEUED && hr == COR_E_OPERATIONCANCELED)
-                        hrCombined = hr;
+                    if (hr == S_QUEUED || hr == COR_E_OPERATIONCANCELED)
+                        hrCombined = hr;  // do not propagate errors on elements
                 return hrCombined;
             }
             size_t outLength() const
@@ -1094,18 +1107,28 @@ namespace MagoEE
             fmtdata.outStr.append(L" ");
         }
 
-        if ( pointeeType->IsChar() )
+        if (objVal.Value.Addr == NULL)
+        {
+            fmtdata.outStr.append(L"null");
+        }
+        else if ( pointeeType->IsChar() )
         {
             bool    foundTerm = false;
             bool    truncated = false;
             fmtdata.outStr.append( L"\"" );
 
-            FormatString( binder, objVal.Value.Addr, pointeeType->GetSize(), false, 0, fmtdata.outStr, truncated, foundTerm );
-            // don't worry about an error here, we still want to show the address
-
-            if ( foundTerm )
+            HRESULT hres = FormatString( binder, objVal.Value.Addr, pointeeType->GetSize(), false, 0, fmtdata.outStr, truncated, foundTerm );
+            if( FAILED( hres ) )
+            {
+                std::wstring errStr;
+                GetErrorString( hres, errStr );
+                // don't propagate error here, we still want to show the address
+                fmtdata.outStr.resize( fmtdata.outStr.length() - 1 );
+                fmtdata.outStr.append( errStr );
+            }
+            else if ( foundTerm )
                 fmtdata.outStr.append( 1, L'"' );
-            if ( truncated )
+            else if ( truncated )
                 fmtdata.outStr.append( L"..." );
         }
         else
@@ -1121,11 +1144,7 @@ namespace MagoEE
             else
                 hr = S_OK;
 
-            if ( objVal.Value.Addr == NULL )
-            {
-                fmtdata.outStr.append(L" null");
-            }
-            else if ( fmtdata.outStr.length() < fmtdata.maxLength )
+            if ( fmtdata.outStr.length() < fmtdata.maxLength )
             {
                 DataObject pointeeObj = { 0 };
                 pointeeObj._Type = pointeeType;

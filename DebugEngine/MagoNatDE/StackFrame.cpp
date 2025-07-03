@@ -645,9 +645,11 @@ namespace Mago
             }
             HRESULT hrCombine(HRESULT hr)
             {
+                if (hr != S_QUEUED && hr != S_OK && hr != E_OPERATIONCANCELED)
+                    hr = hr;
                 if (hrCombined != S_QUEUED && hrCombined != E_OPERATIONCANCELED)
-                    if (hrCombined == S_OK || hr == S_QUEUED || hr == E_OPERATIONCANCELED)
-                        hrCombined = hr;
+                    if (hr == S_QUEUED || hr == E_OPERATIONCANCELED)
+                        hrCombined = hr; // do not propagate errors on arguments
                 return hrCombined;
             }
 
@@ -750,6 +752,9 @@ namespace Mago
                     auto completeValue = !complete ? std::function<HRESULT( HRESULT, std::wstring )>{} :
                         [closure, idx = closure->params.size() - 1]( HRESULT hr, std::wstring valStr )
                         {
+                            if (hr != S_OK && hr != E_OPERATIONCANCELED)
+                                hr = MagoEE::GetErrorString( hr, valStr );
+
                             closure->params[idx].value = valStr;
                             return closure->done(hr, 1);
                         };

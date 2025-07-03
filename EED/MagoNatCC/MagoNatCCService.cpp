@@ -38,6 +38,7 @@
 #include "../../DebugEngine/MagoNatDE/CodeContext.h"
 #include "../../DebugEngine/MagoNatDE/Module.h"
 #include "../../DebugEngine/Exec/Types.h"
+#include "../../DebugEngine/Exec/Log.h"
 #include "../../DebugEngine/Exec/Exec.h"
 #include "../../DebugEngine/Exec/Thread.h"
 #include "../../DebugEngine/Exec/IProcess.h"
@@ -1405,8 +1406,14 @@ public:
 
         virtual void STDMETHODCALLTYPE OnComplete(const Evaluation::DkmExecuteQueryAsyncResult& res)
         {
+            Log::LogMessage("CMagoNatCCService::CallFunctionComplete\n");
+
             HRESULT hr = res.ErrorCode;
+            if (hr != S_OK && hr != E_OPERATIONCANCELED)
+                hr = hr;
             hr = exprContext->processCallFunctionResult(hr, res.FailureReason, res.Results, retbuf, retSize, passRetbuf, obj);
+            if (hr != S_OK && hr != E_OPERATIONCANCELED)
+                hr = hr;
             complete(hr, obj);
             exprContext->mQueuedCalls--;
             exprContext->RestoreSEH();
@@ -1444,6 +1451,8 @@ public:
     virtual HRESULT CallFunction(MagoEE::Address addr, MagoEE::ITypeFunction* func, MagoEE::Address arg,
                                  MagoEE::DataObject& obj, bool saveGC, std::function<HRESULT(HRESULT, MagoEE::DataObject)> complete)
     {
+        Log::LogMessage("CMagoNatCCService::CallFunction\n");
+
         HRESULT hr_gc = S_FALSE;
         if (saveGC && MagoEE::gCallDebuggerUseMagoGC)
             hr_gc = SwitchToMagoGC();
@@ -1509,7 +1518,7 @@ public:
             retbuf = helper->getTmpBuffer(ReturnValueSize);
             if (retbuf == 0)
                 return E_MAGOEE_CALLFAILED;
-            if (ReturnValueSize > returnInRegisterLimit && isX64)
+            if (ReturnValueSize > returnInRegisterLimit && isX64 && !returnsDXAX)
             {
                 passRetbuf = passRetbufFirst = true;
                 ReturnValueSize = ptrSize; // returns the passed hidden reference
@@ -2012,7 +2021,6 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
 
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, false, exprContext));
-    exprContext->SetWorkList(pWorkList);
 
     std::wstring exprText = pExpression->Text()->Value();
     MagoEE::FormatOptions fmtopt;
@@ -2097,9 +2105,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetChildren(
     tryHR(pResult->GetDataItem(&pProperty.Ref()));
 
     RefPtr<CCExprContext> exprContext;
-    if (auto session = pInspectionContext->InspectionSession())
-        if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
-            exprContext->SetWorkList(pWorkList);
+    tryHR(InitExprContext(pInspectionContext, pWorkList, pResult->StackFrame(), false, exprContext));
 
     int radix = pInspectionContext->Radix();
     int timeout = pInspectionContext->Timeout();
@@ -2141,6 +2147,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameLocals(
     _In_ CallStack::DkmStackWalkFrame* pStackFrame,
     _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameLocalsAsyncResult>* pCompletionRoutine)
 {
+    Log::LogMessage("CMagoNatCCService::GetFrameLocals\n");
     auto session = pInspectionContext->InspectionSession();
 
     RefPtr<CCExprContext> exprContext;
@@ -2191,10 +2198,10 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetItems(
     _In_ UINT32 Count,
     _In_ IDkmCompletionRoutine<Evaluation::DkmEvaluationEnumAsyncResult>* pCompletionRoutine)
 {
+    Log::LogMessage("CMagoNatCCService::GetItems\n");
+
     RefPtr<CCExprContext> exprContext;
-    if (auto session = pEnumContext->InspectionSession())
-        if (session->GetDataItem<CCExprContext>(&exprContext.Ref()) == S_OK)
-            exprContext->SetWorkList(pWorkList);
+    tryHR(InitExprContext(pEnumContext->InspectionContext(), pWorkList, pEnumContext->StackFrame(), false, exprContext));
 
     RefPtr<IEnumDebugPropertyInfo2> pEnum;
     tryHR(pEnumContext->GetDataItem(&pEnum.Ref()));
@@ -2225,6 +2232,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetItems(
         tryHR(_GetItems(pEnumContext, pEnum, StartIndex, Count, result.Items));
         pCompletionRoutine->OnComplete(result);
     }
+    Log::LogMessage("CMagoNatCCService::GetItems done\n");
     return S_OK;
 }
 
@@ -2295,9 +2303,13 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::_GetItemsAsync(
                 gNumRequestFailed++;
 
             if (closure->completionGetItems)
+            {
+                Log::LogMessage("CMagoNatCCService::_GetItemsAsync completionGetItems\n");
                 closure->completionGetItems->OnComplete(res);
+            }
             else
             {
+                Log::LogMessage("CMagoNatCCService::_GetItemsAsync completionGetChildren\n");
                 Evaluation::DkmGetChildrenAsyncResult res2;
                 res2.ErrorCode = res.ErrorCode;
                 res2.InitialChildren = std::move(res.Items);
@@ -2527,7 +2539,6 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameName(
     using namespace Evaluation;
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pFrame, false, exprContext));
-    exprContext->SetWorkList(pWorkList);
 
     bool types = ArgumentFlags & DkmVariableInfoFlags::Types;
     bool names = ArgumentFlags & DkmVariableInfoFlags::Names;
@@ -2555,7 +2566,6 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameReturnType(
     using namespace Evaluation;
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pFrame, false, exprContext));
-    exprContext->SetWorkList(pWorkList);
 
     std::wstring retType = exprContext->GetFunctionReturnType();
 
