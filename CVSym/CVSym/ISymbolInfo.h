@@ -37,6 +37,7 @@ namespace MagoST
         virtual bool GetRegisters( uint8_t*& regs ) = 0;
         virtual bool GetUdtKind( UdtKind& udtKind ) = 0;
         virtual bool GetValue( Variant& value ) = 0;
+        virtual bool GetBitfieldRange( uint32_t& position, uint32_t& length ) = 0;
 
 #if 1
         virtual bool GetDebugStart( uint32_t& start ) = 0;

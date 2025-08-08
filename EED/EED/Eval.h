@@ -68,6 +68,7 @@ namespace MagoEE
         //      That needs to carry properties like offsetof.
         RefPtr<Type>        _Type;
         Address             Addr;
+        uint32_t            BitPos, BitLen; // for bitfields
         DataValue           Value;
 
         // Since we're dealing only with values, we always have to have a type.
@@ -155,8 +156,8 @@ namespace MagoEE
         virtual HRESULT NewTuple( const wchar_t* name, const std::vector<RefPtr<Declaration>>& decls, Declaration*& decl ) = 0;
 
         virtual HRESULT GetAddress( Declaration* decl, Address& addr ) = 0;
+        virtual HRESULT FillValue( MagoEE::DataObject& data ) = 0;
         virtual HRESULT GetValue( Declaration* decl, DataValue& value ) = 0;
-        virtual HRESULT GetValue( Address addr, Type* type, DataValue& value ) = 0;
         virtual HRESULT GetValue( Address aArrayAddr, const DataObject& key, Address& valueAddr ) = 0;
         virtual int GetAAVersion() = 0;
         virtual HRESULT GetClassName( Address addr, std::wstring& className, bool derefOnce ) = 0;

@@ -152,6 +152,11 @@ bool DiaDecl::GetVtblOffset( int& offset )
     return false;
 }
 
+bool DiaDecl::GetBitfieldRange( uint32_t& position, uint32_t& length )
+{
+    // TODO
+    return false;
+}
 
 bool DiaDecl::IsField()
 {
@@ -161,6 +166,12 @@ bool DiaDecl::IsField()
         return false;
 
     return kind == DataIsMember;
+}
+
+bool DiaDecl::IsBitField()
+{
+    // TODO
+    return false;
 }
 
 bool DiaDecl::IsVar()

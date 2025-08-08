@@ -45,8 +45,10 @@ public:
     virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset );
     virtual bool GetVTableShape( Declaration*& decl );
     virtual bool GetVtblOffset( int& offset );
+    virtual bool GetBitfieldRange( uint32_t& position, uint32_t& length );
 
     virtual bool IsField();
+    virtual bool IsBitField();
     virtual bool IsVar();
     virtual bool IsConstant();
     virtual bool IsType();

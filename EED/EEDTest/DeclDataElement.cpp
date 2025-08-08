@@ -80,7 +80,17 @@ bool DeclDataElement::GetVtblOffset( int& offset )
     return false;
 }
 
+bool DeclDataElement::GetBitfieldRange( uint32_t& position, uint32_t& length )
+{
+    return false;
+}
+
 bool DeclDataElement::IsField()
+{
+    return false;
+}
+
+bool DeclDataElement::IsBitField()
 {
     return false;
 }

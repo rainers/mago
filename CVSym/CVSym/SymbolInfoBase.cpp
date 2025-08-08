@@ -107,6 +107,13 @@ namespace MagoST
         return false;
     }
 
+    bool SymbolInfo::GetBitfieldRange( uint32_t& position, uint32_t& length )
+    {
+        UNREFERENCED_PARAMETER( position );
+        UNREFERENCED_PARAMETER( length );
+        return false;
+    }
+
 #if 1
     bool SymbolInfo::GetDebugStart( uint32_t& start )
     {

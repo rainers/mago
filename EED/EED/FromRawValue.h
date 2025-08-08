@@ -20,4 +20,5 @@ namespace MagoEE
 	uint64_t ReadInt( const void* srcBuf, uint32_t bufOffset, size_t size, bool isSigned );
 	Real10 ReadFloat( const void* srcBuf, uint32_t bufOffset, Type* type );
 	HRESULT FromRawValue( const void* srcBuf, Type* type, DataValue& value );
+	HRESULT FromRawValue( const void* srcBuf, DataObject& data );
 }

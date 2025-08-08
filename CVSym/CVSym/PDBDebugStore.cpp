@@ -335,6 +335,25 @@ namespace MagoST
         virtual bool GetRegisterCount( uint8_t& count ) { UNREF_PARAM( count ); return false; }
         virtual bool GetRegisters( uint8_t*& regs ) { UNREF_PARAM( regs ); return false; }
 
+        virtual bool GetBitfieldRange( uint32_t& position, uint32_t& length )
+        {
+            IDiaSymbol* pSymbol = NULL;
+            if ( mStore->_symbolById( mId, &pSymbol ) != S_OK )
+                return false;
+
+            DWORD bitPos = 0;
+            ULONGLONG bitLen = 0;
+            HRESULT hr = pSymbol->get_bitPosition( &bitPos );
+            if (hr == S_OK)
+                hr = pSymbol->get_length( &bitLen );
+            pSymbol->Release();
+            if (hr != S_OK)
+                return false;
+            position = bitPos;
+            length = (uint32_t) bitLen;
+            return true;
+        }
+
         virtual bool GetUdtKind( UdtKind& udtKind )
         {
             IDiaSymbol* pSymbol = NULL;

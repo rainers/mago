@@ -306,7 +306,7 @@ namespace MagoEE
                 pointeeObj.ObjVal._Type = ntype;
                 pointeeObj.ObjVal.Addr = pparentVal->ObjVal.Value.Addr;
 
-                hr = binder->GetValue( pointeeObj.ObjVal.Addr, pointeeObj.ObjVal._Type, pointeeObj.ObjVal.Value );
+                hr = binder->FillValue( pointeeObj.ObjVal );
                 if( hr == S_OK )
                 {
                     pointeeExpr.append( L"*(" ).append( parentExprText ).append( 1, L')' );
@@ -444,7 +444,7 @@ namespace MagoEE
                     pointeeObj._Type = ntype;
                     pointeeObj.Addr = pparentVal->Value.Addr;
 
-                    HRESULT hr = binder->GetValue( pointeeObj.Addr, pointeeObj._Type, pointeeObj.Value );
+                    HRESULT hr = binder->FillValue( pointeeObj );
                     if ( hr == S_OK )
                     {
                         pparentVal = &pointeeObj;
@@ -620,7 +620,7 @@ namespace MagoEE
         {
             propValue._Type = fntype;
             propValue.Addr = objAddr + fnaddr;
-            hr = binder->GetValue( propValue.Addr, fntype, propValue.Value );
+            hr = binder->FillValue( propValue );
         }
         return hr;
     }

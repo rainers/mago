@@ -1398,7 +1398,7 @@ public:
         MagoEE::Address retbuf;
         UINT32 retSize;
         bool passRetbuf;
-        MagoEE::DataObject obj;
+        MagoEE::DataObject obj = { 0 };
 
         ~CallFunctionComplete()
         {
@@ -1678,7 +1678,7 @@ public:
                     }
                     if (retSize <= sizeof(MagoEE::DataValue))
                     {
-                        hr = FromRawValue(res->Items(), obj._Type, obj.Value);
+                        hr = FromRawValue(res->Items(), obj);
                         hr = S_OK;
                     }
                 }
@@ -1788,7 +1788,7 @@ public:
         }
         else
         {
-            tryHR(FromRawValue(pbuf, retType, value.ObjVal.Value));
+            tryHR(FromRawValue(pbuf, value.ObjVal));
             tryHR(FormatValue(this, value.ObjVal, fmtdata, {}));
         }
 

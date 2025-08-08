@@ -537,13 +537,19 @@ namespace Mago
         case LocIsTLS:
         case LocIsThisRel: // if accessed by a closure
             {
-                MagoEE::Address addr = 0;
+                MagoEE::DataObject data = { 0 };
 
-                hr = GetAddress( decl, addr );
+                hr = GetAddress( decl, data.Addr );
                 if ( FAILED( hr ) )
                     return hr;
 
-                return GetValue( addr, type, value );
+                data._Type = type;
+                hr = FillValue( data );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                value = data.Value;
+                return hr;
             }
             break;
 
@@ -577,11 +583,9 @@ namespace Mago
         return S_OK;
     }
 
-    HRESULT ModuleContext::GetValue( 
-        MagoEE::Address addr, 
-        MagoEE::Type* type, 
-        MagoEE::DataValue& value )
+    HRESULT ModuleContext::FillValue( MagoEE::DataObject& data )
     {
+        auto type = data._Type;
         HRESULT         hr = S_OK;
         uint8_t         targetBuf[ sizeof( MagoEE::DataValue ) ] = { 0 };
         size_t          targetSize = type->GetSize();
@@ -589,7 +593,7 @@ namespace Mago
 
         if ( type->IsSArray() )
         {
-            value.Addr = addr;
+            data.Value.Addr = data.Addr;
             return S_OK;
         }
         // no value to get for complex/aggregate types
@@ -605,7 +609,7 @@ namespace Mago
             return E_UNEXPECTED;
 
         hr = ReadMemory( 
-            (Address64) addr, 
+            (Address64) data.Addr, 
             (uint32_t) targetSize, 
             lenRead, 
             targetBuf );
@@ -614,7 +618,7 @@ namespace Mago
         if ( lenRead < targetSize )
             return HRESULT_FROM_WIN32( ERROR_PARTIAL_COPY );
 
-        return FromRawValue( targetBuf, type, value );
+        return FromRawValue( targetBuf, data );
     }
 
     HRESULT ModuleContext::GetValue(

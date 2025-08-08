@@ -47,6 +47,7 @@ namespace MagoST
         virtual bool GetRegisters( uint8_t*& regs );
         virtual bool GetOffset( int32_t& offset );
         virtual bool GetLength( uint32_t& length );
+        virtual bool GetBitfieldRange( uint32_t& position, uint32_t& length );
 
 #if 1
         virtual bool GetDebugStart( uint32_t& start );

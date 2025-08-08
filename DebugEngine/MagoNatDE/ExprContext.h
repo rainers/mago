@@ -77,10 +77,7 @@ namespace Mago
 
         virtual HRESULT NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl );
 
-        virtual HRESULT GetValue( 
-            MagoEE::Address addr, 
-            MagoEE::Type* type, 
-            MagoEE::DataValue& value );
+        virtual HRESULT FillValue( MagoEE::DataObject& data );
 
         virtual HRESULT GetValue(
             MagoEE::Address aArrayAddr, 
@@ -277,10 +274,10 @@ namespace Mago
         virtual HRESULT NewTuple( const wchar_t* name, const std::vector<RefPtr<MagoEE::Declaration>>& decls, MagoEE::Declaration*& decl )
         { return mModuleContext->NewTuple( name, decls, decl ); }
 
-        virtual HRESULT GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& value );
+        virtual HRESULT FillValue( MagoEE::DataObject& data )
+        { return mModuleContext->FillValue( data ); }
 
-        virtual HRESULT GetValue( MagoEE::Address addr, MagoEE::Type* type, MagoEE::DataValue& value )
-        { return mModuleContext->GetValue( addr, type, value ); }
+        virtual HRESULT GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& value );
 
         virtual HRESULT GetValue( MagoEE::Address aArrayAddr, const MagoEE::DataObject& key, MagoEE::Address& valueAddr )
         { return mModuleContext->GetValue( aArrayAddr, key, valueAddr ); }

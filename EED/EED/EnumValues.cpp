@@ -178,7 +178,7 @@ namespace MagoEE
         result.ObjVal._Type = tn->GetNext();
         result.ObjVal.Addr = mParentVal.ObjVal.Value.Addr;
 
-        HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+        HRESULT hr = mBinder->FillValue( result.ObjVal );
         if ( FAILED( hr ) )
             return hr;
 
@@ -363,7 +363,7 @@ namespace MagoEE
         }
         else
         {
-            HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+            HRESULT hr = mBinder->FillValue( result.ObjVal );
             if ( FAILED( hr ) )
                 return hr;
         }
@@ -801,11 +801,11 @@ namespace MagoEE
         {
             uint32_t ptrSize = mParentVal.ObjVal._Type->GetSize();
 
-            DataObject keyobj;
+            DataObject keyobj = { 0 };
             keyobj._Type = aa->GetIndex();
             keyobj.Addr = mNextNode + ( mAAVersion == 1 ? 0 : 2 * ptrSize );
 
-            hr = mBinder->GetValue( keyobj.Addr, keyobj._Type, keyobj.Value );
+            hr = mBinder->FillValue( keyobj );
             if ( FAILED( hr ) )
                 return hr;
 
@@ -830,7 +830,7 @@ namespace MagoEE
 
             result.ObjVal.Addr = keyobj.Addr + alignKeySize;
             result.ObjVal._Type = aa->GetElement();
-            hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+            hr = mBinder->FillValue( result.ObjVal );
             if ( FAILED( hr ) )
                 return hr;
         }
@@ -962,7 +962,9 @@ namespace MagoEE
             return E_MAGOEE_NO_ADDRESS;
 
         result.ObjVal.Addr = addr;
-        HRESULT hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+        if ( decl->IsBitField() )
+            decl->GetBitfieldRange( result.ObjVal.BitPos, result.ObjVal.BitLen );
+        HRESULT hr = mBinder->FillValue( result.ObjVal );
         if ( FAILED( hr ) )
             return hr;
 
@@ -1183,7 +1185,7 @@ namespace MagoEE
 
             result.ObjVal.Addr = addr + offset;
 
-            hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+            hr = mBinder->FillValue( result.ObjVal );
             if( FAILED( hr ) )
                 return hr;
 
@@ -1272,8 +1274,10 @@ namespace MagoEE
                     return E_FAIL;
 
                 result.ObjVal.Addr = addr + offset;
+                if ( decl->IsBitField() )
+                    decl->GetBitfieldRange( result.ObjVal.BitPos, result.ObjVal.BitLen );
 
-                hr = mBinder->GetValue( result.ObjVal.Addr, result.ObjVal._Type, result.ObjVal.Value );
+                hr = mBinder->FillValue( result.ObjVal );
                 if ( FAILED( hr ) )
                     return hr;
 

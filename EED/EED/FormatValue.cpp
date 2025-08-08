@@ -533,11 +533,11 @@ namespace MagoEE
 
         for ( uint64_t i = 0; i < length; i++ )
         {
-            DataObject elementObj;
+            DataObject elementObj = { 0 };
             elementObj._Type = elemType;
             elementObj.Addr = addr + elementSize * i;
 
-            HRESULT hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
+            HRESULT hr = binder->FillValue( elementObj );
             if ( FAILED( hr ) )
             {
                 // always a read error or internal state error
@@ -746,13 +746,15 @@ namespace MagoEE
             else if ( !decl->GetAddress( addr, binder ) || addr == 0 )
                 hr = E_MAGOEE_NO_ADDRESS;
 
-            DataObject elementObj;
+            DataObject elementObj = { 0 };
             if ( !FAILED( hr ) )
             {
                 elementObj._Type = type->GetElementType( i );
                 elementObj.Addr = addr + offset;
+                if ( decl->IsBitField() )
+                    decl->GetBitfieldRange( elementObj.BitPos, elementObj.BitLen );
 
-                hr = binder->GetValue( elementObj.Addr, elementObj._Type, elementObj.Value );
+                hr = binder->FillValue( elementObj );
             }
 
             closure->toComplete++;
@@ -917,12 +919,15 @@ namespace MagoEE
                 break;
             }
 
-            DataObject memberObj;
+            DataObject memberObj = { 0 };
             member->GetType( memberObj._Type.Ref() );
             memberObj.Addr = addr;
             int offset;
             if ( member->GetOffset( offset ) )
                 memberObj.Addr += offset;
+
+            if ( member->IsBitField() )
+                member->GetBitfieldRange( memberObj.BitPos, memberObj.BitLen );
 
             auto idx = closure->elemStr.size() - 1;
             auto completeElem = [idx, closure]( HRESULT hr, std::wstring elemStr )
@@ -941,9 +946,9 @@ namespace MagoEE
             else
             {
                 if( srcBuf )
-                    hr = FromRawValue( srcBuf + memberObj.Addr, memberObj._Type, memberObj.Value );
+                    hr = FromRawValue( srcBuf + memberObj.Addr, memberObj );
                 else
-                    hr = binder->GetValue( memberObj.Addr, memberObj._Type, memberObj.Value );
+                    hr = binder->FillValue( memberObj );
 
                 if ( !FAILED( hr ) )
                     hr = FormatValue( binder, memberObj, fmtdataElem,
@@ -1150,7 +1155,7 @@ namespace MagoEE
                 pointeeObj._Type = pointeeType;
                 pointeeObj.Addr = objVal.Value.Addr;
 
-                hr = binder->GetValue( pointeeObj.Addr, pointeeObj._Type, pointeeObj.Value );
+                hr = binder->FillValue( pointeeObj );
                 if ( !FAILED( hr ) )
                 {
                     auto completeFmt = [complete, &fmtdata, outStr = fmtdata.outStr](HRESULT hr, std::wstring memberStr) mutable
@@ -1433,7 +1438,7 @@ namespace MagoEE
             dbgObj._Type = pVal->_Type->AsTypeNext()->GetNext();
             dbgObj.Addr = pVal->Value.Addr;
             if( dbgObj.Addr != 0 )
-            hr = binder->GetValue(dbgObj.Addr, dbgObj._Type, dbgObj.Value);
+            hr = binder->FillValue( dbgObj );
             pVal = &dbgObj;
         }
         if ( auto ts = pVal->_Type->AsTypeStruct() )

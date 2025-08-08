@@ -38,9 +38,11 @@ namespace MagoEE
         virtual bool GetBaseClassOffset( Declaration* baseClass, int& offset ) = 0;
         virtual bool GetVTableShape( Declaration*& decl ) = 0;
         virtual bool GetVtblOffset( int& offset ) = 0;
+        virtual bool GetBitfieldRange( uint32_t& position, uint32_t& length ) = 0;
 
         virtual bool IsField() = 0;
         virtual bool IsStaticField() = 0;
+        virtual bool IsBitField() = 0;
         virtual bool IsVar() = 0;
         virtual bool IsConstant() = 0;
         virtual bool IsType() = 0;

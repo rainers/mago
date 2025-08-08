@@ -246,4 +246,17 @@ HRESULT FromRawValue( const void* srcBuf, MagoEE::Type* type, MagoEE::DataValue&
     return S_OK;
 }
 
+HRESULT FromRawValue( const void* srcBuf, DataObject& data )
+{
+    HRESULT hr = FromRawValue( srcBuf, data._Type, data.Value );
+    if( SUCCEEDED( hr ) && data.BitLen > 0 )
+    {
+        if ( data._Type->IsSigned() )
+            data.Value.Int64Value = (data.Value.Int64Value << (64 - data.BitPos - data.BitLen)) >> (64 - data.BitLen);
+        else
+            data.Value.UInt64Value = (data.Value.UInt64Value << (64 - data.BitPos - data.BitLen)) >> (64 - data.BitLen);
+    }
+    return hr;
+}
+
 } // namespace MagoEE

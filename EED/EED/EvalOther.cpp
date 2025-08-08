@@ -38,7 +38,7 @@ namespace MagoEE
             // has address
             _ASSERT( obj._Type != NULL );
 
-            return binder->GetValue( obj.Addr, obj._Type, obj.Value );
+            return binder->FillValue( obj );
         }
     }
 
@@ -288,7 +288,7 @@ namespace MagoEE
 
         if ( mode == EvalMode_Value )
         {
-            hr = binder->GetValue( obj.Addr, _Type, obj.Value );
+            hr = binder->FillValue( obj );
             if ( FAILED( hr ) )
                 return hr;
         }
@@ -457,6 +457,8 @@ namespace MagoEE
                 if( !elemDecl->GetOffset( offset ) )
                     return E_MAGOEE_NO_ADDRESS;
                 addr = array.Addr + offset;
+                if ( elemDecl->IsBitField() )
+                    elemDecl->GetBitfieldRange( elem.BitPos, elem.BitLen );
             }
             else if ( !elemDecl->GetAddress( addr , binder ) )
                 return E_MAGOEE_NO_ADDRESS;
@@ -473,7 +475,7 @@ namespace MagoEE
 
         if ( mode == EvalMode_Value )
         {
-            hr = binder->GetValue( elem.Addr, _Type, elem.Value );
+            hr = binder->FillValue( elem );
             if ( FAILED( hr ) )
                 return hr;
         }
@@ -779,6 +781,8 @@ namespace MagoEE
                 return E_FAIL;
 
             obj.Addr = thisAddr + offset;
+            if ( Decl->IsBitField() )
+                Decl->GetBitfieldRange( obj.BitPos, obj.BitLen );
         }
         else if ( !Decl->IsRegister() )
         {
@@ -1034,19 +1038,21 @@ namespace MagoEE
                 int vtblOffset;
                 if( Decl->GetVtblOffset( vtblOffset ) )
                 {
-                    DataValue vtblptr = { 0 };
-                    auto vtblptrType = _Type->AsTypeNext()->GetNext(); // any type of pointer
-                    hr = binder->GetValue( parent.Value.Addr, vtblptrType, vtblptr );
+                    DataObject vtblptr = { 0 };
+                    vtblptr.Addr = parent.Value.Addr;
+                    vtblptr._Type = _Type->AsTypeNext()->GetNext(); // any type of pointer
+                    hr = binder->FillValue( vtblptr );
                     if ( FAILED( hr ) )
                         return hr;
                     if( vtblptr.Addr == 0 )
                         return E_MAGOEE_NO_ADDRESS;
 
-                    hr = binder->GetValue( vtblptr.Addr + vtblOffset, vtblptrType, vtblptr );
+                    vtblptr.Addr = vtblptr.Value.Addr + vtblOffset;
+                    hr = binder->FillValue( vtblptr );
                     if ( FAILED( hr ) )
                         return hr;
 
-                    obj.Value.Delegate.FuncAddr = vtblptr.Addr;
+                    obj.Value.Delegate.FuncAddr = vtblptr.Value.Addr;
                 }
                 else if( !Decl->GetAddress( obj.Value.Delegate.FuncAddr, binder ) )
                     return E_MAGOEE_NO_ADDRESS;
@@ -1060,6 +1066,8 @@ namespace MagoEE
                     return E_FAIL;
 
                 obj.Addr = parent.Value.Addr + offset;
+                if ( Decl->IsBitField() )
+                    Decl->GetBitfieldRange( obj.BitPos, obj.BitLen );
             }
         }
         // else is some other value: constant, var

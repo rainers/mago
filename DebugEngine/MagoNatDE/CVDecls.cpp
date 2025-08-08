@@ -162,6 +162,12 @@ namespace Mago
         return mSymInfo->GetVtblOffset( offset );
     }
 
+    bool CVDecl::GetBitfieldRange( uint32_t& position, uint32_t& length )
+    {
+        return mSymInfo->GetBitfieldRange( position, length );
+    }
+
+
     bool CVDecl::IsField()
     {
         MagoST::DataKind   kind = MagoST::DataIsUnknown;
@@ -180,6 +186,16 @@ namespace Mago
             return false;
 
         return kind == DataIsStaticMember;
+    }
+
+    bool CVDecl::IsBitField()
+    {
+        MagoST::LocationType loc = MagoST::LocIsNull;
+
+        if ( !mSymInfo->GetLocation( loc ) )
+            return false;
+
+        return loc == LocIsBitField;
     }
 
     bool CVDecl::IsVar()
@@ -1305,12 +1321,22 @@ namespace Mago
         return false;
     }
 
+    bool ClassRefDecl::GetBitfieldRange( uint32_t& position, uint32_t& length )
+    {
+        return false;
+    }
+
     bool ClassRefDecl::IsField()
     {
         return false;
     }
 
     bool ClassRefDecl::IsStaticField()
+    {
+        return false;
+    }
+
+    bool ClassRefDecl::IsBitField()
     {
         return false;
     }
@@ -1452,6 +1478,11 @@ namespace Mago
         return false;
     }
 
+    bool TupleDecl::GetBitfieldRange( uint32_t& position, uint32_t& length )
+    {
+        return false;
+    }
+
     bool TupleDecl::IsField()
     {
         return firstField()->IsField();
@@ -1462,7 +1493,12 @@ namespace Mago
         return firstField()->IsStaticField();
     }
 
-    bool TupleDecl::IsVar() 
+    bool TupleDecl::IsBitField()
+    {
+        return false;
+    }
+
+    bool TupleDecl::IsVar()
     {
         return firstField()->IsVar();
     }
@@ -2202,6 +2238,7 @@ namespace Mago
         virtual bool GetRegisters( uint8_t*& regs ) { return false; }
         virtual bool GetUdtKind( UdtKind& udtKind ) { return false; }
         virtual bool GetValue( Variant& value ) { return false; }
+        virtual bool GetBitfieldRange( uint32_t& position, uint32_t& length ) { return false; }
 
 #if 1
         virtual bool GetDebugStart( uint32_t& start ) { return false; }

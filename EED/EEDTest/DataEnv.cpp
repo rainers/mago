@@ -347,14 +347,15 @@ HRESULT DataEnvBinder::GetValue( MagoEE::Declaration* decl, MagoEE::DataValue& v
     return S_OK;
 }
 
-HRESULT DataEnvBinder::GetValue( MagoEE::Address addr, MagoEE::Type* type, MagoEE::DataValue& value )
+
+HRESULT DataEnvBinder::FillValue( MagoEE::DataObject& data )
 {
-    std::shared_ptr<DataObj> val = mDataEnv->GetValue( addr, type );
+    std::shared_ptr<DataObj> val = mDataEnv->GetValue( data.Addr, data._Type );
 
     if ( val == NULL )
         throw L"No value.";
 
-    value = val->Value;
+    data.Value = val->Value;
     return S_OK;
 }
 
@@ -407,7 +408,7 @@ HRESULT DataEnvBinder::ReadMemory( MagoEE::Address addr, uint32_t sizeToRead, ui
     return E_NOTIMPL;
 }
 
-HRESULT DataEnvBinder::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType, DWORD* pOffset = nullptr )
+HRESULT DataEnvBinder::SymbolFromAddr( MagoEE::Address addr, std::wstring& symName, MagoEE::Type** pType, DWORD* pOffset )
 {
     return E_NOTIMPL;
 }
