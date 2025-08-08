@@ -899,7 +899,7 @@ namespace MagoST
 
         IDiaSymbol* pChild = NULL;
         if ( !scopeIn.pEnumSymbols )
-            return S_FALSE;
+            return false;
 
         DWORD fetched = 0;
         HRESULT hr = scopeIn.pEnumSymbols->Next( 1, &pChild, &fetched );
