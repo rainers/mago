@@ -1183,7 +1183,8 @@ public:
         MagoEE::Address retval;
         tryHR(ExecFunc(fnaddr, DkmILCallingConvention::StdCall, retval, ptrSize, argbuf, ptrSize));
 
-        std::wstring initFn = druntime_version < 2'109 ? L"initGC_2_108" : L"initGC_2_109";
+        std::wstring initFn = druntime_version < 2'109 ? L"initGC_2_108" :
+                              druntime_version < 2'111 ? L"initGC_2_109" : L"initGC_2_111";
         if (!x64)
             initFn = L"_" + initFn + L"@0";
         MagoEE::Address initGC;

@@ -24,6 +24,7 @@ static import core.memory;
 __gshared HANDLE heap;
 __gshared MagoGCInterface!2_108 mgc2_108 = new MagoGC!2_108;
 __gshared MagoGCInterface!2_109 mgc2_109 = new MagoGC!2_109;
+__gshared MagoGCInterface!2_111 mgc2_111 = new MagoGC!2_111;
 
 extern(Windows)
 export MagoGCInterface!2_108 initGC_2_108()
@@ -43,6 +44,16 @@ export MagoGCInterface!2_109 initGC_2_109()
 		return null;
 
 	return mgc2_109;
+}
+
+extern(Windows)
+export MagoGCInterface!2_111 initGC_2_111()
+{
+	heap = HeapCreate(HEAP_GENERATE_EXCEPTIONS, 0x10000, 0);
+	if (!heap)
+		return null;
+
+	return mgc2_111;
 }
 
 extern(Windows)
@@ -89,16 +100,25 @@ interface MagoGCInterface(int ver)
 	void runFinalizers(const scope void[] segment) nothrow;
 	bool inFinalizer() nothrow;
 	ulong allocatedInCurrentThread() nothrow;
+
+	static if(ver >= 2_111)
+	{
+		void[] getArrayUsed(void *ptr, bool atomic = false) nothrow;
+		bool expandArrayUsed(void[] slice, size_t newUsed, bool atomic = false) nothrow @safe;
+		size_t reserveArrayCapacity(void[] slice, size_t request, bool atomic = false) nothrow @safe;
+		bool shrinkArrayUsed(void[] slice, size_t existingUsed, bool atomic = false) nothrow;
+	}
 }
 
 // verify GC interface is matching
 // pragma(msg, "GC:   ", __traits(allMembers, GC));
 // pragma(msg, "2_109:", __traits(allMembers, MagoGC!(2_109)));
 // pragma(msg, "2_108:", __traits(allMembers, MagoGC!(2_108)));
+pragma(msg, "2_111:", __traits(allMembers, MagoGC!(2_111)));
 
-static assert(__VERSION__ >= 2_109);
+static assert(__VERSION__ >= 2_111);
 enum GC_members = __traits(allMembers, GC);
-static assert(GC_members == __traits(allMembers, MagoGCInterface!(2_109)));
+static assert(GC_members == __traits(allMembers, MagoGCInterface!(2_111)));
 
 class MagoGC(int ver) : MagoGCInterface!(ver)
 {
@@ -272,6 +292,28 @@ class MagoGC(int ver) : MagoGCInterface!(ver)
 	override ulong allocatedInCurrentThread() nothrow
 	{
 		return 0;
+	}
+
+	static if(ver >= 2_111)
+	{
+		void[] getArrayUsed(void *ptr, bool atomic = false) nothrow
+		{
+			return null;
+		}
+		bool expandArrayUsed(void[] slice, size_t newUsed, bool atomic = false) nothrow @safe
+		{
+			return false;
+		}
+
+		size_t reserveArrayCapacity(void[] slice, size_t request, bool atomic = false) nothrow @safe
+		{
+			return 0;
+		}
+
+		bool shrinkArrayUsed(void[] slice, size_t existingUsed, bool atomic = false) nothrow
+		{
+			return false;
+		}
 	}
 }
 
