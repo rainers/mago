@@ -17,6 +17,7 @@ struct IDiaSymbol;
 struct IDiaEnumLineNumbers;
 struct IDiaLineNumber;
 struct IDiaSourceFile;
+struct IUnknown;
 
 namespace MagoST
 {
@@ -92,10 +93,13 @@ namespace MagoST
         HRESULT setLineNumber( IDiaLineNumber* pLineNumber, uint16_t lineIndex, LineNumber& lineNumber );
         uint32_t getCompilandCount();
         HRESULT initSession();
+        HRESULT MsdiaCoCreateInstance( REFCLSID rclsid, IUnknown* pUnkOuter, REFIID riid, LPVOID* ppv );
 
         HRESULT _symbolById( DWORD id, IDiaSymbol** pSymbol );
 
         bool mInit;
+        HMODULE mMSDiaDll;
+
         IDiaDataSource  *mSource;
         IDiaSession     *mSession;
         IDiaSymbol      *mGlobal;

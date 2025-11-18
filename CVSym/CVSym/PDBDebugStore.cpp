@@ -637,6 +637,7 @@ namespace MagoST
 
     PDBDebugStore::PDBDebugStore()
         :   mSource( NULL ),
+            mMSDiaDll( NULL ),
             mSession( NULL ),
             mGlobal( NULL ),
             mFindLineEnumLineNumbers( NULL ),
@@ -655,6 +656,32 @@ namespace MagoST
     PDBDebugStore::~PDBDebugStore()
     {
         CloseDebugInfo();
+    }
+
+    HRESULT PDBDebugStore::MsdiaCoCreateInstance( REFCLSID rclsid, IUnknown* pUnkOuter, REFIID riid, LPVOID* ppv )
+    {
+        if( !mMSDiaDll )
+        {
+            const wchar_t* szDllName = L"msdia140.dll";
+            mMSDiaDll = LoadLibrary( szDllName );
+        }
+        HRESULT hr = REGDB_E_KEYMISSING;
+        if ( !mMSDiaDll )
+            return hr;
+
+        typedef HRESULT( __stdcall* pDllGetClassObject )( REFCLSID, REFIID, LPVOID* );
+        auto GetClassObject = (pDllGetClassObject) GetProcAddress( mMSDiaDll, "DllGetClassObject" );
+        if ( !GetClassObject )
+            return hr;
+
+        IClassFactory* pIFactory;
+        hr = GetClassObject( rclsid, IID_IClassFactory, (LPVOID*)&pIFactory );
+        if ( SUCCEEDED( hr ) )
+        {
+            hr = pIFactory->CreateInstance( pUnkOuter, riid, ppv );
+            pIFactory->Release();
+        }
+        return hr;
     }
 
     HRESULT PDBDebugStore::InitDebugInfo( BYTE* buffer, DWORD size, const wchar_t* filename, const wchar_t* searchPath )
@@ -685,6 +712,10 @@ namespace MagoST
             hr = CoCreateInstance( msdia110, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &mSource );
         if ( FAILED( hr ) )
             hr = CoCreateInstance( msdia100, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &mSource );
+        if ( FAILED( hr ) )
+        {
+            hr = MsdiaCoCreateInstance( msdia140, NULL, __uuidof(IDiaDataSource), (void**)&mSource );
+        }
         if ( FAILED( hr ) )
             return hr;
 
@@ -808,7 +839,11 @@ namespace MagoST
             mSource->Release();
             mSource = NULL;
         }
-
+        if( mMSDiaDll )
+        {
+            FreeLibrary( mMSDiaDll );
+            mMSDiaDll = NULL;
+        }
         CoUninitialize();
         mInit = false;
     }
