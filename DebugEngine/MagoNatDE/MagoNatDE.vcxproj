@@ -346,7 +346,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
       <GenerateStublessProxies>true</GenerateStublessProxies>
@@ -359,11 +359,10 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\udis86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\Include;$(ProjectDir)..\Include;$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\udis86;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
@@ -377,7 +376,7 @@
     </ResourceCompile>
     <Link>
       <RegisterOutput>false</RegisterOutput>
-      <AdditionalDependencies>Exec.lib;dbgmetric.lib;ad2de.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;dbgmetric.lib;ad2de.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\CVSym\$(Configuration);$(ProjectDir)..\..\EED\$(Configuration);$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\MagoNatDE.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
@@ -627,7 +626,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MkTypLibCompatible>false</MkTypLibCompatible>
       <TargetEnvironment>X64</TargetEnvironment>
       <GenerateStublessProxies>true</GenerateStublessProxies>
@@ -640,8 +639,8 @@
     </Midl>
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\Include;$(ProjectDir)..\..\udis86;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\..\Include;$(ProjectDir)..\Include;$(ProjectDir)..\..\EED\Real;$(ProjectDir)..\..\EED\gdtoa;$(ProjectDir)..\..\CVSym\Include;$(ProjectDir)..\..\EED\Include;$(ProjectDir)..\..\udis86;$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>RPC_USE_NATIVE_WCHAR;WIN32;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
@@ -656,7 +655,7 @@
     </ResourceCompile>
     <Link>
       <RegisterOutput>false</RegisterOutput>
-      <AdditionalDependencies>Exec.lib;dbgmetric.lib;ad2de.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rpcrt4.lib;dbgmetric.lib;ad2de.lib;dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)..\..\CVSym\$(Configuration);$(ProjectDir)..\..\EED\$(Configuration);$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\MagoNatDE.def</ModuleDefinitionFile>
       <SubSystem>Windows</SubSystem>
