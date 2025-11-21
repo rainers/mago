@@ -19,12 +19,14 @@ BOOL _dllEntry(HINSTANCE hInstance, ULONG ulReason, LPVOID pvReserved)
 }
 
 import core.gc.gcinterface;
+import core.thread.threadbase : ThreadBase;
 static import core.memory;
 
 __gshared HANDLE heap;
 __gshared MagoGCInterface!2_108 mgc2_108 = new MagoGC!2_108;
 __gshared MagoGCInterface!2_109 mgc2_109 = new MagoGC!2_109;
 __gshared MagoGCInterface!2_111 mgc2_111 = new MagoGC!2_111;
+__gshared MagoGCInterface!2_112 mgc2_112 = new MagoGC!2_112;
 
 extern(Windows)
 export MagoGCInterface!2_108 initGC_2_108()
@@ -54,6 +56,16 @@ export MagoGCInterface!2_111 initGC_2_111()
 		return null;
 
 	return mgc2_111;
+}
+
+extern(Windows)
+export MagoGCInterface!2_112 initGC_2_112()
+{
+	heap = HeapCreate(HEAP_GENERATE_EXCEPTIONS, 0x10000, 0);
+	if (!heap)
+		return null;
+
+	return mgc2_112;
 }
 
 extern(Windows)
@@ -108,17 +120,25 @@ interface MagoGCInterface(int ver)
 		size_t reserveArrayCapacity(void[] slice, size_t request, bool atomic = false) nothrow @safe;
 		bool shrinkArrayUsed(void[] slice, size_t existingUsed, bool atomic = false) nothrow;
 	}
+	static if(ver >= 2_112)
+	{
+		void initThread(ThreadBase thread) nothrow @nogc;
+		void cleanupThread(ThreadBase thread) nothrow @nogc;
+	}
 }
 
 // verify GC interface is matching
 // pragma(msg, "GC:   ", __traits(allMembers, GC));
 // pragma(msg, "2_109:", __traits(allMembers, MagoGC!(2_109)));
 // pragma(msg, "2_108:", __traits(allMembers, MagoGC!(2_108)));
-pragma(msg, "2_111:", __traits(allMembers, MagoGC!(2_111)));
+// pragma(msg, "2_111:", __traits(allMembers, MagoGC!(2_111)));
+pragma(msg, "2_112:", __traits(allMembers, MagoGC!(2_112)));
 
-static assert(__VERSION__ >= 2_111);
+version (LDC) static assert(__VERSION__ >= 2_111);
+else static assert(__VERSION__ >= 2_112);
+
 enum GC_members = __traits(allMembers, GC);
-static assert(GC_members == __traits(allMembers, MagoGCInterface!(2_111)));
+static assert(GC_members == __traits(allMembers, MagoGCInterface!(__VERSION__)));
 
 class MagoGC(int ver) : MagoGCInterface!(ver)
 {
@@ -313,6 +333,15 @@ class MagoGC(int ver) : MagoGCInterface!(ver)
 		bool shrinkArrayUsed(void[] slice, size_t existingUsed, bool atomic = false) nothrow
 		{
 			return false;
+		}
+	}
+	static if(ver >= 2_112)
+	{
+		override void initThread(ThreadBase thread) nothrow @nogc
+		{
+		}
+		override void cleanupThread(ThreadBase thread) nothrow @nogc
+		{
 		}
 	}
 }

@@ -1137,6 +1137,10 @@ public:
             MagoEE::Address cnsaddr; // collectNoStack removed?
             if (FAILED(tryFindSymbol(L"__D4core8internal2gc4impl5protoQo7ProtoGC14collectNoStackMFNbZv", cnsaddr)))
                 druntime_version = 2'109;
+            else if (FAILED(tryFindSymbol(L"__D4core8internal2gc4impl12conservativeQw14ConservativeGC13cleanupThreadMFNbNiCQCy6thread10threadbase10ThreadBaseZv", cnsaddr)))
+                druntime_version = 2'111;
+            else
+                druntime_version = 2'112;
         }
         MagoEE::Address isProxiedAddr; // collectNoStack removed?
         bool ldc = SUCCEEDED(tryFindSymbol(L"_gc_isProxied", isProxiedAddr));
@@ -1184,7 +1188,8 @@ public:
         tryHR(ExecFunc(fnaddr, DkmILCallingConvention::StdCall, retval, ptrSize, argbuf, ptrSize));
 
         std::wstring initFn = druntime_version < 2'109 ? L"initGC_2_108" :
-                              druntime_version < 2'111 ? L"initGC_2_109" : L"initGC_2_111";
+                              druntime_version < 2'111 ? L"initGC_2_109" :
+                              druntime_version < 2'112 ? L"initGC_2_111" : L"initGC_2_112";
         if (!x64)
             initFn = L"_" + initFn + L"@0";
         MagoEE::Address initGC;
