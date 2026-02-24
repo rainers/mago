@@ -69,3 +69,4 @@ jobs:
           path: |
             mago/bin/**/*.exe
             mago/bin/**/*.dll
+            mago/bin/**/*.vsdconfig

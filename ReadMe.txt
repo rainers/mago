@@ -22,6 +22,9 @@ Dependencies:
 - CPPTest 1.0 (needed for tests only)
 - Visual Studio SDK
 
+Binaries can be downloaded from the latest build from master via:
+
+https://nightly.link/rainers/mago/workflows/build-and-test.yml/master/mago-bin.zip
 
 Installation:
 
