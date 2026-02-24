@@ -50,9 +50,9 @@ jobs:
       - name: Build mago
         working-directory: mago
         run:
-          msbuild /p:Configuration=Release;Platform=Win32;PlatformToolset=v143            /target:DebugEngine\MagoNatDE  /verbosity:quiet MagoDbg_2010.sln
-          msbuild /p:Configuration=Release;Platform=x64;PlatformToolset=v143              /target:DebugEngine\MagoNatDE  /verbosity:quiet MagoDbg_2010.sln
-          msbuild /p:Configuration=Release;Platform=x64;PlatformToolset=v143              /target:DebugEngine\MagoRemote /verbosity:quiet MagoDbg_2010.sln
+          msbuild "/p:Configuration=Release;Platform=Win32;PlatformToolset=v143"          /target:DebugEngine\MagoNatDE  /verbosity:quiet MagoDbg_2010.sln
+          msbuild "/p:Configuration=Release;Platform=x64;PlatformToolset=v143"            /target:DebugEngine\MagoNatDE  /verbosity:quiet MagoDbg_2010.sln
+          msbuild "/p:Configuration=Release;Platform=x64;PlatformToolset=v143"            /target:DebugEngine\MagoRemote /verbosity:quiet MagoDbg_2010.sln
           msbuild "/p:Configuration=Release StaticDE;Platform=Win32;PlatformToolset=v143" /target:Expression\MagoNatCC   /verbosity:quiet MagoDbg_2010.sln
           msbuild "/p:Configuration=Release StaticDE;Platform=x64;PlatformToolset=v143"   /target:Expression\MagoNatCC   /verbosity:quiet MagoDbg_2010.sln
           msbuild "/p:Configuration=Release StaticDE;Platform=x64;PlatformToolset=v143"   /target:MagoMI\mago-mi         /verbosity:quiet MagoDbg_2010.sln
