@@ -1,0 +1,63 @@
+name: build visuald
+
+on: [push, pull_request]
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: MagoDbg_vs2010.sln
+
+  # Configuration type to build.
+  BUILD_CONFIGURATION: Release
+  BUILD_PLATFORM: x64
+  BUILD_PLATFORM_TOOLSET: v143
+  DMD_VER: 2.111.0
+  LDC_VER: 1.4.1
+  VISUALD_VER: 1.4.1
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout mago
+        uses: actions/checkout@v3
+        with:
+          path: mago
+      - name: Prepare DMD compiler
+        uses: dlang-community/setup-dlang@v1
+        with:
+          compiler: dmd-${{ env.DMD_VER }}
+      - name: Prepare LDC compiler
+        uses: dlang-community/setup-dlang@v1
+        with:
+          compiler: ldc-${{ env.LDC_VER }}
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: Setup VS environment
+        uses: seanmiddleditch/gha-setup-vsdevenv@v4
+      - name: Download Visual D
+        uses: supplypike/setup-bin@v1
+        with:
+          uri: 'https://github.com/dlang/visuald/releases/download/v${{ env.VISUALD_VER }}/VisualD-v${{ env.VISUALD_VER }}.exe'
+          name: 'VisualD-v${{ env.VISUALD_VER }}.exe'
+          version: '${{ env.VISUALD_VER }}'
+          command: ./VisualD-v${{ env.VISUALD_VER }}.exe /S
+      - name: Register visuald
+        run: |
+          reg add "HKLM\SOFTWARE\DMD" /v "InstallationDir" /t REG_SZ /d "c:\hostedtoolcache\windows\dc\dmd-${{ env.DMD_VER }}\x64" /reg:32 /f
+          reg add "HKLM\SOFTWARE\VisualD" /v "DMDInstallDir" /t REG_SZ /d "c:\hostedtoolcache\windows\dc\dmd-${{ env.DMD_VER }}\x64\dmd2" /reg:32 /f
+          reg add "HKLM\SOFTWARE\VisualD" /v "LDCInstallDir" /t REG_SZ /d "c:\hostedtoolcache\windows\dc\ldc-${{ env.LDC_VER }}\x64\ldc2" /reg:32 /f
+      - name: Build mago
+        working-directory: mago
+        run:
+          msbuild /p:Configuration=Release;Platform=Win32;PlatformToolset=v143            /target:DebugEngine\MagoNatDE  /verbosity:quiet MagoDbg_2010.sln
+          msbuild /p:Configuration=Release;Platform=x64;PlatformToolset=v143              /target:DebugEngine\MagoNatDE  /verbosity:quiet MagoDbg_2010.sln
+          msbuild /p:Configuration=Release;Platform=x64;PlatformToolset=v143              /target:DebugEngine\MagoRemote /verbosity:quiet MagoDbg_2010.sln
+          msbuild "/p:Configuration=Release StaticDE;Platform=Win32;PlatformToolset=v143" /target:Expression\MagoNatCC   /verbosity:quiet MagoDbg_2010.sln
+          msbuild "/p:Configuration=Release StaticDE;Platform=x64;PlatformToolset=v143"   /target:Expression\MagoNatCC   /verbosity:quiet MagoDbg_2010.sln
+          msbuild "/p:Configuration=Release StaticDE;Platform=x64;PlatformToolset=v143"   /target:MagoMI\mago-mi         /verbosity:quiet MagoDbg_2010.sln
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: mago-bin
+          path: bin
