@@ -55,9 +55,12 @@ jobs:
           msbuild "/p:Configuration=Release;Platform=x64;PlatformToolset=v143"            /target:DebugEngine\MagoRemote /verbosity:quiet MagoDbg_2010.sln
           msbuild "/p:Configuration=Release StaticDE;Platform=Win32;PlatformToolset=v143" /target:Expression\MagoNatCC   /verbosity:quiet MagoDbg_2010.sln
           msbuild "/p:Configuration=Release StaticDE;Platform=x64;PlatformToolset=v143"   /target:Expression\MagoNatCC   /verbosity:quiet MagoDbg_2010.sln
+          msbuild "/p:Configuration=Release StaticDE;Platform=Win32;PlatformToolset=v143" /target:MagoMI\mago-mi         /verbosity:quiet MagoDbg_2010.sln
           msbuild "/p:Configuration=Release StaticDE;Platform=x64;PlatformToolset=v143"   /target:MagoMI\mago-mi         /verbosity:quiet MagoDbg_2010.sln
       - name: Upload binaries
         uses: actions/upload-artifact@v4
         with:
           name: mago-bin
-          path: bin
+          path: |
+            mago/bin/**/*.exe
+            mago/bin/**/*.dll
