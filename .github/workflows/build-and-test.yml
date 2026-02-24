@@ -1,6 +1,11 @@
-name: build visuald
+name: build mago
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  # once per month
+  schedule:
+    - cron: '0 0 1 * *'
 
 env:
   # Path to the solution file relative to the root of the project.
