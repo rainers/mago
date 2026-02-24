@@ -48,7 +48,7 @@ jobs:
           reg add "HKLM\SOFTWARE\VisualD" /v "DMDInstallDir" /t REG_SZ /d "c:\hostedtoolcache\windows\dc\dmd-${{ env.DMD_VER }}\x64\dmd2" /reg:32 /f
           reg add "HKLM\SOFTWARE\VisualD" /v "LDCInstallDir" /t REG_SZ /d "c:\hostedtoolcache\windows\dc\ldc-${{ env.LDC_VER }}\x64\ldc2" /reg:32 /f
       - name : Build mago
-        work ing-directory: mago
+        working-directory: mago
         run: |
           msbuild "/p:Configuration=Release;Platform=Win32;PlatformToolset=v143"          /target:DebugEngine\MagoNatDE  /verbosity:quiet MagoDbg_2010.sln
           msbuild "/p:Configuration=Release;Platform=x64;PlatformToolset=v143"            /target:DebugEngine\MagoNatDE  /verbosity:quiet MagoDbg_2010.sln
