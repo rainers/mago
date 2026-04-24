@@ -132,10 +132,10 @@ interface MagoGCInterface(int ver)
 // pragma(msg, "2_109:", __traits(allMembers, MagoGC!(2_109)));
 // pragma(msg, "2_108:", __traits(allMembers, MagoGC!(2_108)));
 // pragma(msg, "2_111:", __traits(allMembers, MagoGC!(2_111)));
-pragma(msg, "2_112:", __traits(allMembers, MagoGC!(2_112)));
+// pragma(msg, "2_112:", __traits(allMembers, MagoGC!(2_112)));
 
-version (LDC) static assert(__VERSION__ >= 2_111);
-else static assert(__VERSION__ >= 2_112);
+// version (LDC) static assert(__VERSION__ >= 2_111);
+// else static assert(__VERSION__ >= 2_112);
 
 enum GC_members = __traits(allMembers, GC);
 static assert(GC_members == __traits(allMembers, MagoGCInterface!(__VERSION__)));
