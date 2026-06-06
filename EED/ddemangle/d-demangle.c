@@ -1517,7 +1517,6 @@ dlang_parse_qualified (string *decl, const char *mangled, state* options)
 	{
 	  const char *start = mangled;
 	  int saved = string_length (decl);
-	  string args;
 
 	  /* Skip over 'this' parameter.and its modifiers  */
 	  if (*mangled == 'M')
@@ -1797,7 +1796,7 @@ dlang_demangle (const char *mangled, int options)
 }
 
 // return the pointer to the function attributes inside mangled
-char*
+const char*
 dlang_demangle_funcattr(const char* mangled)
 {
   string decl;

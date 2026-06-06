@@ -1656,7 +1656,7 @@ namespace MagoEE
                 if ( GetChar() == L';' )
                 {
                     size_t  len = GetCharPtr() - start - 1;         // not counting '&'
-                    dchar_t c = MapNamedCharacter( start + 1, len );
+                    c = MapNamedCharacter( start + 1, len );
 
                     if ( c == 0 )
                         throw 20;

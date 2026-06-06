@@ -500,9 +500,9 @@ namespace Mago
         info.Exe = pszExe;
         info.Dir = pszDir;
         info.EnvBstr = bstrEnv;
-        info.StdInput = (HANDLE) hStdInput;
-        info.StdOutput = (HANDLE) hStdOutput;
-        info.StdError = (HANDLE) hStdError;
+        info.StdInput = (HANDLE)(size_t) hStdInput;
+        info.StdOutput = (HANDLE)(size_t) hStdOutput;
+        info.StdError = (HANDLE)(size_t) hStdError;
         info.Suspend = true;
         if ( (dwLaunchFlags & LAUNCH_NEW_CONSOLE) != 0 )
             info.NewConsole = true;

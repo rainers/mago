@@ -182,7 +182,7 @@ HRESULT MachineX86::GetReturnAddress( Address& address )
 
     BOOL bRet = ReadProcessMemory( 
         GetProcessHandle(), 
-        (void*) mContext.Esp, 
+        (void*) (size_t) mContext.Esp, 
         &address, 
         sizeof address, 
         NULL );

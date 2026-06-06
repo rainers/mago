@@ -336,6 +336,8 @@ namespace MagoST
 
     bool DebugStore::NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr )
     {
+        UNREFERENCED_PARAMETER( addr );
+
         SymbolScopeIn* scopeIn = (SymbolScopeIn*) &scope;
 
         // do we have at least a length and tag field?
@@ -382,6 +384,7 @@ namespace MagoST
 
     HRESULT DebugStore::EndSymbolScope( SymbolScope& scope )
     {
+        UNREFERENCED_PARAMETER( scope );
         return S_OK;
     }
 
@@ -575,6 +578,7 @@ namespace MagoST
 
     HRESULT DebugStore::FindSymbolDone( EnumNamedSymbolsData& handle )
     {
+        UNREFERENCED_PARAMETER( handle );
         return S_OK;
     }
 
@@ -836,6 +840,7 @@ namespace MagoST
 
     HRESULT DebugStore::EndTypeScope( TypeScope& scope )
     {
+        UNREFERENCED_PARAMETER( scope );
         return S_OK;
     }
 

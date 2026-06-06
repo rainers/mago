@@ -51,6 +51,7 @@ namespace Mago
     class BPBinder
     {
     public:
+        virtual ~BPBinder () {}
         virtual void Bind( Module* mod, ModuleBinding* binding, BPBoundBPMaker* maker, Error& err ) = 0;
     };
 

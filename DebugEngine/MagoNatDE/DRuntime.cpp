@@ -781,8 +781,8 @@ namespace Mago
 
         if ( mPtrSize == 4 )
         {
-            BB32    bb32;
-            BB32_V1 bb32_v1;
+            BB32    bb32 = {};
+            BB32_V1 bb32_v1 = {};
 
             if ( mAAVersion >= 1 )
                 hr = ReadMemory( address, sizeof bb32_v1, &bb32_v1 );

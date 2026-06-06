@@ -525,9 +525,9 @@ HRESULT MIEngine::Launch(
 		NULL, //BSTR                  bstrEnv,
 		NULL, //LPCOLESTR             pszOptions,
 		externalConsole ? LAUNCH_NEW_CONSOLE : 0, //LAUNCH_FLAGS          dwLaunchFlags,
-		(DWORD)hPipe, //DWORD                 hStdInput,
-		(DWORD)hPipe, //DWORD                 hStdOutput,
-		(DWORD)hPipe, //DWORD                 hStdError,
+		(DWORD)(size_t)hPipe, //DWORD                 hStdInput,
+		(DWORD)(size_t)hPipe, //DWORD                 hStdOutput,
+		(DWORD)(size_t)hPipe, //DWORD                 hStdError,
 		this, //IDebugEventCallback2* pCallback,
 		&debugProcess //IDebugProcess2**      ppDebugProcess
 		);

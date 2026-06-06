@@ -234,9 +234,9 @@ namespace Mago
             if( !session->FindLines( exactMatch, fileName, fileNameLen, reqLineStart, reqLineEnd, lines ) )
                 continue;
 
-            for( std::list<MagoST::LineNumber>::iterator it = lines.begin(); it != lines.end(); ++it )
+            for( std::list<MagoST::LineNumber>::iterator lit = lines.begin(); lit != lines.end(); ++lit )
             {
-                MagoEE::Address addr = session->GetVAFromSecOffset( it->Section, it->Offset );
+                MagoEE::Address addr = session->GetVAFromSecOffset( lit->Section, lit->Offset );
                 if ( addr == 0 )
                     continue;
                 bindings.push_back( AddressBinding() );

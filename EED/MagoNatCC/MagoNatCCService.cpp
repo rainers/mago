@@ -1170,7 +1170,7 @@ public:
         magogcPathLen = (int)wcslen(magogcPath);
         if (ldc && magogcPathLen > 4 && magogcPath[magogcPathLen - 4] == '.')
         {
-            wcscpy(magogcPath + magogcPathLen - 4, L"_LDC.dll");
+            wcscpy_s(magogcPath + magogcPathLen - 4, MAX_PATH - magogcPathLen, L"_LDC.dll");
             magogcPathLen += 4;
         }
 

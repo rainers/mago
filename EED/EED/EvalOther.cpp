@@ -650,7 +650,7 @@ namespace MagoEE
             return E_NOT_FOUND;
 
         wchar_t field[300];
-        _snwprintf( field, 300, L"__%s_field_0", Id );
+        _snwprintf_s( field, 300, L"__%s_field_0", Id );
         RefPtr<Declaration> first;
         HRESULT hr = find( field, first.Ref() );
         if ( FAILED( hr ) )
@@ -662,7 +662,7 @@ namespace MagoEE
         for (int i = 1; ; i++)
         {
             RefPtr<Declaration> fdecl;
-            _snwprintf( field, 300, L"__%s_field_%d", Id, i );
+            _snwprintf_s( field, 300, L"__%s_field_%d", Id, i );
             hr = find( field, fdecl.Ref() );
             if ( FAILED( hr ) )
                 break;

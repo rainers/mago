@@ -376,7 +376,7 @@ std::wstring BreakpointInfo::dumpParams() {
 
 std::wstring getExeName()
 {
-    for (int alloclen = 256; ; alloclen *= 2)
+    for (DWORD alloclen = 256; ; alloclen *= 2)
     {
         std::unique_ptr<wchar_t> name(new wchar_t[alloclen]);
         DWORD len = GetModuleFileNameW(NULL, name.get(), alloclen);

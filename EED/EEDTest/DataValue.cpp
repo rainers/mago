@@ -110,7 +110,7 @@ void DataObj::AppendValue( std::wstring& str )
     }
     else if ( mType->IsDArray() )
     {
-        swprintf_s( buf, L"(addr=%08I64x, len=%d)", (uint64_t) Value.Array.Addr, Value.Array.Length );
+        swprintf_s( buf, L"(addr=%08I64x, len=%I64u)", (uint64_t) Value.Array.Addr, Value.Array.Length );
         str.append( buf );
     }
     // TODO: add delegate and A-array

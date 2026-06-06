@@ -73,8 +73,6 @@ namespace Mago
     {
         HRESULT                     hr = S_OK;
         RefPtr<MagoST::ISession>    session;
-        uint32_t                    compCount = 0;
-        bool                        foundMatch = false;
 
         if ( !mod->GetSymbolSession( session ) )
             return false;

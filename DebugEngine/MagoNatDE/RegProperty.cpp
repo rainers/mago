@@ -537,7 +537,7 @@ namespace Mago
         HRESULT         hr = S_OK;
         RegisterValue   val = { 0 };
         wchar_t         str[ MaxValueStrLen + 1 ] = L"";
-        size_t          digitLen = 0;
+        unsigned int    digitLen = 0;
 
         hr = mRegSet->GetValue( mReg->FullReg, val );
         if ( FAILED( hr ) )

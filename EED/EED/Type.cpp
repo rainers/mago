@@ -1431,7 +1431,7 @@ namespace MagoEE
 			return false; // undefined?
 
 		uint32_t cnt = members->GetCount();
-		for ( int i = 0; i < cnt; i++ )
+		for ( uint32_t i = 0; i < cnt; i++ )
 		{
 			RefPtr<Declaration> decl;
 			if ( !members->Next( decl.Ref() ) )

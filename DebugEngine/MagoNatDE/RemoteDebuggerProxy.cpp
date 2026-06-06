@@ -87,7 +87,6 @@ namespace Mago
 
     HRESULT StartAgent( const wchar_t* sessionGuidStr )
     {
-        int                 ret = 0;
         HRESULT             hRes = 0;
         BOOL                bRet = FALSE;
         STARTUPINFO         startupInfo = { 0 };

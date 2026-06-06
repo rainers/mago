@@ -103,7 +103,7 @@ namespace Mago
         ir->mSymbolizeBuf = convert.to_bytes( sym );
 
         static char strAddr[32];
-        sprintf( strAddr, " (0x%I64x)", addr );
+        sprintf_s( strAddr, 32, " (0x%I64x)", addr );
         ir->mSymbolizeBuf.append( strAddr );
 
         SysFreeString( info.bstrFunction );

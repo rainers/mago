@@ -149,7 +149,7 @@ namespace MagoEE
     }
 
     HRESULT EEDEnumPointer::EvaluateNext( 
-        const EvalOptions& options, 
+        const EvalOptions& /*options*/,
         EvalResult& result,
         std::wstring& name,
         std::wstring& fullName,
@@ -214,7 +214,7 @@ namespace MagoEE
                 for( size_t p = mParentExprText.length() - 2; p > 0; --p )
                     if( mParentExprText[p] == '[' )
                     {
-                        if( swscanf( mParentExprText.data() + p + 1, L"%d..", &base ) != 1 )
+                        if( swscanf_s( mParentExprText.data() + p + 1, L"%d..", &base ) != 1 )
                             base = -1;
                         else
                             mParentExprText.erase( p );
@@ -295,7 +295,7 @@ namespace MagoEE
     }
 
     HRESULT EEDEnumSArray::EvaluateNext( 
-        const EvalOptions& options, 
+        const EvalOptions& /*options*/,
         EvalResult& result,
         std::wstring& name,
         std::wstring& fullName,
@@ -488,8 +488,8 @@ namespace MagoEE
 
         if ( type->GetSize() == 4 )
         {
-            BB32    bb32;
-            BB32_V1 bb32_v1;
+            BB32    bb32 = {};
+            BB32_V1 bb32_v1 = {};
             if ( AAVersion == 1 )
                 hr = binder->ReadMemory( address, sizeof bb32_v1, sizeRead, (uint8_t*)&bb32_v1 );
             else
@@ -767,7 +767,7 @@ namespace MagoEE
     }
 
     HRESULT EEDEnumAArray::EvaluateNext( 
-        const EvalOptions& options, 
+        const EvalOptions& /*options*/,
         EvalResult& result,
         std::wstring& name,
         std::wstring& fullName,
@@ -911,7 +911,7 @@ namespace MagoEE
     }
 
     HRESULT EEDEnumTuple::EvaluateNext( 
-        const EvalOptions& options, 
+        const EvalOptions& /*options*/,
         EvalResult& result,
         std::wstring& name,
         std::wstring& fullName,
@@ -1040,13 +1040,13 @@ namespace MagoEE
         }
         if( gRecombineTuples )
         {
-            RefPtr<Declaration> decl;
-            while ( members->Next( decl.Ref() ) )
+            RefPtr<Declaration> mdecl;
+            while ( members->Next( mdecl.Ref() ) )
             {
-                auto name = decl->GetName();
+                auto name = mdecl->GetName();
                 if( GetTupleName( name ) > 0 )
                     mHiddenFields++;
-                decl.Release();
+                mdecl.Release();
             }
             members->Reset();
         }
@@ -1365,7 +1365,7 @@ namespace MagoEE
     EEDEnumRange::EEDEnumRange()
         : mCountDone( 0 )
         , mBaseOffset( 0 )
-        , mLength( ~0 )
+        , mLength( ~0UL )
     {
     }
 
@@ -1385,7 +1385,7 @@ namespace MagoEE
             return hr;
         if( FAILED( CacheLength() ) )
         {
-            mLength = ~0;
+            mLength = ~0UL;
             hr = Skip( gMaxArrayLength + 1 );
             mLength = mCountDone;
             Reset();
@@ -1399,7 +1399,7 @@ namespace MagoEE
                 for( size_t p = mParentExprText.length() - 2; p > 0; --p )
                     if( mParentExprText[p] == '[' )
                     {
-                        if( swscanf( mParentExprText.data() + p + 1, L"%d..", &base ) != 1 )
+                        if( swscanf_s( mParentExprText.data() + p + 1, L"%d..", &base ) != 1 )
                             base = -1;
                         else
                             mParentExprText.erase( p );
@@ -1529,7 +1529,7 @@ namespace MagoEE
     }
 
     HRESULT EEDEnumRange::EvaluateNext( 
-        const EvalOptions& options, 
+        const EvalOptions& /*options*/,
         EvalResult& result,
         std::wstring& name,
         std::wstring& fullName,
@@ -1562,8 +1562,6 @@ namespace MagoEE
         if ( !isIdent )
             fullName.append( L")" );
         fullName.append( name );
-
-        uint32_t index = mCountDone;
 
         if ( atLimit )
         {

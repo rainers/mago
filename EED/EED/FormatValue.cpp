@@ -473,7 +473,6 @@ namespace MagoEE
             ubyteType->AddRef();
         }
         uint32_t elementSize = elemType->GetSize();
-        HRESULT hres = S_OK;
 
         struct Closure
         {
@@ -624,8 +623,8 @@ namespace MagoEE
             if( showLength )
             {
                 fmtdata.outStr.append( L"length=" );
-                auto type = arrayType->GetLengthType();
-                hr = FormatInt( array.Length, type->GetSize() * 2, type->IsSigned(), fmtdata.opt, fmtdata.outStr );
+                auto lentype = arrayType->GetLengthType();
+                hr = FormatInt( array.Length, lentype->GetSize() * 2, lentype->IsSigned(), fmtdata.opt, fmtdata.outStr );
                 if ( FAILED( hr ) )
                     return hr;
             }

@@ -19,6 +19,9 @@
     <IntDir>$(OutDir)$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalOptions>/wd4267 /wd4244 /wd4467 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
     <Midl>
       <AdditionalIncludeDirectories>$(VSSDKPath)\VisualStudioIntegration\Common\IDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </Midl>

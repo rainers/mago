@@ -29,7 +29,7 @@ int _tmain(int argc, _TCHAR* argv[])
         char    varName[256] = "";
         char    varVal[256] = "";
 
-        scanf_s( "%s", varName, _countof( varName ) );
+        scanf_s( "%s", varName, (unsigned int) _countof( varName ) );
 
         GetEnvironmentVariableA( varName, varVal, _countof( varVal ) );
 

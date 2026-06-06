@@ -91,12 +91,17 @@ public:
                 DWORD cbData,
                 BYTE data[]) // really a const struct _IMAGE_DEBUG_DIRECTORY *
     {
+        UNREFERENCED_PARAMETER( fExecutable );
+        UNREFERENCED_PARAMETER( cbData );
+        UNREFERENCED_PARAMETER( data );
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE NotifyOpenDBG(
                 LPCOLESTR dbgPath, 
                 HRESULT resultCode)
     {
+        UNREFERENCED_PARAMETER( dbgPath );
+        UNREFERENCED_PARAMETER( resultCode );
         // wprintf(L"opening %s...\n", dbgPath);
         return S_OK;
     }
@@ -105,6 +110,8 @@ public:
                 LPCOLESTR pdbPath, 
                 HRESULT resultCode)
     {
+        UNREFERENCED_PARAMETER( pdbPath );
+        UNREFERENCED_PARAMETER( resultCode );
         // wprintf(L"opening %s...\n", pdbPath);
         return S_OK;
     }
@@ -176,7 +183,7 @@ namespace MagoST
                 BSTR bstrName = NULL;
                 pSymbol->get_name( &bstrName );
 
-                sprintf(str, "Id: 0x%x Tag: 0x%0x, Name:%S\n", id, tag, bstrName );
+                sprintf_s(str, "Id: 0x%x Tag: 0x%0x, Name:%S\n", id, tag, bstrName );
                 Log::LogMessage( str );
 
                 SysFreeString( bstrName );
@@ -532,7 +539,6 @@ namespace MagoST
             HRESULT hr = pSymbol->get_objectPointerType(&thisSymbol);
             if( hr == S_OK)
             {
-                DWORD typeID;
                 hr = thisSymbol->get_symIndexId(&index);
                 thisSymbol->Release();
             }
@@ -929,6 +935,8 @@ namespace MagoST
 
     bool PDBDebugStore::NextSymbol( SymbolScope& scope, SymHandle& handle, DWORD addr )
     {
+        UNREF_PARAM( addr );
+
         PDBStore::SymHandleIn& symIn = (PDBStore::SymHandleIn&) handle;
         PDBStore::SymbolScopeIn& scopeIn = (PDBStore::SymbolScopeIn&) scope;
 
