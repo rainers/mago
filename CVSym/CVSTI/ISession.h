@@ -68,6 +68,7 @@ namespace MagoST
 
         virtual HRESULT FindMatchingGlobals( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles ) = 0;
         virtual HRESULT FindMatchingDebugFuncs( const char* nameChars, size_t nameLen, std::vector<SymHandle>& handles ) = 0;
+        virtual HRESULT FindMatchingForeachFuncs( const char* nameChars, size_t nameLen, std::vector<std::string>& funcs ) = 0;
 
         virtual HRESULT FindUDTShortName(const char* nameChars, size_t nameLen, std::string& shortName) = 0;
         virtual HRESULT FindUDTLongName( const char* nameChars, size_t nameLen, std::string& longName ) = 0;

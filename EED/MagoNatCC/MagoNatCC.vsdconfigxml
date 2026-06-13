@@ -64,9 +64,9 @@ For more information about this file, see https://github.com/Microsoft/ConcordEx
         </InterfaceGroup>
         <InterfaceGroup>
           <Filter>
-            <LanguageId RequiredValue="guidDLanguageId"/>
+            <RuntimeId RequiredValue="DkmRuntimeId.Native"/>
           </Filter>
-          <Interface Name="IDkmStepperFactory"/>
+          <Interface Name="IDkmBreakpointHitReceived"/>
         </InterfaceGroup>
         -->
       </Implements>

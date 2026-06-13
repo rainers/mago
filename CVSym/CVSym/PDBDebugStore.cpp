@@ -697,9 +697,9 @@ namespace MagoST
         if ( mInit )
             return E_ALREADY_INIT;
 
-        HRESULT hr = CoInitializeEx( NULL, COINIT_MULTITHREADED );
-        if ( FAILED( hr ) )
-            return hr;
+        static HRESULT cohr = CoInitializeEx( NULL, COINIT_MULTITHREADED );
+        if ( FAILED( cohr ) )
+            return cohr;
 
         // set it after successfully calling CoInit, 
         // so later CoUninit is only called once for each successful call to CoInit
@@ -711,6 +711,7 @@ namespace MagoST
         GUID msdia110 = { 0x761D3BCD, 0x1304, 0x41D5, { 0x94, 0xE8, 0xEA, 0xC5, 0x4E, 0x4A, 0xC1, 0x72 } };
         GUID msdia100 = { 0xB86AE24D, 0xBF2F, 0x4AC9, { 0xB5, 0xA2, 0x34, 0xB1, 0x4E, 0x4C, 0xE1, 0x1D } }; // same as msdia80
 
+        HRESULT hr;
         hr = CoCreateInstance( msdia140, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &mSource );
         if ( FAILED( hr ) )
             hr = CoCreateInstance( msdia120, NULL, CLSCTX_INPROC_SERVER, __uuidof(IDiaDataSource), (void **) &mSource );
@@ -781,9 +782,9 @@ namespace MagoST
         if ( mInit )
             return E_ALREADY_INIT;
 
-        HRESULT hr = CoInitializeEx( NULL, COINIT_MULTITHREADED );
-        if ( FAILED( hr ) )
-            return hr;
+        static HRESULT cohr = CoInitializeEx( NULL, COINIT_MULTITHREADED );
+        if ( FAILED( cohr ) )
+            return cohr;
 
         mInit = true;
         mSession = session;

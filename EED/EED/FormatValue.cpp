@@ -1180,6 +1180,13 @@ namespace MagoEE
                     else
                         complete = {};
                 }
+                else
+                {
+                    std::wstring errStr;
+                    GetErrorString(hr, errStr);
+                    fmtdata.outStr.append(errStr);
+                    hr = S_OK;
+                }
             }
         }
         if( hr == S_OK && complete )

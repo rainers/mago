@@ -351,6 +351,13 @@ namespace Mago
         if ( FAILED( hr ) )
             return hr;
 
+        if ( auto tf = type->AsTypeFunction() )
+        {
+            type->Release();
+            type = tf->GetReturnType();
+            type->AddRef();
+        }
+
         return hr;
     }
 

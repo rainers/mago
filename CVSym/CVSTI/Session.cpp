@@ -852,6 +852,23 @@ namespace MagoST
         return handles.empty() ? E_NOT_FOUND : S_OK;
     }
 
+    HRESULT Session::FindMatchingForeachFuncs(const char* nameChars, size_t nameLen, std::vector<std::string>& funcs)
+    {
+        _cacheGlobals();
+
+        std::string search(nameChars, nameLen);
+        for (auto it = mFuncShorts.lower_bound(search); it != mFuncShorts.end(); ++it)
+        {
+            if (it->first.length() < nameLen || search.compare(0, nameLen, it->first, 0, nameLen) != 0)
+                break;
+            if (it->first.length() > nameLen && it->first[nameLen] != '.')
+                break;
+            if (it->first.length() > nameLen)
+                funcs.push_back(it->first);
+        }
+        return funcs.empty() ? E_NOT_FOUND : S_OK;
+    }
+
     HRESULT Session::FindUDTShortName( const char* nameChars, size_t nameLen, std::string& shortName )
     {
         _cacheGlobals();

@@ -2015,6 +2015,19 @@ HRESULT createEvaluationError(Evaluation::DkmInspectionContext* pInspectionConte
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+static CMagoNatCCService* theService;
+CMagoNatCCService::CMagoNatCCService()
+{
+    theService = this;
+    CoInitializeEx(NULL, COINIT_MULTITHREADED);
+}
+
+CMagoNatCCService::~CMagoNatCCService()
+{
+    if (theService == this)
+        theService = nullptr;
+}
+
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
     _In_ Evaluation::DkmInspectionContext* pInspectionContext,
     _In_ DkmWorkList* pWorkList,
@@ -2027,6 +2040,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateExpression(
 
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, false, exprContext));
+    saveInspectionContext(pInspectionContext, exprContext);
 
     std::wstring exprText = pExpression->Text()->Value();
     MagoEE::FormatOptions fmtopt;
@@ -2158,6 +2172,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameLocals(
 
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, true, exprContext));
+    saveInspectionContext(pInspectionContext, exprContext);
 
     RefPtr<Mago::FrameProperty> frameProp;
     tryHR(MakeCComObject(frameProp));
@@ -2370,6 +2385,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::EvaluateReturnValue(
 
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pStackFrame, false, exprContext));
+    saveInspectionContext(pInspectionContext, exprContext);
 
     Mago::PropertyInfo info;
     tryHR(exprContext->EvalReturnValue(pInspectionContext, pNativeRetValue, info));
@@ -2495,7 +2511,152 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::OnExceptionTriggerHit(
     return S_FALSE;
 }
 
-// IDkmNativeSteppingCallSiteProvider (experimental, not enabled in vsdconfigxml)
+HRESULT CMagoNatCCService::saveInspectionContext(_In_ Evaluation::DkmInspectionContext* pInspectionContext, CCExprContext* exprContext)
+{
+    lastInspectionContext = pInspectionContext;
+    lastExprContext = exprContext;
+    return S_OK;
+}
+
+extern "C" __declspec(dllexport)
+HRESULT GetForeachStepAddresses(UINT32 maxAdresses,
+    UINT64* pForeachBodyAddr, UINT32* pForeachLine, BSTR* bstrFilename)
+{
+    if (!theService || !theService->lastInspectionContext || !theService->lastExprContext)
+        return E_FAIL;
+    auto thread = theService->lastInspectionContext->Thread();
+    if (!thread)
+        return E_FAIL;
+    CComPtr<CallStack::DkmFrameRegisters> regs;
+    DkmArray<CallStack::DkmUnwoundRegister*> specialRegs = { 0, 0 };
+    tryHR(thread->GetCurrentRegisters(specialRegs, &regs));
+    if (!regs)
+        return E_FAIL;
+    UINT64 rip;
+    tryHR(regs->GetInstructionPointer(&rip));
+    return theService->GetForeachStepAddresses(theService->lastExprContext,
+        rip, maxAdresses, pForeachBodyAddr, pForeachLine, bstrFilename);
+}
+
+// Helper to find foreach body address for both stepping and one-shot breakpoints
+HRESULT CMagoNatCCService::GetForeachStepAddresses(
+    _In_ CCExprContext* exprContext, UINT64 rip,
+    UINT32 maxAdresses, UINT64* pForeachBodyAddr, UINT32* pForeachLine, BSTR* bstrFilename)
+{
+    if (!pForeachBodyAddr || !pForeachLine || !bstrFilename)
+        return E_INVALIDARG;
+    *pForeachBodyAddr = 0;
+
+    if (!exprContext || !exprContext->mModule || !exprContext->mModule->mSession)
+        return E_FAIL;
+
+    RefPtr<CCModule> ccMod = exprContext->mModule;
+    auto session = ccMod->mSession;
+
+    // Find the function containing this instruction
+    MagoST::SymHandle funcSH;
+    std::vector<MagoST::SymHandle> blockSH;
+    tryHR(ccMod->FindFunction(rip, funcSH, blockSH));
+    
+    // Get the function name
+    std::wstring funcName;
+    tryHR(ccMod->GetSymbolName(funcSH, funcName));
+
+    MagoST::SymHandle symHandle;
+    uint16_t sec;
+    uint32_t offset, symOff;
+    tryHR(session->FindGlobalSymbolByAddr(rip, false, symHandle, sec, offset, symOff));
+    MagoST::LineNumber ripLineNumber;
+    if (!session->FindLine(sec, offset, ripLineNumber))
+        return E_FAIL;
+
+    MagoST::FileInfo finfo;
+    tryHR (session->GetFileInfo(ripLineNumber.CompilandIndex, ripLineNumber.FileIndex, finfo));
+    Utf8To16(finfo.Name.GetName(), finfo.Name.GetLength(), *bstrFilename);
+
+    // Check if this function has a __foreachbody symbol (indicating a foreach loop)
+    // D foreach loops generate a nested function with __foreachbody in the symbol name
+    std::string shortNameUtf8 = MagoEE::to_string(funcName.c_str(), funcName.length());
+        
+    // Find all debug functions matching the short name (suffix match)
+    std::vector<std::string> matchingFuncs;
+    HRESULT hrEnum = session->FindMatchingForeachFuncs(
+        shortNameUtf8.c_str(),
+        shortNameUtf8.length(),
+        matchingFuncs
+    );
+    // Check each matching function for __foreachbody and parent function name
+    MagoST::SymHandle foreachHandle = { 0 };
+    MagoST::SymInfoData infoData = { 0 };
+    UINT32 numAddr = 0;
+
+    auto addForeachEntry = [&](const std::string& func)
+        {
+            uint64_t symaddr;
+            HRESULT hr = session->FindGlobalSymbolAddress(func.c_str(), symaddr);
+            if (FAILED(hr) || symaddr == 0)
+                return false;
+
+            MagoST::SymHandle symHandle;
+            uint16_t sec;
+            uint32_t offset, symOff;
+            hr = session->FindGlobalSymbolByAddr(symaddr, true, symHandle, sec, offset, symOff);
+            if (!FAILED(hr))
+            {
+                MagoST::LineNumber lineNumber;
+                if (session->FindLine(sec, offset, lineNumber))
+                {
+                    if (lineNumber.Offset == offset && lineNumber.Length)
+                        session->FindLine(sec, offset + lineNumber.Length, lineNumber);
+
+                    pForeachBodyAddr[numAddr] = session->GetVAFromSecOffset(sec, lineNumber.Offset);
+                    pForeachLine[numAddr] = lineNumber.Number;
+                    if (++numAddr >= maxAdresses)
+                        return true;
+                }
+            }
+            return false;
+        };
+
+    for (auto& func : matchingFuncs)
+    {
+        if (addForeachEntry(func))
+            return S_OK;
+    }
+    size_t lastDot = shortNameUtf8.find_last_of('.');
+    if (lastDot != std::string::npos)
+    {
+        if (shortNameUtf8.substr(lastDot + 1, 13) == "__foreachbody")
+        {
+            // add the function entry itself, in case of "continue"
+            if (addForeachEntry(shortNameUtf8))
+                return S_OK;
+
+#if 0
+            // add the line number after the foreach call
+            std::list<MagoST::LineNumber> lines;
+            session->FindLines(true, finfo.Name.GetName(), finfo.Name.GetLength(),
+                ripLineNumber.Number, ripLineNumber.NumberEnd + 1, lines);
+            for (auto it = lines.begin(); it != lines.end(); ++it)
+                if (it->Number > ripLineNumber.Number)
+                {
+                    pForeachBodyAddr[numAddr] = session->GetVAFromSecOffset(sec, it->Offset);
+                    pForeachLine[numAddr] = it->Number;
+                    if (++numAddr >= maxAdresses)
+                        return S_OK;
+                    break;
+                }
+#endif
+        }
+    }
+    if (numAddr < maxAdresses)
+        pForeachBodyAddr[numAddr] = 0;
+    return S_OK;
+}
+
+// IDkmNativeSteppingCallSiteProvider
+// Called during stepping to discover call sites reachable from an instruction.
+// For D foreach loops, we detect the opApply call and return the delegate (loop body) address.
 HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetSteppingCallSites(
     _In_ Native::DkmNativeInstructionAddress* pNativeAddress,
     _In_ const DkmArray<Symbols::DkmSteppingRange>& SteppingRanges,
@@ -2545,6 +2706,7 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameName(
     using namespace Evaluation;
     RefPtr<CCExprContext> exprContext;
     tryHR(InitExprContext(pInspectionContext, pWorkList, pFrame, false, exprContext));
+    saveInspectionContext(pInspectionContext, exprContext);
 
     bool types = ArgumentFlags & DkmVariableInfoFlags::Types;
     bool names = ArgumentFlags & DkmVariableInfoFlags::Names;
@@ -2576,9 +2738,8 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameReturnType(
     std::wstring retType = exprContext->GetFunctionReturnType();
 
     DkmGetFrameReturnTypeAsyncResult res;
-    res.ErrorCode = retType.empty() ? E_FAIL : S_OK;
-    res.pReturnType = toDkmString(retType.c_str());
+    res.ErrorCode = S_OK; //retType.empty() ? E_FAIL : S_OK;
+    res.pReturnType = toDkmString(retType.c_str()).Detach();
     pCompletionRoutine->OnComplete(res);
     return S_OK;
 }
-

@@ -589,9 +589,14 @@ namespace Mago
             tailName.AppendFormat( L" + 0x%x %s", (uint32_t) (mPC - baseAddr), bytesStr );
         }
 
-        if ((flags & FIF_FUNCNAME_ARGS_ALL) != 0)
+        if ( (flags & FIF_FUNCNAME_ARGS_ALL) != 0 )
         {
-            hr = AppendArgs(flags, radix, session, symInfo, fullName, tailName, complete);
+            hr = AppendArgs( flags, radix, session, symInfo, fullName, tailName, complete );
+        }
+        else if ( complete )
+        {
+            fullName.Append( tailName );
+            hr = complete( hr, std::wstring( fullName.GetBuffer(), fullName.GetLength() ) );
         }
 
         return hr;

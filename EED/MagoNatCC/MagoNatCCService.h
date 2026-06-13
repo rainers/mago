@@ -7,6 +7,7 @@
 // COM object exported from the sample dll.
 
 #include "MagoNatCC.Contract.h"
+#include <objbase.h>
 
 struct IEnumDebugPropertyInfo2;
 struct IEnumDebugPropertyInfoAsync;
@@ -26,12 +27,8 @@ class ATL_NO_VTABLE CMagoNatCCService :
     public CComCoClass<CMagoNatCCService, &CMagoNatCCServiceContract::ClassId>
 {
 protected:
-    CMagoNatCCService()
-    {
-    }
-    ~CMagoNatCCService()
-    {
-    }
+    CMagoNatCCService();
+    ~CMagoNatCCService();
 
     HRESULT STDMETHODCALLTYPE _GetItems(
         _In_ Evaluation::DkmEvaluationResultEnumContext* pEnumContext,
@@ -147,6 +144,16 @@ public:
         _In_ CallStack::DkmStackWalkFrame* pFrame,
         _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameReturnTypeAsyncResult>* pCompletionRoutine
     );
+
+    // Helper to find foreach body address
+    HRESULT GetForeachStepAddresses(
+        CCExprContext* exprContext, UINT64 rip,
+        UINT32 maxAdresses, UINT64* pForeachBodyAddr, UINT32* pForeachLine, BSTR* bstrFilename);
+
+    CComPtr<Evaluation::DkmInspectionContext> lastInspectionContext;
+    CComPtr<CCExprContext> lastExprContext;
+
+    HRESULT saveInspectionContext(_In_ Evaluation::DkmInspectionContext* pInspectionContext, CCExprContext* exprContext);
 };
 
 OBJECT_ENTRY_AUTO(CMagoNatCCService::ClassId, CMagoNatCCService)
