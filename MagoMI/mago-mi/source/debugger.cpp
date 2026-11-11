@@ -632,12 +632,11 @@ void Debugger::handleThreadInfoCommand(MICommand & cmd, bool idsOnly) {
 	IEnumDebugThreads2* pThreadList = NULL;
 	ULONG count = 0;
 	if (SUCCEEDED(_pProgram->EnumThreads(&pThreadList)) && pThreadList && SUCCEEDED(pThreadList->GetCount(&count))) {
-		IDebugThread2 * threads[1];
 		bool firstThread = true;
 		for (ULONG i = 0; i < count; i++) {
 			IDebugThread2 * thread = NULL;
 			ULONG fetched = 0;
-			if (FAILED(pThreadList->Next(1, &thread, &fetched)) || fetched != 1 || !threads[0]) {
+			if (FAILED(pThreadList->Next(1, &thread, &fetched)) || fetched != 1 || !thread) {
 				break;
 			}
 			DWORD id = 0;
@@ -1058,11 +1057,10 @@ IDebugThread2 * Debugger::findThreadById(DWORD threadId) {
 		pThreadList->Release();
 		return NULL;
 	}
-	IDebugThread2 * threads[1];
 	for (ULONG i = 0; i < count; i++) {
 		IDebugThread2 * thread = NULL;
 		ULONG fetched = 0;
-		if (FAILED(pThreadList->Next(1, &thread, &fetched)) || fetched != 1 || !threads[0]) {
+		if (FAILED(pThreadList->Next(1, &thread, &fetched)) || fetched != 1 || !thread) {
 			break;
 		}
 		DWORD id = 0;
