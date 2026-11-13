@@ -145,6 +145,21 @@ public:
         _In_ IDkmCompletionRoutine<Evaluation::DkmGetFrameReturnTypeAsyncResult>* pCompletionRoutine
     );
 
+    // IDkmDataBreakpointInfoProvider
+    virtual HRESULT STDMETHODCALLTYPE GetDataBreakpointInfo(
+        _In_ Evaluation::DkmSuccessEvaluationResult* pSuccessResult,
+        _Out_ Evaluation::DkmDataBreakpointInfo* pDataBreakpointInfo,
+        _Deref_out_opt_ DkmString** ppError
+    );
+
+    // IDkmDataBreakpointInfoProvider160. The name the IDE shows for the breakpoint it
+    // creates from a row; registering it is what pairs the Dkm side with the engine's
+    // IDebugProperty160::GetDataBreakpointInfo160.
+    virtual HRESULT STDMETHODCALLTYPE GetDataBreakpointDisplayName(
+        _In_ Evaluation::DkmSuccessEvaluationResult* pSuccessResult,
+        _Deref_out_ DkmString** ppName
+    );
+
     // Helper to find foreach body address
     HRESULT GetForeachStepAddresses(
         CCExprContext* exprContext, UINT64 rip,

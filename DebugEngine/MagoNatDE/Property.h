@@ -39,6 +39,17 @@ namespace Mago
         COM_INTERFACE_ENTRY(Property)
     END_COM_MAP()
 
+        STDMETHOD( GetPropertyInfoAsync )(
+            DEBUGPROP_INFO_FLAGS dwFields,
+            DWORD dwRadix,
+            DWORD dwTimeout,
+            IDebugReference2** rgpArgs,
+            DWORD dwArgCount,
+            DEBUG_PROPERTY_INFO* pPropertyInfo,
+            std::function<HRESULT(HRESULT hr, const DEBUG_PROPERTY_INFO&)> complete );
+
+        STDMETHOD( GetPointerAddress )( Address64* addr );
+
         //////////////////////////////////////////////////////////// 
         // IDebugProperty2 
 
@@ -50,15 +61,6 @@ namespace Mago
             DWORD dwArgCount,
             DEBUG_PROPERTY_INFO* pPropertyInfo );
         
-        STDMETHOD( GetPropertyInfoAsync )(
-            DEBUGPROP_INFO_FLAGS dwFields,
-            DWORD dwRadix,
-            DWORD dwTimeout,
-            IDebugReference2** rgpArgs,
-            DWORD dwArgCount,
-            DEBUG_PROPERTY_INFO* pPropertyInfo,
-            std::function<HRESULT(HRESULT hr, const DEBUG_PROPERTY_INFO&)> complete );
-
         STDMETHOD( SetValueAsString )(
             LPCOLESTR pszValue,
             DWORD dwRadix,
@@ -144,5 +146,5 @@ namespace Mago
     };
 
     bool GetPropertyType( MagoEE::IValueBinder* binder, const MagoEE::DataObject& objVal, const wchar_t* exprText, std::wstring& type );
-    DWORD GetPropertyAttr( const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts );
+    UINT64 GetPropertyAttr( const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts );
 }

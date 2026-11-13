@@ -217,7 +217,36 @@ namespace Mago
         Log::LogMessage( "Property::GetMemoryBytes\n" );
         return E_NOTIMPL;
     }
-    
+
+    HRESULT Property::GetPointerAddress( Address64* addr )
+    {
+        if ( addr == NULL)
+            return E_INVALIDARG;
+
+        // TODO: let the EE figure this out
+        auto type = mObjVal.ObjVal._Type;
+        if ( type->IsPointer() )
+        {
+            *addr = (Address64)mObjVal.ObjVal.Value.Addr;
+        }
+        else if ( type->IsIntegral() || type->Ty == MagoEE::Tvoid )
+        {
+            *addr = (Address64)mObjVal.ObjVal.Value.UInt64Value;
+        }
+        else if ( type->IsSArray() )
+        {
+            *addr = (Address64)mObjVal.ObjVal.Addr;
+        }
+        else if ( type->IsDArray() )
+        {
+            *addr = (Address64)mObjVal.ObjVal.Value.Array.Addr;
+        }
+        else
+            return S_GETMEMORYCONTEXT_NO_MEMORY_CONTEXT;
+
+        return S_OK;
+    }
+
     HRESULT Property::GetMemoryContext( 
         IDebugMemoryContext2** ppMemory )
     {
@@ -228,28 +257,7 @@ namespace Mago
 
         HRESULT hr = S_OK;
         RefPtr<CodeContext> codeCxt;
-        Address64 addr = 0;
-
-        // TODO: let the EE figure this out
-        auto type = mObjVal.ObjVal._Type;
-        if ( type->IsPointer() )
-        {
-            addr = (Address64) mObjVal.ObjVal.Value.Addr;
-        }
-        else if ( type->IsIntegral() || type->Ty == MagoEE::Tvoid )
-        {
-            addr = (Address64) mObjVal.ObjVal.Value.UInt64Value;
-        }
-        else if ( type->IsSArray() )
-        {
-            addr = (Address64) mObjVal.ObjVal.Addr;
-        }
-        else if ( type->IsDArray() )
-        {
-            addr = (Address64) mObjVal.ObjVal.Value.Array.Addr;
-        }
-        else
-            return S_GETMEMORYCONTEXT_NO_MEMORY_CONTEXT;
+        Address64 addr = mObjVal.ObjVal.Addr;
 
         hr = MakeCComObject( codeCxt );
         if ( FAILED( hr ) )
@@ -266,7 +274,11 @@ namespace Mago
         DWORD* pdwSize )
     {
         Log::LogMessage( "Property::GetSize\n" );
-        return E_NOTIMPL;
+        if( !mObjVal.ObjVal._Type )
+            return E_INVALIDARG;
+
+        *pdwSize = mObjVal.ObjVal._Type->GetSize();
+        return S_OK;
     }
     
     HRESULT Property::GetReference( 
@@ -428,9 +440,9 @@ namespace Mago
         return true;
     }
 
-    DWORD GetPropertyAttr( const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts )
+    UINT64 GetPropertyAttr( const MagoEE::EvalResult& objVal, const MagoEE::FormatOptions& fmtOpts )
     {
-        DWORD dwAttrib = 0;
+        UINT64 dwAttrib = 0;
         if ( objVal.HasString )
             dwAttrib |= DBG_ATTRIB_VALUE_RAW_STRING;
         if ( objVal.ReadOnly )

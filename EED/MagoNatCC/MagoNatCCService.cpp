@@ -1952,15 +1952,13 @@ HRESULT createEvaluationResult(Evaluation::DkmInspectionContext* pInspectionCont
     CComPtr<IDebugMemoryContext2> memctx;
     if (info.pProperty)
     {
-        hr = info.pProperty->GetMemoryContext(&memctx);
-        if(hr == S_OK) // doesn't fail for properties without context
+        CComPtr<Mago::Property> property;
+        hr = info.pProperty->QueryInterface(&property);
+        if (hr == S_OK && property)
         {
-            CComPtr<Mago::IMagoMemoryContext> magoCtx;
-            hr = memctx->QueryInterface(&magoCtx);
-            if(SUCCEEDED(hr))
+            UINT64 addr = 0;
+            if (property->GetPointerAddress(&addr) == S_OK)
             {
-                UINT64 addr = 0;
-                tryHR(magoCtx->GetAddress(addr));
                 // always create an instruction address, too
                 CComPtr<DkmInstructionAddress> instrAddr;
                 pStackFrame->Process()->CreateNativeInstructionAddress(addr, &instrAddr);
@@ -2742,4 +2740,101 @@ HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetFrameReturnType(
     res.pReturnType = toDkmString(retType.c_str()).Detach();
     pCompletionRoutine->OnComplete(res);
     return S_OK;
+}
+
+// IDkmDataBreakpointInfoProvider
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetDataBreakpointInfo(
+    _In_ Evaluation::DkmSuccessEvaluationResult* pSuccessResult,
+    _Out_ Evaluation::DkmDataBreakpointInfo* pDataBreakpointInfo,
+    _Deref_out_opt_ DkmString** ppError)
+{
+    pDataBreakpointInfo->pIdentifier = nullptr;
+    pDataBreakpointInfo->Size = 0;
+    if (ppError != nullptr)
+        *ppError = nullptr;
+
+    // The identifier is the address text, and it has to be the very storage mago reported
+    // for the value: a data breakpoint watches that address, so nothing here re-evaluates
+    // or widens it. Both fields come from the item attached in createEvaluationResult.
+    const wchar_t* refusal = nullptr;
+    UINT64 address = 0;
+    UINT32 size = 0;
+    const wchar_t* displayName = L"(none)";
+
+    if (pSuccessResult == nullptr)
+    {
+        refusal = L"no evaluation result given";
+    }
+    else
+    {
+        if (DkmString* pName = pSuccessResult->Name())
+            displayName = pName->Value();
+
+        Mago::Property* property = nullptr;
+        const HRESULT hrItem = pSuccessResult->GetDataItem(&property);
+        if (hrItem != S_OK || property == nullptr)
+        {
+            // The expression behind this row was not one mago gave a storage address to
+            // (an rvalue, a register value, a bit field, or a child/return-value result).
+            refusal = L"result carries no mago data breakpoint item";
+        }
+        else
+        {
+            CComPtr<IDebugMemoryContext2> memctx;
+            auto hr = property->GetMemoryContext(&memctx);
+            if (hr == S_OK) // doesn't fail for properties without context
+            {
+                CComPtr<Mago::IMagoMemoryContext> magoCtx;
+                hr = memctx->QueryInterface(&magoCtx);
+                if (SUCCEEDED(hr))
+                {
+                    hr = magoCtx->GetAddress(address);
+                }
+            }
+            hr = property->GetSize((DWORD*) &size);
+            property->Release();
+            if (address == 0 || size == 0)
+                refusal = L"mago reported no watchable storage for this result";
+        }
+    }
+
+    if (refusal != nullptr)
+    {
+        if (ppError != nullptr)
+            *ppError = toDkmString(refusal).Detach();
+        return S_OK;
+    }
+
+    wchar_t buf[20] = L"";
+    swprintf_s(buf, L"0x%I64x", address);
+    pDataBreakpointInfo->pIdentifier = toDkmString(buf).Detach();
+    pDataBreakpointInfo->Size = size;
+    return S_OK;
+}
+
+// IDkmDataBreakpointInfoProvider160
+    // might not do much more than the default without this interface
+HRESULT STDMETHODCALLTYPE CMagoNatCCService::GetDataBreakpointDisplayName(
+    _In_ Evaluation::DkmSuccessEvaluationResult* pSuccessResult,
+    _Deref_out_ DkmString** ppName)
+{
+    if (ppName == nullptr)
+        return E_INVALIDARG;
+    *ppName = nullptr;
+
+    if (pSuccessResult == nullptr)
+        return E_INVALIDARG;
+
+    std::wstring name;
+    DkmString* pFull = pSuccessResult->FullName();
+    if (pFull == nullptr || pFull->Value() == nullptr)
+        pFull = pSuccessResult->Name();
+    if (pFull != nullptr && pFull->Value() != nullptr)
+        name = pFull->Value();
+
+    if (name.empty())
+        return S_FALSE;
+
+    *ppName = toDkmString(name.c_str()).Detach();
+    return *ppName != nullptr ? S_OK : E_OUTOFMEMORY;
 }
